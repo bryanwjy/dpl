@@ -3,7 +3,7 @@
 	[
 		{
 			"path": ".",
-			"name": "simd-x86"
+			"name": "dpl"
 		}
 	],
 	"settings":
@@ -16,6 +16,6 @@
 		}
 	},
 	"syntax_override": {
-		".*\\.(h|cpp)$": ["C++", "UTL"]
+		".*\\.(h|cpp)$": ["cpp-sublime-syntax/C++20"]
 	}
 }
