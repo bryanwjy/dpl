@@ -1,0 +1,131 @@
+---
+# We'll use defaults from the LLVM style, but with 4 columns indentation.
+BasedOnStyle: LLVM
+---
+Language: Cpp
+AlignAfterOpenBracket: DontAlign
+AlignEscapedNewlines: Left
+AlignOperands: DontAlign
+AlignTrailingComments: true
+AllowShortBlocksOnASingleLine: Empty
+AllowShortEnumsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortLambdasOnASingleLine: All
+# AllowShortCompoundRequirementOnASingleLine: true
+AlignArrayOfStructures: Right
+AlignConsecutiveAssignments:
+  Enabled: false
+AlignConsecutiveDeclarations:
+  Enabled: false
+
+BraceWrapping:
+  AfterCaseLabel: false
+  AfterClass: false
+  AfterControlStatement: false
+  AfterEnum: false
+  AfterFunction: false
+  AfterNamespace: false
+  AfterObjCDeclaration: false
+  AfterStruct: false
+  AfterUnion: false
+  AfterExternBlock: false
+  BeforeCatch: false
+  BeforeElse: false
+  BeforeLambdaBody: false
+  BeforeWhile: false
+  IndentBraces: false
+BreakBeforeBinaryOperators: None
+BreakBeforeBraces: Custom
+BreakInheritanceList: AfterColon
+BreakBeforeTernaryOperators: true
+BreakConstructorInitializers: BeforeComma
+BreakStringLiterals: true
+# BreakTemplateDeclarations: MultiLine
+AlwaysBreakTemplateDeclarations: true
+IndentRequiresClause: false
+ColumnLimit: 80
+CompactNamespaces: false
+PackConstructorInitializers: CurrentLine
+Cpp11BracedListStyle: true
+EmptyLineBeforeAccessModifier: LogicalBlock
+IndentAccessModifiers: false
+IndentCaseBlocks: false
+IndentCaseLabels: false
+IndentPPDirectives: AfterHash
+IndentWidth: 4
+AccessModifierOffset: -4
+IndentWrappedFunctionNames: false
+NamespaceIndentation: None
+DerivePointerAlignment: false
+PointerAlignment: Left
+QualifierAlignment: Right
+SortIncludes: CaseSensitive
+SpaceBeforeCaseColon: false
+SpaceBeforeParens: Custom
+SpaceBeforeParensOptions:
+  AfterControlStatements: true
+  AfterForeachMacros: false
+  AfterFunctionDeclarationName: false
+  AfterFunctionDefinitionName: false
+  AfterIfMacros: false
+  AfterOverloadedOperator: false
+  AfterRequiresInClause: true
+  AfterRequiresInExpression: false
+  BeforeNonEmptyParentheses: false
+SpaceBeforeRangeBasedForLoopColon: true
+SpaceBeforeSquareBrackets: false
+FixNamespaceComments: true
+PPIndentWidth: 2
+IncludeBlocks:   Regroup
+IncludeCategories:
+  - Regex:           '.*\.generated\.h'
+    Priority:        100
+  - Regex:           '"dpl/config.h"'
+    Priority:        0
+  - Regex:           '"configuration/.*"'
+    Priority:        0
+  - Regex:           '"preprocessor/.*"'
+    Priority:        5
+  - Regex:           '".*/fwd.h"'
+    Priority:        6
+  - Regex:           '".*"'
+    Priority:        10
+  - Regex:           '^<.*\.(h)>'
+    Priority:        30
+  - Regex:           '^<.*>'
+    Priority:        40
+
+IfMacros: ['DPL_TRY','DPL_IF_CONSTEVAL','DPL_IF_CONSTEXPR']
+AttributeMacros: []
+StatementMacros: ['DPL_NAMESPACE_BEGIN', 'DPL_NAMESPACE_END']
+Macros:
+- DPL_CATCH(X)=else if ([](X){ return true; }())
+- DPL_NOEXCEPT(X)=noexcept(X)
+- DPL_THROWS=noexcept
+- DPL_INLINE_CXX17=inline
+- DPL_CONSTEXPR_CXX11=constexpr
+- DPL_CONSTEXPR_CXX14=constexpr
+- DPL_CONSTEXPR_CXX17=constexpr
+- DPL_CONSTEXPR_CXX20=constexpr
+- DPL_CONSTEXPR_CXX23=constexpr
+- DPL_CONSTEVAL=consteval
+- DPL_CONSTRAINT_CXX11(X)=,typename=enable_if_t<X>
+- DPL_CONSTRAINT_CXX11(X,Y)=,typename=enable_if_t<X,Y>
+- DPL_CONSTRAINT_CXX11(X,Y,Z)=,typename=enable_if_t<X,Y,Z>
+- DPL_CONSTRAINT_CXX20(X)=requires (X)
+- DPL_CONSTRAINT_CXX20(X,Y)=requires (X,Y)
+- DPL_CONSTRAINT_CXX20(X,Y,Z)=requires (X,Y,Z)
+- DPL_CONCEPT_CXX20(X)=type<X>
+- DPL_NODISCARD=[[nodiscard]]
+- DPL_ENABLE_IF_CXX11(X,Y)=enable_if_t<Y, X>
+- DPL_ATTRIBUTE(X)=[[X]]
+- DPL_ATTRIBUTES(X)=[[X]]
+- DPL_ATTRIBUTES(X,Y)=[[X,Y]]
+- DPL_ATTRIBUTES(X,Y,Z)=[[X,Y,Z]]
+- DPL_ATTRIBUTES(X,Y,Z,W)=[[X,Y,Z,W]]
+- DPL_NODISCARD=[[nodiscard]]
+- DPL_LIFETIMEBOUND=[[clang::lifetimebound]]
+- DPL_UNLIKELY=[[unlikely]]
+- DPL_LIKELY=[[likely]]
+- '__DPL=::utl::'
+

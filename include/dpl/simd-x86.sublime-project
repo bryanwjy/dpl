@@ -1,0 +1,21 @@
+{
+	"folders":
+	[
+		{
+			"path": ".",
+			"name": "simd-x86"
+		}
+	],
+	"settings":
+	{
+		"tab_size": 4,
+		"ClangFormat":
+		{
+			"format_on_save":true,
+			"style": "File"
+		}
+	},
+	"syntax_override": {
+		".*\\.(h|cpp)$": ["C++", "UTL"]
+	}
+}
