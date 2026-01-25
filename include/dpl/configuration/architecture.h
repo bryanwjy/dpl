@@ -22,16 +22,19 @@
 #  error "Unsupported Architecture"
 #elif defined(__ARM_ARCH_6T2_) || defined(__ARM_ARCH_6T2_)
 #  error "Unsupported Architecture"
-#elif defined(__ARM_ARCH_6__) || defined(__ARM_ARCH_6J__) || defined(__ARM_ARCH_6K__) || \
-    defined(__ARM_ARCH_6Z__) || defined(__ARM_ARCH_6ZK__)
+#elif defined(__ARM_ARCH_6__) || defined(__ARM_ARCH_6J__) || \
+    defined(__ARM_ARCH_6K__) || defined(__ARM_ARCH_6Z__) ||  \
+    defined(__ARM_ARCH_6ZK__)
 #  error "Unsupported Architecture"
-#elif defined(__ARM_ARCH_7__) || defined(__ARM_ARCH_7A__) || defined(__ARM_ARCH_7R__) || \
-    defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7S__)
-#  error "Unsupported Architecture"
-#elif defined(__ARM_ARCH_7A__) || defined(__ARM_ARCH_7R__) || defined(__ARM_ARCH_7M__) || \
+#elif defined(__ARM_ARCH_7__) || defined(__ARM_ARCH_7A__) || \
+    defined(__ARM_ARCH_7R__) || defined(__ARM_ARCH_7M__) ||  \
     defined(__ARM_ARCH_7S__)
 #  error "Unsupported Architecture"
-#elif defined(__ARM_ARCH_7R__) || defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7S__)
+#elif defined(__ARM_ARCH_7A__) || defined(__ARM_ARCH_7R__) || \
+    defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7S__)
+#  error "Unsupported Architecture"
+#elif defined(__ARM_ARCH_7R__) || defined(__ARM_ARCH_7M__) || \
+    defined(__ARM_ARCH_7S__)
 #  error "Unsupported Architecture"
 #elif defined(__ARM_ARCH_7M__)
 #  error "Unsupported Architecture"
@@ -42,7 +45,8 @@
 #elif defined(__sh__)
 #  error "Unsupported Architecture"
 #elif defined(__powerpc) || defined(__powerpc__) || defined(__powerpc64__) || \
-    defined(__POWERPC__) || defined(__ppc__) || defined(__PPC__) || defined(_ARCH_PPC)
+    defined(__POWERPC__) || defined(__ppc__) || defined(__PPC__) ||           \
+    defined(_ARCH_PPC)
 #  error "Unsupported Architecture"
 #elif defined(__PPC64__) || defined(__ppc64__) || defined(_ARCH_PPC64)
 #  error "Unsupported Architecture"

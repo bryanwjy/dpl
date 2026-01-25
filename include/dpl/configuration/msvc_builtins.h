@@ -2,17 +2,18 @@
 
 #pragma once
 
-#include "configuration/utl_compiler.h"
-
-#include "preprocessor/utl_concatenation.h"
-#include "preprocessor/utl_is_empty.h"
+#include "dpl/configuration/compiler.h" // IWYU pragma: keep
 
 #if DPL_COMPILER_MSVC
+
+#  include "dpl/preprocessor/concatenation.h"
+#  include "dpl/preprocessor/is_empty.h"
 
 #  ifdef __has_builtin
 #    error '__has_builtin' definition collision
 #  endif
-#  define __has_builtin(BUILTIN) DPL_IS_EMPTY(DPL_CONCAT(__DPL_MSVC_BUILTIN, BUILTIN))
+#  define __has_builtin(BUILTIN) \
+      DPL_IS_EMPTY(DPL_CONCAT(__DPL_MSVC_BUILTIN, BUILTIN))
 
 #  if DPL_COMPILER_MSVC_AT_LEAST(1915)
 #    define __DPL_MSVC_BUILTIN__is_aggregate

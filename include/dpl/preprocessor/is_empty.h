@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "preprocessor/utl_paste.h"
+#include "dpl/preprocessor/paste.h"
 
 /**
  * By Jens Gustedt
@@ -11,10 +11,12 @@
 #define __DPL_IE_TRIGGER_PARENTHESIS() ,
 
 /* increase if needed */
-#define __DPL_IE_ARG16(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, ...) \
+#define __DPL_IE_ARG16(                                                        \
+    _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, ...) \
     _15
 #define __DPL_IE_HAS_COMMA(...) \
-    DPL_PASTE(__DPL_IE_ARG16(__VA_ARGS__, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0))
+    DPL_PASTE(__DPL_IE_ARG16(   \
+        __VA_ARGS__, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0))
 
 #define __DPL_IE_CONCAT5(_0, _1, _2, _3, _4) _0##_1##_2##_3##_4
 #define __DPL_IE_EMPTY_CASE_0001 ,
@@ -34,7 +36,8 @@ __DPL_IS_EMPTY(                                                                 
           )
 /* clang-format on */
 
-#define __DPL_C89_STATIC_ASSERT_3(COND, MSG) typedef char static_assertion[(!!(COND)) * 2 - 1]
+#define __DPL_C89_STATIC_ASSERT_3(COND, MSG) \
+    typedef char static_assertion[(!!(COND)) * 2 - 1]
 #define __DPL_C89_STATIC_ASSERT_2(X, L) __DPL_C89_STATIC_ASSERT_3(X, LINE##L)
 #define __DPL_C89_STATIC_ASSERT_1(X, L) __DPL_C89_STATIC_ASSERT_2(X, L)
 #define DPL_C89_STATIC_ASSERT(X) __DPL_C89_STATIC_ASSERT_1(X, __LINE__)
@@ -45,9 +48,9 @@ DPL_C89_STATIC_ASSERT(!DPL_IS_EMPTY(A, B, C));
 /**
  * Appends the result of IS_EMPTY to a prefix, used to resolve macro overloads
  *
- * If the number of variadic arguments is 0, the prefix will be appended with 1 (i.e. result of
- * IS_EMPTY) If the number of variadic arguments is >0, the prefix will be appended with 0 (i.e.
- * result of IS_EMPTY)
+ * If the number of variadic arguments is 0, the prefix will be appended with 1
+ * (i.e. result of IS_EMPTY) If the number of variadic arguments is >0, the
+ * prefix will be appended with 0 (i.e. result of IS_EMPTY)
  */
 #define DPL_APPEND_IS_EMPTY(PREFIX, ...) \
     DPL_PASTE(DPL_CONCAT(PREFIX, DPL_PASTE(DPL_IS_EMPTY(__VA_ARGS__))))

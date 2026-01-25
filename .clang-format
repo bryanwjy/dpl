@@ -97,35 +97,8 @@ IncludeCategories:
 
 IfMacros: ['DPL_TRY','DPL_IF_CONSTEVAL','DPL_IF_CONSTEXPR']
 AttributeMacros: []
-StatementMacros: ['DPL_NAMESPACE_BEGIN', 'DPL_NAMESPACE_END']
+StatementMacros: ['DPL_DEFAULT_NAMESPACE_BEGIN', 'DPL_DEFAULT_NAMESPACE_END']
 Macros:
-- DPL_CATCH(X)=else if ([](X){ return true; }())
-- DPL_NOEXCEPT(X)=noexcept(X)
-- DPL_THROWS=noexcept
-- DPL_INLINE_CXX17=inline
-- DPL_CONSTEXPR_CXX11=constexpr
-- DPL_CONSTEXPR_CXX14=constexpr
-- DPL_CONSTEXPR_CXX17=constexpr
-- DPL_CONSTEXPR_CXX20=constexpr
-- DPL_CONSTEXPR_CXX23=constexpr
-- DPL_CONSTEVAL=consteval
-- DPL_CONSTRAINT_CXX11(X)=,typename=enable_if_t<X>
-- DPL_CONSTRAINT_CXX11(X,Y)=,typename=enable_if_t<X,Y>
-- DPL_CONSTRAINT_CXX11(X,Y,Z)=,typename=enable_if_t<X,Y,Z>
-- DPL_CONSTRAINT_CXX20(X)=requires (X)
-- DPL_CONSTRAINT_CXX20(X,Y)=requires (X,Y)
-- DPL_CONSTRAINT_CXX20(X,Y,Z)=requires (X,Y,Z)
-- DPL_CONCEPT_CXX20(X)=type<X>
-- DPL_NODISCARD=[[nodiscard]]
-- DPL_ENABLE_IF_CXX11(X,Y)=enable_if_t<Y, X>
-- DPL_ATTRIBUTE(X)=[[X]]
-- DPL_ATTRIBUTES(X)=[[X]]
-- DPL_ATTRIBUTES(X,Y)=[[X,Y]]
-- DPL_ATTRIBUTES(X,Y,Z)=[[X,Y,Z]]
-- DPL_ATTRIBUTES(X,Y,Z,W)=[[X,Y,Z,W]]
-- DPL_NODISCARD=[[nodiscard]]
-- DPL_LIFETIMEBOUND=[[clang::lifetimebound]]
-- DPL_UNLIKELY=[[unlikely]]
-- DPL_LIKELY=[[likely]]
-- '__DPL=::utl::'
-
+- '__DPL=::rxx::'
+- 'DPL_CATCH(X)=else if ([](X){ return true; }())'
+- 'DPL_LIFETIMEBOUND=[[clang::lifetimebound]]'

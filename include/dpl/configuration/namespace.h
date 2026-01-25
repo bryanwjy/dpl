@@ -2,13 +2,11 @@
 
 #pragma once
 
-#include "configuration/utl_abi.h"
+#include "dpl/configuration/abi.h"
 
 #define DPL_NAMESPACE_BEGIN(NAME) namespace __DPL_PUBLIC_TYPE_VISIBILITY NAME {
 
 #define DPL_NAMESPACE_END(NAME) }
-
-#include <stddef.h>
 
 #ifdef _LIBCPP_ABI_NAMESPACE
 #  define DPL_STD_ABI_NAMESPACE_BEGIN inline namespace _LIBCPP_ABI_NAMESPACE {
@@ -24,6 +22,7 @@
 #endif
 
 /* extern C++ for MSVC > C++20, no effect anywhere else */
+/* Note: Does not apply to all std entities */
 #define DPL_STD_NAMESPACE_BEGIN                                              \
     DPL_EXTERN_CXX_BEGIN namespace DPL_ATTRIBUTE(TYPE_VISIBILITY("default")) \
         std {                                                                \

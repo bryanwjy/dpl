@@ -2,15 +2,22 @@
 
 #pragma once
 
-#include "preprocessor/utl_concatenation.h"
+#include "dpl/preprocessor/concatenation.h"
 
 #ifdef __apple_build_version__
 
-#  define __DPL_APPLE_CLANG_MAJOR DPL_CONCAT(__DPL_APPLE_TO_CLANG_MAJOR_, __apple_build_version__)
-#  define __DPL_APPLE_CLANG_MINOR DPL_CONCAT(__DPL_APPLE_TO_CLANG_MINOR_, __apple_build_version__)
-#  define __DPL_APPLE_CLANG_PATCH DPL_CONCAT(__DPL_APPLE_TO_CLANG_PATCH_, __apple_build_version__)
+#  define __DPL_APPLE_CLANG_MAJOR \
+      DPL_CONCAT(__DPL_APPLE_TO_CLANG_MAJOR_, __apple_build_version__)
+#  define __DPL_APPLE_CLANG_MINOR \
+      DPL_CONCAT(__DPL_APPLE_TO_CLANG_MINOR_, __apple_build_version__)
+#  define __DPL_APPLE_CLANG_PATCH \
+      DPL_CONCAT(__DPL_APPLE_TO_CLANG_PATCH_, __apple_build_version__)
 
 /* Define new version when needed, newest at the top */
+
+#  define __DPL_APPLE_TO_CLANG_MAJOR_17000013 19
+#  define __DPL_APPLE_TO_CLANG_MINOR_17000013 1
+#  define __DPL_APPLE_TO_CLANG_PATCH_17000013 4
 
 #  define __DPL_APPLE_TO_CLANG_MAJOR_16000023 17
 #  define __DPL_APPLE_TO_CLANG_MINOR_16000023 0

@@ -2,9 +2,9 @@
 
 #pragma once
 
-#include "configuration/utl_compiler.h"
-#include "configuration/utl_pragma.h"
-#include "configuration/utl_standard.h"
+#include "dpl/configuration/compiler.h" // IWYU pragma: keep
+#include "dpl/configuration/pragma.h"
+#include "dpl/configuration/standard.h" // IWYU pragma: keep
 
 #if DPL_SUPPORTS_GNU_ASM
 #  define DPL_COMPILER_BARRIER() __asm__ __volatile__("" ::: "memory")
@@ -18,6 +18,9 @@ void _ReadWriteBarrier();
 #  pragma intrinsic(_ReadWriteBarrier)
 #  define DPL_COMPILER_BARRIER() _ReadWriteBarrier()
 #else
+
+#  include "dpl/configuration/pragma.h"
+
 DPL_PRAGMA_WARN("Unrecognize compiler")
 #  define DPL_COMPILER_BARRIER()
 #endif

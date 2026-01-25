@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "configuration/utl_compiler.h"
+#include "dpl/configuration/compiler.h" // IWYU pragma: keep
 
 #if DPL_COMPILER_MSVC
 #  ifdef __cplusplus
@@ -13,6 +13,8 @@
 #endif
 
 #ifdef DPL_CXX
+
+#  include <cstddef> // IWYU pragma: export
 
 #  if DPL_CXX < 201103L
 #    error "C++11 is required"
@@ -58,8 +60,10 @@
 #    define DPL_EXPLICIT_IF(...)
 #    define DPL_IMPLICIT_IF(...) explicit
 #    define DPL_TEMPLATE_CXX11(...) , __VA_ARGS__
-#    define DPL_ENABLE_IF_CXX11(TYPE, ...) __DPL enable_if_t<(__VA_ARGS__), TYPE>
-#    define DPL_CONSTRAINT_CXX11(...) , __DPL enable_if_t<(__VA_ARGS__), int> = __LINE__
+#    define DPL_ENABLE_IF_CXX11(TYPE, ...) \
+        __DPL enable_if_t<(__VA_ARGS__), TYPE>
+#    define DPL_CONSTRAINT_CXX11(...) \
+        , __DPL enable_if_t<(__VA_ARGS__), int> = __LINE__
 #    define DPL_CONSTRAINT_CXX20(...)
 #    define DPL_CONCEPT_CXX20(...) typename
 #  endif /* DPL_CXX >= 202002L */
@@ -68,16 +72,17 @@
 #    define DPL_CXX23 1
 #    define DPL_CONSTEXPR_CXX23 constexpr
 #    define DPL_CONSTEVAL_CXX23 consteval
-#    define DPL_STATIC_CXX23 static
+#    define DPL_STATIC_CALL static
 #    define DPL_CONST_CALL
 #    define DPL_IF_CONSTEVAL(...) if consteval
 #  else /* DPL_CXX >= 202302L */
 #    define DPL_CONSTEXPR_CXX23
 #    define DPL_CONSTEVAL_CXX23 constexpr
-#    define DPL_STATIC_CXX23
+#    define DPL_STATIC_CALL
 #    define DPL_CONST_CALL const
 #    define DPL_IF_CONSTEVAL(...) \
-        if (DPL_CONSTANT_P(__VA_ARGS__)) /* This requires including 'utl_constant_p.h' */
+        if (DPL_CONSTANT_P(       \
+                __VA_ARGS__)) /* This requires including 'constant_p.h' */
 
 #  endif /* DPL_CXX >= 202302L */
 
@@ -100,11 +105,11 @@
 #else /* ifdef DPL_CXX */
 
 /* Not C++, so only define qualifiers usable on global functions/variables */
-#  define DPL_CONSTEXPR_CXX14 const
+#  define DPL_CONSTEXPR_CXX14
 #  define DPL_INLINE_CXX17
-#  define DPL_CONSTEXPR_CXX17 const
-#  define DPL_CONSTEXPR_CXX20 const
-#  define DPL_CONSTEXPR_CXX23 const
+#  define DPL_CONSTEXPR_CXX17
+#  define DPL_CONSTEXPR_CXX20
+#  define DPL_CONSTEXPR_CXX23
 #  define DPL_CONSTEVAL
 
 #endif /* ifdef DPL_CXX */

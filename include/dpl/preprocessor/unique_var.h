@@ -2,10 +2,11 @@
 
 #pragma once
 
-#include "configuration/utl_compiler.h"
-#include "preprocessor/utl_concatenation.h"
+#include "dpl/configuration/compiler.h"
+#include "dpl/preprocessor/concatenation.h"
 
-#if DPL_COMPILER_CLANG | DPL_COMPILER_GCC | DPL_COMPILER_MSVC | DPL_COMPILER_INTEL
+#if DPL_COMPILER_CLANG | DPL_COMPILER_GCC | DPL_COMPILER_MSVC | \
+    DPL_COMPILER_INTEL
 
 #  define DPL_UNIQUE_VAR(var) DPL_CONCAT(var, __COUNTER__)
 

@@ -1,0 +1,22 @@
+// Copyright 2025 Bryan Wong
+module;
+
+#define DPL_MODULES 1
+#include "dpl/config.h"
+
+export module dpl:std.utility;
+export import :std.stddef;
+import :std.type_traits;
+import :std.concepts;
+
+// IWYU pragma: begin_exports
+#include "dpl/std/utility/as_const.h"
+#include "dpl/std/utility/exchange.h"
+#include "dpl/std/utility/forward.h"
+#include "dpl/std/utility/move.h"
+#include "dpl/std/utility/sequence.h"
+#include "dpl/std/utility/to_signed.h"
+#include "dpl/std/utility/to_underlying.h"
+#include "dpl/std/utility/to_unsigned.h"
+#include "dpl/std/utility/unreachable.h"
+// IWYU pragma: end_exports

@@ -5,9 +5,10 @@
 /**
  * Concatenates the last token of the variadic argument with the first argument
  *
- * All of the arguments to a C preprocessor macro are fully expanded before the macro itself is
- * expanded, unless the # or ## operator is applied to them; then they're not expanded. So to get
- * full expansion before ##, pass the arguments through a wrapper macro that doesn't use ##.
+ * All of the arguments to a C preprocessor macro are fully expanded before the
+ * macro itself is expanded, unless the # or ## operator is applied to them;
+ * then they're not expanded. So to get full expansion before ##, pass the
+ * arguments through a wrapper macro that doesn't use ##.
  */
 #define DPL_SWAP_CONCAT(Y, ...) DPL_PRIMITIVE_SWAP_CONCAT(Y, __VA_ARGS__)
 /**

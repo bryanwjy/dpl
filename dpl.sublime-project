@@ -9,11 +9,33 @@
 	"settings":
 	{
 		"tab_size": 4,
-		"ClangFormat":
-		{
-			"format_on_save":true,
-			"style": "File"
-		}
+		"ClangFormat": {
+			"binary": "clang-format-21",
+		    "style": "File",
+		    "format_on_save": true,
+		    "languages": ["C", "C++", "C++11", "C++20"],
+		},
+		"LSP": {
+            "clangd": {
+                "initializationOptions": {
+                	"fallbackFlags": [
+                		"-O1",
+                		"-I/home/bryan/projects/dpl/include",
+                		"-mfma",
+                		"-msse4.2",
+                		"-mavx2",
+                		"-std=c++23",
+                	],
+                    "clangd.compile-commands-dir": "/home/bryan/projects/dpl",
+                    "clangd.clang-tidy": true,
+                    "clangd.background-index": true,
+                    "clangd.header-insertion": "never",
+                    "clangd.malloc-trim": true,
+                    "clangd.experimental-modules-support": true
+                },
+            	"enabled": true,
+			},
+        },
 	},
 	"syntax_override": {
 		".*\\.(h|cpp)$": ["cpp-sublime-syntax/C++20"]

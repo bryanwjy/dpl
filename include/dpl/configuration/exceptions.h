@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "configuration/utl_compiler.h"
+#include "dpl/configuration/compiler.h" // IWYU pragma: keep
 
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
 #  if defined(__cpp_exceptions)

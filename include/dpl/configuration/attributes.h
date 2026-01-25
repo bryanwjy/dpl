@@ -2,10 +2,10 @@
 
 #pragma once
 
-#include "configuration/utl_builtins.h"
-#include "configuration/utl_compiler.h"
-#include "configuration/utl_declspec.h"
-#include "configuration/utl_keywords.h"
+#include "dpl/configuration/compiler.h" // IWYU pragma: keep
+#include "dpl/configuration/declspec.h" // IWYU pragma: keep
+#include "dpl/configuration/keywords.h" // IWYU pragma: keep
+#include "dpl/configuration/standard.h"
 
 #if defined(__cplusplus) && defined(__has_cpp_attribute)
 #  define DPL_HAS_CPP_ATTRIBUTE(NAME) __has_cpp_attribute(NAME)
@@ -35,10 +35,6 @@
 #  define DPL_NODISCARD __attribute__((__warn_unused_result__))
 #  define __DPL_ATTRIBUTE_NODISCARD __warn_unused_result__
 #  define __DPL_ATTRIBUTE_TYPE_GNU_NODISCARD
-#elif DPL_HAS_KEYWORD(_Check_return_)
-#  define DPL_NODISCARD _Check_return_
-#  define __DPL_ATTRIBUTE_NODISCARD _Check_return_
-#  define __DPL_ATTRIBUTE_TYPE_MSVC_EXT_NODISCARD
 #else
 #  define DPL_NODISCARD
 #endif /* DPL_HAS_CPP_ATTRIBUTE(nodiscard) */
@@ -55,15 +51,18 @@
 #  define DPL_LIFETIMEBOUND [[msvc::lifetimebound]]
 #  define __DPL_ATTRIBUTE_LIFETIMEBOUND msvc::lifetimebound
 #  define __DPL_ATTRIBUTE_TYPE_CPP_LIFETIMEBOUND
-#elif DPL_HAS_CPP_ATTRIBUTE(clang::lifetimebound) /* DPL_HAS_CPP_ATTRIBUTE(msvc::lifetimebound) */
+#elif DPL_HAS_CPP_ATTRIBUTE( \
+    clang::lifetimebound) /* DPL_HAS_CPP_ATTRIBUTE(msvc::lifetimebound) */
 #  define DPL_LIFETIMEBOUND [[clang::lifetimebound]]
 #  define __DPL_ATTRIBUTE_LIFETIMEBOUND clang::lifetimebound
 #  define __DPL_ATTRIBUTE_TYPE_CPP_LIFETIMEBOUND
-#elif DPL_HAS_CPP_ATTRIBUTE(gnu::lifetimebound) /* DPL_HAS_CPP_ATTRIBUTE(msvc::lifetimebound) */
+#elif DPL_HAS_CPP_ATTRIBUTE( \
+    gnu::lifetimebound) /* DPL_HAS_CPP_ATTRIBUTE(msvc::lifetimebound) */
 #  define DPL_LIFETIMEBOUND [[gnu::lifetimebound]]
 #  define __DPL_ATTRIBUTE_LIFETIMEBOUND gnu::lifetimebound
 #  define __DPL_ATTRIBUTE_TYPE_CPP_LIFETIMEBOUND
-#elif DPL_HAS_GNU_ATTRIBUTE(__lifetimebound__) /* DPL_HAS_CPP_ATTRIBUTE(msvc::lifetimebound) */
+#elif DPL_HAS_GNU_ATTRIBUTE( \
+    __lifetimebound__) /* DPL_HAS_CPP_ATTRIBUTE(msvc::lifetimebound) */
 #  define DPL_LIFETIMEBOUND __attribute__((__lifetimebound__))
 #  define __DPL_ATTRIBUTE_LIFETIMEBOUND __lifetimebound__
 #  define __DPL_ATTRIBUTE_TYPE_GNU_LIFETIMEBOUND
@@ -129,9 +128,6 @@
 #elif DPL_HAS_GNU_ATTRIBUTE(__always_inline__)
 #  define __DPL_ATTRIBUTE_ALWAYS_INLINE __always_inline__
 #  define __DPL_ATTRIBUTE_TYPE_GNU_ALWAYS_INLINE
-#elif DPL_HAS_MSVC_KEYWORD(__forceinline)
-#  define __DPL_ATTRIBUTE_ALWAYS_INLINE __forceinline
-#  define __DPL_ATTRIBUTE_TYPE_MSVC_EXT_ALWAYS_INLINE
 #endif /* DPL_HAS_CPP_ATTRIBUTE(clang::always_inline) */
 
 #if DPL_HAS_CPP_ATTRIBUTE(msvc::noinline)
@@ -183,10 +179,7 @@
 #  endif /* DPL_HAS_CPP_ATTRIBUTE(clang::malloc) */
 #endif
 
-#if DPL_HAS_CPP_ATTRIBUTE(visibility)
-#  define __DPL_ATTRIBUTE_VISIBILITY visibility
-#  define __DPL_ATTRIBUTE_TYPE_CPP_VISIBILITY(VISIBILITY)
-#elif DPL_HAS_CPP_ATTRIBUTE(gnu::visibility)
+#if DPL_HAS_CPP_ATTRIBUTE(gnu::visibility)
 #  define __DPL_ATTRIBUTE_VISIBILITY gnu::visibility
 #  define __DPL_ATTRIBUTE_TYPE_CPP_VISIBILITY(VISIBILITY)
 #elif DPL_HAS_GNU_ATTRIBUTE(__visibility__)
@@ -307,6 +300,10 @@
 #  define DPL_NODEBUG [[clang::nodebug]]
 #  define __DPL_ATTRIBUTE_NODEBUG clang::nodebug
 #  define __DPL_ATTRIBUTE_TYPE_CPP_NODEBUG
+#elif DPL_HAS_CPP_ATTRIBUTE(gnu::nodebug)
+#  define DPL_NODEBUG [[gnu::nodebug]]
+#  define __DPL_ATTRIBUTE_NODEBUG gnu::nodebug
+#  define __DPL_ATTRIBUTE_TYPE_CPP_NODEBUG
 #else
 #  define DPL_NODEBUG
 #endif
@@ -338,8 +335,9 @@
 #if DPL_HAS_CPP_ATTRIBUTE(clang::vectorcall)
 #  define __DPL_ATTRIBUTE_VECTORCALL clang::vectorcall
 #  define __DPL_ATTRIBUTE_TYPE_CPP_VECTORCALL
-#elif DPL_HAS_KEYWORD(__vectorcall)
-#  define DPL_NODISCARD __vectorcall
-#  define __DPL_ATTRIBUTE_VECTORCALL __vectorcall
-#  define __DPL_ATTRIBUTE_TYPE_MSVC_EXT_VECTORCALL
 #endif /* DPL_HAS_CPP_ATTRIBUTE(clang::vectorcall) */
+
+#if DPL_HAS_DECLSPEC(empty_bases)
+#  define __DPL_ATTRIBUTE_EMPTY_BASES empty_bases
+#  define __DPL_ATTRIBUTE_TYPE_DECLSPEC_EMPTY_BASES
+#endif

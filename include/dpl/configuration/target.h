@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "configuration/utl_compiler.h"
+#include "dpl/configuration/compiler.h"
 
 #if DPL_COMPILER_CLANG
 
@@ -14,8 +14,8 @@
 #    define DPL_TARGET_SONY 1
 #  elif defined(RENAME_TO_NINTENDO_IDENTIFIER) /* NDA */
 #    define DPL_TARGET_NINTENDO 1
-#  elif defined(__FreeBSD__) || defined(__DragonFly__) || defined(__NetBSD__) || \
-      defined(__OpenBSD__)
+#  elif defined(__FreeBSD__) || defined(__DragonFly__) || \
+      defined(__NetBSD__) || defined(__OpenBSD__)
 #    define DPL_TARGET_BSD 1
 #  elif defined(__linux__)
 #    define DPL_TARGET_LINUX 1
@@ -31,8 +31,8 @@
 #    define DPL_TARGET_MICROSOFT 1
 #  elif defined(__APPLE__)
 #    define DPL_TARGET_APPLE 1
-#  elif defined(__FreeBSD__) || defined(__DragonFly__) || defined(__NetBSD__) || \
-      defined(__OpenBSD__)
+#  elif defined(__FreeBSD__) || defined(__DragonFly__) || \
+      defined(__NetBSD__) || defined(__OpenBSD__)
 #    define DPL_TARGET_BSD 1
 #  elif defined(__linux__)
 #    define DPL_TARGET_LINUX 1
@@ -52,8 +52,8 @@
 #    define DPL_TARGET_MICROSOFT 1
 #  elif defined(__APPLE__)
 #    define DPL_TARGET_APPLE 1
-#  elif defined(__FreeBSD__) || defined(__DragonFly__) || defined(__NetBSD__) || \
-      defined(__OpenBSD__)
+#  elif defined(__FreeBSD__) || defined(__DragonFly__) || \
+      defined(__NetBSD__) || defined(__OpenBSD__)
 #    define DPL_TARGET_BSD 1
 #  elif defined(__linux__)
 #    define DPL_TARGET_LINUX 1

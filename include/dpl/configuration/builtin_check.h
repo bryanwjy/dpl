@@ -2,9 +2,6 @@
 
 #pragma once
 
-#include "configuration/utl_compiler.h"
-#include "configuration/utl_standard.h"
-
 #ifdef __is_identifier
 #  define DPL_IS_RESERVED_IDENTIFIER(X) !__is_identifier(X)
 #else
@@ -12,7 +9,8 @@
 #endif
 
 #ifdef __has_builtin
-#  define DPL_HAS_BUILTIN(BUILTIN) (__has_builtin(BUILTIN) || DPL_IS_RESERVED_IDENTIFIER(BUILTIN))
+#  define DPL_HAS_BUILTIN(BUILTIN) \
+      (__has_builtin(BUILTIN) || DPL_IS_RESERVED_IDENTIFIER(BUILTIN))
 #else
 #  define DPL_HAS_BUILTIN(...) 0
 #endif /* ifdef __has_builtin */

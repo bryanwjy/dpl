@@ -2,20 +2,54 @@
 
 #pragma once
 
-#include "configuration/utl_architecture.h"
+#include "dpl/configuration/architecture.h"
+#include "dpl/configuration/compiler.h"
 
 #if DPL_ARCH_x86
 
-/* Use SSE4.2 as a minimum SIMD support */
+#  ifdef __SSE2__
+#    define DPL_SIMD_X86_SSE2 __SSE2__
+#  else
+// Always enabled on x64
+#    define DPL_SIMD_X86_SSE2 DPL_ARCH_x86_64
+#  endif
+
+#  ifdef __SSE3__
+#    define DPL_SIMD_X86_SSE3 __SSE3__
+#  endif
+
+#  ifdef __SSE4_1__
+#    define DPL_SIMD_X86_SSE4_1 __SSE4_1__
+#  endif
+
 #  ifdef __SSE4_2__
 #    define DPL_SIMD_X86_SSE4_2 __SSE4_2__
 #  endif
+
 #  ifdef __AVX__
+#    ifndef DPL_SIMD_X86_SSE3
+#      define DPL_SIMD_X86_SSE3 1
+#    endif
+#    ifndef DPL_SIMD_X86_SSE4_1
+#      define DPL_SIMD_X86_SSE4_1 1
+#    endif
+#    ifndef DPL_SIMD_X86_SSE4_2
+#      define DPL_SIMD_X86_SSE4_2 1
+#    endif
 #    define DPL_SIMD_X86_AVX __AVX__
+#  endif
+
+#  ifdef __FMA__
+#    define DPL_SIMD_X86_FMA __FMA__
 #  endif
 
 #  ifdef __AVX2__
 #    define DPL_SIMD_X86_AVX2 __AVX2__
+#    if DPL_COMPILER_MSVC
+#      ifndef __FMA__
+#        define DPL_SIMD_X86_FMA 1
+#      endif
+#    endif
 #  endif
 
 #  ifdef __AVX512BF16__

@@ -2,9 +2,10 @@
 
 #pragma once
 
-#include "configuration/utl_compiler.h"
-#include "configuration/utl_keywords.h"
-#include "configuration/utl_standard.h"
+#include "dpl/configuration/builtin_check.h"
+#include "dpl/configuration/compiler.h"
+#include "dpl/configuration/keywords.h"
+#include "dpl/configuration/standard.h"
 
 #if DPL_HAS_BUILTIN(__builtin_memcpy)
 
@@ -13,7 +14,8 @@
 #else
 
 #  if DPL_CXX
-extern "C" void* memcpy(void* DPL_RESTRICT, void const* DPL_RESTRICT, decltype(sizeof(0)));
+extern "C" void* memcpy(
+    void* DPL_RESTRICT, void const* DPL_RESTRICT, decltype(sizeof(0)));
 #  else
 #    include <stddef.h>
 void* memcpy(void* DPL_RESTRICT, void const* DPL_RESTRICT, size_t);

@@ -2,12 +2,12 @@
 
 #pragma once
 
-#include "configuration/utl_compiler.h"
-
-#include "preprocessor/utl_concatenation.h"
-#include "preprocessor/utl_is_empty.h"
+#include "dpl/configuration/compiler.h" // IWYU pragma: keep
 
 #if DPL_COMPILER_MSVC
+#  include "dpl/preprocessor/concatenation.h"
+#  include "dpl/preprocessor/is_empty.h"
+
 #  define DPL_HAS_DECLSPEC(NAME) DPL_IS_EMPTY(DPL_CONCAT(DPL_DECLSPEC_, NAME))
 
 #  define DPL_DECLSPEC_dllexport

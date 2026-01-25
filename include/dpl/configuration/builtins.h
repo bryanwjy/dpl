@@ -2,10 +2,10 @@
 
 #pragma once
 
-#include "configuration/utl_builtin_check.h"
-#include "configuration/utl_compiler.h"
-#include "configuration/utl_msvc_builtins.h"
-#include "configuration/utl_standard.h"
+#include "dpl/configuration/builtin_check.h"
+#include "dpl/configuration/compiler.h"
+#include "dpl/configuration/msvc_builtins.h" // IWYU pragma: keep
+#include "dpl/configuration/standard.h"      // IWYU pragma: keep
 
 #if DPL_HAS_BUILTIN(__builtin_launder)
 #  define DPL_BUILTIN_launder(X) __builtin_launder(X)
@@ -16,6 +16,10 @@
 #elif DPL_COMPILER_ICX
 #  define DPL_BUILTIN_launder(X) __builtin_launder(X)
 #endif /* DPL_HAS_BUILTIN(__builtin_launder) */
+
+#if DPL_HAS_BUILTIN(__builtin_invoke)
+#  define DPL_BUILTIN_invoke(...) __builtin_invoke(__VA_ARGS__)
+#endif
 
 #if DPL_HAS_BUILTIN(__builtin_addressof)
 #  define DPL_BUILTIN_addressof(X) __builtin_addressof(X)
@@ -65,16 +69,20 @@ void abort(void);
 #elif DPL_COMPILER_MSVC /* DPL_HAS_BUILTIN(__builtin_unreachable) */
 #  define DPL_BUILTIN_assume(...) __assume(__VA_ARGS__)
 #elif DPL_HAS_BUILTIN(__builtin_unreachable)
-#  define DPL_BUILTIN_assume(...) ((__VA_ARGS__) ? (void)0 : __builtin_unreachable())
+#  define DPL_BUILTIN_assume(...) \
+      ((__VA_ARGS__) ? (void)0 : __builtin_unreachable())
 #else
 #  define DPL_BUILTIN_assume(...) (void)0
 #endif /* DPL_HAS_BUILTIN(__builtin_assume) */
 
-#if DPL_HAS_BUILTIN(__is_layout_compatible) || DPL_COMPILER_GCC_AT_LEAST(12, 0, 0)
-#  define DPL_BUILTIN_is_layout_compatible(...) __is_layout_compatible(__VA_ARGS__)
+#if DPL_HAS_BUILTIN(__is_layout_compatible) || \
+    DPL_COMPILER_GCC_AT_LEAST(12, 0, 0)
+#  define DPL_BUILTIN_is_layout_compatible(...) \
+      __is_layout_compatible(__VA_ARGS__)
 #endif
 
-#if DPL_HAS_BUILTIN(__is_pointer_interconvertible_base_of) || DPL_COMPILER_GCC_AT_LEAST(12, 0, 0)
+#if DPL_HAS_BUILTIN(__is_pointer_interconvertible_base_of) || \
+    DPL_COMPILER_GCC_AT_LEAST(12, 0, 0)
 #  define DPL_BUILTIN_is_pointer_interconvertible_base_of(...) \
       __is_pointer_interconvertible_base_of(__VA_ARGS__)
 #endif

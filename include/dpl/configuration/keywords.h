@@ -2,14 +2,16 @@
 
 #pragma once
 
-#include "configuration/utl_compiler.h"
+#include "dpl/configuration/compiler.h"
+#include "dpl/preprocessor/is_empty.h"
 
 #if DPL_COMPILER_MSVC
 #  define DPL_HAS_KEYWORD(NAME)                            \
       DPL_IS_EMPTY(DPL_CONCAT(__DPL_KEYWORD_MSVC, NAME)) | \
           DPL_IS_EMPTY(DPL_CONCAT(__DPL_SAL_ANNOTATION, NAME))
 
-#  define DPL_HAS_SAL_ANNOTATION(NAME) DPL_IS_EMPTY(DPL_CONCAT(__DPL_SAL_ANNOTATION, NAME))
+#  define DPL_HAS_SAL_ANNOTATION(NAME) \
+      DPL_IS_EMPTY(DPL_CONCAT(__DPL_SAL_ANNOTATION, NAME))
 
 #  define DPL_CDECL __cdecl
 #  define DPL_FASTCALL __fastcall
@@ -34,7 +36,8 @@
 #  define __DPL_SAL_ANNOTATION_Check_return_
 
 #elif DPL_COMPILER_GNU_BASED
-#  define DPL_HAS_KEYWORD(NAME) DPL_IS_EMPTY(DPL_CONCAT(__DPL_GNU_KEYWORD, NAME))
+#  define DPL_HAS_KEYWORD(NAME) \
+      DPL_IS_EMPTY(DPL_CONCAT(__DPL_GNU_KEYWORD, NAME))
 
 #  define __DPL_KEYWORD_GNU__restrict__
 
