@@ -28,24 +28,32 @@ ARG_TARGETS := $(addsuffix .args, $(MODULE_SRCS:$(MODULES_DIR)/%=%))
 BMI_TARGETS := $(addsuffix .pcm, $(MODULE_SRCS:$(MODULES_DIR)/%=%))
 BMID_TARGETS := $(addsuffix .d, $(MODULE_SRCS:$(MODULES_DIR)/%=%))
 BMIPP_TARGETS := $(addsuffix .i, $(MODULE_SRCS:$(MODULES_DIR)/%=%))
+BMIJCMD_TARGETS := $(addsuffix .jcmd, $(MODULE_SRCS:$(MODULES_DIR)/%=%))
 
 OBJ_TARGETS := $(addsuffix .o, $(TU_SRCS:$(SRC_DIR)/%=%))
 OBJD_TARGETS := $(addsuffix .d, $(TU_SRCS:$(SRC_DIR)/%=%))
 OBJPP_TARGETS := $(addsuffix .i, $(TU_SRCS:$(SRC_DIR)/%=%))
+OBJJCMD_TARGETS := $(addsuffix .jcmd, $(TU_SRCS:$(SRC_DIR)/%=%))
 
-ALL_TARGETS := $(BMI_TARGETS) $(ARG_TARGETS) $(JDEP_TARGETS) $(BMID_TARGETS) $(BMIPP_TARGETS) $(OBJ_TARGETS) $(OBJD_TARGETS) $(OBJPP_TARGETS)
+JCMD_TARGETS := $(BMIJCMD_TARGETS) $(OBJJCMD_TARGETS)
+
+ALL_TARGETS := $(JDEP_TARGETS) $(ARG_TARGETS) $(BMI_TARGETS) $(BMID_TARGETS) \
+$(BMIPP_TARGETS) $(OBJ_TARGETS) $(OBJD_TARGETS) $(OBJPP_TARGETS) $(JCMD_TARGETS)
 
 BMI_DIR := $(OUTPUT_DIR)/modules
 OBJ_DIR := $(OUTPUT_DIR)/obj
 
-.PHONY: compile.command link.command dpl.jmap dpl.graph FORCE print all $(ALL_TARGETS)
 
-.SECONDARY:  %/ $(OUTPUT_DIR)/%.d $(OUTPUT_DIR)/%.i $(OUTPUT_DIR)/%.command $(OUTPUT_DIR)/%.stamp $(BMI_DIR)/%.jdep $(BMI_DIR)/%.args $(BMI_DIR)/%jmap
+.PHONY: compile.command link.command dpl.jmap dpl.graph FORCE print all compile_commands $(ALL_TARGETS)
 
-all: $(ARG_TARGETS)
+.SECONDARY:  %/ $(OUTPUT_DIR)/%.d $(OUTPUT_DIR)/%.i $(OUTPUT_DIR)/%.command \
+$(OUTPUT_DIR)/%.stamp  $(OUTPUT_DIR)/%.jcmd $(BMI_DIR)/%.jdep $(BMI_DIR)/%.args \
+$(BMI_DIR)/%jmap $(OUTPUT_DIR)/compile_commands.json
+
+all: $(BMI_TARGETS) $(OUTPUT_DIR)/compile_commands.json
 	@
 
-$(OUTPUT_DIR)/env.stamp: FORCE | $(OUTPUT_DIR)/
+$(OUTPUT_DIR)/env.stamp: FORCE
 	@mkdir -p '$(@D)'
 	@tmp=$@.tmp; \
 	printf "%s\n" \
@@ -57,17 +65,17 @@ $(OUTPUT_DIR)/env.stamp: FORCE | $(OUTPUT_DIR)/
 	| sha256sum > $$tmp && \
 	cmp -s $$tmp $@ || mv $$tmp $@
 
-$(OUTPUT_DIR)/compile.command: makefile $(ENV_STAMP) | $(OUTPUT_DIR)/
+$(OUTPUT_DIR)/compile.command: makefile $(OUTPUT_DIR)/env.stamp
 	@echo "$(CXX) $(CPPFLAGS) $(CXXFLAGS)" > $@
 
-$(OUTPUT_DIR)/link.command: makefile $(ENV_STAMP) | $(OUTPUT_DIR)/
+$(OUTPUT_DIR)/link.command: makefile $(OUTPUT_DIR)/env.stamp
 	@echo "$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) $(LDLIBS)" > $@
 
 compile.command: $(OUTPUT_DIR)/compile.command
-	@cat $<
+	@
 
 link.command: $(OUTPUT_DIR)/link.command
-	@cat $<
+	@
 
 dpl.jmap: $(BMI_DIR)/dpl.jmap
 	@
@@ -75,10 +83,10 @@ dpl.jmap: $(BMI_DIR)/dpl.jmap
 dpl.jgraph: $(BMI_DIR)/dpl.jgraph
 	@
 
-$(BMI_TARGETS):%.cppm.pcm: $(BMI_DIR)/%.cppm.pcm
+compile_commands: $(OUTPUT_DIR)/compile_commands.json
 	@
 
-$(BMID_TARGETS):%.cppm.d: $(BMI_DIR)/%.cppm.d
+$(BMI_TARGETS):%.cppm.pcm: $(BMI_DIR)/%.cppm.pcm
 	@
 
 $(ARG_TARGETS):%.cppm.args: $(BMI_DIR)/%.cppm.args
@@ -88,7 +96,12 @@ $(JDEP_TARGETS):%.cppm.jdep: $(BMI_DIR)/%.cppm.jdep
 	@
 
 $(BMI_DIR)/%.cppm.pcm: $(MODULES_DIR)/%.cppm $(BMI_DIR)/%.cppm.args
-	@
+	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) -MMD -MP -MF '$(@:.pcm=.d)' -MT '$@' --precompile $< -o '$@' @$(BMI_DIR)/$*.cppm.args
+
+-include $(addprefix $(BMI_DIR)/,$(BMID_TARGETS))
+
+$(BMI_DIR)/%.cppm.jcmd: $(OUTPUT_DIR)/compile.command $(BMI_DIR)/%.cppm.args
+	@echo "{ \"directory\": \"$(BMI_DIR)\", \"command\": \"$(CXX) $(CPPFLAGS) $(CXXFLAGS) --precompile $(MODULES_DIR)/$*.cppm -o $*.cppm.pcm @$*.cppm.args\", \"file\": \"$(MODULES_DIR)/$*.cppm\" }" > $@
 
 $(BMI_DIR)/%.cppm.jdep: $(MODULES_DIR)/%.cppm
 	@mkdir -p '$(@D)'
@@ -100,10 +113,11 @@ $(BMI_DIR)/dpl.jmap: $(TOOLS_DIR)/jdeps-to-jmap.jq $(addprefix $(BMI_DIR)/,$(JDE
 $(BMI_DIR)/dpl.jgraph: $(TOOLS_DIR)/jdeps-to-jgraph.jq $(addprefix $(BMI_DIR)/,$(JDEP_TARGETS)) 
 	@jq -s -f $^ > $@
 
+$(OUTPUT_DIR)/compile_commands.json: $(addprefix $(BMI_DIR)/,$(BMIJCMD_TARGETS)) $(addprefix $(OBJ_DIR)/,$(OBJJCMD_TARGETS)) 
+	@jq -s '.' $^ > $@
+
 $(BMI_DIR)/%.cppm.d: $(BMI_DIR)/%.cppm.jdep $(BMI_DIR)/dpl.jmap $(TOOLS_DIR)/jdep-to-d.jq
 	@jq -r --slurpfile jmap $(BMI_DIR)/dpl.jmap -f $(TOOLS_DIR)/jdep-to-d.jq $< > $@
-
--include $(addprefix $(BMI_DIR)/,$(BMID_TARGETS))
 
 $(BMI_DIR)/%.cppm.args: $(BMI_DIR)/dpl.jmap $(BMI_DIR)/dpl.jgraph $(BMI_DIR)/%.cppm.jdep
 	@jq -r --slurpfile jmap $(BMI_DIR)/dpl.jmap \

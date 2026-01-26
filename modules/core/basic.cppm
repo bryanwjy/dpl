@@ -5,7 +5,7 @@ module;
 #include "dpl/config.h"
 
 export module dpl:core.basic;
-import :core.fwd;
+export import :core.fwd;
 import :core.concepts;
 import :core.type_traits;
 import :std.concepts;

@@ -4,9 +4,6 @@
 #include "dpl/config.h"
 
 #include "dpl/core/concepts/common_abi_with.h"
-#include "dpl/core/concepts/common_class_with.h"
-#include "dpl/core/concepts/simd_abi.h"
-#include "dpl/core/concepts/simd_class.h"
 #include "dpl/core/concepts/simd_element.h"
 
 #if !DPL_MODULES
@@ -15,9 +12,7 @@
 #  include "dpl/std/bit/bit_cast.h"
 #  include "dpl/std/bit/bit_type.h"
 #  include "dpl/std/bit/char_bit.h"
-#  include "dpl/std/bit/has_single_bit.h"
 #  include "dpl/std/concepts/same_as.h"
-#  include "dpl/std/stddef/types.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN

@@ -3,14 +3,13 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/fwd.h"
-
 #include "dpl/core/concepts/common_abi_with.h"
 #include "dpl/core/concepts/common_basic_element_with.h"
 #include "dpl/core/concepts/simd_element.h"
 
 #if !DPL_MODULES
-#  include "dpl/std/bit/bit_cast.h"
+#  include "dpl/core/fwd.h"
+
 #  include "dpl/std/concepts/floating_point.h"
 #endif
 

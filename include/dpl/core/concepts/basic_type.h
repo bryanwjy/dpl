@@ -6,16 +6,12 @@
 #include "dpl/core/concepts/simd_abi.h"
 #include "dpl/core/concepts/simd_class.h"
 #include "dpl/core/concepts/simd_element.h"
-#include "dpl/core/concepts/simd_mask_type.h"
-#include "dpl/core/concepts/simd_type.h"
 
 #if !DPL_MODULES
 #  include "dpl/std/bit/bit_type.h"
 #  include "dpl/std/bit/char_bit.h"
+#  include "dpl/std/concepts/enumeration.h"
 #  include "dpl/std/concepts/integral.h"
-#  include "dpl/std/type_traits/is_enum.h"
-#  include "dpl/std/type_traits/is_signed.h"
-#  include "dpl/std/type_traits/underlying_type.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -63,6 +59,11 @@ concept basic_simd_type =
 DPL_EXPORT template <typename T>
 concept basic_simd_mask_type =
     basic_simd_class<T> && internal::simd_mask_specialization<T>;
+
+DPL_EXPORT template <enumeration T>
+struct basic_element<T> {
+    using type = T;
+};
 
 DPL_EXPORT template <floating_point T>
 requires (sizeof(T) == sizeof(int16))

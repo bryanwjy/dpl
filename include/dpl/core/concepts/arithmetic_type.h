@@ -6,7 +6,7 @@
 #include "dpl/core/concepts/basic_type.h"
 #include "dpl/core/concepts/simd_element.h"
 
-#if !DPL_MODULE
+#if !DPL_MODULES
 #  include "dpl/std/concepts/floating_point.h"
 #  include "dpl/std/concepts/integral.h"
 #endif

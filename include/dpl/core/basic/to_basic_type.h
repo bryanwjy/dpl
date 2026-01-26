@@ -21,7 +21,7 @@ constexpr T to_basic_type(T src) noexcept {
 template <simd_class T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr basic_type_t<T> to_basic_type(T src) noexcept {
-    if constexpr (requires { static_cast<basic_type_t<T>>(src); }) {
+    if constexpr (explicitly_convertible_to<T, basic_type_t<T>>) {
         return static_cast<basic_type_t<T>>(src);
     } else {
         return +src;

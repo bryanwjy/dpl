@@ -11,10 +11,8 @@
 #  include "dpl/core/fwd.h"
 
 #  include "dpl/core/concepts/basic_type.h"
-#  include "dpl/core/concepts/simd_class.h"
 #  include "dpl/core/type_traits/array_for.h"
 #  include "dpl/core/type_traits/basic_type.h"
-#  include "dpl/core/type_traits/bit_type.h"
 #  include "dpl/core/type_traits/iota_sequence.h"
 #  include "dpl/std/concepts/invocable.h"
 #endif

@@ -7,7 +7,7 @@
 #include "dpl/core/concepts/simd_mask_type.h"
 #include "dpl/core/concepts/simd_type.h"
 
-#if !DPL_MODULE
+#if !DPL_MODULES
 #  include "dpl/core/fwd/basic.h"
 #  include "dpl/core/type_traits/simd_element_type.h"
 #  include "dpl/std/concepts/same_as.h"

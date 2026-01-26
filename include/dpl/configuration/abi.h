@@ -11,7 +11,7 @@
 #include "dpl/preprocessor/to_string.h"
 
 #ifndef DPL_DEFAULT_ABI_PREFIX
-#  define DPL_DEFAULT_ABI_PREFIX DPL_TO_STRING(RXX)
+#  define DPL_DEFAULT_ABI_PREFIX DPL_TO_STRING(DPL)
 #  if DPL_CXX
 /* Ensure that the default tag is a string */
 static_assert(true, DPL_DEFAULT_ABI_PREFIX);

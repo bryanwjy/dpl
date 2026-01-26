@@ -5,16 +5,13 @@
 
 #include "dpl/core/concepts/simd_abi.h"
 #include "dpl/core/concepts/simd_element.h"
-#include "dpl/core/concepts/simd_type.h"
 
-#if !DPL_MODULE
+#if !DPL_MODULES
 #  include "dpl/core/fwd/basic.h"
+#  include "dpl/std/concepts/enumeration.h"
 #  include "dpl/std/concepts/floating_point.h"
 #  include "dpl/std/concepts/integral.h"
 #  include "dpl/std/concepts/same_as.h"
-#  include "dpl/std/type_traits/is_constructible.h"
-#  include "dpl/std/type_traits/is_convertible.h"
-#  include "dpl/std/type_traits/is_enum.h"
 #  include "dpl/std/type_traits/is_object.h"
 #  include "dpl/std/type_traits/is_trivially_copyable.h"
 #endif
@@ -61,7 +58,7 @@ DPL_EXPORT template <typename T>
 concept floating_point_simd =
     simd_type<T> && floating_point<simd_element_type_t<T>>;
 DPL_EXPORT template <typename T>
-concept enum_simd = simd_type<T> && is_enum_v<simd_element_type_t<T>>;
+concept enumeration_simd = simd_type<T> && enumeration<simd_element_type_t<T>>;
 
 } // namespace datapar
 

@@ -7,7 +7,7 @@
 #include "dpl/core/concepts/simd_element.h"
 #include "dpl/core/concepts/simd_type.h"
 
-#if !DPL_MODULE
+#if !DPL_MODULES
 #  include "dpl/core/fwd/basic.h"
 #  include "dpl/std/concepts/same_as.h"
 #  include "dpl/std/type_traits/is_constructible.h"

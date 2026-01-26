@@ -26,7 +26,7 @@
                 		"-mavx2",
                 		"-std=c++23",
                 	],
-                    "clangd.compile-commands-dir": "/home/bryan/projects/dpl",
+                    "clangd.compile-commands-dir": "/home/bryan/projects/dpl/build",
                     "clangd.clang-tidy": true,
                     "clangd.background-index": true,
                     "clangd.header-insertion": "never",

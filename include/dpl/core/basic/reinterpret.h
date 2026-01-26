@@ -3,14 +3,12 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/basic/aligned.h"
 #include "dpl/core/basic/extract.h"
 #include "dpl/core/basic/immediate.h"
 #include "dpl/core/basic/load.h"
 #include "dpl/core/basic/store.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/fwd.h"
 
 #  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/common_abi_with.h"
@@ -95,7 +93,7 @@ public:
         if consteval {
             using To = rebind_simd_t<T, E>;
             return []<size_t... Is>(T arg, index_sequence<Is...>) {
-                return dx::initialize<To>(arg[Is]...);
+                return dx::initialize<To>(dx::extract(arg, imm<Is>)...);
             }(arg, iota_sequence<To>);
         } else {
             if constexpr (requires(T arg) {

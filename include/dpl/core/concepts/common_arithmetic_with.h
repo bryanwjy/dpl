@@ -8,10 +8,6 @@
 #include "dpl/core/concepts/common_bits_with.h"
 #include "dpl/core/concepts/common_float_with.h"
 
-#if !DPL_MODULES
-#  include "dpl/std/concepts/same_as.h"
-#endif
-
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 

@@ -3,7 +3,7 @@
 
 #include "dpl/config.h"
 
-#if !DPL_MODULE
+#if !DPL_MODULES
 #  include "dpl/std/concepts/floating_point.h"
 #  include "dpl/std/concepts/integral.h"
 #  include "dpl/std/concepts/regular.h"

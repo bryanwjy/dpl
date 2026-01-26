@@ -6,8 +6,6 @@
 #include "dpl/core/basic/to_basic_type.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/fwd.h"
-
 #  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_class.h"

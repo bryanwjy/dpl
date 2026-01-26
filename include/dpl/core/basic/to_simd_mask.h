@@ -15,7 +15,7 @@
 #  include "dpl/core/type_traits/iota_sequence.h"
 #  include "dpl/core/type_traits/to_simd_mask_type.h"
 #  include "dpl/std/bit/bit_cast.h"
-#  include "dpl/std/type_traits/is_enum.h"
+#  include "dpl/std/concepts/enumeration.h"
 #  include "dpl/std/utility/sequence.h"
 #  include "dpl/std/utility/to_signed.h"
 #  include "dpl/std/utility/to_underlying.h"
@@ -40,8 +40,7 @@ void to_simd_mask(...) noexcept = delete;
 
 struct to_simd_mask_t {
 private:
-    template <typename T>
-    requires is_enum_v<T>
+    template <enumeration T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr bool is_true(T val) noexcept {
         return is_true(__DPL to_underlying(val));

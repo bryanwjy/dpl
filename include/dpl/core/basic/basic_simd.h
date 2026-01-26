@@ -10,15 +10,12 @@
 #include "dpl/core/basic/reinterpret.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/fwd.h"
-
-#  include "dpl/core/concepts/common_order_with.h"
+#  include "dpl/core/concepts/common_arithmetic_with.h"
+#  include "dpl/core/concepts/common_order_with.h" // IWYU pragma: keep
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_element.h"
 #  include "dpl/core/type_traits/element_count.h"
 #  include "dpl/std/concepts/different_from.h"
-#  include "dpl/std/concepts/same_as.h"
-#  include "dpl/std/type_traits/is_enum.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -41,8 +38,22 @@ public:
         : data_(vec) {}
 
     template <different_from<E> E2>
-    requires simd_element<E2> && common_order_with<E2, E>
-    __DPL_HIDE_FROM_ABI constexpr basic_simd(
+    requires (!enumeration<E2> && !enumeration<E>) &&
+        common_arithmetic_with<E2, E>
+    __DPL_HIDE_FROM_ABI explicit(!is_convertible_v<E2, E> ||
+        !common_order_with<E2, E>) constexpr basic_simd(basic_simd<E2, abi_type>
+            other) noexcept
+        : basic_simd(datapar::reinterpret<basic_simd>(other)) {}
+
+    template <integral E2>
+    requires enumeration<E> && same_as<underlying_type_t<E>, E2>
+    __DPL_HIDE_FROM_ABI explicit constexpr basic_simd(
+        basic_simd<E2, abi_type> other) noexcept
+        : basic_simd(datapar::reinterpret<basic_simd>(other)) {}
+
+    template <enumeration E2>
+    requires same_as<underlying_type_t<E2>, E>
+    __DPL_HIDE_FROM_ABI explicit(scoped_enumeration<E2>) constexpr basic_simd(
         basic_simd<E2, abi_type> other) noexcept
         : basic_simd(datapar::reinterpret<basic_simd>(other)) {}
 
@@ -52,9 +63,13 @@ public:
         : basic_simd(datapar::broadcast<A>(scalar)) {}
 
     template <typename... Args>
-    requires regular_invocable<internal::initialize_t<A>, Args...>
-    __DPL_HIDE_FROM_ABI constexpr basic_simd(Args&&... args) noexcept
-        : basic_simd(datapar::initialize<A>(__DPL forward<Args>(args)...)) {}
+    requires regular_invocable<internal::initialize_t<basic_simd>, Args...>
+    __DPL_HIDE_FROM_ABI explicit(
+        !same_as<invoke_result_t<internal::initialize_t<A>, Args...>,
+            basic_simd>) constexpr basic_simd(Args&&... args) noexcept
+        : basic_simd(
+              datapar::initialize<basic_simd>(__DPL forward<Args>(args)...)) {
+    }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     constexpr auto DPL_VECTORCALL operator+(this basic_simd self) noexcept {
