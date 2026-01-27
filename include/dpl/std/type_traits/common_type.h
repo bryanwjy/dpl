@@ -4,7 +4,8 @@
 
 #include "dpl/config.h"
 
-#include "dpl/std/type_traits/constants.h"
+#include "dpl/std/type_traits/decay.h"
+#include "dpl/std/type_traits/declval.h"
 #include "dpl/std/type_traits/is_same.h"
 #include "dpl/std/type_traits/remove_reference.h"
 
@@ -25,12 +26,8 @@ using common_type_t DPL_NODEBUG = typename common_type<Ts...>::type;
 namespace details::common_type {
 template <typename T, typename U>
 using ternary_result_t DPL_NODEBUG = decltype([]() {
-    return false ? static_cast < T && (*)() > (0)()
-                 : static_cast < U && (*)() > (0)();
+    return false ? __DPL declval<T>() : __DPL declval<U>();
 }());
-
-template <typename T>
-using decay_t DPL_NODEBUG = decltype([](T&& val) { return val; });
 
 template <typename T, typename U>
 struct impl2 {};

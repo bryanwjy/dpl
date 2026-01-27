@@ -4,5 +4,5 @@
 #include "dpl/config.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/concepts/common_abi_with.h"
+#  include "dpl/core/concepts/common_abi_with.h" // IWYU pragma: export
 #endif

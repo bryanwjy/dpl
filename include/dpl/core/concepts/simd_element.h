@@ -4,13 +4,10 @@
 #include "dpl/config.h"
 
 #if !DPL_MODULES
+#  include "dpl/std/concepts/enumeration.h"
 #  include "dpl/std/concepts/floating_point.h"
 #  include "dpl/std/concepts/integral.h"
-#  include "dpl/std/concepts/regular.h"
 #  include "dpl/std/concepts/same_as.h"
-#  include "dpl/std/concepts/totally_ordered.h"
-#  include "dpl/std/type_traits/is_enum.h"
-#  include "dpl/std/type_traits/is_trivially_copyable.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -19,7 +16,7 @@ namespace datapar {
 
 DPL_EXPORT template <typename T>
 concept simd_element =
-    !same_as<T, bool> && (integral<T> || floating_point<T> || is_enum_v<T>);
+    !same_as<T, bool> && (integral<T> || floating_point<T> || enumeration<T>);
 
 DPL_EXPORT template <typename T>
 struct simd_element_type {};

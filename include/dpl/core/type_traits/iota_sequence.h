@@ -6,7 +6,6 @@
 #include "dpl/core/type_traits/element_count.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/concepts/simd_class.h"
 #  include "dpl/std/utility/sequence.h"
 #endif
 

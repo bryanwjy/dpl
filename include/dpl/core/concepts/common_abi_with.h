@@ -16,6 +16,13 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
+/**
+ * Pairwise trait of common_abi where both template arguments satisfies
+ * simd_abi, may be partially specialized to define a common operating
+ * ABI. The common abi functionalities are invoked whenever there are
+ * differing ABIs between simd classes for non-basic binary or ternary
+ * operations.
+ */
 DPL_EXPORT template <typename... T>
 struct common_abi {};
 
@@ -64,7 +71,7 @@ concept common_abi_with =
     });
 
 DPL_EXPORT template <typename A, typename B>
-concept same_abi_with = common_abi_with<A, B> && same_as<A, B>;
+concept same_abi_as = common_abi_with<A, B> && same_as<A, B>;
 
 DPL_EXPORT template <typename A, typename B>
 concept simd_common_abi_with =
@@ -72,8 +79,8 @@ concept simd_common_abi_with =
     common_abi_with<typename A::abi_type, typename B::abi_type>;
 
 DPL_EXPORT template <typename A, typename B>
-concept simd_same_abi_with = simd_common_abi_with<A, B> &&
-    same_abi_with<typename A::abi_type, typename B::abi_type>;
+concept simd_same_abi_as = simd_common_abi_with<A, B> &&
+    same_abi_as<typename A::abi_type, typename B::abi_type>;
 } // namespace datapar
 
 DPL_DEFAULT_NAMESPACE_END

@@ -19,6 +19,8 @@ export import :std.stddef;
 #include "dpl/std/type_traits/constants.h"
 #include "dpl/std/type_traits/copy_cv.h"
 #include "dpl/std/type_traits/copy_cvref.h"
+#include "dpl/std/type_traits/decay.h"
+#include "dpl/std/type_traits/declval.h"
 #include "dpl/std/type_traits/enable_if.h"
 #include "dpl/std/type_traits/extent.h"
 #include "dpl/std/type_traits/has_unique_object_representations.h"

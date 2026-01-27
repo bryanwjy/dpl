@@ -4,6 +4,7 @@
 #include "dpl/config.h"
 
 #include "dpl/core/concepts/common_abi_with.h"
+#include "dpl/core/concepts/common_size_with.h"
 #include "dpl/core/concepts/simd_element.h"
 
 #if !DPL_MODULES
@@ -19,12 +20,12 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
 namespace internal {
-template <typename T>
-using bit_for_t = typename bit_type<sizeof(T) * char_bit_v>::type;
-}
 
-DPL_EXPORT template <typename A, typename B>
-concept common_bits_with = sizeof(A) == sizeof(B) &&
+template <typename T>
+using bit_for_t DPL_NODEBUG = typename bit_type<sizeof(T) * char_bit_v>::type;
+
+template <typename A, typename B>
+concept common_bits_with = same_as<A, B> || (common_size_with<A, B> &&
     requires {
         typename internal::bit_for_t<A>;
         typename internal::bit_for_t<B>;
@@ -34,7 +35,41 @@ concept common_bits_with = sizeof(A) == sizeof(B) &&
         __DPL bit_cast<A>(b);
         __DPL bit_cast<internal::bit_for_t<A>>(a);
         __DPL bit_cast<internal::bit_for_t<B>>(b);
-    };
+    });
+
+template <typename T, typename U>
+concept enum_bit_operable = (flag_enumeration<T> && same_as<T, U>) ||
+    (unscoped_enumeration<T> &&
+        (same_as<T, U> || (integral<U> && common_bits_with<T, U>)) &&
+        requires(T lhs, U rhs) {
+            requires !requires { operator&(lhs, rhs); } ||
+                requires { lhs & rhs; };
+            requires !requires { operator|(lhs, rhs); } ||
+                requires { lhs | rhs; };
+            requires !requires { operator^(lhs, rhs); } ||
+                requires { lhs ^ rhs; };
+            requires !requires { operator~(lhs); } || requires { ~lhs; };
+        });
+
+/**
+ * An enum, T, is common bit with itself iff T statisfies flag_enumeration or T
+ * is an unscoped enumeration that does not have any bitwise operations with
+ * itself found via ADL.
+ *
+ * An unscoped enum, T, is common bit with an integral U, if they satisfies
+ * internal::common_bits_with and no bitwise operations between T and U are
+ * found via ADL
+ */
+template <typename T, typename U>
+concept enum_common_bits_with = (enumeration<T> && enum_bit_operable<T, U>) ||
+    (enumeration<U> && enum_bit_operable<U, T>);
+
+} // namespace internal
+
+DPL_EXPORT template <typename A, typename B>
+concept common_bits_with =
+    (!enumeration<A> && !enumeration<B> && internal::common_bits_with<A, B>) ||
+    internal::enum_bit_operable<A, B>;
 
 DPL_EXPORT template <typename A, typename B>
 concept simd_common_bits_with = simd_common_abi_with<A, B> &&

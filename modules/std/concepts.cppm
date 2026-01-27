@@ -14,6 +14,7 @@ import :std.type_traits;
 #include "dpl/std/concepts/assignable_from.h"
 #include "dpl/std/concepts/boolean_testable.h"
 #include "dpl/std/concepts/common_reference_with.h"
+#include "dpl/std/concepts/common_with.h"
 #include "dpl/std/concepts/constructible_from.h"
 #include "dpl/std/concepts/convertible_to.h"
 #include "dpl/std/concepts/copy_constructible.h"

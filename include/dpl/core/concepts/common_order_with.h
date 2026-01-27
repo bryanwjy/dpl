@@ -3,14 +3,15 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/concepts/arithmetic_type.h"
 #include "dpl/core/concepts/common_abi_with.h"
-#include "dpl/core/concepts/common_bits_with.h"
 #include "dpl/core/concepts/common_float_with.h"
 #include "dpl/core/concepts/common_integral_with.h"
 
 #if !DPL_MODULES
 #  include "dpl/std/concepts/enumeration.h"
 #  include "dpl/std/concepts/same_as.h"
+#  include "dpl/std/concepts/totally_ordered.h"
 #  include "dpl/std/type_traits/underlying_type.h"
 #endif
 
@@ -41,7 +42,7 @@ concept naturally_ordered_enum =
  * operations found via ADL
  */
 template <typename T, typename U>
-concept enum_comparable_to = (same_as<T, U> && naturally_ordered_enum<T>) ||
+concept enum_comparable = (same_as<T, U> && naturally_ordered_enum<T>) ||
     (enumeration<T> && common_integral_with<U, underlying_type_t<T>> &&
         totally_ordered_with<T, U> && requires(T lhs, U rhs) {
             requires !requires { operator<(lhs, rhs); };
@@ -57,15 +58,17 @@ concept enum_comparable_to = (same_as<T, U> && naturally_ordered_enum<T>) ||
         });
 
 template <typename T, typename U>
-concept enum_common_order_with = (enumeration<T> && enum_comparable_to<T, U>) ||
-    (enumeration<U> && enum_comparable_to<U, T>);
+concept enum_common_order_with = (enumeration<T> && enum_comparable<T, U>) ||
+    (enumeration<U> && enum_comparable<U, T>);
 
 } // namespace internal
 
 DPL_EXPORT template <typename A, typename B>
-concept common_order_with = (common_bits_with<A, B> &&
-    (same_as<A, B> || common_float_with<A, B> || common_integral_with<A, B> ||
-        internal::enum_common_order_with<A, B>));
+concept common_order_with = sizeof(A) == sizeof(B) &&
+    ((arithmetic_type<A> && arithmetic_type<B> &&
+         (same_as<A, B> || common_float_with<A, B> ||
+             common_integral_with<A, B>)) ||
+        internal::enum_common_order_with<A, B>);
 
 DPL_EXPORT template <typename A, typename B>
 concept simd_common_order_with = simd_common_abi_with<A, B> &&

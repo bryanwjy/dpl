@@ -6,7 +6,6 @@
 #if !DPL_MODULES
 #  include "dpl/core/fwd.h"
 
-#  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/simd_class.h"
 #  include "dpl/core/concepts/simd_mask_type.h"
 #  include "dpl/core/concepts/simd_type.h"

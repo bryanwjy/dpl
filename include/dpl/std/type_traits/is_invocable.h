@@ -5,7 +5,9 @@
 #include "dpl/config.h"
 
 #include "dpl/std/type_traits/constants.h"
+#include "dpl/std/type_traits/declval.h"
 #include "dpl/std/type_traits/is_void.h"
+
 #if !__DPL_SHOULD_USE_BUILTIN(builtin_invoke)
 #  include "dpl/std/type_traits/add_const.h"
 #  include "dpl/std/type_traits/is_base_of.h"
@@ -18,18 +20,6 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 
 #if __DPL_SHOULD_USE_BUILTIN(builtin_invoke)
-
-namespace details {
-struct invoke_t {
-    template <typename T>
-    __DPL_HIDE_FROM_ABI static T&& decl(int) noexcept;
-    template <typename T>
-    __DPL_HIDE_FROM_ABI static T decl(float) noexcept;
-    template <typename T>
-    __DPL_HIDE_FROM_ABI static auto decl() noexcept
-        -> decltype(invoke_t::decl<T>(0));
-};
-} // namespace details
 
 #  define __DPL_BUILTIN_invoke(...) __builtin_invoke(__VA_ARGS__)
 
@@ -80,26 +70,18 @@ template <typename T>
 concept not_ref_wrapper = !is_wrapped<remove_cvref_t<T>>;
 
 struct invoke_t {
-    template <typename T>
-    __DPL_HIDE_FROM_ABI static T&& decl(int) noexcept;
-    template <typename T>
-    __DPL_HIDE_FROM_ABI static T decl(float) noexcept;
-    template <typename T>
-    __DPL_HIDE_FROM_ABI static auto decl() noexcept
-        -> decltype(invoke_t::decl<T>(0));
-
     DPL_EXPORT template <typename F, typename... Args>
     __DPL_HIDE_FROM_ABI constexpr auto
     operator()(F&& func, Args&&... args) noexcept(
-        noexcept(invoke_t::decl<F>()(invoke_t::decl<Args>()...)))
-        -> decltype(invoke_t::decl<F>()(invoke_t::decl<Args>()...)) {
+        noexcept(__DPL declval<F>()(__DPL declval<Args>()...)))
+        -> decltype(__DPL declval<F>()(__DPL declval<Args>()...)) {
         return static_cast<F&&>(func)(static_cast<Args&&>(args)...);
     }
 
     template <object C, not_function P, object O>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto operator()(P C::* member, O&& obj) noexcept
-        -> decltype(invoke_t::decl<O>().*member) {
+        -> decltype(__DPL declval<O>().*member) {
         return static_cast<O&&>(obj).*member;
     }
 
@@ -114,15 +96,15 @@ struct invoke_t {
     requires not_ref_wrapper<O>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto operator()(P C::* member, O&& obj) noexcept
-        -> decltype((*invoke_t::decl<O>()).*member) {
+        -> decltype((*__DPL declval<O>()).*member) {
         return (*static_cast<O&&>(obj)).*member;
     }
 
     template <object C, function P, object O, typename... Args>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto operator()(
-        P C::* member, O&& obj, Args&&... args) noexcept
-        -> decltype((invoke_t::decl<O>().*member)(invoke_t::decl<Args>()...)) {
+    static constexpr auto operator()(P C::* member, O&& obj,
+        Args&&... args) noexcept -> decltype((__DPL declval<O>().*
+        member)(__DPL declval<Args>()...)) {
         return (static_cast<O&&>(obj).*member)(static_cast<Args&&>(args)...);
     }
 
@@ -130,7 +112,7 @@ struct invoke_t {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto operator()(
         P C::* member, O&& obj, Args&&... args) noexcept
-        -> decltype((obj.get().*member)(invoke_t::decl<Args>()...)) {
+        -> decltype((obj.get().*member)(__DPL declval<Args>()...)) {
         return (obj.get().*member)(static_cast<Args&&>(args)...);
     }
 
@@ -138,8 +120,8 @@ struct invoke_t {
     requires not_ref_wrapper<O>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto operator()(P C::* member, O&& obj,
-        Args&&... args) noexcept -> decltype(((*invoke_t::decl<O>()).*
-        member)(invoke_t::decl<Args>()...)) {
+        Args&&... args) noexcept -> decltype(((*__DPL declval<O>()).*
+        member)(__DPL declval<Args>()...)) {
         return ((*static_cast<O&&>(obj)).*member)(static_cast<Args&&>(args)...);
     }
 };
@@ -154,7 +136,7 @@ inline constexpr invoke_t invoke{};
 
 DPL_EXPORT template <typename F, typename... Args>
 using invoke_result_t = decltype(__DPL_BUILTIN_invoke(
-    details::invoke_t::decl<F>(), details::invoke_t::decl<Args>()...));
+    __DPL declval<F>(), __DPL declval<Args>()...));
 
 DPL_EXPORT template <typename F, typename... Args>
 struct invoke_result {};
@@ -174,9 +156,8 @@ inline constexpr bool is_nothrow_invocable_v = false;
 
 DPL_EXPORT template <typename F, typename... Args>
 requires is_invocable_v<F, Args...>
-inline constexpr bool is_nothrow_invocable_v<F, Args...> =
-    noexcept(__DPL_BUILTIN_invoke(
-        details::invoke_t::decl<F>(), details::invoke_t::decl<Args>()...));
+inline constexpr bool is_nothrow_invocable_v<F, Args...> = noexcept(
+    __DPL_BUILTIN_invoke( __DPL declval<F>(), __DPL declval<Args>()...));
 
 DPL_EXPORT template <typename R, typename F, typename... Args>
 inline constexpr bool is_invocable_r_v = false;

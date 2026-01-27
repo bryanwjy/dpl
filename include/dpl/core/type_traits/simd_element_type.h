@@ -4,5 +4,5 @@
 #include "dpl/config.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/concepts/simd_element.h"
+#  include "dpl/core/concepts/simd_element.h" // IWYU pragma: export
 #endif

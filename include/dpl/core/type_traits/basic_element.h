@@ -4,5 +4,5 @@
 #include "dpl/config.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/concepts/basic_type.h"
+#  include "dpl/core/concepts/basic_type.h" // IWYU pragma: export
 #endif
