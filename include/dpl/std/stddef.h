@@ -8,5 +8,7 @@
 #  error "This public header is only for legacy builds"
 #endif
 
+// IWYU pragma: begin_exports
 #include "dpl/std/stddef/namespace.h"
 #include "dpl/std/stddef/types.h"
+// IWYU pragma: end_exports

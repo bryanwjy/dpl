@@ -8,7 +8,6 @@
 #  include "dpl/core/concepts/simd_class.h"
 #  include "dpl/std/concepts/convertible_to.h"
 #  include "dpl/std/concepts/derived_from.h"
-#  include "dpl/std/concepts/invocable.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN

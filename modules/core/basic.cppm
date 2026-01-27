@@ -20,6 +20,7 @@ import :std.utility;
 #include "dpl/core/basic/broadcastable_base.h"
 #include "dpl/core/basic/extract.h"
 #include "dpl/core/basic/immediate.h"
+#include "dpl/core/basic/immediate_mask.h"
 #include "dpl/core/basic/initialize.h"
 #include "dpl/core/basic/load.h"
 #include "dpl/core/basic/reinterpret.h"

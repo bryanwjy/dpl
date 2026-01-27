@@ -1,0 +1,33 @@
+// Copyright 2025-2026 Bryan Wong
+#pragma once
+
+#include "dpl/config.h"
+
+#if !DPL_MODULES
+#  include "dpl/core/basic/broadcastable_base.h"
+#  include "dpl/std/concepts/convertible_to.h"
+#endif
+
+DPL_DEFAULT_NAMESPACE_BEGIN
+namespace datapar {
+
+DPL_EXPORT
+struct rcp_pi_t : broadcastable_base {
+    __DPL_HIDE_FROM_ABI explicit constexpr rcp_pi_t() noexcept = default;
+
+    template <floating_point T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    constexpr operator T(this rcp_pi_t) noexcept {
+        return 0.318309886183790671537767526745028;
+    }
+};
+
+DPL_EXPORT
+inline constexpr rcp_pi_t rcp_pi{};
+
+DPL_EXPORT template <typename T>
+requires explicitly_convertible_to<rcp_pi_t, T>
+inline constexpr auto rcp_pi_v = static_cast<T>(rcp_pi);
+
+} // namespace datapar
+DPL_DEFAULT_NAMESPACE_END
