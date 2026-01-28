@@ -3,6 +3,8 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/concepts/simd_type.h"
+
 #if !DPL_MODULES
 #  include "dpl/std/concepts/enumeration.h"
 #  include "dpl/std/concepts/floating_point.h"
@@ -27,12 +29,19 @@ concept naturally_arithmetic_enum = unscoped_enumeration<T> && requires(T val) {
     requires !requires { operator*(val, val); } && requires {
         { val * val } -> underlying_type_of<T>;
     };
+    requires !requires { operator-(val); } && requires {
+        { -val } -> underlying_type_of<T>;
+    };
 };
 } // namespace internal
 DPL_EXPORT template <typename T>
 concept arithmetic_type = !same_as<T, bool> &&
     (integral<T> || floating_point<T> ||
         internal::naturally_arithmetic_enum<T>);
+
+DPL_EXPORT template <typename T>
+concept arithmetic_simd =
+    simd_type<T> && arithmetic_type<typename T::value_type>;
 
 } // namespace datapar
 

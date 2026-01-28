@@ -24,8 +24,12 @@ struct min_value_t : broadcastable_base {
     template <integral T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     constexpr operator T(this min_value_t) noexcept {
-        return static_cast<T>(
-            static_cast<T>(1) << (char_bit_v * sizeof(T) - 1));
+        if constexpr (signed_integral<T>) {
+            constexpr auto shift = char_bit_v * sizeof(T) - 1;
+            return static_cast<T>(static_cast<T>(1) << shift);
+        } else {
+            return 0;
+        }
     }
 
     template <floating_point T>

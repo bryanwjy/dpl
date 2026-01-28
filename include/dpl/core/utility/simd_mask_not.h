@@ -49,14 +49,14 @@ public:
         simd_mask_not<T, A> other) noexcept
         : simd_mask_not(+datapar::reinterpret<E>(!other)) {}
 
-    template <simd_common_bits_with<simd_type> T>
+    template <common_bits_simd_with<simd_type> T>
     requires same_as<mask_type, vector_type>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     explicit operator T(this simd_mask_not self) noexcept {
         // return datapar::bwnot(!self);
     }
 
-    template <simd_common_bits_with<simd_type> T>
+    template <common_bits_simd_with<simd_type> T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     explicit operator T(this simd_mask_not self) noexcept {
         // return datapar::bwnot(!self);

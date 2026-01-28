@@ -24,7 +24,7 @@ concept common_float_with =
     internal::common_basic_element_with<T, U>;
 
 DPL_EXPORT template <typename A, typename B>
-concept simd_common_float_with = simd_common_abi_with<A, B> &&
+concept common_float_simd_with = simd_common_abi_with<A, B> &&
     common_float_with<simd_element_type_t<A>, simd_element_type_t<B>>;
 
 } // namespace datapar

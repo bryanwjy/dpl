@@ -10,8 +10,7 @@
 #if !DPL_MODULES
 #  include "dpl/core/fwd.h"
 
-#  include "dpl/std/bit/bit_cast.h"
-#  include "dpl/std/concepts/floating_point.h"
+#  include "dpl/std/concepts/integral.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -25,7 +24,7 @@ concept common_integral_with =
     internal::common_basic_element_with<T, U>;
 
 DPL_EXPORT template <typename A, typename B>
-concept simd_common_integral_with = simd_common_abi_with<A, B> &&
+concept common_integral_simd_with = simd_common_abi_with<A, B> &&
     common_integral_with<simd_element_type_t<A>, simd_element_type_t<B>>;
 
 } // namespace datapar

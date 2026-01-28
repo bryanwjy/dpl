@@ -53,7 +53,7 @@ private:
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr bool is_true(unsigned_integral auto val) noexcept {
-        return __DPL to_signed(val);
+        return is_true(__DPL to_signed(val));
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, FLATTEN, NODISCARD)

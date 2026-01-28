@@ -44,7 +44,7 @@ BMI_DIR := $(OUTPUT_DIR)/modules
 OBJ_DIR := $(OUTPUT_DIR)/obj
 
 
-.PHONY: compile.command link.command dpl.jmap dpl.graph FORCE print all compile_commands $(ALL_TARGETS)
+.PHONY: compile.command link.command jmap jgraph FORCE print all compile_commands $(ALL_TARGETS)
 
 .SECONDARY:  %/ $(OUTPUT_DIR)/%.d $(OUTPUT_DIR)/%.i $(OUTPUT_DIR)/%.command \
 $(OUTPUT_DIR)/%.stamp  $(OUTPUT_DIR)/%.jcmd $(BMI_DIR)/%.jdep $(BMI_DIR)/%.args \
@@ -77,10 +77,10 @@ compile.command: $(OUTPUT_DIR)/compile.command
 link.command: $(OUTPUT_DIR)/link.command
 	@
 
-dpl.jmap: $(BMI_DIR)/dpl.jmap
+jmap: $(BMI_DIR)/dpl.jmap
 	@
 
-dpl.jgraph: $(BMI_DIR)/dpl.jgraph
+jgraph: $(BMI_DIR)/dpl.jgraph
 	@
 
 compile_commands: $(OUTPUT_DIR)/compile_commands.json

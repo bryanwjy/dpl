@@ -72,7 +72,7 @@ concept common_bits_with =
     internal::enum_bit_operable<A, B>;
 
 DPL_EXPORT template <typename A, typename B>
-concept simd_common_bits_with = simd_common_abi_with<A, B> &&
+concept common_bits_simd_with = simd_common_abi_with<A, B> &&
     common_bits_with<simd_element_type_t<A>, simd_element_type_t<B>>;
 
 } // namespace datapar

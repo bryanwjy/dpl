@@ -71,7 +71,7 @@ concept common_order_with = sizeof(A) == sizeof(B) &&
         internal::enum_common_order_with<A, B>);
 
 DPL_EXPORT template <typename A, typename B>
-concept simd_common_order_with = simd_common_abi_with<A, B> &&
+concept common_order_simd_with = simd_common_abi_with<A, B> &&
     common_order_with<simd_element_type_t<A>, simd_element_type_t<B>>;
 
 } // namespace datapar

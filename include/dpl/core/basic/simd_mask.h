@@ -59,13 +59,13 @@ public:
     __DPL_HIDE_FROM_ABI constexpr simd_mask(simd_mask<E2, A> other) noexcept
         : simd_mask(datapar::reinterpret<simd_mask>(other)) {}
 
-    template <simd_common_bits_with<simd_type> T>
+    template <common_bits_simd_with<simd_type> T>
     __DPL_HIDE_FROM_ABI explicit constexpr simd_mask(
         direct_t tag, T simd) noexcept
         : simd_mask(datapar::to_simd_mask(
               tag, datapar::reinterpret<simd_type>(simd))) {}
 
-    template <simd_common_bits_with<simd_type> T>
+    template <common_bits_simd_with<simd_type> T>
     __DPL_HIDE_FROM_ABI explicit constexpr simd_mask(T simd) noexcept
         : simd_mask(
               datapar::to_simd_mask(datapar::reinterpret<simd_type>(simd))) {}

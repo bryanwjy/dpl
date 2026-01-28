@@ -57,7 +57,7 @@ concept common_arithmetic_with =
         internal::enum_common_arithmetic_with<A, B>);
 
 DPL_EXPORT template <typename A, typename B>
-concept simd_common_arithmetic_with = simd_common_abi_with<A, B> &&
+concept common_arithmetic_simd_with = simd_common_abi_with<A, B> &&
     common_arithmetic_with<simd_element_type_t<A>, simd_element_type_t<B>>;
 
 } // namespace datapar
