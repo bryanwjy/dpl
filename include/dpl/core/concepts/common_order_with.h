@@ -4,7 +4,6 @@
 #include "dpl/config.h"
 
 #include "dpl/core/concepts/arithmetic_type.h"
-#include "dpl/core/concepts/common_abi_with.h"
 #include "dpl/core/concepts/common_float_with.h"
 #include "dpl/core/concepts/common_integral_with.h"
 
@@ -64,14 +63,14 @@ concept enum_common_order_with = (enumeration<T> && enum_comparable<T, U>) ||
 } // namespace internal
 
 DPL_EXPORT template <typename A, typename B>
-concept common_order_with = sizeof(A) == sizeof(B) &&
+concept common_order_with = common_size_with<A, B> &&
     ((arithmetic_type<A> && arithmetic_type<B> &&
          (same_as<A, B> || common_float_with<A, B> ||
              common_integral_with<A, B>)) ||
         internal::enum_common_order_with<A, B>);
 
 DPL_EXPORT template <typename A, typename B>
-concept common_order_simd_with = simd_common_abi_with<A, B> &&
+concept common_order_simd_with = common_size_simd_with<A, B> &&
     common_order_with<simd_element_type_t<A>, simd_element_type_t<B>>;
 
 } // namespace datapar

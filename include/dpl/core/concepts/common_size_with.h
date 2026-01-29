@@ -3,10 +3,16 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/concepts/common_abi_with.h"
+
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 template <typename T, typename U>
 concept common_size_with = sizeof(T) == sizeof(U);
+
+template <typename T, typename U>
+concept common_size_simd_with = simd_common_abi_with<T, U> &&
+    common_size_with<simd_element_type_t<T>, simd_element_type_t<U>>;
 } // namespace datapar
 
 DPL_DEFAULT_NAMESPACE_END

@@ -17,4 +17,5 @@ import :core.constants;
 
 // IWYU pragma: begin_exports
 #include "dpl/core/operations/arithmetic.h"
+#include "dpl/core/operations/bitwise.h"
 // IWYU pragma: end_exports

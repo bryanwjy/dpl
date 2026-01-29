@@ -4,7 +4,6 @@
 #include "dpl/config.h"
 
 #include "dpl/core/concepts/arithmetic_type.h"
-#include "dpl/core/concepts/common_abi_with.h"
 #include "dpl/core/concepts/common_float_with.h"
 #include "dpl/core/concepts/common_size_with.h"
 
@@ -57,7 +56,7 @@ concept common_arithmetic_with =
         internal::enum_common_arithmetic_with<A, B>);
 
 DPL_EXPORT template <typename A, typename B>
-concept common_arithmetic_simd_with = simd_common_abi_with<A, B> &&
+concept common_arithmetic_simd_with = common_size_simd_with<A, B> &&
     common_arithmetic_with<simd_element_type_t<A>, simd_element_type_t<B>>;
 
 } // namespace datapar

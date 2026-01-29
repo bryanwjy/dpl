@@ -3,7 +3,7 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/type_traits/bit_type.h"
+#include "dpl/core/type_traits/common_size_type.h"
 #include "dpl/core/type_traits/simd_element_type.h"
 
 #if !DPL_MODULES
@@ -12,8 +12,6 @@
 #  include "dpl/core/concepts/simd_element.h"
 #  include "dpl/std/concepts/common_with.h"
 #  include "dpl/std/type_traits/common_type.h"
-#  include "dpl/std/type_traits/make_signed.h"
-#  include "dpl/std/type_traits/make_unsigned.h"
 #  include "dpl/std/type_traits/type_identity.h"
 #  include "dpl/std/type_traits/underlying_type.h"
 #endif
@@ -49,42 +47,22 @@ requires requires { typename common_bits_type_t<T, U>; }
 struct common_bits_type<T, U, Ts...> :
     common_bits_type<common_bits_type_t<T, U>, Ts...> {};
 
-DPL_EXPORT template <simd_element A, common_bits_with<A> B>
-requires (enumeration<A> || enumeration<B>)
-struct common_bits_type<A, B> {
-private:
-    static consteval auto choose_type() noexcept {
-        if constexpr (same_as<A, B> && flag_enumeration<A> &&
-            flag_enumeration<B>) {
-            return type_identity<A>{};
-        } else if constexpr (same_as<A, B> || enumeration<A>) {
-            return underlying_type<A>{};
-        } else {
-            return underlying_type<B>{};
-        }
-    }
-
-public:
-    using type DPL_NODEBUG = typename decltype(choose_type())::type;
+template <typename T, typename U>
+concept common_bits_with_common_type = common_with<T, U> && requires {
+    requires common_bits_with<T, common_type_t<T, U>> &&
+        common_bits_with<U, common_type_t<T, U>>;
 };
 
 DPL_EXPORT template <simd_element A, common_bits_with<A> B>
 struct common_bits_type<A, B> {
 private:
     static consteval auto choose_type() noexcept {
-        static_assert(!enumeration<A> && !enumeration<B>);
         if constexpr (same_as<A, B>) {
             return type_identity<A>{};
-        } else if constexpr (common_with<A, B> &&
-            common_bits_with<A, common_type_t<A, B>> &&
-            common_bits_with<B, common_type_t<A, B>>) {
+        } else if constexpr (common_bits_with_common_type<A, B>) {
             return common_type<A, B>{};
-        } else if constexpr (signed_integral<A> && signed_integral<B>) {
-            return make_signed<internal::bit_type_for_t<A>>{};
-        } else if constexpr (unsigned_integral<A> && unsigned_integral<B>) {
-            return make_unsigned<internal::bit_type_for_t<A>>{};
         } else {
-            return internal::bit_type_for<A>{};
+            return common_size_type<A, B>{};
         }
     }
 

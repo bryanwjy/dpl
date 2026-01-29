@@ -53,7 +53,7 @@ private:
 
 public:
     template <basic_simd_type L, common_arithmetic_simd_with<L> R>
-    requires simd_same_abi_as<L, R>
+    requires simd_same_abi_as<L, R> && basic_simd_type<R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept {
         using T = common_arithmetic_simd_t<L, R>;
@@ -116,7 +116,7 @@ private:
 
 public:
     template <basic_simd_type L, common_arithmetic_simd_with<L> R>
-    requires simd_same_abi_as<L, R>
+    requires simd_same_abi_as<L, R> && basic_simd_type<R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept {
         using T = common_arithmetic_simd_t<L, R>;
@@ -179,7 +179,7 @@ private:
 
 public:
     template <basic_simd_type L, common_arithmetic_simd_with<L> R>
-    requires simd_same_abi_as<L, R>
+    requires simd_same_abi_as<L, R> && basic_simd_type<R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept {
         using T = common_arithmetic_simd_t<L, R>;
@@ -282,18 +282,18 @@ public:
 struct simple_negate_t {
 private:
     template <arithmetic_type E>
-    using Result DPL_NODEBUG = decltype(-__DPL declval<E>());
+    using result DPL_NODEBUG = decltype(-__DPL declval<E>());
 
     template <arithmetic_simd T>
-    using ResultSimd DPL_NODEBUG =
-        rebind_simd_t<T, Result<typename T::value_type>>;
+    using result_simd DPL_NODEBUG =
+        rebind_simd_t<T, result<typename T::value_type>>;
 
     template <arithmetic_type E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<E, A> val) noexcept {
         if constexpr (enumeration<E>) {
-            return dx::reinterpret<Result<E>>(val);
+            return dx::reinterpret<result<E>>(val);
         } else if constexpr (integral<E>) {
             return dx::reinterpret<E>(sub_t::operator()(dx::zero, val));
         } else {
@@ -306,7 +306,7 @@ public:
     template <arithmetic_type E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(
-        basic_simd<E, A> val) noexcept -> simd_with<Result<E>, A> auto {
+        basic_simd<E, A> val) noexcept -> simd_with<result<E>, A> auto {
         if constexpr (requires { negate(internal::abi<A>, val); }) {
             if consteval {
                 return fallback(val);
@@ -322,7 +322,7 @@ public:
     requires (!basic_simd_type<T>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(T val) noexcept
-        -> equivalent_simd_as<ResultSimd<T>> auto {
+        -> equivalent_simd_as<result_simd<T>> auto {
         if constexpr (requires { negate(internal::abi<T>, val); }) {
             return negate(internal::abi<T>, val);
         } else {

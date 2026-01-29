@@ -20,11 +20,11 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
 namespace internal {
-
 template <typename T>
 using bit_for_t DPL_NODEBUG = typename bit_type<sizeof(T) * char_bit_v>::type;
+} // namespace internal
 
-template <typename A, typename B>
+DPL_EXPORT template <typename A, typename B>
 concept common_bits_with = same_as<A, B> || (common_size_with<A, B> &&
     requires {
         typename internal::bit_for_t<A>;
@@ -37,42 +37,8 @@ concept common_bits_with = same_as<A, B> || (common_size_with<A, B> &&
         __DPL bit_cast<internal::bit_for_t<B>>(b);
     });
 
-template <typename T, typename U>
-concept enum_bit_operable = (flag_enumeration<T> && same_as<T, U>) ||
-    (unscoped_enumeration<T> &&
-        (same_as<T, U> || (integral<U> && common_bits_with<T, U>)) &&
-        requires(T lhs, U rhs) {
-            requires !requires { operator&(lhs, rhs); } ||
-                requires { lhs & rhs; };
-            requires !requires { operator|(lhs, rhs); } ||
-                requires { lhs | rhs; };
-            requires !requires { operator^(lhs, rhs); } ||
-                requires { lhs ^ rhs; };
-            requires !requires { operator~(lhs); } || requires { ~lhs; };
-        });
-
-/**
- * An enum, T, is common bit with itself iff T statisfies flag_enumeration or T
- * is an unscoped enumeration that does not have any bitwise operations with
- * itself found via ADL.
- *
- * An unscoped enum, T, is common bit with an integral U, if they satisfies
- * internal::common_bits_with and no bitwise operations between T and U are
- * found via ADL
- */
-template <typename T, typename U>
-concept enum_common_bits_with = (enumeration<T> && enum_bit_operable<T, U>) ||
-    (enumeration<U> && enum_bit_operable<U, T>);
-
-} // namespace internal
-
 DPL_EXPORT template <typename A, typename B>
-concept common_bits_with =
-    (!enumeration<A> && !enumeration<B> && internal::common_bits_with<A, B>) ||
-    internal::enum_bit_operable<A, B>;
-
-DPL_EXPORT template <typename A, typename B>
-concept common_bits_simd_with = simd_common_abi_with<A, B> &&
+concept common_bits_simd_with = common_size_simd_with<A, B> &&
     common_bits_with<simd_element_type_t<A>, simd_element_type_t<B>>;
 
 } // namespace datapar

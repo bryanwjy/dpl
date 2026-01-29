@@ -77,6 +77,12 @@ public:
     using type DPL_NODEBUG = typename decltype(choose_type())::type;
 };
 
+template <typename T, typename U>
+concept common_arithmetic_with_common_type = common_with<T, U> && requires {
+    requires common_arithmetic_with<T, common_type_t<T, U>> &&
+        common_arithmetic_with<U, common_type_t<T, U>>;
+};
+
 DPL_EXPORT template <simd_element A, common_arithmetic_with<A> B>
 struct common_arithmetic_type<A, B> {
 private:
@@ -84,9 +90,7 @@ private:
         static_assert(!enumeration<A> && !enumeration<B>);
         if constexpr (same_as<A, B>) {
             return type_identity<A>{};
-        } else if constexpr (__DPL common_with<A, B> &&
-            common_arithmetic_with<A, common_type_t<A, B>> &&
-            common_arithmetic_with<B, common_type_t<A, B>>) {
+        } else if constexpr (common_arithmetic_with_common_type<A, B>) {
             return common_type<A, B>{};
         } else if constexpr (signed_integral<A> && signed_integral<B>) {
             return make_signed<internal::bit_type_for_t<A>>{};
