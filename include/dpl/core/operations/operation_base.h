@@ -20,7 +20,7 @@ concept implements_native = requires(Args... args) {
     T::native(internal::abi<A>, args...);
 };
 
-DPL_EXPORT template <typename T>
+template <typename T>
 struct binary_operation_base {
     template <basic_simd_class L, broadcastable_to<L> R>
     requires implements_native<T, L, L, R>

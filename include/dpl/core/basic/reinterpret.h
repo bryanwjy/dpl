@@ -38,9 +38,7 @@ public:
     template <simd_class T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(T arg) noexcept {
-        if constexpr (requires(T arg) {
-                          { reinterpret<E>(internal::abi<T>, arg) };
-                      }) {
+        if constexpr (requires { reinterpret<E>(internal::abi<T>, arg); }) {
             return reinterpret<E>(internal::abi<T>, arg);
         } else {
             return operator()(dx::to_basic_type(arg));

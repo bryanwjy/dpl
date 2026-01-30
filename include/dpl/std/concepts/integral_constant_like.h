@@ -10,7 +10,6 @@
 #if !DPL_MODULES
 #  include "dpl/std/type_traits/constants.h"
 #  include "dpl/std/type_traits/is_integral.h"
-#  include "dpl/std/type_traits/is_signed.h"
 #  include "dpl/std/type_traits/remove_const.h"
 #endif
 

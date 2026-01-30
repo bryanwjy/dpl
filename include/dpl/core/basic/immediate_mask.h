@@ -185,9 +185,21 @@ struct basic_immediate_mask {
 DPL_EXPORT template <size_t W, convertible_to<bit_type_t<W>> auto V>
 using immediate_mask DPL_NODEBUG =
     basic_immediate_mask<W, static_cast<bit_type_t<W>>(V)>;
-DPL_EXPORT template <simd_type T, auto V>
-requires requires { typename immediate_mask<element_count<T>, V>; }
-using immediate_simd_mask DPL_NODEBUG = immediate_mask<element_count<T>, V>;
+
+DPL_EXPORT template <typename M, typename T>
+concept immediate_mask_for = simd_class<T> && requires(M mask) {
+    typename immediate<M::value>;
+    typename basic_immediate_mask<element_count<T>, M::value>;
+    requires convertible_to<M,
+        basic_immediate_mask<element_count<T>, M::value>>;
+};
+
+DPL_EXPORT template <simd_class T, immediate_mask_for<T> M>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+constexpr auto to_immediate_mask(M mask) noexcept {
+    return static_cast<basic_immediate_mask<element_count<T>, M::value>>(mask);
+}
+
 DPL_EXPORT template <convertible_to<bit_type_t<1>> auto V>
 using mask1_t DPL_NODEBUG =
     basic_immediate_mask<1, static_cast<bit_type_t<1>>(V)>;
