@@ -16,10 +16,13 @@ import :core.type_traits;
 import :core.constants;
 
 // IWYU pragma: begin_exports
+#include "dpl/core/operations/abs.h"
 #include "dpl/core/operations/arithmetic.h"
 #include "dpl/core/operations/bit.h"
 #include "dpl/core/operations/bitwise.h"
+#include "dpl/core/operations/cast.h"
 #include "dpl/core/operations/compare.h"
+#include "dpl/core/operations/negate.h"
 #include "dpl/core/operations/permute.h"
 #include "dpl/core/operations/select.h"
 // IWYU pragma: end_exports

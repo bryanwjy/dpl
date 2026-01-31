@@ -93,6 +93,13 @@ struct basic_immediate_mask {
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    constexpr auto operator~(this basic_immediate_mask) noexcept {
+        constexpr auto mask = static_cast<value_type>((1 << W) - 1);
+        constexpr auto nvalue = ~value;
+        return basic_immediate_mask<W, nvalue & mask>{};
+    }
+
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     friend constexpr bool operator==(
         all_bits_t, basic_immediate_mask) noexcept {
         return __DPL popcount(value) == static_cast<int>(W);

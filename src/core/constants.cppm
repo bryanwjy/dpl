@@ -18,6 +18,7 @@ import :core.type_traits;
 #include "dpl/core/constants/all_bits.h"
 #include "dpl/core/constants/digits.h"
 #include "dpl/core/constants/epsilon.h"
+#include "dpl/core/constants/exponent_bias.h"
 #include "dpl/core/constants/exponent_bits.h"
 #include "dpl/core/constants/infinity.h"
 #include "dpl/core/constants/ln2.h"

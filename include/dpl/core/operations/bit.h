@@ -44,6 +44,8 @@ void byteswap(...) noexcept = delete;
 
 struct bit_clear_t : binary_operation_base<bit_clear_t> {
 private:
+    friend binary_operation_base<bit_clear_t>;
+
     template <simd_abi A, typename L, typename R>
     requires requires(L lhs, R rhs) { bit_clear(internal::abi<A>, lhs, rhs); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -218,6 +220,8 @@ public:
 
 struct bit_set_t : binary_operation_base<bit_set_t> {
 private:
+    friend binary_operation_base<bit_set_t>;
+
     template <simd_abi A, typename L, typename R>
     requires requires(L lhs, R rhs) { bit_set(internal::abi<A>, lhs, rhs); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -642,6 +646,8 @@ public:
 template <auto V>
 struct bit_selecti_t : binary_operation_base<bit_selecti_t<V>> {
 private:
+    friend binary_operation_base<bit_selecti_t>;
+
     template <typename T>
     using mask_type DPL_NODEBUG = immediate_mask<element_count<T>, V>;
 
