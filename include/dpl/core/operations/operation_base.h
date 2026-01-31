@@ -8,7 +8,6 @@
 #  include "dpl/core/basic/to_basic_type.h"
 #  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/broadcastable_to.h"
-
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN

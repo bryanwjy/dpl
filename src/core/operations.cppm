@@ -19,5 +19,6 @@ import :core.constants;
 #include "dpl/core/operations/arithmetic.h"
 #include "dpl/core/operations/bit.h"
 #include "dpl/core/operations/bitwise.h"
+#include "dpl/core/operations/permute.h"
 #include "dpl/core/operations/select.h"
 // IWYU pragma: end_exports
