@@ -9,6 +9,7 @@
 #if !DPL_MODULES
 #  include "dpl/core/basic/broadcast.h"
 #  include "dpl/core/basic/immediate_mask.h"
+#  include "dpl/core/concepts/common_arithmetic_with.h"
 #  include "dpl/core/concepts/common_size_with.h"
 #  include "dpl/core/concepts/compatible_mask_for.h"
 #  include "dpl/core/concepts/simd_class.h"
@@ -27,9 +28,13 @@ template <auto>
 void select(...) noexcept = delete;
 
 template <typename L, typename R>
+using ternary_result_t DPL_NODEBUG =
+    decltype(false ? __DPL declval<L>() : __DPL declval<R>());
+
+template <typename L, typename R>
 struct ternary_type {};
 template <typename L, typename R>
-using ternary_type_t = typename ternary_type<L, R>::type;
+using ternary_type_t DPL_NODEBUG = typename ternary_type<L, R>::type;
 
 template <simd_type L, simd_element R>
 struct ternary_type<L, R> : ternary_type<typename L::value_type, R> {};
@@ -42,19 +47,25 @@ struct ternary_type<L, R> :
     ternary_type<typename L::value_type, typename R::value_type> {};
 
 template <simd_element L, simd_element R>
+requires requires {
+    typename ternary_result_t<L, R>;
+    requires common_arithmetic_with<ternary_result_t<L, R>, L>;
+    requires common_arithmetic_with<ternary_result_t<L, R>, R>;
+}
 struct ternary_type<L, R> {
-    using type DPL_NODEBUG =
-        decltype(false ? __DPL declval<L>() : __DPL declval<R>());
+    using type DPL_NODEBUG = ternary_result_t<L, R>;
 };
 
 template <typename L, typename R>
 struct ternary_simd {};
+template <typename L, typename R>
+using ternary_simd_t DPL_NODEBUG = typename ternary_simd<L, R>::type;
 
 template <simd_type L, simd_type R>
-requires simd_common_abi_with<L, R> &&
-    requires { typename ternary_type_t<L, R>; }
+requires requires { typename ternary_type_t<L, R>; }
 struct ternary_simd<L, R> {
-    using type = rebind_simd_t<common_size_simd_t<L, R>, ternary_type_t<L, R>>;
+    using type DPL_NODEBUG =
+        basic_simd<ternary_type_t<L, R>, common_abi_t<L, R>>;
 };
 
 template <typename L, typename R>
@@ -113,15 +124,19 @@ private:
 
     template <typename M, typename T, typename F>
     using mask_result DPL_NODEBUG =
-        basic_simd<common_size_type_t<T, F>, common_abi_t<M, T, F>>;
+        simd_mask<common_size_type_t<T, F>, common_abi_t<M, T, F>>;
+
+    template <typename M, typename T, typename F>
+    using result DPL_NODEBUG =
+        basic_simd<ternary_type_t<T, F>, common_abi_t<M, T, F>>;
 
 public:
     template <basic_simd_mask_type M, basic_simd_type TT, basic_simd_type TF>
     requires selectable_with<TT, TF> && compatible_mask_for<M, TT> &&
-        compatible_mask_for<M, TF> && simd_same_abi_as<TT, TF> &&
-        simd_same_abi_as<M, TT> && simd_same_abi_as<M, TF>
+        compatible_mask_for<M, TF> && same_abi_simd_as<TT, TF> &&
+        same_abi_simd_as<M, TT> && same_abi_simd_as<M, TF>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(
+    static constexpr result<M, TT, TF> DPL_VECTORCALL operator()(
         M mask, TT tval, TF fval) noexcept {
         using A = common_abi_t<M, TT, TF>;
         if constexpr (requires {
@@ -143,9 +158,8 @@ public:
     requires selectable_with<TT, TF> && compatible_mask_for<M, TT> &&
         compatible_mask_for<M, TF>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(
-        M mask, TT tval, TF fval) noexcept
-        -> simd_with<ternary_type_t<TT, TF>, common_abi_t<M, TT, TF>> auto {
+    static constexpr auto DPL_VECTORCALL operator()(M mask, TT tval,
+        TF fval) noexcept -> equivalent_simd_as<result<M, TT, TF>> auto {
         using A = common_abi_t<M, TT, TF>;
         return select(internal::abi<A>, mask, tval, fval);
     }
@@ -154,9 +168,8 @@ public:
     requires selectable_with<TT, TF> && compatible_mask_for<M, TT> &&
         compatible_mask_for<M, TF>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(
-        M mask, TT tval, TF fval) noexcept
-        -> simd_with<ternary_type_t<TT, TF>, common_abi_t<M, TT, TF>> auto {
+    static constexpr auto DPL_VECTORCALL operator()(M mask, TT tval,
+        TF fval) noexcept -> equivalent_simd_as<result<M, TT, TF>> auto {
         using A = common_abi_t<M, TT, TF>;
         if constexpr (requires {
                           select(internal::abi<A>, mask, tval, fval);
@@ -171,11 +184,11 @@ public:
     template <basic_simd_mask_type M, basic_simd_mask_type TT,
         basic_simd_mask_type TF>
     requires common_size_simd_with<TT, TF> && common_size_simd_with<M, TT> &&
-        common_size_simd_with<M, TF> && simd_same_abi_as<TT, TF> &&
-        simd_same_abi_as<M, TT> && simd_same_abi_as<M, TF>
+        common_size_simd_with<M, TF> && same_abi_simd_as<TT, TF> &&
+        same_abi_simd_as<M, TT> && same_abi_simd_as<M, TF>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(
-        M mask, TT tval, TF fval) noexcept -> common_size_simd_t<TT, TF> {
+    static constexpr mask_result<M, TT, TF> DPL_VECTORCALL operator()(
+        M mask, TT tval, TF fval) noexcept {
         using A = common_abi_t<M, TT, TF>;
         if constexpr (requires {
                           select(internal::abi<A>, mask, tval, fval);
@@ -221,9 +234,9 @@ public:
     }
 
     template <basic_simd_type TT, basic_simd_type TF, immediate_mask_for<TT> M>
-    requires selectable_with<TT, TF> && simd_same_abi_as<TT, TF>
+    requires selectable_with<TT, TF> && same_abi_simd_as<TT, TF>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(
+    static constexpr ternary_simd_t<TT, TF> DPL_VECTORCALL operator()(
         M mask, TT tval, TF fval) noexcept {
         using A = common_abi_t<TT, TF>;
         constexpr auto V = decltype(dx::to_immediate_mask<TT>(mask))::value;
@@ -243,9 +256,8 @@ public:
     template <basic_simd_type TT, basic_simd_type TF, immediate_mask_for<TT> M>
     requires selectable_with<TT, TF>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(
-        M mask, TT tval, TF fval) noexcept
-        -> simd_with<ternary_type_t<TT, TF>, common_abi_t<TT, TF>> auto {
+    static constexpr auto DPL_VECTORCALL operator()(M mask, TT tval,
+        TF fval) noexcept -> equivalent_simd_as<ternary_simd_t<TT, TF>> auto {
         using A = common_abi_t<TT, TF>;
         constexpr auto V = decltype(dx::to_immediate_mask<TT>(mask))::value;
         return select<V>(internal::abi<A>, tval, fval);
@@ -254,9 +266,8 @@ public:
     template <simd_type TT, simd_type TF, immediate_mask_for<TT> M>
     requires selectable_with<TT, TF>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(
-        M mask, TT tval, TF fval) noexcept
-        -> simd_with<ternary_type_t<TT, TF>, common_abi_t<M, TT, TF>> auto {
+    static constexpr auto DPL_VECTORCALL operator()(M mask, TT tval,
+        TF fval) noexcept -> equivalent_simd_as<ternary_simd_t<TT, TF>> auto {
         using A = common_abi_t<TT, TF>;
         constexpr auto V = decltype(dx::to_immediate_mask<TT>(mask))::value;
         if constexpr (requires { select<V>(internal::abi<A>, tval, fval); }) {
@@ -269,10 +280,10 @@ public:
 
     template <basic_simd_mask_type TT, basic_simd_mask_type TF,
         immediate_mask_for<TT> M>
-    requires common_size_simd_with<TT, TF> && simd_same_abi_as<TT, TF>
+    requires common_size_simd_with<TT, TF> && same_abi_simd_as<TT, TF>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(
-        M mask, TT tval, TF fval) noexcept -> common_size_simd_t<TT, TF> {
+    static constexpr common_size_type_t<TT, TF> DPL_VECTORCALL operator()(
+        M mask, TT tval, TF fval) noexcept {
         using A = common_abi_t<TT, TF>;
         constexpr auto V = decltype(dx::to_immediate_mask<TT>(mask))::value;
         if constexpr (requires { select<V>(internal::abi<A>, tval, fval); }) {
@@ -292,7 +303,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(
         M mask, TT tval, TF fval) noexcept
-        -> common_size_simd_with<common_size_simd_t<TT, TF>> auto {
+        -> common_size_simd_with<common_size_type_t<TT, TF>> auto {
         using A = common_abi_t<TT, TF>;
         constexpr auto V = decltype(dx::to_immediate_mask<TT>(mask))::value;
         return select<V>(internal::abi<A>, tval, fval);
@@ -303,7 +314,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(
         M mask, TT tval, TF fval) noexcept
-        -> common_size_simd_with<common_size_simd_t<TT, TF>> auto {
+        -> common_size_simd_with<common_size_type_t<TT, TF>> auto {
         using A = common_abi_t<TT, TF>;
         constexpr auto V = decltype(dx::to_immediate_mask<TT>(mask))::value;
         if constexpr (requires { select<V>(internal::abi<A>, tval, fval); }) {
@@ -316,7 +327,7 @@ public:
 
     template <basic_simd_mask_type M, basic_simd_class TT,
         broadcastable_to<TT> TF>
-    requires simd_same_abi_as<M, TT>
+    requires same_abi_simd_as<M, TT>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto operator()(M mask, TT tval, TF fval) noexcept
         -> equivalent_simd_as<TT> auto {
@@ -335,7 +346,7 @@ public:
 
     template <basic_simd_mask_type M, basic_simd_class TT,
         broadcastable_to<TT> TF>
-    requires simd_common_abi_with<M, TT>
+    requires common_abi_simd_with<M, TT>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto operator()(M mask, TT tval, TF fval) noexcept
         -> equivalent_simd_as<TT> auto {
@@ -351,7 +362,7 @@ public:
 
     template <basic_simd_mask_type M, basic_simd_class TF,
         broadcastable_to<TF> TT>
-    requires simd_same_abi_as<M, TF>
+    requires same_abi_simd_as<M, TF>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto operator()(M mask, TT tval, TF fval) noexcept
         -> equivalent_simd_as<TF> auto {
@@ -370,7 +381,7 @@ public:
 
     template <basic_simd_mask_type M, basic_simd_class TF,
         broadcastable_to<TF> TT>
-    requires simd_common_abi_with<M, TF>
+    requires common_abi_simd_with<M, TF>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto operator()(M mask, TT tval, TF fval) noexcept
         -> equivalent_simd_as<TF> auto {
@@ -406,9 +417,10 @@ public:
     }
 
     template <simd_mask_type M, simd_class TT, broadcastable_to<TT> TF>
-    requires simd_common_abi_with<M, TT>
+    requires common_abi_simd_with<M, TT>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto operator()(M mask, TT tval, TF fval) noexcept {
+    static constexpr auto operator()(M mask, TT tval, TF fval) noexcept
+        -> equivalent_simd_as<TT> auto {
         using A = common_abi_t<M, TT>;
         if constexpr (requires {
                           select(internal::abi<A>, mask, tval, fval);
@@ -421,9 +433,10 @@ public:
     }
 
     template <simd_mask_type M, simd_class TF, broadcastable_to<TF> TT>
-    requires simd_common_abi_with<M, TF>
+    requires common_abi_simd_with<M, TF>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto operator()(M mask, TT tval, TF fval) noexcept {
+    static constexpr auto operator()(M mask, TT tval, TF fval) noexcept
+        -> equivalent_simd_as<TF> auto {
         using A = common_abi_t<M, TF>;
         if constexpr (requires {
                           select(internal::abi<A>, mask, tval, fval);
@@ -438,7 +451,8 @@ public:
     template <simd_mask_type M, broadcastable_to<to_simd_type_t<M>> TF,
         broadcastable_to<to_simd_type_t<M>> TT>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto operator()(M mask, TT tval, TF fval) noexcept {
+    static constexpr auto operator()(M mask, TT tval, TF fval) noexcept
+        -> equivalent_simd_as<to_simd_type_t<M>> auto {
         using T = to_simd_type_t<M>;
         if constexpr (requires {
                           select(internal::abi<M>, mask, tval, fval);

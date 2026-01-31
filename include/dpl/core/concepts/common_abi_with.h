@@ -74,12 +74,12 @@ DPL_EXPORT template <typename A, typename B>
 concept same_abi_as = common_abi_with<A, B> && same_as<A, B>;
 
 DPL_EXPORT template <typename A, typename B>
-concept simd_common_abi_with =
+concept common_abi_simd_with =
     simd_class<A> && simd_class<B> && common_class_with<A, B> &&
     common_abi_with<typename A::abi_type, typename B::abi_type>;
 
 DPL_EXPORT template <typename A, typename B>
-concept simd_same_abi_as = simd_common_abi_with<A, B> &&
+concept same_abi_simd_as = common_abi_simd_with<A, B> &&
     same_abi_as<typename A::abi_type, typename B::abi_type>;
 } // namespace datapar
 

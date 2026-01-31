@@ -116,14 +116,14 @@ struct reinterpret_t<To> {
     static constexpr To operator()(To src) noexcept { return src; }
 
     template <simd_class From>
-    requires common_class_with<To, From> && simd_same_abi_as<From, To>
+    requires common_class_with<To, From> && same_abi_simd_as<From, To>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr To DPL_VECTORCALL operator()(From from) noexcept {
         return reinterpret_t<simd_element_type_t<To>>::operator()(from);
     }
 
     template <simd_class From>
-    requires common_class_with<To, From> && simd_same_abi_as<From, To> &&
+    requires common_class_with<To, From> && same_abi_simd_as<From, To> &&
         reinterpretable_as<From, To>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr To DPL_VECTORCALL operator()(From from) noexcept {
@@ -138,7 +138,7 @@ private:
 
 public:
     template <simd_class From>
-    requires common_class_with<To, From> && simd_same_abi_as<From, To> &&
+    requires common_class_with<To, From> && same_abi_simd_as<From, To> &&
         reinterpretable_as<From, To>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr To DPL_VECTORCALL operator()(From arg) noexcept {
@@ -146,7 +146,7 @@ public:
     }
 
     template <simd_class From>
-    requires common_class_with<To, From> && simd_same_abi_as<From, To> &&
+    requires common_class_with<To, From> && same_abi_simd_as<From, To> &&
         regular_invocable<base_type, From> &&
         explicitly_convertible_to<basic_type_t<To>, To>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)

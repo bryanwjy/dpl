@@ -129,9 +129,9 @@ public:
 
 namespace datapar {
 inline namespace cpo {
-template <size_t... Is>
+DPL_EXPORT template <size_t... Is>
 inline constexpr internal::permute_t<Is...> permute{};
-template <size_t I>
+DPL_EXPORT template <size_t I>
 inline constexpr internal::broadcast_element_t<I> broadcast_element{};
 } // namespace cpo
 } // namespace datapar

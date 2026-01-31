@@ -11,7 +11,7 @@ template <typename T, typename U>
 concept common_size_with = sizeof(T) == sizeof(U);
 
 template <typename T, typename U>
-concept common_size_simd_with = simd_common_abi_with<T, U> &&
+concept common_size_simd_with = common_abi_simd_with<T, U> &&
     common_size_with<simd_element_type_t<T>, simd_element_type_t<U>>;
 } // namespace datapar
 

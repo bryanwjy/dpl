@@ -53,7 +53,7 @@ private:
 
 public:
     template <basic_simd_type L, common_arithmetic_simd_with<L> R>
-    requires simd_same_abi_as<L, R> && basic_simd_type<R>
+    requires same_abi_simd_as<L, R> && basic_simd_type<R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept {
         using T = common_arithmetic_simd_t<L, R>;
@@ -116,7 +116,7 @@ private:
 
 public:
     template <basic_simd_type L, common_arithmetic_simd_with<L> R>
-    requires simd_same_abi_as<L, R> && basic_simd_type<R>
+    requires same_abi_simd_as<L, R> && basic_simd_type<R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept {
         using T = common_arithmetic_simd_t<L, R>;
@@ -179,7 +179,7 @@ private:
 
 public:
     template <basic_simd_type L, common_arithmetic_simd_with<L> R>
-    requires simd_same_abi_as<L, R> && basic_simd_type<R>
+    requires same_abi_simd_as<L, R> && basic_simd_type<R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept {
         using T = common_arithmetic_simd_t<L, R>;
