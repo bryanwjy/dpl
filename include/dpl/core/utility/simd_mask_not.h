@@ -17,6 +17,9 @@
 #  include "dpl/core/concepts/common_order_with.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_element.h"
+#  include "dpl/core/operations/bitwise.h"
+#  include "dpl/core/operations/logic.h"
+#  include "dpl/core/operations/select.h"
 #  include "dpl/core/type_traits/element_count.h"
 #  include "dpl/std/concepts/different_from.h"
 #  include "dpl/std/concepts/same_as.h"
@@ -49,22 +52,15 @@ public:
         simd_mask_not<T, A> other) noexcept
         : simd_mask_not(+datapar::reinterpret<E>(!other)) {}
 
-    template <common_bits_simd_with<simd_type> T>
-    requires same_as<mask_type, vector_type>
+    template <common_size_simd_with<simd_type> T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     explicit operator T(this simd_mask_not self) noexcept {
-        // return datapar::bwnot(!self);
-    }
-
-    template <common_bits_simd_with<simd_type> T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    explicit operator T(this simd_mask_not self) noexcept {
-        // return datapar::bwnot(!self);
+        return datapar::bwnot(!self);
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     constexpr mask_type operator+(this simd_mask_not self) noexcept {
-        // return +datapar::bwnot(!self);
+        return +datapar::bwnot(!self);
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -83,41 +79,57 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     friend constexpr auto select(
         abi_type, simd_mask_not self, T lhs, F rhs) noexcept {
-        // return datapar::select(!self, rhs, lhs);
+        return datapar::select(!self, rhs, lhs);
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     friend constexpr bool any_of(abi_type, simd_mask_not self) noexcept {
-        // return !datapar::none_of(internal::abi<A>, !self);
+        return !datapar::none_of(internal::abi<A>, !self);
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     friend constexpr bool all_of(abi_type, simd_mask_not self) noexcept {
-        // return datapar::none_of(internal::abi<A>, !self);
+        return datapar::none_of(internal::abi<A>, !self);
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     friend constexpr bool none_of(abi_type, simd_mask_not self) noexcept {
-        // return datapar::all_of(internal::abi<A>, !self);
+        return datapar::all_of(internal::abi<A>, !self);
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     friend constexpr bool some_of(abi_type, simd_mask_not self) noexcept {
-        // return datapar::some_of(internal::abi<A>, !self);
+        return datapar::some_of(internal::abi<A>, !self);
     }
+
+    // TODO: Complete
 
     template <datapar::simd_type T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     friend constexpr auto bit_set(
         abi_type, simd_mask_not self, T arg) noexcept {
-        // return datapar::select(!self, arg, datapar::all_bits);
+        return datapar::select(!self, arg, datapar::all_bits);
     }
 
     template <datapar::simd_type T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     friend constexpr auto bit_clear(
         abi_type, simd_mask_not self, T arg) noexcept {
-        // return datapar::select(!self, arg);
+        return datapar::select(!self, arg, datapar::zero);
+    }
+
+    template <simd_mask_type T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    friend constexpr auto bit_set(
+        abi_type, simd_mask_not self, T arg) noexcept {
+        return datapar::bwornot(arg, !self);
+    }
+
+    template <simd_mask_type T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    friend constexpr auto bit_clear(
+        abi_type, simd_mask_not self, T arg) noexcept {
+        return datapar::bwand(!self, arg);
     }
 
 private:
