@@ -53,7 +53,7 @@ private:
         } else if constexpr (floating_point<E>) {
             constexpr auto nmask = ~mask;
             constexpr auto msb =
-                dx::bit_clear(nmask, dx::msb_v<basic_simd<E, A>>);
+                dx::bit_drop(nmask, dx::msb_v<basic_simd<E, A>>);
             return dx::reinterpret<E>(dx::bwxor(val, msb));
         } else {
             using T = negated_type<E>;

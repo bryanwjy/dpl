@@ -26,14 +26,20 @@
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
-void bit_clear(...) noexcept = delete;
-void bit_set(...) noexcept = delete;
+void bit_drop(...) noexcept = delete;
+template <auto>
+void bit_drop(...) noexcept = delete;
+void bit_force(...) noexcept = delete;
+template <auto>
+void bit_force(...) noexcept = delete;
+void bit_keep(...) noexcept = delete;
+template <auto>
+void bit_keep(...) noexcept = delete;
+void bit_stencil(...) noexcept = delete;
+template <auto>
+void bit_stencil(...) noexcept = delete;
+template <auto>
 void bit_select(...) noexcept = delete;
-template <auto>
-void bit_clear(...) noexcept = delete;
-template <auto>
-void bit_set(...) noexcept = delete;
-template <auto>
 void bit_select(...) noexcept = delete;
 void popcount(...) noexcept = delete;
 void countl_zero(...) noexcept = delete;
@@ -42,15 +48,15 @@ void countr_zero(...) noexcept = delete;
 void countr_one(...) noexcept = delete;
 void byteswap(...) noexcept = delete;
 
-struct bit_clear_t : binary_operation_base<bit_clear_t> {
+struct bit_drop_t : binary_operation_base<bit_drop_t> {
 private:
-    friend binary_operation_base<bit_clear_t>;
+    friend binary_operation_base<bit_drop_t>;
 
     template <simd_abi A, typename L, typename R>
-    requires requires(L lhs, R rhs) { bit_clear(internal::abi<A>, lhs, rhs); }
+    requires requires(L lhs, R rhs) { bit_drop(internal::abi<A>, lhs, rhs); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto native(A abi, L left, R right) noexcept {
-        return bit_clear(internal::abi<A>, left, right);
+        return bit_drop(internal::abi<A>, left, right);
     }
 
     template <basic_simd_type M, basic_simd_type T>
@@ -64,13 +70,21 @@ private:
     requires same_abi_simd_as<M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto fallback(M mask, T arg) noexcept {
-        return dx::select(mask, dx::zero, arg);
+        if constexpr (basic_simd_type<T>) {
+            return dx::select(mask, arg, dx::all_bits);
+        } else {
+            return dx::select(mask, arg, dx::broadcast<T>(true));
+        }
     }
 
-    template <auto V, basic_simd_class T>
+    template <auto V, basic_simd_type T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto fallbacki(T arg) noexcept {
-        return dx::selecti<V>(dx::zero, arg);
+        if constexpr (basic_simd_type<T>) {
+            return dx::selecti<V>(arg, dx::all_bits);
+        } else {
+            return dx::selecti<V>(arg, dx::broadcast<T>(true));
+        }
     }
 
 public:
@@ -78,11 +92,11 @@ public:
     requires common_bits_simd_with<M, T> && same_abi_simd_as<M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept {
-        if constexpr (requires { bit_clear(internal::abi<M>, mask, arg); }) {
+        if constexpr (requires { bit_drop(internal::abi<M>, mask, arg); }) {
             if consteval {
                 return fallback(mask, arg);
             } else {
-                return bit_clear(internal::abi<M>, mask, arg);
+                return bit_drop(internal::abi<M>, mask, arg);
             }
         } else {
             return fallback(mask, arg);
@@ -95,20 +109,20 @@ public:
     static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept
         -> common_bits_simd_with<common_bits_simd_t<M, T>> auto {
         using A = common_abi_t<M, T>;
-        return bit_clear(internal::abi<A>, mask, arg);
+        return bit_drop(internal::abi<A>, mask, arg);
     }
 
-    using binary_operation_base<bit_clear_t>::operator();
+    using binary_operation_base<bit_drop_t>::operator();
 
     template <basic_simd_mask_type M, basic_simd_type T>
     requires compatible_mask_for<M, T> && same_abi_simd_as<M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept {
-        if constexpr (requires { bit_clear(internal::abi<M>, mask, arg); }) {
+        if constexpr (requires { bit_drop(internal::abi<M>, mask, arg); }) {
             if consteval {
                 return fallback(mask, arg);
             } else {
-                return bit_clear(internal::abi<M>, mask, arg);
+                return bit_drop(internal::abi<M>, mask, arg);
             }
         } else {
             return fallback(mask, arg);
@@ -121,7 +135,7 @@ public:
     static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept
         -> common_bits_simd_with<T> auto {
         using A = common_abi_t<M, T>;
-        return bit_clear(internal::abi<A>, mask, arg);
+        return bit_drop(internal::abi<A>, mask, arg);
     }
 
     template <simd_mask_type M, simd_type T>
@@ -129,8 +143,8 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept {
         using A = common_abi_t<M, T>;
-        if constexpr (requires { bit_clear(internal::abi<A>, mask, arg); }) {
-            return bit_clear(internal::abi<M>, mask, arg);
+        if constexpr (requires { bit_drop(internal::abi<A>, mask, arg); }) {
+            return bit_drop(internal::abi<M>, mask, arg);
         } else {
             return operator()(dx::to_basic_type(mask), dx::to_basic_type(arg));
         }
@@ -140,11 +154,11 @@ public:
     requires common_size_simd_with<M, T> && same_abi_simd_as<M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept {
-        if constexpr (requires { bit_clear(internal::abi<M>, mask, arg); }) {
+        if constexpr (requires { bit_drop(internal::abi<M>, mask, arg); }) {
             if consteval {
                 return fallback(mask, arg);
             } else {
-                return bit_clear(internal::abi<M>, mask, arg);
+                return bit_drop(internal::abi<M>, mask, arg);
             }
         } else {
             return fallback(mask, arg);
@@ -157,7 +171,7 @@ public:
     static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept
         -> common_size_simd_with<T> auto {
         using A = common_abi_t<M, T>;
-        return bit_clear(internal::abi<A>, mask, arg);
+        return bit_drop(internal::abi<A>, mask, arg);
     }
 
     template <simd_mask_type M, simd_mask_type T>
@@ -165,8 +179,8 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept {
         using A = common_abi_t<M, T>;
-        if constexpr (requires { bit_clear(internal::abi<A>, mask, arg); }) {
-            return bit_clear(internal::abi<M>, mask, arg);
+        if constexpr (requires { bit_drop(internal::abi<A>, mask, arg); }) {
+            return bit_drop(internal::abi<M>, mask, arg);
         } else {
             return operator()(dx::to_basic_type(mask), dx::to_basic_type(arg));
         }
@@ -176,11 +190,11 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept {
         constexpr auto V = decltype(dx::to_immediate_mask<T>(mask))::value;
-        if constexpr (requires { bit_clear<V>(internal::abi<T>, arg); }) {
+        if constexpr (requires { bit_drop<V>(internal::abi<T>, arg); }) {
             if consteval {
                 return fallbacki<V>(arg);
             } else {
-                return bit_clear<V>(internal::abi<T>, arg);
+                return bit_drop<V>(internal::abi<T>, arg);
             }
         } else {
             return fallbacki<V>(arg);
@@ -191,8 +205,8 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept {
         constexpr auto V = decltype(dx::to_immediate_mask<T>(mask))::value;
-        if constexpr (requires { bit_clear<V>(internal::abi<T>, arg); }) {
-            return bit_clear<V>(internal::abi<T>, arg);
+        if constexpr (requires { bit_drop<V>(internal::abi<T>, arg); }) {
+            return bit_drop<V>(internal::abi<T>, arg);
         } else {
             return operator()(mask, dx::to_basic_type(arg));
         }
@@ -200,7 +214,7 @@ public:
 };
 
 template <auto V>
-struct bit_cleari_t {
+struct bit_dropi_t {
 private:
     template <typename T>
     using mask_type DPL_NODEBUG = immediate_mask<element_count<T>, V>;
@@ -209,24 +223,24 @@ public:
     template <simd_class T>
     requires requires {
         typename mask_type<T>;
-        requires regular_invocable<bit_clear_t, mask_type<T>, T>;
+        requires regular_invocable<bit_drop_t, mask_type<T>, T>;
     }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(T arg) noexcept {
         constexpr mask_type<T> mask{};
-        return bit_clear_t::operator()(mask, arg);
+        return bit_drop_t::operator()(mask, arg);
     }
 };
 
-struct bit_set_t : binary_operation_base<bit_set_t> {
+struct bit_force_t : binary_operation_base<bit_force_t> {
 private:
-    friend binary_operation_base<bit_set_t>;
+    friend binary_operation_base<bit_force_t>;
 
     template <simd_abi A, typename L, typename R>
-    requires requires(L lhs, R rhs) { bit_set(internal::abi<A>, lhs, rhs); }
+    requires requires(L lhs, R rhs) { bit_force(internal::abi<A>, lhs, rhs); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto native(A abi, L left, R right) noexcept {
-        return bit_set(internal::abi<A>, left, right);
+        return bit_force(internal::abi<A>, left, right);
     }
 
     template <basic_simd_type M, basic_simd_type T>
@@ -240,13 +254,21 @@ private:
     requires same_abi_simd_as<M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto fallback(M mask, T arg) noexcept {
-        return dx::select(mask, dx::all_bits, arg);
+        if constexpr (basic_simd_type<T>) {
+            return dx::select(mask, arg, dx::all_bits);
+        } else {
+            return dx::select(mask, arg, dx::broadcast<T>(true));
+        }
     }
 
-    template <auto V, basic_simd_class T>
+    template <auto V, basic_simd_type T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto fallbacki(T arg) noexcept {
-        return dx::selecti<V>(dx::all_bits, arg);
+        if constexpr (basic_simd_type<T>) {
+            return dx::selecti<V>(arg, dx::all_bits);
+        } else {
+            return dx::selecti<V>(arg, dx::broadcast<T>(true));
+        }
     }
 
 public:
@@ -254,11 +276,11 @@ public:
     requires common_bits_simd_with<M, T> && same_abi_simd_as<M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept {
-        if constexpr (requires { bit_set(internal::abi<M>, mask, arg); }) {
+        if constexpr (requires { bit_force(internal::abi<M>, mask, arg); }) {
             if consteval {
                 return fallback(mask, arg);
             } else {
-                return bit_set(internal::abi<M>, mask, arg);
+                return bit_force(internal::abi<M>, mask, arg);
             }
         } else {
             return fallback(mask, arg);
@@ -271,20 +293,20 @@ public:
     static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept
         -> common_bits_simd_with<common_bits_simd_t<M, T>> auto {
         using A = common_abi_t<M, T>;
-        return bit_set(internal::abi<A>, mask, arg);
+        return bit_force(internal::abi<A>, mask, arg);
     }
 
-    using binary_operation_base<bit_set_t>::operator();
+    using binary_operation_base<bit_force_t>::operator();
 
     template <basic_simd_mask_type M, basic_simd_type T>
     requires compatible_mask_for<M, T> && same_abi_simd_as<M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept {
-        if constexpr (requires { bit_set(internal::abi<M>, mask, arg); }) {
+        if constexpr (requires { bit_force(internal::abi<M>, mask, arg); }) {
             if consteval {
                 return fallback(mask, arg);
             } else {
-                return bit_set(internal::abi<M>, mask, arg);
+                return bit_force(internal::abi<M>, mask, arg);
             }
         } else {
             return fallback(mask, arg);
@@ -297,7 +319,7 @@ public:
     static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept
         -> common_bits_simd_with<T> auto {
         using A = common_abi_t<M, T>;
-        return bit_set(internal::abi<A>, mask, arg);
+        return bit_force(internal::abi<A>, mask, arg);
     }
 
     template <simd_mask_type M, simd_type T>
@@ -306,8 +328,8 @@ public:
     static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept
         -> common_bits_simd_with<T> auto {
         using A = common_abi_t<M, T>;
-        if constexpr (requires { bit_set(internal::abi<A>, mask, arg); }) {
-            return bit_set(internal::abi<M>, mask, arg);
+        if constexpr (requires { bit_force(internal::abi<A>, mask, arg); }) {
+            return bit_force(internal::abi<M>, mask, arg);
         } else {
             return operator()(dx::to_basic_type(mask), dx::to_basic_type(arg));
         }
@@ -317,11 +339,11 @@ public:
     requires common_size_simd_with<M, T> && same_abi_simd_as<M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept {
-        if constexpr (requires { bit_set(internal::abi<M>, mask, arg); }) {
+        if constexpr (requires { bit_force(internal::abi<M>, mask, arg); }) {
             if consteval {
                 return fallback(mask, arg);
             } else {
-                return bit_set(internal::abi<M>, mask, arg);
+                return bit_force(internal::abi<M>, mask, arg);
             }
         } else {
             return fallback(mask, arg);
@@ -334,7 +356,7 @@ public:
     static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept
         -> common_size_simd_with<T> auto {
         using A = common_abi_t<M, T>;
-        return bit_set(internal::abi<A>, mask, arg);
+        return bit_force(internal::abi<A>, mask, arg);
     }
 
     template <simd_mask_type M, simd_mask_type T>
@@ -343,8 +365,8 @@ public:
     static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept
         -> common_size_simd_with<T> auto {
         using A = common_abi_t<M, T>;
-        if constexpr (requires { bit_set(internal::abi<A>, mask, arg); }) {
-            return bit_set(internal::abi<M>, mask, arg);
+        if constexpr (requires { bit_force(internal::abi<A>, mask, arg); }) {
+            return bit_force(internal::abi<M>, mask, arg);
         } else {
             return operator()(dx::to_basic_type(mask), dx::to_basic_type(arg));
         }
@@ -354,11 +376,11 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept {
         constexpr auto V = decltype(dx::to_immediate_mask<T>(mask))::value;
-        if constexpr (requires { bit_set<V>(internal::abi<T>, arg); }) {
+        if constexpr (requires { bit_force<V>(internal::abi<T>, arg); }) {
             if consteval {
                 return fallbacki<V>(arg);
             } else {
-                return bit_set<V>(internal::abi<T>, arg);
+                return bit_force<V>(internal::abi<T>, arg);
             }
         } else {
             return fallbacki<V>(arg);
@@ -370,8 +392,8 @@ public:
     static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept
         -> common_bits_simd_with<T> auto {
         constexpr auto V = decltype(dx::to_immediate_mask<T>(mask))::value;
-        if constexpr (requires { bit_set<V>(internal::abi<T>, arg); }) {
-            return bit_set<V>(internal::abi<T>, arg);
+        if constexpr (requires { bit_force<V>(internal::abi<T>, arg); }) {
+            return bit_force<V>(internal::abi<T>, arg);
         } else {
             return operator()(mask, dx::to_basic_type(arg));
         }
@@ -382,8 +404,8 @@ public:
     static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept
         -> common_size_simd_with<T> auto {
         constexpr auto V = decltype(dx::to_immediate_mask<T>(mask))::value;
-        if constexpr (requires { bit_set<V>(internal::abi<T>, arg); }) {
-            return bit_set<V>(internal::abi<T>, arg);
+        if constexpr (requires { bit_force<V>(internal::abi<T>, arg); }) {
+            return bit_force<V>(internal::abi<T>, arg);
         } else {
             return operator()(mask, dx::to_basic_type(arg));
         }
@@ -391,7 +413,7 @@ public:
 };
 
 template <auto V>
-struct bit_seti_t {
+struct bit_forcei_t {
 private:
     template <typename T>
     using mask_type DPL_NODEBUG = immediate_mask<element_count<T>, V>;
@@ -400,12 +422,410 @@ public:
     template <simd_class T>
     requires requires {
         typename mask_type<T>;
-        requires regular_invocable<bit_set_t, mask_type<T>, T>;
+        requires regular_invocable<bit_force_t, mask_type<T>, T>;
     }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(T arg) noexcept {
         constexpr mask_type<T> mask{};
-        return bit_set_t::operator()(mask, arg);
+        return bit_force_t::operator()(mask, arg);
+    }
+};
+
+struct bit_keep_t : binary_operation_base<bit_keep_t> {
+private:
+    friend binary_operation_base<bit_keep_t>;
+
+    template <simd_abi A, typename L, typename R>
+    requires requires(L lhs, R rhs) { bit_keep(internal::abi<A>, lhs, rhs); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto native(A abi, L left, R right) noexcept {
+        return bit_keep(internal::abi<A>, left, right);
+    }
+
+    template <basic_simd_type M, basic_simd_type T>
+    requires same_abi_simd_as<M, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto fallback(M mask, T arg) noexcept {
+        return dx::bwand(mask, arg);
+    }
+
+    template <basic_simd_mask_type M, basic_simd_class T>
+    requires same_abi_simd_as<M, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto fallback(M mask, T arg) noexcept {
+        if constexpr (basic_simd_type<T>) {
+            return dx::select(mask, arg, dx::all_bits);
+        } else {
+            return dx::select(mask, arg, dx::broadcast<T>(true));
+        }
+    }
+
+    template <auto V, basic_simd_type T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto fallbacki(T arg) noexcept {
+        if constexpr (basic_simd_type<T>) {
+            return dx::selecti<V>(arg, dx::all_bits);
+        } else {
+            return dx::selecti<V>(arg, dx::broadcast<T>(true));
+        }
+    }
+
+public:
+    template <basic_simd_type M, basic_simd_type T>
+    requires common_bits_simd_with<M, T> && same_abi_simd_as<M, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept {
+        if constexpr (requires { bit_keep(internal::abi<M>, mask, arg); }) {
+            if consteval {
+                return fallback(mask, arg);
+            } else {
+                return bit_keep(internal::abi<M>, mask, arg);
+            }
+        } else {
+            return fallback(mask, arg);
+        }
+    }
+
+    template <basic_simd_type M, basic_simd_type T>
+    requires common_bits_simd_with<M, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept
+        -> common_bits_simd_with<common_bits_simd_t<M, T>> auto {
+        using A = common_abi_t<M, T>;
+        return bit_keep(internal::abi<A>, mask, arg);
+    }
+
+    using binary_operation_base<bit_keep_t>::operator();
+
+    template <basic_simd_mask_type M, basic_simd_type T>
+    requires compatible_mask_for<M, T> && same_abi_simd_as<M, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept {
+        if constexpr (requires { bit_keep(internal::abi<M>, mask, arg); }) {
+            if consteval {
+                return fallback(mask, arg);
+            } else {
+                return bit_keep(internal::abi<M>, mask, arg);
+            }
+        } else {
+            return fallback(mask, arg);
+        }
+    }
+
+    template <basic_simd_mask_type M, basic_simd_type T>
+    requires compatible_mask_for<M, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept
+        -> common_bits_simd_with<T> auto {
+        using A = common_abi_t<M, T>;
+        return bit_keep(internal::abi<A>, mask, arg);
+    }
+
+    template <simd_mask_type M, simd_type T>
+    requires compatible_mask_for<M, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept
+        -> common_bits_simd_with<T> auto {
+        using A = common_abi_t<M, T>;
+        if constexpr (requires { bit_keep(internal::abi<A>, mask, arg); }) {
+            return bit_keep(internal::abi<M>, mask, arg);
+        } else {
+            return operator()(dx::to_basic_type(mask), dx::to_basic_type(arg));
+        }
+    }
+
+    template <basic_simd_mask_type M, basic_simd_mask_type T>
+    requires common_size_simd_with<M, T> && same_abi_simd_as<M, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept {
+        if constexpr (requires { bit_keep(internal::abi<M>, mask, arg); }) {
+            if consteval {
+                return fallback(mask, arg);
+            } else {
+                return bit_keep(internal::abi<M>, mask, arg);
+            }
+        } else {
+            return fallback(mask, arg);
+        }
+    }
+
+    template <basic_simd_mask_type M, basic_simd_mask_type T>
+    requires common_size_simd_with<M, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept
+        -> common_size_simd_with<T> auto {
+        using A = common_abi_t<M, T>;
+        return bit_keep(internal::abi<A>, mask, arg);
+    }
+
+    template <simd_mask_type M, simd_mask_type T>
+    requires common_size_simd_with<M, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept
+        -> common_size_simd_with<T> auto {
+        using A = common_abi_t<M, T>;
+        if constexpr (requires { bit_keep(internal::abi<A>, mask, arg); }) {
+            return bit_keep(internal::abi<M>, mask, arg);
+        } else {
+            return operator()(dx::to_basic_type(mask), dx::to_basic_type(arg));
+        }
+    }
+
+    template <basic_simd_class T, immediate_mask_for<T> M>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept {
+        constexpr auto V = decltype(dx::to_immediate_mask<T>(mask))::value;
+        if constexpr (requires { bit_keep<V>(internal::abi<T>, arg); }) {
+            if consteval {
+                return fallbacki<V>(arg);
+            } else {
+                return bit_keep<V>(internal::abi<T>, arg);
+            }
+        } else {
+            return fallbacki<V>(arg);
+        }
+    }
+
+    template <simd_type T, immediate_mask_for<T> M>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept
+        -> common_bits_simd_with<T> auto {
+        constexpr auto V = decltype(dx::to_immediate_mask<T>(mask))::value;
+        if constexpr (requires { bit_keep<V>(internal::abi<T>, arg); }) {
+            return bit_keep<V>(internal::abi<T>, arg);
+        } else {
+            return operator()(mask, dx::to_basic_type(arg));
+        }
+    }
+
+    template <simd_mask_type T, immediate_mask_for<T> M>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept
+        -> common_size_simd_with<T> auto {
+        constexpr auto V = decltype(dx::to_immediate_mask<T>(mask))::value;
+        if constexpr (requires { bit_keep<V>(internal::abi<T>, arg); }) {
+            return bit_keep<V>(internal::abi<T>, arg);
+        } else {
+            return operator()(mask, dx::to_basic_type(arg));
+        }
+    }
+};
+
+template <auto V>
+struct bit_keepi_t {
+private:
+    template <typename T>
+    using mask_type DPL_NODEBUG = immediate_mask<element_count<T>, V>;
+
+public:
+    template <simd_class T>
+    requires requires {
+        typename mask_type<T>;
+        requires regular_invocable<bit_keep_t, mask_type<T>, T>;
+    }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(T arg) noexcept {
+        constexpr mask_type<T> mask{};
+        return bit_keep_t::operator()(mask, arg);
+    }
+};
+
+struct bit_stencil_t : binary_operation_base<bit_stencil_t> {
+private:
+    friend binary_operation_base<bit_stencil_t>;
+
+    template <simd_abi A, typename L, typename R>
+    requires requires(L lhs, R rhs) { bit_stencil(internal::abi<A>, lhs, rhs); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto native(A abi, L left, R right) noexcept {
+        return bit_stencil(internal::abi<A>, left, right);
+    }
+
+    template <basic_simd_type M, basic_simd_type T>
+    requires same_abi_simd_as<M, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto fallback(M mask, T arg) noexcept {
+        return dx::bwornot(arg, mask);
+    }
+
+    template <basic_simd_mask_type M, basic_simd_class T>
+    requires same_abi_simd_as<M, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto fallback(M mask, T arg) noexcept {
+        if constexpr (basic_simd_type<T>) {
+            return dx::select(mask, arg, dx::all_bits);
+        } else {
+            return dx::select(mask, arg, dx::broadcast<T>(true));
+        }
+    }
+
+    template <auto V, basic_simd_type T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto fallbacki(T arg) noexcept {
+        if constexpr (basic_simd_type<T>) {
+            return dx::selecti<V>(arg, dx::all_bits);
+        } else {
+            return dx::selecti<V>(arg, dx::broadcast<T>(true));
+        }
+    }
+
+public:
+    template <basic_simd_type M, basic_simd_type T>
+    requires common_bits_simd_with<M, T> && same_abi_simd_as<M, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept {
+        if constexpr (requires { bit_stencil(internal::abi<M>, mask, arg); }) {
+            if consteval {
+                return fallback(mask, arg);
+            } else {
+                return bit_stencil(internal::abi<M>, mask, arg);
+            }
+        } else {
+            return fallback(mask, arg);
+        }
+    }
+
+    template <basic_simd_type M, basic_simd_type T>
+    requires common_bits_simd_with<M, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept
+        -> common_bits_simd_with<common_bits_simd_t<M, T>> auto {
+        using A = common_abi_t<M, T>;
+        return bit_stencil(internal::abi<A>, mask, arg);
+    }
+
+    using binary_operation_base<bit_stencil_t>::operator();
+
+    template <basic_simd_mask_type M, basic_simd_type T>
+    requires compatible_mask_for<M, T> && same_abi_simd_as<M, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept {
+        if constexpr (requires { bit_stencil(internal::abi<M>, mask, arg); }) {
+            if consteval {
+                return fallback(mask, arg);
+            } else {
+                return bit_stencil(internal::abi<M>, mask, arg);
+            }
+        } else {
+            return fallback(mask, arg);
+        }
+    }
+
+    template <basic_simd_mask_type M, basic_simd_type T>
+    requires compatible_mask_for<M, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept
+        -> common_bits_simd_with<T> auto {
+        using A = common_abi_t<M, T>;
+        return bit_stencil(internal::abi<A>, mask, arg);
+    }
+
+    template <simd_mask_type M, simd_type T>
+    requires compatible_mask_for<M, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept
+        -> common_bits_simd_with<T> auto {
+        using A = common_abi_t<M, T>;
+        if constexpr (requires { bit_stencil(internal::abi<A>, mask, arg); }) {
+            return bit_stencil(internal::abi<M>, mask, arg);
+        } else {
+            return operator()(dx::to_basic_type(mask), dx::to_basic_type(arg));
+        }
+    }
+
+    template <basic_simd_mask_type M, basic_simd_mask_type T>
+    requires common_size_simd_with<M, T> && same_abi_simd_as<M, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept {
+        if constexpr (requires { bit_stencil(internal::abi<M>, mask, arg); }) {
+            if consteval {
+                return fallback(mask, arg);
+            } else {
+                return bit_stencil(internal::abi<M>, mask, arg);
+            }
+        } else {
+            return fallback(mask, arg);
+        }
+    }
+
+    template <basic_simd_mask_type M, basic_simd_mask_type T>
+    requires common_size_simd_with<M, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept
+        -> common_size_simd_with<T> auto {
+        using A = common_abi_t<M, T>;
+        return bit_stencil(internal::abi<A>, mask, arg);
+    }
+
+    template <simd_mask_type M, simd_mask_type T>
+    requires common_size_simd_with<M, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept
+        -> common_size_simd_with<T> auto {
+        using A = common_abi_t<M, T>;
+        if constexpr (requires { bit_stencil(internal::abi<A>, mask, arg); }) {
+            return bit_stencil(internal::abi<M>, mask, arg);
+        } else {
+            return operator()(dx::to_basic_type(mask), dx::to_basic_type(arg));
+        }
+    }
+
+    template <basic_simd_class T, immediate_mask_for<T> M>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept {
+        constexpr auto V = decltype(dx::to_immediate_mask<T>(mask))::value;
+        if constexpr (requires { bit_stencil<V>(internal::abi<T>, arg); }) {
+            if consteval {
+                return fallbacki<V>(arg);
+            } else {
+                return bit_stencil<V>(internal::abi<T>, arg);
+            }
+        } else {
+            return fallbacki<V>(arg);
+        }
+    }
+
+    template <simd_type T, immediate_mask_for<T> M>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept
+        -> common_bits_simd_with<T> auto {
+        constexpr auto V = decltype(dx::to_immediate_mask<T>(mask))::value;
+        if constexpr (requires { bit_stencil<V>(internal::abi<T>, arg); }) {
+            return bit_stencil<V>(internal::abi<T>, arg);
+        } else {
+            return operator()(mask, dx::to_basic_type(arg));
+        }
+    }
+
+    template <simd_mask_type T, immediate_mask_for<T> M>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept
+        -> common_size_simd_with<T> auto {
+        constexpr auto V = decltype(dx::to_immediate_mask<T>(mask))::value;
+        if constexpr (requires { bit_stencil<V>(internal::abi<T>, arg); }) {
+            return bit_stencil<V>(internal::abi<T>, arg);
+        } else {
+            return operator()(mask, dx::to_basic_type(arg));
+        }
+    }
+};
+
+template <auto V>
+struct bit_stencili_t {
+private:
+    template <typename T>
+    using mask_type DPL_NODEBUG = immediate_mask<element_count<T>, V>;
+
+public:
+    template <simd_class T>
+    requires requires {
+        typename mask_type<T>;
+        requires regular_invocable<bit_stencil_t, mask_type<T>, T>;
+    }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(T arg) noexcept {
+        constexpr mask_type<T> mask{};
+        return bit_stencil_t::operator()(mask, arg);
     }
 };
 
@@ -1125,8 +1545,8 @@ public:
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::bit_clear_t bit_clear{};
-DPL_EXPORT inline constexpr internal::bit_set_t bit_set{};
+DPL_EXPORT inline constexpr internal::bit_drop_t bit_drop{};
+DPL_EXPORT inline constexpr internal::bit_force_t bit_force{};
 DPL_EXPORT inline constexpr internal::bit_select_t bit_select{};
 DPL_EXPORT inline constexpr internal::popcount_t popcount{};
 DPL_EXPORT inline constexpr internal::countl_zero_t countl_zero{};
@@ -1135,9 +1555,9 @@ DPL_EXPORT inline constexpr internal::countr_zero_t countr_zero{};
 DPL_EXPORT inline constexpr internal::countr_one_t countr_one{};
 DPL_EXPORT inline constexpr internal::byteswap_t byteswap{};
 DPL_EXPORT template <auto V>
-inline constexpr internal::bit_cleari_t<V> bit_cleari{};
+inline constexpr internal::bit_dropi_t<V> bit_dropi{};
 DPL_EXPORT template <auto V>
-inline constexpr internal::bit_seti_t<V> bit_seti{};
+inline constexpr internal::bit_forcei_t<V> bit_forcei{};
 DPL_EXPORT template <auto V>
 inline constexpr internal::bit_selecti_t<V> bit_selecti{};
 } // namespace cpo

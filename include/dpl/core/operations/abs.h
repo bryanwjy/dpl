@@ -55,7 +55,7 @@ private:
         } else if constexpr (floating_point<E>) {
             constexpr auto nmask = ~mask;
             return dx::reinterpret<E>(dx::bwandnot(
-                val, dx::bit_clear(nmask, dx::msb_v<basic_simd<E, A>>)));
+                val, dx::bit_drop(nmask, dx::msb_v<basic_simd<E, A>>)));
         } else {
             using T = negated_type<E>;
             return internal::itransform<basic_simd<T, A>>(

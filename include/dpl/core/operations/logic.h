@@ -3,31 +3,14 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/operations/abs.h"
-#include "dpl/core/operations/bitwise.h"
-#include "dpl/core/operations/negate.h"
-#include "dpl/core/operations/permute.h"
-#include "dpl/core/operations/select.h"
-
 #if !DPL_MODULES
-#  include "dpl/core/basic/load.h"
-#  include "dpl/core/basic/reinterpret.h"
+#  include "dpl/core/basic/immediate_mask.h"
 #  include "dpl/core/basic/to_basic_type.h"
 #  include "dpl/core/concepts/basic_type.h"
-#  include "dpl/core/concepts/common_size_with.h"
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/concepts/simd_equivalence.h"
 #  include "dpl/core/concepts/simd_mask_type.h"
-#  include "dpl/core/constants/exponent_bias.h"
-#  include "dpl/core/constants/exponent_bits.h"
-#  include "dpl/core/constants/max_value.h"
-#  include "dpl/core/constants/min_value.h"
-#  include "dpl/core/constants/zero.h"
-#  include "dpl/core/type_traits/array_for.h"
 #  include "dpl/core/type_traits/basic_element.h"
-#  include "dpl/core/type_traits/basic_type.h"
 #  include "dpl/core/type_traits/iota_sequence.h"
-#  include "dpl/core/type_traits/rebind_simd.h"
 #  include "dpl/std/concepts/convertible_to.h"
 #endif
 
