@@ -2,7 +2,7 @@
 #pragma once
 
 #if !DPL_MODULES
-#  include "dpl/core/basic/zero.h"
+#  include "dpl/core/basic/zero.h" // IWYU pragma: export
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN

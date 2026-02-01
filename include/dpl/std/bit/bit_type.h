@@ -5,7 +5,6 @@
 
 #if !DPL_MODULES
 #  include "dpl/std/stddef.h"
-#  include "dpl/std/type_traits/make_signed.h"
 #endif
 
 #include "dpl/std/bit/char_bit.h"

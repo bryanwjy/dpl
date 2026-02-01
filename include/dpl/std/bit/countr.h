@@ -9,9 +9,6 @@
 #  include "dpl/std/concepts/same_as.h"
 #endif
 
-#include "dpl/std/bit/char_bit.h"
-#include "dpl/std/bit/popcount.h"
-
 DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace details::bit {

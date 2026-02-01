@@ -4,7 +4,7 @@
 #include "dpl/config.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/basic/all_bits.h"
+#  include "dpl/core/basic/all_bits.h" // IWYU pragma: export
 #  include "dpl/std/concepts/convertible_to.h"
 #endif
 

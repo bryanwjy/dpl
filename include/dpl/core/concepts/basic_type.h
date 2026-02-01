@@ -12,6 +12,7 @@
 #  include "dpl/std/bit/char_bit.h"
 #  include "dpl/std/concepts/enumeration.h"
 #  include "dpl/std/concepts/integral.h"
+#  include "dpl/std/type_traits/make_signed.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
