@@ -1547,6 +1547,8 @@ namespace datapar {
 inline namespace cpo {
 DPL_EXPORT inline constexpr internal::bit_drop_t bit_drop{};
 DPL_EXPORT inline constexpr internal::bit_force_t bit_force{};
+DPL_EXPORT inline constexpr internal::bit_keep_t bit_keep{};
+DPL_EXPORT inline constexpr internal::bit_stencil_t bit_stencil{};
 DPL_EXPORT inline constexpr internal::bit_select_t bit_select{};
 DPL_EXPORT inline constexpr internal::popcount_t popcount{};
 DPL_EXPORT inline constexpr internal::countl_zero_t countl_zero{};
@@ -1558,6 +1560,10 @@ DPL_EXPORT template <auto V>
 inline constexpr internal::bit_dropi_t<V> bit_dropi{};
 DPL_EXPORT template <auto V>
 inline constexpr internal::bit_forcei_t<V> bit_forcei{};
+DPL_EXPORT template <auto V>
+inline constexpr internal::bit_keepi_t<V> bit_keepi{};
+DPL_EXPORT template <auto V>
+inline constexpr internal::bit_stencili_t<V> bit_stencili{};
 DPL_EXPORT template <auto V>
 inline constexpr internal::bit_selecti_t<V> bit_selecti{};
 } // namespace cpo

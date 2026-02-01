@@ -6,30 +6,32 @@
 #if !DPL_MODULES
 #  include "dpl/core/fwd.h"
 
-#  include "dpl/core/basic/broadcast.h"
-#  include "dpl/core/basic/broadcastable_base.h"
 #  include "dpl/core/basic/extract.h"
-#  include "dpl/core/basic/initialize.h"
 #  include "dpl/core/basic/reinterpret.h"
 #  include "dpl/core/basic/simd_mask.h"
-#  include "dpl/core/basic/to_simd_mask.h"
-#  include "dpl/core/concepts/common_bits_with.h"
-#  include "dpl/core/concepts/common_order_with.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_element.h"
+#  include "dpl/core/operations/bit.h"
 #  include "dpl/core/operations/bitwise.h"
 #  include "dpl/core/operations/logic.h"
 #  include "dpl/core/operations/select.h"
 #  include "dpl/core/type_traits/element_count.h"
-#  include "dpl/std/concepts/different_from.h"
 #  include "dpl/std/concepts/same_as.h"
-#  include "dpl/std/type_traits/is_enum.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
 template <simd_element E, simd_abi A>
+class simd_mask_not;
+namespace internal {
+template <typename T>
+inline constexpr bool is_mask_not_specialization = false;
+template <simd_element E, simd_abi A>
+inline constexpr bool is_mask_not_specialization<simd_mask_not<E, A>> = true;
+} // namespace internal
+
+DPL_EXPORT template <simd_element E, simd_abi A>
 class simd_mask_not {
     using mask_type = typename A::template native_mask<E>;
     using vector_type = typename A::template native_type<E>;
@@ -102,34 +104,97 @@ public:
         return datapar::some_of(internal::abi<A>, !self);
     }
 
-    // TODO: Complete
-
-    template <datapar::simd_type T>
+    template <typename T, typename F>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    friend constexpr auto bit_set(
-        abi_type, simd_mask_not self, T arg) noexcept {
-        return datapar::select(!self, arg, datapar::all_bits);
+    friend constexpr auto select(
+        abi_type, simd_mask_not self, T lhs, F rhs) noexcept
+    requires requires { datapar::select(!self, rhs, lhs); }
+    {
+        return datapar::select(!self, rhs, lhs);
     }
 
-    template <datapar::simd_type T>
+    template <simd_element E2, simd_abi A2>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    friend constexpr auto bit_clear(
-        abi_type, simd_mask_not self, T arg) noexcept {
-        return datapar::select(!self, arg, datapar::zero);
+    friend constexpr auto bit_keep(
+        abi_type, simd_mask_not self, simd_mask_not<E2, A2> arg) noexcept
+    requires requires { !datapar::bit_force(!self, !arg); }
+    {
+        return !datapar::bit_force(!self, !arg);
     }
 
-    template <simd_mask_type T>
+    template <simd_element E2, simd_abi A2>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    friend constexpr auto bit_set(
-        abi_type, simd_mask_not self, T arg) noexcept {
-        return datapar::bwornot(arg, !self);
+    friend constexpr auto bit_drop(
+        abi_type, simd_mask_not self, simd_mask_not<E2, A2> arg) noexcept
+    requires requires { !datapar::bit_stencil(!self, !arg); }
+    {
+        using A3 = common_abi_t<abi_type, A2>;
+        return !datapar::bit_stencil(!self, !arg);
     }
 
-    template <simd_mask_type T>
+    template <simd_element E2, simd_abi A2>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    friend constexpr auto bit_clear(
-        abi_type, simd_mask_not self, T arg) noexcept {
-        return datapar::bwand(!self, arg);
+    friend constexpr auto bit_force(
+        abi_type, simd_mask_not self, simd_mask_not<E2, A2> arg) noexcept
+    requires requires { !datapar::bit_keep(!self, !arg); }
+    {
+        return !datapar::bit_keep(!self, !arg);
+    }
+
+    template <simd_element E2, simd_abi A2>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    friend constexpr auto bit_stencil(
+        abi_type, simd_mask_not self, simd_mask_not<E2, A2> arg) noexcept
+    requires requires { !datapar::bit_drop(!self, !arg); }
+    {
+        return !datapar::bit_drop(!self, !arg);
+    }
+
+    template <typename T>
+    requires (!internal::is_mask_not_specialization<T>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    friend constexpr auto bit_keep(abi_type, simd_mask_not self, T arg) noexcept
+    requires requires { datapar::bit_drop(!self, arg); }
+    {
+        return datapar::bit_drop(!self, arg);
+    }
+
+    template <typename T>
+    requires (!internal::is_mask_not_specialization<T>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    friend constexpr auto bit_drop(abi_type, simd_mask_not self, T arg) noexcept
+    requires requires { datapar::bit_keep(!self, arg); }
+    {
+        return datapar::bit_keep(!self, arg);
+    }
+
+    template <typename T>
+    requires (!internal::is_mask_not_specialization<T>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    friend constexpr auto bit_force(
+        abi_type, simd_mask_not self, T arg) noexcept
+    requires requires { datapar::bit_stencil(!self, arg); }
+    {
+        return datapar::bit_stencil(!self, arg);
+    }
+
+    template <typename T>
+    requires (!internal::is_mask_not_specialization<T>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    friend constexpr auto bit_stencil(
+        abi_type, simd_mask_not self, T arg) noexcept
+    requires requires { datapar::bit_force(!self, arg); }
+    {
+        return datapar::bit_force(!self, arg);
+    }
+
+    template <typename L, typename R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    friend constexpr auto bit_select(
+        abi_type, simd_mask_not self, L lhs, R rhs) noexcept
+    requires requires { datapar::bit_select(!self, rhs, lhs); }
+    {
+        return datapar::bit_select(!self, rhs, lhs);
     }
 
 private:
