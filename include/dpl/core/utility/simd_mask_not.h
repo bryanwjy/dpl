@@ -223,9 +223,9 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     friend constexpr auto bit_keep(common_abi_with<abi_type> auto,
         simd_mask_not self, simd_mask_not<E2, A2> arg) noexcept
-    requires requires { !datapar::bit_force(!self, !arg); }
+    requires requires { !datapar::bit_fill(!self, !arg); }
     {
-        return !datapar::bit_force(!self, !arg);
+        return !datapar::bit_fill(!self, !arg);
     }
 
     template <common_size_with<E> E2, common_abi_with<abi_type> A2>
@@ -239,7 +239,7 @@ public:
 
     template <common_size_with<E> E2, common_abi_with<abi_type> A2>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    friend constexpr auto bit_force(common_abi_with<abi_type> auto,
+    friend constexpr auto bit_fill(common_abi_with<abi_type> auto,
         simd_mask_not self, simd_mask_not<E2, A2> arg) noexcept
     requires requires { !datapar::bit_keep(!self, !arg); }
     {
@@ -278,7 +278,7 @@ public:
     template <typename T>
     requires (!internal::is_mask_not_specialization<T>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    friend constexpr auto bit_force(
+    friend constexpr auto bit_fill(
         common_abi_with<abi_type> auto, simd_mask_not self, T arg) noexcept
     requires requires { datapar::bit_stencil(!self, arg); }
     {
@@ -290,9 +290,9 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     friend constexpr auto bit_stencil(
         common_abi_with<abi_type> auto, simd_mask_not self, T arg) noexcept
-    requires requires { datapar::bit_force(!self, arg); }
+    requires requires { datapar::bit_fill(!self, arg); }
     {
-        return datapar::bit_force(!self, arg);
+        return datapar::bit_fill(!self, arg);
     }
 
     template <typename L, typename R>

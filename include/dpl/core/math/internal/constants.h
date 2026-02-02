@@ -13,7 +13,9 @@
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
-namespace datapar::internal {
+namespace datapar::fmath {
+namespace dxi = __DPL datapar::internal;
+
 struct toint_t : broadcastable_base {
     __DPL_HIDE_FROM_ABI explicit constexpr toint_t() noexcept = default;
 
@@ -33,8 +35,7 @@ struct maxint_t : broadcastable_base {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     constexpr operator T(this maxint_t) noexcept {
         return static_cast<T>(
-            __DPL bit_cast<internal::bit_type_for_t<T>>(mantissa_bits_v<T>) +
-            1);
+            __DPL bit_cast<dxi::bit_type_for_t<T>>(mantissa_bits_v<T>) + 1);
     }
 };
 
@@ -59,7 +60,7 @@ struct underhalf_t : broadcastable_base {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     constexpr operator T(this underhalf_t) noexcept {
         constexpr auto half_rep =
-            __DPL bit_cast<internal::bit_type_for_t<T>>(static_cast<T>(half));
+            __DPL bit_cast<dxi::bit_type_for_t<T>>(static_cast<T>(half));
         return __DPL bit_cast<T>(half_rep - 1);
     }
 };
@@ -90,5 +91,5 @@ struct rcp_ln2_t : broadcastable_base {
 
 inline constexpr rcp_ln2_t rcp_ln2{};
 
-} // namespace datapar::internal
+} // namespace datapar::fmath
 DPL_DEFAULT_NAMESPACE_END

@@ -13,8 +13,8 @@
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
-namespace datapar::internal {
-
+namespace datapar::fmath {
+namespace dx = __DPL datapar;
 template <floating_point T, T... Vs>
 struct polynomial {
     static_assert(sizeof...(Vs) >= 2);
@@ -144,5 +144,5 @@ public:
         return coeffs[imm<0>];
     }
 };
-} // namespace datapar::internal
+} // namespace datapar::fmath
 DPL_DEFAULT_NAMESPACE_END

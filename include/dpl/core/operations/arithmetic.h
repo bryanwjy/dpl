@@ -69,7 +69,7 @@ public:
     }
 
     template <basic_simd_type L, common_arithmetic_simd_with<L> R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
         -> equivalent_simd_as<result_for<L, R>> auto {
         using A = common_abi_t<L, R>;
@@ -77,7 +77,7 @@ public:
     }
 
     template <simd_type L, common_arithmetic_simd_with<L> R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
         -> equivalent_simd_as<result_for<L, R>> auto {
         using A = common_abi_t<L, R>;
@@ -132,7 +132,7 @@ public:
     }
 
     template <basic_simd_type L, common_arithmetic_simd_with<L> R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
         -> equivalent_simd_as<result_for<L, R>> auto {
         using A = common_abi_t<L, R>;
@@ -140,7 +140,7 @@ public:
     }
 
     template <simd_type L, common_arithmetic_simd_with<L> R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
         -> equivalent_simd_as<result_for<L, R>> auto {
         using A = common_abi_t<L, R>;
@@ -195,7 +195,7 @@ public:
     }
 
     template <basic_simd_type L, common_arithmetic_simd_with<L> R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
         -> equivalent_simd_as<result_for<L, R>> auto {
         using A = common_abi_t<L, R>;
@@ -203,7 +203,7 @@ public:
     }
 
     template <simd_type L, common_arithmetic_simd_with<L> R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
         -> equivalent_simd_as<result_for<L, R>> auto {
         using A = common_abi_t<L, R>;
@@ -256,7 +256,7 @@ public:
 
     template <floating_point E, simd_abi A, simd_abi B>
     requires (!same_as<A, B>)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(
         basic_simd<E, A> left, basic_simd<E, B> right) noexcept {
         return div(internal::abi<common_abi_t<A, B>>, left, right);
@@ -264,7 +264,7 @@ public:
 
     template <floating_point_simd L, common_float_simd_with<L> R>
     requires (!basic_simd_type<L> || !basic_simd_type<R>)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
         -> common_float_simd_with<common_float_simd_t<L, R>> auto {
         using abi_type = common_abi_t<L, R>;
@@ -320,7 +320,7 @@ public:
 
     template <arithmetic_simd T>
     requires (!basic_simd_type<T>)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(T val) noexcept
         -> equivalent_simd_as<result_simd<T>> auto {
         if constexpr (requires { negate(internal::abi<T>, val); }) {

@@ -5,7 +5,6 @@
 
 #include "dpl/core/basic/initialize.h"
 #include "dpl/core/basic/to_basic_type.h"
-#include "dpl/core/basic/unsafe.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/basic_type.h"
@@ -21,6 +20,15 @@
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
+namespace datapar {
+DPL_EXPORT struct assume_cannonical_t {
+    __DPL_HIDE_FROM_ABI explicit constexpr assume_cannonical_t() noexcept =
+        default;
+};
+
+DPL_EXPORT inline constexpr assume_cannonical_t assume_cannonical{};
+} // namespace datapar
+
 namespace datapar::internal {
 void to_simd_mask(...) noexcept = delete;
 
@@ -85,7 +93,7 @@ public:
     template <basic_simd_type T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr to_simd_mask_type_t<T> operator()(
-        unsafe_t tag, T src) noexcept {
+        assume_cannonical_t tag, T src) noexcept {
         if constexpr (requires { to_simd_mask(internal::abi<T>, tag, src); }) {
             if consteval {
                 return operator()(src);
@@ -100,7 +108,7 @@ public:
     template <simd_type T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr equivalent_mask_as<to_simd_mask_type_t<T>> auto operator()(
-        unsafe_t tag, T src) noexcept {
+        assume_cannonical_t tag, T src) noexcept {
         if constexpr (requires { to_simd_mask(internal::abi<T>, tag, src); }) {
             return to_simd_mask(internal::abi<T>, tag, src);
         } else {

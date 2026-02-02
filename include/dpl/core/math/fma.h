@@ -291,7 +291,7 @@ public:
         common_arithmetic_simd_with<common_arithmetic_simd_t<A, B>, C> &&
         floating_point_simd<A> && floating_point_simd<B> &&
         floating_point_simd<C>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(A a, B b, C c) noexcept {
         return fmsub(internal::abi<common_abi_t<A, B, C>>, a, b, c);
     }
@@ -300,7 +300,7 @@ public:
         common_arithmetic_simd_with<common_arithmetic_simd_t<A, B>> C>
     requires floating_point_simd<A> && floating_point_simd<B> &&
         floating_point_simd<C>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(A a, B b, C c) noexcept {
         if constexpr (requires {
                           fmsub(internal::abi<common_abi_t<A, B, C>>, a, b, c);
@@ -354,7 +354,7 @@ public:
         common_arithmetic_simd_with<common_arithmetic_simd_t<A, B>, C> &&
         floating_point_simd<A> && floating_point_simd<B> &&
         floating_point_simd<C>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(A a, B b, C c) noexcept {
         return fnmadd(internal::abi<common_abi_t<A, B, C>>, a, b, c);
     }
@@ -363,7 +363,7 @@ public:
         common_arithmetic_simd_with<common_arithmetic_simd_t<A, B>> C>
     requires floating_point_simd<A> && floating_point_simd<B> &&
         floating_point_simd<C>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(A a, B b, C c) noexcept {
         if constexpr (requires {
                           fnmadd(internal::abi<common_abi_t<A, B, C>>, a, b, c);
@@ -417,7 +417,7 @@ public:
         common_arithmetic_simd_with<common_arithmetic_simd_t<A, B>, C> &&
         floating_point_simd<A> && floating_point_simd<B> &&
         floating_point_simd<C>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(A a, B b, C c) noexcept {
         return fnmsub(internal::abi<common_abi_t<A, B, C>>, a, b, c);
     }
@@ -426,7 +426,7 @@ public:
         common_arithmetic_simd_with<common_arithmetic_simd_t<A, B>> C>
     requires floating_point_simd<A> && floating_point_simd<B> &&
         floating_point_simd<C>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(A a, B b, C c) noexcept {
         if constexpr (requires {
                           fnmsub(internal::abi<common_abi_t<A, B, C>>, a, b, c);
@@ -481,7 +481,7 @@ public:
         common_arithmetic_simd_with<common_arithmetic_simd_t<A, B>, C> &&
         floating_point_simd<A> && floating_point_simd<B> &&
         floating_point_simd<C>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(A a, B b, C c) noexcept {
         return fmaddsub(internal::abi<common_abi_t<A, B, C>>, a, b, c);
     }
@@ -490,7 +490,7 @@ public:
         common_arithmetic_simd_with<common_arithmetic_simd_t<A, B>> C>
     requires floating_point_simd<A> && floating_point_simd<B> &&
         floating_point_simd<C>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(A a, B b, C c) noexcept {
         if constexpr (requires {
                           fmaddsub(
@@ -546,7 +546,7 @@ public:
         common_arithmetic_simd_with<common_arithmetic_simd_t<A, B>, C> &&
         floating_point_simd<A> && floating_point_simd<B> &&
         floating_point_simd<C>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(A a, B b, C c) noexcept {
         return fmsubadd(internal::abi<common_abi_t<A, B, C>>, a, b, c);
     }
@@ -555,7 +555,7 @@ public:
         common_arithmetic_simd_with<common_arithmetic_simd_t<A, B>> C>
     requires floating_point_simd<A> && floating_point_simd<B> &&
         floating_point_simd<C>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(A a, B b, C c) noexcept {
         if constexpr (requires {
                           fmsubadd(

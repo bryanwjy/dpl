@@ -20,15 +20,18 @@
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
+struct sqrt_t;
+struct rsqrt_t;
+} // namespace datapar::internal
+namespace datapar::fmath {
+namespace dx = __DPL datapar;
+namespace dxi = __DPL datapar::internal;
 template <typename T, typename... Args>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr auto cpo(Args... args) noexcept {
     constexpr T func;
     return func(args...);
 }
-
-struct sqrt_t;
-struct rsqrt_t;
 
 template <simd_element T, simd_abi A>
 requires floating_point<T>
@@ -303,10 +306,10 @@ template <simd_abi A, abi_float_type<A> T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 constexpr pair<T, A> DPL_VECTORCALL sqrt(pair<T, A> arg) noexcept {
     using simd = typename pair<T, A>::element_type;
-    auto x = dx::rsqrt(arg.upper + arg.lower);
+    auto x = fmath::cpo<dxi::rsqrt_t>(arg.upper + arg.lower);
     auto r = arg * x;
     constexpr auto n3 = dx::broadcast<simd>(-3.0);
-    return internal::scale(r * (r * x + n3), -0.5);
+    return fmath::scale(r * (r * x + n3), -0.5);
 }
 
 template <typename T>
@@ -399,9 +402,9 @@ constexpr pair_of<T> DPL_VECTORCALL rcp(single<T> arg) noexcept {
 template <simd_type T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 constexpr pair_of<T> DPL_VECTORCALL sqrt(single<T> arg) noexcept {
-    auto t = dx::sqrt(arg.value);
-    return internal::scale(arg + (single(t) * t) * internal::rcp(single(t)),
-        dx::broadcast<T>(0.5));
+    auto t = fmath::cpo<dxi::sqrt_t>(arg.value);
+    return fmath::scale(
+        arg + (single(t) * t) * fmath::rcp(single(t)), dx::broadcast<T>(0.5));
 }
 
 template <simd_element T, simd_abi A>
@@ -593,5 +596,5 @@ template <typename T>
 requires explicitly_convertible_to<ln2_t, T>
 inline constexpr auto ln2_v = static_cast<T>(ln2);
 
-} // namespace datapar::internal
+} // namespace datapar::fmath
 DPL_DEFAULT_NAMESPACE_END
