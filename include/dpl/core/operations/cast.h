@@ -4,6 +4,7 @@
 #include "dpl/config.h"
 
 #include "dpl/core/operations/abs.h"
+#include "dpl/core/operations/bit.h"
 #include "dpl/core/operations/bitwise.h"
 #include "dpl/core/operations/negate.h"
 #include "dpl/core/operations/permute.h"
@@ -107,12 +108,12 @@ private:
                 dx::reinterpret<uint64>(dx::msb_v<basic_simd<int32, A>>);
             auto const is_lt_zero = dx::reinterpret<uint64>(parg) > signbits;
             if constexpr (signed_integral<To>) {
-                auto const result = dx::select(
+                auto const result = dx::bit_keep(
                     uexp > dx::zero, dx::select(uexp < du64, small, large));
                 return dx::reinterpret<To>(dx::negate(is_lt_zero, result));
             } else {
                 return dx::reinterpret<To>(
-                    dx::select(dx::bwandnot(is_lt_zero, uexp > dx::zero),
+                    dx::bit_keep(dx::bwandnot(uexp > dx::zero, is_lt_zero),
                         dx::select(uexp < du64, small, large)));
             }
         } else if constexpr (common_size_with<int32, To>) {
@@ -131,7 +132,7 @@ private:
                     arg < dx::zero, dx::select(exp > dx::zero, result)));
             } else {
                 return dx::reinterpret<To>(
-                    dx::select((exp > dx::zero) & (arg > dx::zero), result));
+                    dx::bit_keep((exp > dx::zero) & (arg > dx::zero), result));
             }
         } else {
             return operator()(cast_t<int32>::operator()(arg));
@@ -162,7 +163,7 @@ private:
                     arg < dx::zero, dx::select(exp > dx::zero, result)));
             } else {
                 return dx::reinterpret<result_type>(
-                    dx::select((exp > dx::zero) & (arg > dx::zero), result));
+                    dx::bit_keep((exp > dx::zero) & (arg > dx::zero), result));
             }
         } else {
             return operator()(cast_t<int64>::operator()(arg));

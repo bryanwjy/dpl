@@ -3,22 +3,17 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/constants/epsilon.h"
-#include "dpl/core/constants/exponent_bits.h"
-#include "dpl/core/constants/mantissa_bits.h"
-
 #if !DPL_MODULES
 #  include "dpl/core/basic/broadcastable_base.h"
+#  include "dpl/core/constants/epsilon.h"
+#  include "dpl/core/constants/mantissa_bits.h"
 #  include "dpl/core/type_traits/bit_type.h"
 #  include "dpl/std/bit/bit_cast.h"
-#  include "dpl/std/bit/countr.h"
 #  include "dpl/std/concepts/floating_point.h"
-#  include "dpl/std/utility/to_unsigned.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
-namespace datapar::fmath {
-DPL_EXPORT
+namespace datapar::internal {
 struct toint_t : broadcastable_base {
     __DPL_HIDE_FROM_ABI explicit constexpr toint_t() noexcept = default;
 
@@ -29,14 +24,12 @@ struct toint_t : broadcastable_base {
     }
 };
 
-DPL_EXPORT
 inline constexpr toint_t toint{};
 
-DPL_EXPORT
 struct maxint_t : broadcastable_base {
     __DPL_HIDE_FROM_ABI explicit constexpr maxint_t() noexcept = default;
 
-    template <brain_float T>
+    template <floating_point T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     constexpr operator T(this maxint_t) noexcept {
         return static_cast<T>(
@@ -45,10 +38,8 @@ struct maxint_t : broadcastable_base {
     }
 };
 
-DPL_EXPORT
 inline constexpr maxint_t maxint{};
 
-DPL_EXPORT
 struct half_t : broadcastable_base {
     __DPL_HIDE_FROM_ABI explicit constexpr half_t() noexcept = default;
 
@@ -59,10 +50,8 @@ struct half_t : broadcastable_base {
     }
 };
 
-DPL_EXPORT
 inline constexpr half_t half{};
 
-DPL_EXPORT
 struct underhalf_t : broadcastable_base {
     __DPL_HIDE_FROM_ABI explicit constexpr underhalf_t() noexcept = default;
 
@@ -75,54 +64,9 @@ struct underhalf_t : broadcastable_base {
     }
 };
 
-DPL_EXPORT
 inline constexpr underhalf_t underhalf{};
 
-DPL_EXPORT template <floating_point T>
-struct mantissa_of_t : broadcastable_base {
-    __DPL_HIDE_FROM_ABI explicit constexpr mantissa_of_t() noexcept = default;
-
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    constexpr operator internal::sbit_type_for_t<T>(
-        this mantissa_of_t) noexcept {
-        using result = internal::sbit_type_for_t<T>;
-        return __DPL bit_cast<result>(mantissa_bits_v<T>);
-    }
-};
-
-DPL_EXPORT template <floating_point T>
-inline constexpr mantissa_of_t<T> mantissa_of{};
-
-DPL_EXPORT template <floating_point T>
-struct digits_of_t : broadcastable_base {
-    __DPL_HIDE_FROM_ABI explicit constexpr digits_of_t() noexcept = default;
-
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    constexpr operator integral auto(this digits_of_t) noexcept {
-        using result = internal::sbit_type_for_t<T>;
-        return __DPL popcount(
-            __DPL to_unsigned(static_cast<result>(mantissa_of<T>)));
-    }
-};
-
-DPL_EXPORT template <floating_point T>
-inline constexpr digits_of_t<T> digits_of{};
-
-DPL_EXPORT template <floating_point T>
-struct exp_bias_of_t : broadcastable_base {
-    __DPL_HIDE_FROM_ABI explicit constexpr exp_bias_of_t() noexcept = default;
-
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    constexpr operator integral auto(this exp_bias_of_t) noexcept {
-        constexpr auto exp =
-            __DPL bit_cast<internal::bit_type_for_t<T>>(exponent_bits_v<T>);
-        return exp >> (__DPL countr_zero(exp) + 1);
-    }
-};
-DPL_EXPORT template <floating_point T>
-inline constexpr exp_bias_of_t<T> exp_bias_of{};
-
-DPL_EXPORT template <simd_element T>
+template <simd_element T>
 struct bit_width_of_t : broadcastable_base {
     __DPL_HIDE_FROM_ABI explicit constexpr bit_width_of_t() noexcept = default;
 
@@ -131,10 +75,9 @@ struct bit_width_of_t : broadcastable_base {
         return sizeof(T) * char_bit_v;
     }
 };
-DPL_EXPORT template <floating_point T>
+template <simd_element T>
 inline constexpr bit_width_of_t<T> bit_width_of{};
 
-DPL_EXPORT
 struct rcp_ln2_t : broadcastable_base {
     __DPL_HIDE_FROM_ABI explicit constexpr rcp_ln2_t() noexcept = default;
 
@@ -145,8 +88,7 @@ struct rcp_ln2_t : broadcastable_base {
     }
 };
 
-DPL_EXPORT
 inline constexpr rcp_ln2_t rcp_ln2{};
 
-} // namespace datapar::fmath
+} // namespace datapar::internal
 DPL_DEFAULT_NAMESPACE_END

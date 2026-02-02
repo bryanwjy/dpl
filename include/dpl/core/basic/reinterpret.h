@@ -16,6 +16,7 @@
 #  include "dpl/core/type_traits/array_for.h"
 #  include "dpl/core/type_traits/basic_type.h"
 #  include "dpl/core/type_traits/iota_sequence.h"
+#  include "dpl/core/type_traits/rebind_simd.h"
 #  include "dpl/std/bit/bit_cast.h"
 #  include "dpl/std/concepts/invocable.h"
 #endif

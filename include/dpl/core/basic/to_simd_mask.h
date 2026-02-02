@@ -5,12 +5,11 @@
 
 #include "dpl/core/basic/initialize.h"
 #include "dpl/core/basic/to_basic_type.h"
+#include "dpl/core/basic/unsafe.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/basic_type.h"
-#  include "dpl/core/concepts/simd_class.h"
 #  include "dpl/core/concepts/simd_equivalence.h"
-#  include "dpl/core/type_traits/basic_type.h"
 #  include "dpl/core/type_traits/bit_type.h"
 #  include "dpl/core/type_traits/iota_sequence.h"
 #  include "dpl/core/type_traits/to_simd_mask_type.h"
@@ -22,19 +21,6 @@
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
-namespace datapar {
-/**
- * Tag type to request direct 'fast' conversions if supported
- */
-DPL_EXPORT
-struct direct_t {
-    __DPL_HIDE_FROM_ABI explicit constexpr direct_t() noexcept = default;
-};
-
-DPL_EXPORT inline constexpr direct_t direct{};
-
-} // namespace datapar
-
 namespace datapar::internal {
 void to_simd_mask(...) noexcept = delete;
 
@@ -99,7 +85,7 @@ public:
     template <basic_simd_type T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr to_simd_mask_type_t<T> operator()(
-        direct_t tag, T src) noexcept {
+        unsafe_t tag, T src) noexcept {
         if constexpr (requires { to_simd_mask(internal::abi<T>, tag, src); }) {
             if consteval {
                 return operator()(src);
@@ -114,7 +100,7 @@ public:
     template <simd_type T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr equivalent_mask_as<to_simd_mask_type_t<T>> auto operator()(
-        direct_t tag, T src) noexcept {
+        unsafe_t tag, T src) noexcept {
         if constexpr (requires { to_simd_mask(internal::abi<T>, tag, src); }) {
             return to_simd_mask(internal::abi<T>, tag, src);
         } else {

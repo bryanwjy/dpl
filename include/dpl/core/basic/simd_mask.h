@@ -4,7 +4,6 @@
 #include "dpl/config.h"
 
 #include "dpl/core/basic/broadcast.h"
-#include "dpl/core/basic/broadcastable_base.h"
 #include "dpl/core/basic/extract.h"
 #include "dpl/core/basic/initialize.h"
 #include "dpl/core/basic/reinterpret.h"
@@ -14,13 +13,10 @@
 #  include "dpl/core/fwd.h"
 
 #  include "dpl/core/concepts/common_bits_with.h"
-#  include "dpl/core/concepts/common_order_with.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_element.h"
 #  include "dpl/core/type_traits/element_count.h"
 #  include "dpl/std/concepts/different_from.h"
-#  include "dpl/std/concepts/same_as.h"
-#  include "dpl/std/type_traits/is_enum.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -61,7 +57,7 @@ public:
 
     template <common_bits_simd_with<simd_type> T>
     __DPL_HIDE_FROM_ABI explicit constexpr simd_mask(
-        direct_t tag, T simd) noexcept
+        unsafe_t tag, T simd) noexcept
         : simd_mask(datapar::to_simd_mask(
               tag, datapar::reinterpret<simd_type>(simd))) {}
 
@@ -94,7 +90,7 @@ private:
 template <simd_element E, simd_abi A>
 explicit simd_mask(basic_simd<E, A>) -> simd_mask<E, A>;
 template <simd_element E, simd_abi A>
-explicit simd_mask(direct_t, basic_simd<E, A>) -> simd_mask<E, A>;
+explicit simd_mask(unsafe_t, basic_simd<E, A>) -> simd_mask<E, A>;
 
 } // namespace datapar
 DPL_DEFAULT_NAMESPACE_END
