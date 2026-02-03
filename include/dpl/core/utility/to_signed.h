@@ -15,7 +15,7 @@ namespace datapar {
 template <simd_class T>
 requires integral<simd_element_type_t<T>>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-constexpr auto to_unsigned(T simd) noexcept {
+constexpr auto to_signed(T simd) noexcept {
     using To = make_signed_t<simd_element_type_t<T>>;
     return datapar::reinterpret<To>(simd);
 }

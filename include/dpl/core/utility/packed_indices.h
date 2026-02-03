@@ -6,6 +6,7 @@
 #if !DPL_MODULES
 #  include "dpl/core/basic/immediate_mask.h"
 #  include "dpl/core/constants/zero.h"
+#  include "dpl/core/operations/bit.h"
 #  include "dpl/std/bit/bit_ceil.h"
 #  include "dpl/std/bit/bit_type.h"
 #  include "dpl/std/bit/bit_width.h"
@@ -249,7 +250,7 @@ private:
     template <auto MaskBits>
     consteval packed_indices masked_rotate(this packed_indices self,
         basic_immediate_mask<N, MaskBits> mask, ptrdiff_t shift) noexcept {
-        auto const ones = popcount(mask);
+        auto const ones = datapar::popcount(mask);
         shift = shift < 0 ? ones - (-shift % ones) : shift % ones;
         auto const zero_mask = [&]() {
             packed_indices output;

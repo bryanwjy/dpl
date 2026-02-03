@@ -11,12 +11,18 @@
 #  include "dpl/core/operations/arithmetic.h"
 #  include "dpl/core/operations/negate.h"
 #  include "dpl/core/operations/operation_base.h"
-#  include "dpl/core/operations/select.h"
 #  include "dpl/core/type_traits/common_arithmetic_type.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
+
+void fmadd(...) noexcept = delete;
+void fmsub(...) noexcept = delete;
+void fnmadd(...) noexcept = delete;
+void fnmsub(...) noexcept = delete;
+void fmsubadd(...) noexcept = delete;
+void fmaddsub(...) noexcept = delete;
 
 template <typename T>
 struct fma_base {
@@ -456,8 +462,7 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto fallback(
         basic_simd<E, A> a, basic_simd<E, A> b, basic_simd<E, A> c) noexcept {
-        return dx::selecti<0b1010>(
-            fmadd_t::operator()(a, b, c), fmsub_t::operator()(a, b, c));
+        return fmadd_t::operator()(a, b, dx::negatei<0b0101>(c));
     }
 
 public:
@@ -521,8 +526,7 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto fallback(
         basic_simd<E, A> a, basic_simd<E, A> b, basic_simd<E, A> c) noexcept {
-        return dx::selecti<0b1010>(
-            fmsub_t::operator()(a, b, c), fmadd_t::operator()(a, b, c));
+        return fmadd_t::operator()(a, b, dx::negatei<0b1010>(c));
     }
 
 public:

@@ -9,6 +9,7 @@
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_type.h"
 #  include "dpl/core/constants/infinity.h"
+#  include "dpl/core/constants/value_bits.h"
 #  include "dpl/core/operations/bitwise.h"
 #  include "dpl/core/operations/compare.h"
 #endif
@@ -16,15 +17,19 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 
-void isfinite(...) noexcept = delete;
+void isnan(...) noexcept = delete;
 
-struct isfinite_t {
+struct isnan_t {
 private:
     template <floating_point E, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr simd_mask<E, A> DPL_VECTORCALL
-        fallback(basic_simd<E, A> arg) noexcept {
-        return dx::cmpneq(dx::bwand(arg, dx::infinity), dx::infinity);
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr simd_mask<E, A> fallback(basic_simd<E, A> arg) noexcept {
+        using bit_type = bit_type_for_t<E>;
+        constexpr auto inf_bits =
+            dx::reinterpret<bit_type>(dx::infinity_v<basic_simd<E, A>>);
+        auto const abs_val =
+            dx::reinterpret<bit_type>(dx::bwand(arg, value_bits));
+        return dx::cmpgt(abs_val, inf_bits);
     }
 
 public:
@@ -33,11 +38,11 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr to_simd_mask_type_t<T> DPL_VECTORCALL operator()(
         T arg) noexcept {
-        if constexpr (requires { isfinite(internal::abi<T>, arg); }) {
+        if constexpr (requires { isnan(internal::abi<T>, arg); }) {
             if consteval {
                 return fallback(arg);
             } else {
-                return isfinite(internal::abi<T>, arg);
+                return isnan(internal::abi<T>, arg);
             }
         } else {
             return fallback(arg);
@@ -48,8 +53,8 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(T arg) noexcept
         -> compatible_mask_for<T> auto {
-        if constexpr (requires { isfinite(internal::abi<T>, arg); }) {
-            return isfinite(internal::abi<T>, arg);
+        if constexpr (requires { isnan(internal::abi<T>, arg); }) {
+            return isnan(internal::abi<T>, arg);
         } else {
             return operator()(dx::to_basic_type(arg));
         }
@@ -58,6 +63,6 @@ public:
 } // namespace datapar::internal
 
 namespace datapar {
-DPL_EXPORT inline constexpr internal::isfinite_t isfinite{};
+DPL_EXPORT inline constexpr internal::isnan_t isnan{};
 }
 DPL_DEFAULT_NAMESPACE_END

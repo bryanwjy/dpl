@@ -22,7 +22,7 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
-template <simd_element E, simd_abi A>
+DPL_EXPORT template <simd_element E, simd_abi A>
 class simd_mask_not;
 
 DPL_EXPORT template <simd_element E, simd_abi A>

@@ -22,8 +22,6 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
-template <simd_element E, simd_abi A>
-class simd_mask_not;
 namespace internal {
 template <typename T>
 inline constexpr bool is_mask_not_specialization = false;

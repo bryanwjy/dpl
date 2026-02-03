@@ -31,6 +31,8 @@ void negate(...) noexcept = delete;
 
 struct add_t : binary_operation_base<add_t> {
 private:
+    friend binary_operation_base<add_t>;
+
     template <simd_abi A, typename L, typename R>
     requires requires(L lhs, R rhs) { add(internal::abi<A>, lhs, rhs); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -94,6 +96,8 @@ public:
 
 struct sub_t : binary_operation_base<sub_t> {
 private:
+    friend binary_operation_base<sub_t>;
+
     template <simd_abi A, typename L, typename R>
     requires requires(L lhs, R rhs) { sub(internal::abi<A>, lhs, rhs); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -157,6 +161,8 @@ public:
 
 struct mul_t : binary_operation_base<mul_t> {
 private:
+    friend binary_operation_base<mul_t>;
+
     template <simd_abi A, typename L, typename R>
     requires requires(L lhs, R rhs) { mul(internal::abi<A>, lhs, rhs); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -223,6 +229,8 @@ public:
  */
 struct div_t : binary_operation_base<div_t> {
 private:
+    friend binary_operation_base<div_t>;
+
     template <simd_abi A, typename L, typename R>
     requires requires(L lhs, R rhs) { div(internal::abi<A>, lhs, rhs); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)

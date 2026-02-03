@@ -28,5 +28,4 @@ import :std.utility;
 #include "dpl/core/basic/store.h"
 #include "dpl/core/basic/to_basic_type.h"
 #include "dpl/core/basic/to_simd_mask.h"
-#include "dpl/core/basic/unsafe.h"
 // IWYU pragma: end_exports

@@ -234,11 +234,5 @@ inline constexpr mask8_t<V> mask8{};
 DPL_EXPORT template <convertible_to<bit_type_t<16>> auto V>
 inline constexpr mask16_t<V> mask16{};
 
-DPL_EXPORT template <size_t W, bit_type_t<W> V>
-DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr int popcount(basic_immediate_mask<W, V> val) noexcept {
-    return __DPL popcount(static_cast<bit_type_t<W>>(val));
-}
-
 } // namespace datapar
 DPL_DEFAULT_NAMESPACE_END
