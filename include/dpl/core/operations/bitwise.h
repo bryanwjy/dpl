@@ -34,6 +34,34 @@ void bwnot(...) noexcept = delete;
 void bwshift_left(...) noexcept = delete;
 void bwshift_right(...) noexcept = delete;
 
+template <typename A, typename L, typename R>
+concept unqualified_bwor =
+    requires(L lhs, R rhs) { bwor(internal::abi<A>, lhs, rhs); };
+
+template <typename A, typename L, typename R>
+concept unqualified_bwand =
+    requires(L lhs, R rhs) { bwand(internal::abi<A>, lhs, rhs); };
+
+template <typename A, typename L, typename R>
+concept unqualified_bwxor =
+    requires(L lhs, R rhs) { bwxor(internal::abi<A>, lhs, rhs); };
+
+template <typename A, typename L, typename R>
+concept unqualified_bwandnot =
+    requires(L lhs, R rhs) { bwandnot(internal::abi<A>, lhs, rhs); };
+
+template <typename A, typename L, typename R>
+concept unqualified_bwornot =
+    requires(L lhs, R rhs) { bwornot(internal::abi<A>, lhs, rhs); };
+
+template <typename A, typename L, typename R>
+concept unqualified_bwshift_left =
+    requires(L lhs, R rhs) { bwshift_left(internal::abi<A>, lhs, rhs); };
+
+template <typename A, typename L, typename R>
+concept unqualified_bwshift_right =
+    requires(L lhs, R rhs) { bwshift_right(internal::abi<A>, lhs, rhs); };
+
 template <simd_type L, simd_type R>
 using bwsimd_for DPL_NODEBUG =
     common_bits_simd_t<basic_type_t<L>, basic_type_t<R>>;
@@ -46,7 +74,7 @@ private:
     friend binary_operation_base<bwor_t>;
 
     template <simd_abi A, typename L, typename R>
-    requires requires(L lhs, R rhs) { bwor(internal::abi<A>, lhs, rhs); }
+    requires unqualified_bwor<A, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto native(A abi, L left, R right) noexcept {
         return bwor(internal::abi<A>, left, right);
@@ -80,7 +108,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept {
         using T = common_bits_type_t<L, R>;
-        if constexpr (requires { bwor(internal::abi<T>, left, right); }) {
+        if constexpr (unqualified_bwor<T, L, R>) {
             if consteval {
                 return fallback(left, right);
             } else {
@@ -91,12 +119,23 @@ public:
         }
     }
 
-    template <basic_simd_type L, basic_simd_type R>
-    requires common_bits_simd_with<L, R>
+    template <simd_type L, simd_type R>
+    requires common_bits_simd_with<L, R> && only_unqualified<L, R> &&
+        unqualified_bwor<common_abi_t<L, R>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
         -> equivalent_simd_as<bwsimd_for<L, R>> auto {
         return bwor(internal::abi<common_abi_t<L, R>>, left, right);
+    }
+
+    template <simd_type L, simd_type R>
+    requires common_bits_simd_with<L, R> &&
+        (!basic_simd_type<L> || !basic_simd_type<R>) &&
+        (!unqualified_bwor<common_abi_t<L, R>, L, R>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
+        -> equivalent_simd_as<bwsimd_for<L, R>> auto {
+        return operator()(dx::to_basic_type(left), dx::to_basic_type(right));
     }
 
     template <basic_simd_mask_type L, basic_simd_mask_type R>
@@ -104,7 +143,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept {
         using T = common_bits_type_t<L, R>;
-        if constexpr (requires { bwor(internal::abi<T>, left, right); }) {
+        if constexpr (unqualified_bwor<T, L, R>) {
             if consteval {
                 return fallback(left, right);
             } else {
@@ -115,40 +154,23 @@ public:
         }
     }
 
-    template <basic_simd_mask_type L, basic_simd_mask_type R>
-    requires common_bits_simd_with<L, R>
+    template <simd_mask_type L, simd_mask_type R>
+    requires common_size_simd_with<L, R> && only_unqualified<L, R> &&
+        unqualified_bwor<common_abi_t<L, R>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
         -> equivalent_mask_as<bwmask_for<L, R>> auto {
         return bwor(internal::abi<common_abi_t<L, R>>, left, right);
     }
 
-    template <simd_type L, simd_type R>
-    requires common_bits_simd_with<L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    template <simd_mask_type L, simd_mask_type R>
+    requires common_size_simd_with<L, R> &&
+        (!basic_simd_mask_type<L> || !basic_simd_mask_type<R>) &&
+        (!unqualified_bwor<common_abi_t<L, R>, L, R>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
         -> equivalent_simd_as<bwsimd_for<L, R>> auto {
-        using A = common_abi_t<L, R>;
-        if constexpr (requires { bwor(internal::abi<A>, left, right); }) {
-            return bwor(internal::abi<A>, left, right);
-        } else {
-            return operator()(
-                dx::to_basic_type(left), dx::to_basic_type(right));
-        }
-    }
-
-    template <simd_mask_type L, simd_mask_type R>
-    requires common_size_simd_with<L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
-        -> equivalent_mask_as<bwmask_for<L, R>> auto {
-        using A = common_abi_t<L, R>;
-        if constexpr (requires { bwor(internal::abi<A>, left, right); }) {
-            return bwor(internal::abi<A>, left, right);
-        } else {
-            return operator()(
-                dx::to_basic_type(left), dx::to_basic_type(right));
-        }
+        return operator()(dx::to_basic_type(left), dx::to_basic_type(right));
     }
 
     using binary_operation_base<bwor_t>::operator();
@@ -159,7 +181,7 @@ private:
     friend binary_operation_base<bwand_t>;
 
     template <simd_abi A, typename L, typename R>
-    requires requires(L lhs, R rhs) { bwand(internal::abi<A>, lhs, rhs); }
+    requires unqualified_bwand<A, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto native(A abi, L left, R right) noexcept {
         return bwand(internal::abi<A>, left, right);
@@ -193,7 +215,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept {
         using T = common_bits_type_t<L, R>;
-        if constexpr (requires { bwand(internal::abi<T>, left, right); }) {
+        if constexpr (unqualified_bwand<T, L, R>) {
             if consteval {
                 return fallback(left, right);
             } else {
@@ -204,12 +226,23 @@ public:
         }
     }
 
-    template <basic_simd_type L, basic_simd_type R>
-    requires common_bits_simd_with<L, R>
+    template <simd_type L, simd_type R>
+    requires common_bits_simd_with<L, R> && only_unqualified<L, R> &&
+        unqualified_bwand<common_abi_t<L, R>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
         -> equivalent_simd_as<bwsimd_for<L, R>> auto {
         return bwand(internal::abi<common_abi_t<L, R>>, left, right);
+    }
+
+    template <simd_type L, simd_type R>
+    requires common_bits_simd_with<L, R> &&
+        (!basic_simd_type<L> || !basic_simd_type<R>) &&
+        (!unqualified_bwand<common_abi_t<L, R>, L, R>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
+        -> equivalent_simd_as<bwsimd_for<L, R>> auto {
+        return operator()(dx::to_basic_type(left), dx::to_basic_type(right));
     }
 
     template <basic_simd_mask_type L, basic_simd_mask_type R>
@@ -217,7 +250,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept {
         using T = common_bits_type_t<L, R>;
-        if constexpr (requires { bwand(internal::abi<T>, left, right); }) {
+        if constexpr (unqualified_bwand<T, L, R>) {
             if consteval {
                 return fallback(left, right);
             } else {
@@ -228,40 +261,23 @@ public:
         }
     }
 
-    template <basic_simd_mask_type L, basic_simd_mask_type R>
-    requires common_bits_simd_with<L, R>
+    template <simd_mask_type L, simd_mask_type R>
+    requires common_size_simd_with<L, R> && only_unqualified<L, R> &&
+        unqualified_bwand<common_abi_t<L, R>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
         -> equivalent_mask_as<bwmask_for<L, R>> auto {
         return bwand(internal::abi<common_abi_t<L, R>>, left, right);
     }
 
-    template <simd_type L, simd_type R>
-    requires common_bits_simd_with<L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    template <simd_mask_type L, simd_mask_type R>
+    requires common_size_simd_with<L, R> &&
+        (!basic_simd_mask_type<L> || !basic_simd_mask_type<R>) &&
+        (!unqualified_bwand<common_abi_t<L, R>, L, R>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
         -> equivalent_simd_as<bwsimd_for<L, R>> auto {
-        using A = common_abi_t<L, R>;
-        if constexpr (requires { bwand(internal::abi<A>, left, right); }) {
-            return bwand(internal::abi<A>, left, right);
-        } else {
-            return operator()(
-                dx::to_basic_type(left), dx::to_basic_type(right));
-        }
-    }
-
-    template <simd_mask_type L, simd_mask_type R>
-    requires common_size_simd_with<L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
-        -> equivalent_mask_as<bwmask_for<L, R>> auto {
-        using A = common_abi_t<L, R>;
-        if constexpr (requires { bwand(internal::abi<A>, left, right); }) {
-            return bwand(internal::abi<A>, left, right);
-        } else {
-            return operator()(
-                dx::to_basic_type(left), dx::to_basic_type(right));
-        }
+        return operator()(dx::to_basic_type(left), dx::to_basic_type(right));
     }
 
     using binary_operation_base<bwand_t>::operator();
@@ -272,7 +288,7 @@ private:
     friend binary_operation_base<bwxor_t>;
 
     template <simd_abi A, typename L, typename R>
-    requires requires(L lhs, R rhs) { bwxor(internal::abi<A>, lhs, rhs); }
+    requires unqualified_bwxor<A, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto native(A abi, L left, R right) noexcept {
         return bwxor(internal::abi<A>, left, right);
@@ -306,7 +322,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept {
         using T = common_bits_type_t<L, R>;
-        if constexpr (requires { bwxor(internal::abi<T>, left, right); }) {
+        if constexpr (unqualified_bwxor<T, L, R>) {
             if consteval {
                 return fallback(left, right);
             } else {
@@ -317,12 +333,23 @@ public:
         }
     }
 
-    template <basic_simd_type L, basic_simd_type R>
-    requires common_bits_simd_with<L, R>
+    template <simd_type L, simd_type R>
+    requires common_bits_simd_with<L, R> && only_unqualified<L, R> &&
+        unqualified_bwxor<common_abi_t<L, R>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
         -> equivalent_simd_as<bwsimd_for<L, R>> auto {
         return bwxor(internal::abi<common_abi_t<L, R>>, left, right);
+    }
+
+    template <simd_type L, simd_type R>
+    requires common_bits_simd_with<L, R> &&
+        (!basic_simd_type<L> || !basic_simd_type<R>) &&
+        (!unqualified_bwxor<common_abi_t<L, R>, L, R>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
+        -> equivalent_simd_as<bwsimd_for<L, R>> auto {
+        return operator()(dx::to_basic_type(left), dx::to_basic_type(right));
     }
 
     template <basic_simd_mask_type L, basic_simd_mask_type R>
@@ -330,7 +357,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept {
         using T = common_bits_type_t<L, R>;
-        if constexpr (requires { bwxor(internal::abi<T>, left, right); }) {
+        if constexpr (unqualified_bwxor<T, L, R>) {
             if consteval {
                 return fallback(left, right);
             } else {
@@ -341,40 +368,23 @@ public:
         }
     }
 
-    template <basic_simd_mask_type L, basic_simd_mask_type R>
-    requires common_bits_simd_with<L, R>
+    template <simd_mask_type L, simd_mask_type R>
+    requires common_size_simd_with<L, R> && only_unqualified<L, R> &&
+        unqualified_bwxor<common_abi_t<L, R>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
         -> equivalent_mask_as<bwmask_for<L, R>> auto {
         return bwxor(internal::abi<common_abi_t<L, R>>, left, right);
     }
 
-    template <simd_type L, simd_type R>
-    requires common_bits_simd_with<L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    template <simd_mask_type L, simd_mask_type R>
+    requires common_size_simd_with<L, R> &&
+        (!basic_simd_mask_type<L> || !basic_simd_mask_type<R>) &&
+        (!unqualified_bwxor<common_abi_t<L, R>, L, R>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
         -> equivalent_simd_as<bwsimd_for<L, R>> auto {
-        using A = common_abi_t<L, R>;
-        if constexpr (requires { bwxor(internal::abi<A>, left, right); }) {
-            return bwxor(internal::abi<A>, left, right);
-        } else {
-            return operator()(
-                dx::to_basic_type(left), dx::to_basic_type(right));
-        }
-    }
-
-    template <simd_mask_type L, simd_mask_type R>
-    requires common_size_simd_with<L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
-        -> equivalent_mask_as<bwmask_for<L, R>> auto {
-        using A = common_abi_t<L, R>;
-        if constexpr (requires { bwxor(internal::abi<A>, left, right); }) {
-            return bwxor(internal::abi<A>, left, right);
-        } else {
-            return operator()(
-                dx::to_basic_type(left), dx::to_basic_type(right));
-        }
+        return operator()(dx::to_basic_type(left), dx::to_basic_type(right));
     }
 
     using binary_operation_base<bwxor_t>::operator();
@@ -385,7 +395,7 @@ private:
     friend binary_operation_base<bwandnot_t>;
 
     template <simd_abi A, typename L, typename R>
-    requires requires(L lhs, R rhs) { bwandnot(internal::abi<A>, lhs, rhs); }
+    requires unqualified_bwandnot<A, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto native(A abi, L left, R right) noexcept {
         return bwandnot(internal::abi<A>, left, right);
@@ -413,16 +423,13 @@ private:
             left, right, [](bool lhs, bool rhs) { return lhs && !rhs; });
     }
 
-    template <simd_class L, simd_class R>
-    using result_t = common_bits_simd_t<basic_type_t<L>, basic_type_t<R>>;
-
 public:
     template <basic_simd_type L, basic_simd_type R>
     requires common_bits_simd_with<L, R> && same_abi_simd_as<L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept {
         using T = common_bits_type_t<L, R>;
-        if constexpr (requires { bwandnot(internal::abi<T>, left, right); }) {
+        if constexpr (unqualified_bwandnot<T, L, R>) {
             if consteval {
                 return fallback(left, right);
             } else {
@@ -433,12 +440,23 @@ public:
         }
     }
 
-    template <basic_simd_type L, basic_simd_type R>
-    requires common_bits_simd_with<L, R>
+    template <simd_type L, simd_type R>
+    requires common_bits_simd_with<L, R> && only_unqualified<L, R> &&
+        unqualified_bwandnot<common_abi_t<L, R>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
         -> equivalent_simd_as<bwsimd_for<L, R>> auto {
         return bwandnot(internal::abi<common_abi_t<L, R>>, left, right);
+    }
+
+    template <simd_type L, simd_type R>
+    requires common_bits_simd_with<L, R> &&
+        (!basic_simd_type<L> || !basic_simd_type<R>) &&
+        (!unqualified_bwandnot<common_abi_t<L, R>, L, R>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
+        -> equivalent_simd_as<bwsimd_for<L, R>> auto {
+        return operator()(dx::to_basic_type(left), dx::to_basic_type(right));
     }
 
     template <basic_simd_mask_type L, basic_simd_mask_type R>
@@ -446,7 +464,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept {
         using T = common_bits_type_t<L, R>;
-        if constexpr (requires { bwandnot(internal::abi<T>, left, right); }) {
+        if constexpr (unqualified_bwandnot<T, L, R>) {
             if consteval {
                 return fallback(left, right);
             } else {
@@ -457,40 +475,23 @@ public:
         }
     }
 
-    template <basic_simd_mask_type L, basic_simd_mask_type R>
-    requires common_bits_simd_with<L, R>
+    template <simd_mask_type L, simd_mask_type R>
+    requires common_size_simd_with<L, R> && only_unqualified<L, R> &&
+        unqualified_bwandnot<common_abi_t<L, R>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
         -> equivalent_mask_as<bwmask_for<L, R>> auto {
         return bwandnot(internal::abi<common_abi_t<L, R>>, left, right);
     }
 
-    template <simd_type L, simd_type R>
-    requires common_bits_simd_with<L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    template <simd_mask_type L, simd_mask_type R>
+    requires common_size_simd_with<L, R> &&
+        (!basic_simd_mask_type<L> || !basic_simd_mask_type<R>) &&
+        (!unqualified_bwandnot<common_abi_t<L, R>, L, R>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
         -> equivalent_simd_as<bwsimd_for<L, R>> auto {
-        using A = common_abi_t<L, R>;
-        if constexpr (requires { bwandnot(internal::abi<A>, left, right); }) {
-            return bwandnot(internal::abi<A>, left, right);
-        } else {
-            return operator()(
-                dx::to_basic_type(left), dx::to_basic_type(right));
-        }
-    }
-
-    template <simd_mask_type L, simd_mask_type R>
-    requires common_size_simd_with<L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
-        -> equivalent_mask_as<bwmask_for<L, R>> auto {
-        using A = common_abi_t<L, R>;
-        if constexpr (requires { bwandnot(internal::abi<A>, left, right); }) {
-            return bwandnot(internal::abi<A>, left, right);
-        } else {
-            return operator()(
-                dx::to_basic_type(left), dx::to_basic_type(right));
-        }
+        return operator()(dx::to_basic_type(left), dx::to_basic_type(right));
     }
 
     using binary_operation_base<bwandnot_t>::operator();
@@ -501,7 +502,7 @@ private:
     friend binary_operation_base<bwornot_t>;
 
     template <simd_abi A, typename L, typename R>
-    requires requires(L lhs, R rhs) { bwornot(internal::abi<A>, lhs, rhs); }
+    requires unqualified_bwornot<A, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto native(A abi, L left, R right) noexcept {
         return bwornot(internal::abi<A>, left, right);
@@ -529,16 +530,13 @@ private:
             left, right, [](bool lhs, bool rhs) { return lhs || !rhs; });
     }
 
-    template <simd_class L, simd_class R>
-    using result_t = common_bits_simd_t<basic_type_t<L>, basic_type_t<R>>;
-
 public:
     template <basic_simd_type L, basic_simd_type R>
     requires common_bits_simd_with<L, R> && same_abi_simd_as<L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept {
         using T = common_bits_type_t<L, R>;
-        if constexpr (requires { bwornot(internal::abi<T>, left, right); }) {
+        if constexpr (unqualified_bwornot<T, L, R>) {
             if consteval {
                 return fallback(left, right);
             } else {
@@ -549,12 +547,23 @@ public:
         }
     }
 
-    template <basic_simd_type L, basic_simd_type R>
-    requires common_bits_simd_with<L, R>
+    template <simd_type L, simd_type R>
+    requires common_bits_simd_with<L, R> && only_unqualified<L, R> &&
+        unqualified_bwornot<common_abi_t<L, R>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
         -> equivalent_simd_as<bwsimd_for<L, R>> auto {
         return bwornot(internal::abi<common_abi_t<L, R>>, left, right);
+    }
+
+    template <simd_type L, simd_type R>
+    requires common_bits_simd_with<L, R> &&
+        (!basic_simd_type<L> || !basic_simd_type<R>) &&
+        (!unqualified_bwornot<common_abi_t<L, R>, L, R>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
+        -> equivalent_simd_as<bwsimd_for<L, R>> auto {
+        return operator()(dx::to_basic_type(left), dx::to_basic_type(right));
     }
 
     template <basic_simd_mask_type L, basic_simd_mask_type R>
@@ -562,7 +571,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept {
         using T = common_bits_type_t<L, R>;
-        if constexpr (requires { bwornot(internal::abi<T>, left, right); }) {
+        if constexpr (unqualified_bwornot<T, L, R>) {
             if consteval {
                 return fallback(left, right);
             } else {
@@ -573,40 +582,23 @@ public:
         }
     }
 
-    template <basic_simd_mask_type L, basic_simd_mask_type R>
-    requires common_bits_simd_with<L, R>
+    template <simd_mask_type L, simd_mask_type R>
+    requires common_size_simd_with<L, R> && only_unqualified<L, R> &&
+        unqualified_bwornot<common_abi_t<L, R>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
         -> equivalent_mask_as<bwmask_for<L, R>> auto {
         return bwornot(internal::abi<common_abi_t<L, R>>, left, right);
     }
 
-    template <simd_type L, simd_type R>
-    requires common_bits_simd_with<L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    template <simd_mask_type L, simd_mask_type R>
+    requires common_size_simd_with<L, R> &&
+        (!basic_simd_mask_type<L> || !basic_simd_mask_type<R>) &&
+        (!unqualified_bwornot<common_abi_t<L, R>, L, R>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
         -> equivalent_simd_as<bwsimd_for<L, R>> auto {
-        using A = common_abi_t<L, R>;
-        if constexpr (requires { bwornot(internal::abi<A>, left, right); }) {
-            return bwornot(internal::abi<A>, left, right);
-        } else {
-            return operator()(
-                dx::to_basic_type(left), dx::to_basic_type(right));
-        }
-    }
-
-    template <simd_mask_type L, simd_mask_type R>
-    requires common_size_simd_with<L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
-        -> equivalent_mask_as<bwmask_for<L, R>> auto {
-        using A = common_abi_t<L, R>;
-        if constexpr (requires { bwornot(internal::abi<A>, left, right); }) {
-            return bwornot(internal::abi<A>, left, right);
-        } else {
-            return operator()(
-                dx::to_basic_type(left), dx::to_basic_type(right));
-        }
+        return operator()(dx::to_basic_type(left), dx::to_basic_type(right));
     }
 
     using binary_operation_base<bwornot_t>::operator();
@@ -738,7 +730,7 @@ private:
 
 public:
     template <shiftable_basic_simd L, basic_simd_type R>
-    requires common_size_with<L, R> && integral_simd<R> &&
+    requires common_size_simd_with<L, R> && integral_simd<R> &&
         same_abi_simd_as<L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L arg, R shift) noexcept {
@@ -755,28 +747,24 @@ public:
         }
     }
 
-    template <shiftable_basic_simd L, basic_simd_type R>
-    requires common_size_with<L, R> && integral_simd<R> &&
-        common_abi_simd_with<L, R>
+    template <shiftable_simd L, simd_type R>
+    requires common_size_simd_with<L, R> && integral_simd<R> &&
+        only_unqualified<L, R> &&
+        unqualified_bwshift_left<common_abi_t<L, R>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L arg, R shift) noexcept
         -> simd_with<typename L::value_type, common_abi_t<L, R>> auto {
-        return bwshift_left(internal::abi<L>, arg, shift);
+        return bwshift_left(internal::abi<common_abi_t<L, R>>, arg, shift);
     }
 
-    template <shiftable_simd L, integral_simd R>
-    requires common_size_with<L, R> && common_abi_simd_with<L, R>
+    template <shiftable_simd L, simd_type R>
+    requires common_size_simd_with<L, R> && integral_simd<R> &&
+        (!shiftable_basic_simd<L> || !basic_simd_type<R>) &&
+        (!unqualified_bwshift_left<common_abi_t<L, R>, L, R>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L arg, R shift) noexcept
         -> simd_with<typename L::value_type, common_abi_t<L, R>> auto {
-        using A = common_abi_t<L, R>;
-        if constexpr (requires {
-                          bwshift_left(internal::abi<A>, arg, shift);
-                      }) {
-            return bwshift_left(internal::abi<A>, arg, shift);
-        } else {
-            return operator()(dx::to_basic_type(arg), dx::to_basic_type(shift));
-        }
+        return operator()(dx::to_basic_type(arg), dx::to_basic_type(shift));
     }
 
     template <basic_simd_class L, integral auto V>
@@ -802,7 +790,11 @@ public:
     static constexpr auto DPL_VECTORCALL operator()(
         L arg, immediate<V> shift) noexcept {
         static_assert(V > 0 && V < sizeof(typename L::value_type) * char_bit_v);
-        return bwshift_left(internal::abi<L>, arg, shift);
+        if constexpr (unqualified_bwshift_left<L, L, immediate<V>>) {
+            return bwshift_left(internal::abi<L>, arg, shift);
+        } else {
+            return operator()(dx::to_basic_type(arg), shift);
+        }
     }
 
     template <basic_simd_class L>
@@ -824,7 +816,11 @@ public:
     template <simd_class L>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L arg, int shift) noexcept {
-        return bwshift_left(internal::abi<L>, arg, shift);
+        if constexpr (unqualified_bwshift_left<L, L, int>) {
+            return bwshift_left(internal::abi<L>, arg, shift);
+        } else {
+            return operator()(dx::to_basic_type(arg), shift);
+        }
     }
 };
 
@@ -886,7 +882,7 @@ private:
 
 public:
     template <shiftable_basic_simd L, basic_simd_type R>
-    requires common_size_with<L, R> && integral_simd<R> &&
+    requires common_size_simd_with<L, R> && integral_simd<R> &&
         same_abi_simd_as<L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L arg, R shift) noexcept {
@@ -903,28 +899,24 @@ public:
         }
     }
 
-    template <shiftable_basic_simd L, basic_simd_type R>
-    requires common_size_with<L, R> && integral_simd<R> &&
-        common_abi_simd_with<L, R>
+    template <shiftable_simd L, simd_type R>
+    requires common_size_simd_with<L, R> && integral_simd<R> &&
+        only_unqualified<L, R> &&
+        unqualified_bwshift_right<common_abi_t<L, R>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L arg, R shift) noexcept
         -> simd_with<typename L::value_type, common_abi_t<L, R>> auto {
-        return bwshift_right(internal::abi<L>, arg, shift);
+        return bwshift_right(internal::abi<common_abi_t<L, R>>, arg, shift);
     }
 
-    template <shiftable_simd L, integral_simd R>
-    requires common_size_with<L, R> && common_abi_simd_with<L, R>
+    template <shiftable_simd L, simd_type R>
+    requires common_size_simd_with<L, R> && integral_simd<R> &&
+        (!shiftable_basic_simd<L> || !basic_simd_type<R>) &&
+        (!unqualified_bwshift_right<common_abi_t<L, R>, L, R>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L arg, R shift) noexcept
         -> simd_with<typename L::value_type, common_abi_t<L, R>> auto {
-        using A = common_abi_t<L, R>;
-        if constexpr (requires {
-                          bwshift_right(internal::abi<A>, arg, shift);
-                      }) {
-            return bwshift_right(internal::abi<A>, arg, shift);
-        } else {
-            return operator()(dx::to_basic_type(arg), dx::to_basic_type(shift));
-        }
+        return operator()(dx::to_basic_type(arg), dx::to_basic_type(shift));
     }
 
     template <basic_simd_class L, integral auto V>
@@ -950,7 +942,11 @@ public:
     static constexpr auto DPL_VECTORCALL operator()(
         L arg, immediate<V> shift) noexcept {
         static_assert(V > 0 && V < sizeof(typename L::value_type) * char_bit_v);
-        return bwshift_right(internal::abi<L>, arg, shift);
+        if constexpr (unqualified_bwshift_right<L, L, immediate<V>>) {
+            return bwshift_right(internal::abi<L>, arg, shift);
+        } else {
+            return operator()(dx::to_basic_type(arg), shift);
+        }
     }
 
     template <basic_simd_class L>
@@ -972,7 +968,11 @@ public:
     template <simd_class L>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L arg, int shift) noexcept {
-        return bwshift_right(internal::abi<L>, arg, shift);
+        if constexpr (unqualified_bwshift_right<L, L, int>) {
+            return bwshift_right(internal::abi<L>, arg, shift);
+        } else {
+            return operator()(dx::to_basic_type(arg), shift);
+        }
     }
 };
 

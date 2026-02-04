@@ -3,217 +3,133 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/operations/bitwise.h"
+#include "dpl/core/operations/logic_reduction.h" // IWYU pragma: export
+#include "dpl/core/operations/negated_mask.h"    // IWYU pragma: export
+
 #if !DPL_MODULES
-#  include "dpl/core/basic/immediate_mask.h"
-#  include "dpl/core/basic/to_basic_type.h"
-#  include "dpl/core/concepts/basic_type.h"
-#  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_mask_type.h"
-#  include "dpl/core/type_traits/basic_element.h"
-#  include "dpl/core/type_traits/iota_sequence.h"
-#  include "dpl/std/concepts/convertible_to.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::internal {
 
-template <typename T>
-concept unqualified_all_of = simd_mask_type<T> && requires(T mask) {
-    { all_of(internal::abi<T>, mask) } -> core_convertible_to<bool>;
-};
-
-struct all_of_t {
-private:
-    template <basic_simd_element E, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr bool DPL_VECTORCALL
-        fallback(simd_mask<E, A> mask) noexcept {
-        return []<size_t... Is>(auto mask, index_sequence<Is...>) {
-            return (... && mask[Is]);
-        }(mask, iota_sequence<E, A>);
-    }
-
-public:
-    template <basic_simd_mask_type T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr bool DPL_VECTORCALL operator()(T mask) noexcept {
-        if constexpr (unqualified_all_of<T>) {
-            if consteval {
-                return fallback(mask);
-            } else {
-                return all_of(internal::abi<T>, mask);
-            }
-        } else {
-            return fallback(mask);
-        }
-    }
-
-    template <simd_mask_type T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr bool DPL_VECTORCALL operator()(T mask) noexcept {
-        if constexpr (unqualified_all_of<T>) {
-            return all_of(internal::abi<T>, mask);
-        } else {
-            return operator()(dx::to_basic_type(mask));
-        }
-    }
-
-    template <size_t W, bit_type_t<W> V>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr bool operator()(basic_immediate_mask<W, V> val) noexcept {
-        return all_of(val);
+struct logical_and_t {
+    template <simd_mask_type L, simd_mask_type R>
+    requires requires(L lhs, R rhs) { dx::bwand(lhs, rhs); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(L lhs, R rhs) noexcept {
+        return dx::bwand(lhs, rhs);
     }
 };
 
-template <typename T>
-concept unqualified_any_of = simd_mask_type<T> && requires(T mask) {
-    { any_of(internal::abi<T>, mask) } -> core_convertible_to<bool>;
-};
-
-struct any_of_t {
-private:
-    template <basic_simd_element E, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr bool DPL_VECTORCALL
-        fallback(simd_mask<E, A> mask) noexcept {
-        return []<size_t... Is>(auto mask, index_sequence<Is...>) {
-            return (... || mask[Is]);
-        }(mask, iota_sequence<E, A>);
-    }
-
-public:
-    template <basic_simd_mask_type T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr bool DPL_VECTORCALL operator()(T mask) noexcept {
-        if constexpr (unqualified_any_of<T>) {
-            if consteval {
-                return fallback(mask);
-            } else {
-                return any_of(internal::abi<T>, mask);
-            }
-        } else {
-            return fallback(mask);
-        }
-    }
-
-    template <simd_mask_type T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr bool DPL_VECTORCALL operator()(T mask) noexcept {
-        if constexpr (unqualified_any_of<T>) {
-            return any_of(internal::abi<T>, mask);
-        } else {
-            return operator()(dx::to_basic_type(mask));
-        }
-    }
-
-    template <size_t W, bit_type_t<W> V>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr bool operator()(basic_immediate_mask<W, V> val) noexcept {
-        return any_of(val);
+struct logical_or_t {
+    template <simd_mask_type L, simd_mask_type R>
+    requires requires(L lhs, R rhs) { dx::bwor(lhs, rhs); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(L lhs, R rhs) noexcept {
+        return dx::bwor(lhs, rhs);
     }
 };
 
-template <typename T>
-concept unqualified_none_of = simd_mask_type<T> && requires(T mask) {
-    { none_of(internal::abi<T>, mask) } -> core_convertible_to<bool>;
-};
-
-struct none_of_t {
-private:
-    template <basic_simd_element E, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr bool DPL_VECTORCALL
-        fallback(simd_mask<E, A> mask) noexcept {
-        return !any_of_t::operator()(mask);
+struct logical_not_t {
+    template <simd_mask_type M>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(M val) noexcept {
+        return negated_mask<M>(+val);
     }
 
-public:
-    template <basic_simd_mask_type T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr bool DPL_VECTORCALL operator()(T mask) noexcept {
-        if constexpr (unqualified_none_of<T>) {
-            if consteval {
-                return fallback(mask);
-            } else {
-                return none_of(internal::abi<T>, mask);
-            }
-        } else {
-            return fallback(mask);
-        }
-    }
-
-    template <simd_mask_type T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr bool DPL_VECTORCALL operator()(T mask) noexcept {
-        if constexpr (unqualified_none_of<T>) {
-            return none_of(internal::abi<T>, mask);
-        } else {
-            return operator()(dx::to_basic_type(mask));
-        }
-    }
-
-    template <size_t W, bit_type_t<W> V>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr bool operator()(basic_immediate_mask<W, V> val) noexcept {
-        return none_of(val);
-    }
-};
-
-template <typename T>
-concept unqualified_some_of = simd_mask_type<T> && requires(T mask) {
-    { some_of(internal::abi<T>, mask) } -> core_convertible_to<bool>;
-};
-
-struct some_of_t {
-private:
-    template <basic_simd_element E, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr bool DPL_VECTORCALL
-        fallback(simd_mask<E, A> mask) noexcept {
-        return any_of_t::operator()(mask) && !all_of_t::operator()(mask);
-    }
-
-public:
-    template <basic_simd_mask_type T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr bool DPL_VECTORCALL operator()(T mask) noexcept {
-        if constexpr (unqualified_some_of<T>) {
-            if consteval {
-                return fallback(mask);
-            } else {
-                return some_of(internal::abi<T>, mask);
-            }
-        } else {
-            return fallback(mask);
-        }
-    }
-
-    template <simd_mask_type T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr bool DPL_VECTORCALL operator()(T mask) noexcept {
-        if constexpr (unqualified_some_of<T>) {
-            return some_of(internal::abi<T>, mask);
-        } else {
-            return operator()(dx::to_basic_type(mask));
-        }
-    }
-
-    template <size_t W, bit_type_t<W> V>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr bool operator()(basic_immediate_mask<W, V> val) noexcept {
-        return some_of(val);
+    template <simd_mask_type M>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(negated_mask<M> val) noexcept {
+        return !val;
     }
 };
 } // namespace datapar::internal
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::all_of_t all_of{};
-DPL_EXPORT inline constexpr internal::any_of_t any_of{};
-DPL_EXPORT inline constexpr internal::some_of_t some_of{};
-DPL_EXPORT inline constexpr internal::none_of_t none_of{};
+DPL_EXPORT inline constexpr internal::logical_and_t logical_and{};
+DPL_EXPORT inline constexpr internal::logical_or_t logical_or{};
+DPL_EXPORT inline constexpr internal::logical_not_t logical_not{};
 } // namespace cpo
+
+DPL_EXPORT template <typename D>
+class logical_simd_interface {
+public:
+    template <simd_mask_type R>
+    requires regular_invocable<internal::logical_or_t, D, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    constexpr invoke_result_t<internal::logical_or_t, D, R> operator||(
+        this D lhs, R rhs) noexcept
+    requires simd_mask_type<D>
+    {
+        return datapar::logical_or(lhs, rhs);
+    }
+
+    template <simd_mask_type R>
+    requires regular_invocable<internal::logical_and_t, D, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    constexpr invoke_result_t<internal::logical_and_t, D, R> operator&&(
+        this D lhs, R rhs) noexcept
+    requires simd_mask_type<D>
+    {
+        return datapar::logical_and(lhs, rhs);
+    }
+
+    template <simd_mask_type Self>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    constexpr invoke_result_t<internal::logical_not_t, Self> operator!(
+        this Self lhs) noexcept {
+        return datapar::logical_not(lhs);
+    }
+
+    template <simd_mask_type L>
+    requires regular_invocable<internal::logical_or_t, L, D>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    friend constexpr invoke_result_t<internal::logical_or_t, L, D> operator||(
+        L lhs, D rhs) noexcept
+    requires simd_mask_type<D>
+    {
+        return datapar::logical_or(lhs, rhs);
+    }
+
+    template <simd_mask_type L>
+    requires regular_invocable<internal::logical_or_t, L, D>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    friend constexpr invoke_result_t<internal::logical_and_t, L, D> operator&&(
+        L lhs, D rhs) noexcept
+    requires simd_mask_type<D>
+    {
+        return datapar::logical_and(lhs, rhs);
+    }
+};
+
+/**
+ * The following are not exported by design
+ */
+template <simd_mask_type L, simd_mask_type R>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+constexpr invoke_result_t<internal::bwor_t, L, R> operator||(
+    L lhs, R rhs) noexcept {
+    return datapar::logical_or(lhs, rhs);
+}
+
+template <simd_mask_type L, simd_mask_type R>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+constexpr invoke_result_t<internal::bwand_t, L, R> operator&&(
+    L lhs, R rhs) noexcept {
+    return datapar::logical_and(lhs, rhs);
+}
+
+template <simd_mask_type T>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+constexpr auto operator!(T val) noexcept
+    -> invoke_result_t<internal::logical_not_t, T> {
+    return datapar::logical_not(val);
+}
+
 } // namespace datapar
 
 DPL_DEFAULT_NAMESPACE_END

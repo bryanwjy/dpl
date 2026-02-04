@@ -29,12 +29,28 @@ void mul(...) noexcept = delete;
 void div(...) noexcept = delete;
 void negate(...) noexcept = delete;
 
+template <typename A, typename L, typename R>
+concept unqualified_add =
+    requires(L lhs, R rhs) { add(internal::abi<A>, lhs, rhs); };
+
+template <typename A, typename L, typename R>
+concept unqualified_sub =
+    requires(L lhs, R rhs) { sub(internal::abi<A>, lhs, rhs); };
+
+template <typename A, typename L, typename R>
+concept unqualified_mul =
+    requires(L lhs, R rhs) { mul(internal::abi<A>, lhs, rhs); };
+
+template <typename A, typename L, typename R>
+concept unqualified_div =
+    requires(L lhs, R rhs) { div(internal::abi<A>, lhs, rhs); };
+
 struct add_t : binary_operation_base<add_t> {
 private:
     friend binary_operation_base<add_t>;
 
     template <simd_abi A, typename L, typename R>
-    requires requires(L lhs, R rhs) { add(internal::abi<A>, lhs, rhs); }
+    requires unqualified_add<A, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto native(A abi, L left, R right) noexcept {
         return add(internal::abi<A>, left, right);
@@ -55,7 +71,7 @@ private:
 
 public:
     template <basic_simd_type L, common_arithmetic_simd_with<L> R>
-    requires same_abi_simd_as<L, R> && basic_simd_type<R>
+    requires basic_simd_type<R> && same_abi_simd_as<L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept {
         using T = common_arithmetic_simd_t<L, R>;
@@ -70,7 +86,8 @@ public:
         }
     }
 
-    template <basic_simd_type L, common_arithmetic_simd_with<L> R>
+    template <simd_type L, common_arithmetic_simd_with<L> R>
+    requires only_unqualified<L, R> && unqualified_add<common_abi_t<L, R>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
         -> equivalent_simd_as<result_for<L, R>> auto {
@@ -79,16 +96,12 @@ public:
     }
 
     template <simd_type L, common_arithmetic_simd_with<L> R>
+    requires (!basic_simd_type<L> || !basic_simd_type<R>) &&
+        (!unqualified_add<common_abi_t<L, R>, L, R>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
         -> equivalent_simd_as<result_for<L, R>> auto {
-        using A = common_abi_t<L, R>;
-        if constexpr (requires { add(internal::abi<A>, left, right); }) {
-            return add(internal::abi<A>, left, right);
-        } else {
-            return operator()(
-                dx::to_basic_type(left), dx::to_basic_type(right));
-        }
+        return operator()(dx::to_basic_type(left), dx::to_basic_type(right));
     }
 
     using binary_operation_base<add_t>::operator();
@@ -120,7 +133,7 @@ private:
 
 public:
     template <basic_simd_type L, common_arithmetic_simd_with<L> R>
-    requires same_abi_simd_as<L, R> && basic_simd_type<R>
+    requires basic_simd_type<R> && same_abi_simd_as<L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept {
         using T = common_arithmetic_simd_t<L, R>;
@@ -135,7 +148,8 @@ public:
         }
     }
 
-    template <basic_simd_type L, common_arithmetic_simd_with<L> R>
+    template <simd_type L, common_arithmetic_simd_with<L> R>
+    requires only_unqualified<L, R> && unqualified_sub<common_abi_t<L, R>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
         -> equivalent_simd_as<result_for<L, R>> auto {
@@ -144,16 +158,12 @@ public:
     }
 
     template <simd_type L, common_arithmetic_simd_with<L> R>
+    requires (!basic_simd_type<L> || !basic_simd_type<R>) &&
+        (!unqualified_sub<common_abi_t<L, R>, L, R>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
         -> equivalent_simd_as<result_for<L, R>> auto {
-        using A = common_abi_t<L, R>;
-        if constexpr (requires { sub(internal::abi<A>, left, right); }) {
-            return sub(internal::abi<A>, left, right);
-        } else {
-            return operator()(
-                dx::to_basic_type(left), dx::to_basic_type(right));
-        }
+        return operator()(dx::to_basic_type(left), dx::to_basic_type(right));
     }
 
     using binary_operation_base<sub_t>::operator();
@@ -185,7 +195,7 @@ private:
 
 public:
     template <basic_simd_type L, common_arithmetic_simd_with<L> R>
-    requires same_abi_simd_as<L, R> && basic_simd_type<R>
+    requires basic_simd_type<R> && same_abi_simd_as<L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept {
         using T = common_arithmetic_simd_t<L, R>;
@@ -200,7 +210,8 @@ public:
         }
     }
 
-    template <basic_simd_type L, common_arithmetic_simd_with<L> R>
+    template <simd_type L, common_arithmetic_simd_with<L> R>
+    requires only_unqualified<L, R> && unqualified_mul<common_abi_t<L, R>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
         -> equivalent_simd_as<result_for<L, R>> auto {
@@ -209,16 +220,12 @@ public:
     }
 
     template <simd_type L, common_arithmetic_simd_with<L> R>
+    requires (!basic_simd_type<L> || !basic_simd_type<R>) &&
+        (!unqualified_mul<common_abi_t<L, R>, L, R>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
         -> equivalent_simd_as<result_for<L, R>> auto {
-        using A = common_abi_t<L, R>;
-        if constexpr (requires { mul(internal::abi<A>, left, right); }) {
-            return mul(internal::abi<A>, left, right);
-        } else {
-            return operator()(
-                dx::to_basic_type(left), dx::to_basic_type(right));
-        }
+        return operator()(dx::to_basic_type(left), dx::to_basic_type(right));
     }
 
     using binary_operation_base<mul_t>::operator();
@@ -246,42 +253,46 @@ private:
             [](auto lhs, auto rhs) { return static_cast<E>(lhs / rhs); });
     }
 
+    template <simd_type L, simd_type R>
+    using result_for =
+        common_arithmetic_simd_t<basic_type_t<L>, basic_type_t<R>>;
+
 public:
-    template <floating_point E, simd_abi A>
+    template <basic_simd_type L, common_arithmetic_simd_with<L> R>
+    requires basic_simd_type<R> && floating_point_simd<L> &&
+        floating_point_simd<R> && same_abi_simd_as<L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_simd<E, A> DPL_VECTORCALL operator()(
-        basic_simd<E, A> left, basic_simd<E, A> right) noexcept {
-        if constexpr (requires { div(internal::abi<A>, left, right); }) {
+    static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept {
+        using T = common_arithmetic_simd_t<L, R>;
+        if constexpr (requires { div(internal::abi<T>, left, right); }) {
             if consteval {
                 return fallback(left, right);
             } else {
-                return div(internal::abi<A>, left, right);
+                return div(internal::abi<T>, left, right);
             }
         } else {
             return fallback(left, right);
         }
     }
 
-    template <floating_point E, simd_abi A, simd_abi B>
-    requires (!same_as<A, B>)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(
-        basic_simd<E, A> left, basic_simd<E, B> right) noexcept {
-        return div(internal::abi<common_abi_t<A, B>>, left, right);
-    }
-
-    template <floating_point_simd L, common_float_simd_with<L> R>
-    requires (!basic_simd_type<L> || !basic_simd_type<R>)
+    template <simd_type L, common_arithmetic_simd_with<L> R>
+    requires floating_point_simd<L> && floating_point_simd<R> &&
+        only_unqualified<L, R> && unqualified_div<common_abi_t<L, R>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
-        -> common_float_simd_with<common_float_simd_t<L, R>> auto {
-        using abi_type = common_abi_t<L, R>;
-        if constexpr (div(internal::abi<abi_type>, left, right)) {
-            return div(internal::abi<abi_type>, left, right);
-        } else {
-            return operator()(
-                dx::to_basic_type(left), dx::to_basic_type(right));
-        }
+        -> equivalent_simd_as<result_for<L, R>> auto {
+        using A = common_abi_t<L, R>;
+        return div(internal::abi<A>, left, right);
+    }
+
+    template <simd_type L, common_arithmetic_simd_with<L> R>
+    requires floating_point_simd<L> && floating_point_simd<R> &&
+        (!basic_simd_type<L> || !basic_simd_type<R>) &&
+        (!unqualified_div<common_abi_t<L, R>, L, R>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
+        -> equivalent_simd_as<result_for<L, R>> auto {
+        return operator()(dx::to_basic_type(left), dx::to_basic_type(right));
     }
 
     using binary_operation_base<div_t>::operator();

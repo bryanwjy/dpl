@@ -219,8 +219,16 @@
 #  define __DPL_ATTRIBUTE_DLLEXPORT __dllexport__
 #  define __DPL_ATTRIBUTE_TYPE_CPP_DLLEXPORT
 #elif DPL_HAS_DECLSPEC(dllexport)
-#  define __DPL_ATTRIBUTE_DLLIMPORT dllexport
-#  define __DPL_ATTRIBUTE_TYPE_DECLSPEC_DLLIMPORT
+#  define __DPL_ATTRIBUTE_DLLEXPORT dllexport
+#  define __DPL_ATTRIBUTE_TYPE_DECLSPEC_DLLEXPORT
+#endif
+
+#if DPL_HAS_CPP_ATTRIBUTE(gnu::nonnull)
+#  define __DPL_ATTRIBUTE_NONNULL gnu::nonnull
+#  define __DPL_ATTRIBUTE_TYPE_CPP_NONNULL
+#elif DPL_HAS_GNU_ATTRIBUTE(__nonnull__)
+#  define __DPL_ATTRIBUTE_NONNULL __nonnull__
+#  define __DPL_ATTRIBUTE_TYPE_CPP_NONNULL
 #endif
 
 #if DPL_HAS_CPP_ATTRIBUTE(clang::exclude_from_explicit_instantiation)

@@ -10,8 +10,6 @@
 #if !DPL_MODULES
 #  include "dpl/core/fwd/basic.h"
 #  include "dpl/std/concepts/same_as.h"
-#  include "dpl/std/type_traits/is_constructible.h"
-#  include "dpl/std/type_traits/is_convertible.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN

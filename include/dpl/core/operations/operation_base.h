@@ -8,10 +8,15 @@
 #  include "dpl/core/basic/to_basic_type.h"
 #  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/broadcastable_to.h"
+#  include "dpl/core/concepts/common_abi_with.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
+
+template <typename L, typename R>
+concept only_unqualified =
+    !basic_simd_class<L> || !basic_simd_class<R> || !same_abi_simd_as<L, R>;
 
 template <typename T, typename A, typename... Args>
 concept implements_native = requires(Args... args) {

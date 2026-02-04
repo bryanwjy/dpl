@@ -13,8 +13,8 @@
 #  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/common_abi_with.h"
 #  include "dpl/core/concepts/simd_class.h"
+#  include "dpl/core/concepts/simd_equivalence.h"
 #  include "dpl/core/type_traits/array_for.h"
-#  include "dpl/core/type_traits/basic_type.h"
 #  include "dpl/core/type_traits/iota_sequence.h"
 #  include "dpl/core/type_traits/rebind_simd.h"
 #  include "dpl/std/bit/bit_cast.h"
@@ -138,6 +138,11 @@ private:
     using base_type DPL_NODEBUG = reinterpret_t<simd_element_type_t<To>>;
 
 public:
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr To DPL_VECTORCALL operator()(To arg) noexcept {
+        return arg;
+    }
+
     template <simd_class From>
     requires common_class_with<To, From> && same_abi_simd_as<From, To> &&
         reinterpretable_as<From, To>
@@ -148,8 +153,9 @@ public:
 
     template <simd_class From>
     requires common_class_with<To, From> && same_abi_simd_as<From, To> &&
+        (!reinterpretable_as<From, To> && !equivalent_class_as<To, From>) &&
         regular_invocable<base_type, From> &&
-        explicitly_convertible_to<basic_type_t<To>, To>
+        explicitly_convertible_to<invoke_result_t<base_type, From>, To>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr To DPL_VECTORCALL operator()(From arg) noexcept {
         return static_cast<To>(base_type::operator()(arg));

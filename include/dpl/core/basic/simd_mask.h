@@ -23,9 +23,6 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
 DPL_EXPORT template <simd_element E, simd_abi A>
-class simd_mask_not;
-
-DPL_EXPORT template <simd_element E, simd_abi A>
 class simd_mask<E, A> {
     using mask_type DPL_NODEBUG = typename A::template native_mask<E>;
     using vector_type DPL_NODEBUG = typename A::template native_type<E>;
@@ -76,11 +73,6 @@ public:
         this simd_mask self, internal::extraction_index auto idx) noexcept {
         assert(idx < element_count<simd_mask>);
         return datapar::extract(self, idx);
-    }
-
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    constexpr simd_mask_not<E, A> operator!(this simd_mask self) noexcept {
-        return self.mask_;
     }
 
 private:

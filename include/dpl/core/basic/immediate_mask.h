@@ -207,6 +207,10 @@ constexpr auto to_immediate_mask(M mask) noexcept {
     return static_cast<basic_immediate_mask<element_count<T>, M::value>>(mask);
 }
 
+template <simd_class T, immediate_mask_for<T> M>
+inline constexpr auto immediate_mask_v =
+    decltype(datapar::to_immediate_mask<T>(M{}))::value;
+
 DPL_EXPORT template <convertible_to<bit_type_t<1>> auto V>
 using mask1_t DPL_NODEBUG =
     basic_immediate_mask<1, static_cast<bit_type_t<1>>(V)>;
