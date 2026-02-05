@@ -66,4 +66,10 @@ public:
     }
 };
 } // namespace datapar::internal
+
+namespace datapar {
+inline namespace cpo {
+DPL_EXPORT inline constexpr internal::rsqrt_t rsqrt{};
+}
+} // namespace datapar
 DPL_DEFAULT_NAMESPACE_END

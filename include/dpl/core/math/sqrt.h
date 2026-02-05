@@ -14,7 +14,7 @@
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_type.h"
 #  include "dpl/core/operations/arithmetic.h"
-#  include "dpl/core/operations/bitwise.h" // IWYU pragma: keep
+#  include "dpl/core/operations/bitwise.h"
 #  include "dpl/core/operations/compare.h"
 #  include "dpl/core/operations/select.h"
 #endif
@@ -67,4 +67,10 @@ public:
     }
 };
 } // namespace datapar::internal
+
+namespace datapar {
+inline namespace cpo {
+DPL_EXPORT inline constexpr internal::sqrt_t sqrt{};
+}
+} // namespace datapar
 DPL_DEFAULT_NAMESPACE_END

@@ -58,6 +58,8 @@ public:
 } // namespace datapar::internal
 
 namespace datapar {
+inline namespace cpo {
 DPL_EXPORT inline constexpr internal::isfinite_t isfinite{};
 }
+} // namespace datapar
 DPL_DEFAULT_NAMESPACE_END

@@ -3,6 +3,8 @@
 
 #include "dpl/config.h"
 
+// IWYU pragma: always_keep
+
 #include "dpl/core/operations/bitwise.h"
 #include "dpl/core/operations/logic_reduction.h" // IWYU pragma: export
 #include "dpl/core/operations/negated_mask.h"    // IWYU pragma: export

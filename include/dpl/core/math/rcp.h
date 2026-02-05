@@ -34,7 +34,7 @@ private:
     }
 
     template <simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr basic_simd<float, A> calculate(
         basic_simd<float, A> val) noexcept {
         using simd = basic_simd<float, A>;
@@ -83,4 +83,10 @@ public:
     }
 };
 } // namespace datapar::internal
+
+namespace datapar {
+inline namespace cpo {
+DPL_EXPORT inline constexpr internal::rcp_t rcp{};
+}
+} // namespace datapar
 DPL_DEFAULT_NAMESPACE_END

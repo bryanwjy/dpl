@@ -45,19 +45,19 @@ public:
     __DPL_HIDE_FROM_ABI constexpr reduction_result(vector_type vec) noexcept
         : result_(vec) {}
 
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     constexpr auto DPL_VECTORCALL operator+(
         this reduction_result self) noexcept {
         return +self.result_;
     }
 
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     explicit constexpr DPL_VECTORCALL operator T(
         this reduction_result self) noexcept {
         return self.result_;
     }
 
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     constexpr auto operator[](
         this reduction_result self, extraction_index auto idx) noexcept {
         return self.result_[idx];
@@ -118,7 +118,7 @@ struct reducei_t<V> {
     static constexpr bool is_nothrow_v = is_nothrow_invocable_v<BinaryOp, T, T>;
 
     template <reducible<V> T, reduction_operator_for<T> BinaryOp>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto operator()(T value, BinaryOp) noexcept(
         is_nothrow_v<T, BinaryOp>)
     requires (__DPL popcount(__DPL to_unsigned(V)) == 0)
@@ -127,7 +127,7 @@ struct reducei_t<V> {
     }
 
     template <reducible<V> T, reduction_operator_for<T> BinaryOp>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto operator()(T value, BinaryOp) noexcept
     requires (__DPL popcount(__DPL to_unsigned(V)) == 1)
     {
@@ -137,7 +137,7 @@ struct reducei_t<V> {
     }
 
     template <reducible<V> T, reduction_operator_for<T> BinaryOp>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(
         T value, BinaryOp op) noexcept(is_nothrow_v<T, BinaryOp>) {
         using indices_type = packed_indices<element_count<T>>;
@@ -175,7 +175,7 @@ struct reducei_t<V> {
 struct reduce_t {
     template <simd_type T, immediate_mask_for<T> M,
         reduction_operator_for<T> BinaryOp>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto operator()(M mask, T val, BinaryOp op) noexcept
     requires reducible<T, decltype(dx::to_immediate_mask<T>(mask))::value>
     {
@@ -184,7 +184,7 @@ struct reduce_t {
     }
 
     template <simd_type T, reduction_operator_for<T> BinaryOp>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto operator()(T val, BinaryOp op) noexcept {
         return reducei_t<-1>::operator()(val, op);
     }

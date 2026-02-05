@@ -53,7 +53,21 @@ struct rounding_t {
     explicit constexpr operator bool(this rounding_t) noexcept {
         return is_valid(O);
     }
+
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    constexpr bool has(this rounding_t, rounding_flags flag) noexcept {
+        return (O & flag) == flag;
+    }
+
+    template <rounding_flags O2>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    constexpr bool has(this rounding_t, rounding_t<O2>) noexcept {
+        return (O & O2) == O2;
+    }
 };
+
+template <rounding_flags R>
+inline constexpr rounding_t<R> rounding_v{};
 
 DPL_EXPORT
 namespace rounding {

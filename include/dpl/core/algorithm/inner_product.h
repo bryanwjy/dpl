@@ -57,7 +57,7 @@ struct inner_product_t {
     template <simd_type L, common_arithmetic_simd_with<L> R>
     requires only_unqualified<L, R> &&
         unqualified_inner_product<common_abi_t<L, R>, L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L lhs, R rhs) noexcept
         -> equivalent_simd_as<common_arithmetic_simd_t<L, R>> auto {
         using A = common_abi_t<L, R>;
@@ -68,8 +68,8 @@ struct inner_product_t {
     requires (!basic_simd_type<L> || !basic_simd_type<R>) &&
         (!unqualified_inner_product<common_abi_t<L, R>, L, R>) &&
         basic_inner_product<L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(L lhs, R rhs) noexcept
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto operator()(L lhs, R rhs) noexcept
         -> equivalent_simd_as<common_arithmetic_simd_t<L, R>> auto {
         return operator()(dx::to_basic_type(lhs), dx::to_basic_type(rhs));
     }
@@ -96,7 +96,7 @@ struct inner_product_t {
         immediate_mask_for<L> M>
     requires immediate_mask_for<R, M> && only_unqualified<L, R> &&
         unqualified_inner_producti<M, common_abi_t<L, R>, L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(
         M mask, L lhs, R rhs) noexcept
         -> equivalent_simd_as<common_arithmetic_simd_t<L, R>> auto {
@@ -111,9 +111,8 @@ struct inner_product_t {
         (!basic_simd_type<L> || !basic_simd_type<R>) &&
         (!unqualified_inner_producti<M, common_abi_t<L, R>, L, R>) &&
         basic_inner_product<L, R, M>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(
-        M mask, L lhs, R rhs) noexcept
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto operator()(M mask, L lhs, R rhs) noexcept
         -> equivalent_simd_as<common_arithmetic_simd_t<L, R>> auto {
         return operator()(mask, dx::to_basic_type(lhs), dx::to_basic_type(rhs));
     }
@@ -133,8 +132,8 @@ public:
         typename mask_type<L>;
         requires regular_invocable<inner_product_t, mask_type<L>, L, R>;
     }
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(L lhs, R rhs) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto operator()(L lhs, R rhs) noexcept {
         constexpr mask_type<L> mask{};
         return inner_product_t::operator()(mask, lhs, rhs);
     }

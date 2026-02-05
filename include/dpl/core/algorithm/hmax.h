@@ -49,7 +49,7 @@ struct hmax_t {
 
     template <arithmetic_simd T>
     requires (!basic_simd_type<T>) && unqualified_hmax<T, T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(T arg) noexcept
         -> equivalent_simd_as<T> auto {
         return hmax(internal::abi<T>, arg);
@@ -58,8 +58,8 @@ struct hmax_t {
     template <arithmetic_simd T>
     requires (!basic_simd_type<T> && !unqualified_hmax<T, T>) &&
         has_fallback_hmax<T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(T arg) noexcept
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto operator()(T arg) noexcept
         -> equivalent_simd_as<T> auto {
         return operator()(dx::to_basic_type(arg));
     }
@@ -82,7 +82,7 @@ struct hmax_t {
 
     template <arithmetic_simd T, immediate_mask_for<T> M>
     requires (!basic_simd_type<T>) && unqualified_hmaxi<M, T, T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept
         -> equivalent_simd_as<T> auto {
         constexpr auto V = immediate_mask_v<T, M>;
@@ -92,8 +92,8 @@ struct hmax_t {
     template <arithmetic_simd T, immediate_mask_for<T> M>
     requires (!basic_simd_type<T> && !unqualified_hmaxi<M, T, T>) &&
         has_fallback_hmaxi<M, T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto operator()(M mask, T arg) noexcept
         -> equivalent_simd_as<T> auto {
         return operator()(mask, dx::to_basic_type(arg));
     }
@@ -114,8 +114,8 @@ public:
         typename mask_type<T>;
         requires regular_invocable<hmax_t, mask_type<T>, T>;
     }
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(T arg) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto operator()(T arg) noexcept {
         constexpr mask_type<T> mask{};
         return hmax_t::operator()(mask, arg);
     }

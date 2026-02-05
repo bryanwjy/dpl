@@ -543,7 +543,7 @@ public:
     requires compatible_mask_for<M, T> && same_abi_simd_as<M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept {
-        if constexpr (requires { bit_keep(internal::abi<M>, mask, arg); }) {
+        if constexpr (unqualified_bit_keep<M, M, T>) {
             if consteval {
                 return fallback(mask, arg);
             } else {

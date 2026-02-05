@@ -21,7 +21,7 @@ void isinf(...) noexcept = delete;
 struct isinf_t {
 private:
     template <floating_point E, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr simd_mask<E, A> fallback(basic_simd<E, A> arg) noexcept {
         return dx::cmpeq(dx::bwand(arg, dx::value_bits), dx::infinity);
     }
@@ -57,6 +57,8 @@ public:
 } // namespace datapar::internal
 
 namespace datapar {
+inline namespace cpo {
 DPL_EXPORT inline constexpr internal::isinf_t isinf{};
 }
+} // namespace datapar
 DPL_DEFAULT_NAMESPACE_END

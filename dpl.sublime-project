@@ -3,7 +3,7 @@
 	[
 		{
 			"path": ".",
-			"name": "dpl"
+			"name": "dpl",
 		}
 	],
 	"settings":
@@ -25,19 +25,19 @@
                 		"-msse4.2",
                 		"-mavx2",
                 		"-std=c++23",
-                	],
+					],
                     "clangd.compile-commands-dir": "/home/bryan/projects/dpl/build",
                     "clangd.clang-tidy": true,
                     "clangd.background-index": true,
                     "clangd.header-insertion": "never",
                     "clangd.malloc-trim": true,
-                    "clangd.experimental-modules-support": true
+                    "clangd.experimental-modules-support": true,
                 },
             	"enabled": true,
 			},
         },
 	},
 	"syntax_override": {
-		".*\\.(h|cpp)$": ["cpp-sublime-syntax/C++20"]
-	}
+		".*\\.(h|cpp)$": ["cpp-sublime-syntax/C++20"],
+	},
 }

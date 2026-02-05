@@ -1,0 +1,167 @@
+// Copyright 2025-2026 Bryan Wong
+#pragma once
+
+#include "dpl/config.h"
+
+#include "dpl/core/math/ceil.h"
+#include "dpl/core/math/copysign.h"
+#include "dpl/core/math/floor.h"
+#include "dpl/core/math/internal/constants.h"
+#include "dpl/core/math/isfinite.h"
+#include "dpl/core/math/trunc.h"
+
+#if !DPL_MODULES
+#  include "dpl/core/concepts/basic_type.h"
+#  include "dpl/core/concepts/simd_abi.h"
+#  include "dpl/core/concepts/simd_type.h"
+#  include "dpl/core/constants/one.h"
+#  include "dpl/core/operations/abs.h"
+#  include "dpl/core/operations/arithmetic.h"
+#  include "dpl/core/operations/bit.h"
+#  include "dpl/core/operations/cast.h"
+#  include "dpl/core/operations/compare.h"
+#  include "dpl/core/operations/select.h"
+#  include "dpl/core/utility/rounding.h"
+#endif
+
+DPL_DEFAULT_NAMESPACE_BEGIN
+namespace datapar::internal {
+namespace mx = datapar::fmath;
+
+void round(...) noexcept = delete;
+
+template <typename T>
+concept unqualified_cmath_round =
+    requires(T val) { round(internal::abi<T>, val); };
+
+template <typename T, rounding_flags R>
+concept unqualified_round =
+    requires(T val) { round(internal::abi<T>, val, rounding_v<R>); };
+
+struct round_t {
+private:
+    template <floating_point E, simd_abi A>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL
+        fallback(basic_simd<E, A> val) noexcept {
+        auto const isfinite = dx::isfinite(val);
+        auto const finite = dx::bit_keep(isfinite, val);
+        auto x = finite + mx::half;
+        auto fr = x - dx::trunc(x);
+        x -= dx::bit_keep(
+            x <= dx::zero && fr == dx::zero, dx::one_v<decltype(val)>);
+        fr += dx::bit_keep(fr < dx::zero, dx::one_v<decltype(val)>);
+
+        x = dx::bit_keep(fr != mx::underhalf, x);
+        return dx::select(isfinite && dx::abs(val) < mx::maxint,
+            dx::copysign(x - fr, finite), val);
+    }
+
+    template <floating_point E, simd_abi A, rounding_flags R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL
+        fallback(basic_simd<E, A> val, rounding_t<R>) noexcept {
+        constexpr auto opt = rounding_v<R>;
+        static_assert(opt);
+        if constexpr (opt.has(rounding::to_zero | rounding::no_exc)) {
+            return dx::trunc(val, rounding::no_exc);
+        } else if constexpr (opt.has(rounding::to_zero)) {
+            return dx::trunc(val);
+        } else if constexpr (opt.has(rounding::to_pos_inf | rounding::no_exc)) {
+            return dx::ceil(val, rounding::no_exc);
+        } else if constexpr (opt.has(rounding::to_pos_inf)) {
+            return dx::ceil(val);
+        } else if constexpr (opt.has(rounding::to_neg_inf | rounding::no_exc)) {
+            return dx::floor(val, rounding::no_exc);
+        } else if constexpr (opt.has(rounding::to_neg_inf)) {
+            return dx::floor(val);
+        } else {
+            // R to nearest int, tie to nearest even
+            auto const isfinite = dx::isfinite(val);
+            auto const finite = dx::bit_keep(isfinite, val);
+            auto x = finite;
+            auto i = dx::floor(x);
+            auto fr = x - i;
+            x += dx::bit_keep(fr > mx::half, dx::one_v<decltype(val)>);
+            // there are bit tricks alternatives to casting available but
+            // they usually just add more instructions
+            using sint = sbit_type_for_t<E>;
+            auto const iseven = (dx::cast<sint>(i) & dx::one) == dx::zero;
+            i += dx::bit_drop(iseven, dx::one_v<decltype(val)>);
+
+            return dx::select(isfinite && dx::abs(val) < mx::maxint,
+                dx::copysign(i, finite), //
+                val);
+        }
+    }
+
+public:
+    template <basic_simd_type T>
+    requires floating_point_simd<T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr T DPL_VECTORCALL operator()(T val) noexcept {
+        if constexpr (unqualified_cmath_round<T>) {
+            if not consteval {
+                return round(internal::abi<T>, val);
+            } else {
+                return fallback(val);
+            }
+        } else {
+            return fallback(val);
+        }
+    }
+
+    template <floating_point_simd T>
+    requires (!basic_simd_type<T>) && unqualified_cmath_round<T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(T val) noexcept {
+        return round(internal::abi<T>, val);
+    }
+
+    template <floating_point_simd T>
+    requires (!basic_simd_type<T> && !unqualified_cmath_round<T>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(T val) noexcept {
+        return operator()(dx::to_basic_type(val));
+    }
+
+    template <basic_simd_type T, rounding_flags R>
+    requires floating_point_simd<T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr T DPL_VECTORCALL operator()(
+        T val, rounding_t<R> flags) noexcept {
+        if constexpr (unqualified_round<T, R>) {
+            if not consteval {
+                return round(internal::abi<T>, val, flags);
+            } else {
+                return fallback(val, flags);
+            }
+        } else {
+            return fallback(val, flags);
+        }
+    }
+
+    template <floating_point_simd T, rounding_flags R>
+    requires (!basic_simd_type<T>) && unqualified_round<T, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(
+        T val, rounding_t<R> flags) noexcept {
+        return round(internal::abi<T>, val, flags);
+    }
+
+    template <floating_point_simd T, rounding_flags R>
+    requires (!basic_simd_type<T> && !unqualified_round<T, R>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(
+        T val, rounding_t<R> flags) noexcept {
+        return operator()(dx::to_basic_type(val), flags);
+    }
+};
+} // namespace datapar::internal
+
+namespace datapar {
+inline namespace cpo {
+DPL_EXPORT inline constexpr internal::round_t round{};
+}
+} // namespace datapar
+DPL_DEFAULT_NAMESPACE_END

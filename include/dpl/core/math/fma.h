@@ -55,8 +55,8 @@ struct fma_base {
     template <basic_simd_type TA, broadcastable_to<TA> TB,
         broadcastable_to<TA> TC>
     requires regular_invocable<T, TA, TA, TA>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(TA a, TB b, TC c) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(TA a, TB b, TC c) noexcept {
         if constexpr (implements_native<T, TA, TA, TB, TC>) {
             if consteval {
                 return T::operator()(
@@ -72,8 +72,8 @@ struct fma_base {
     template <basic_simd_type TB, broadcastable_to<TB> TA,
         broadcastable_to<TB> TC>
     requires regular_invocable<T, TB, TB, TB>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(TA a, TB b, TC c) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(TA a, TB b, TC c) noexcept {
         if constexpr (implements_native<T, TB, TA, TB, TC>) {
             if consteval {
                 return T::operator()(
@@ -89,8 +89,8 @@ struct fma_base {
     template <basic_simd_type TC, broadcastable_to<TC> TA,
         broadcastable_to<TC> TB>
     requires regular_invocable<T, TC, TC, TC>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(TA a, TB b, TC c) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(TA a, TB b, TC c) noexcept {
         if constexpr (implements_native<T, TC, TA, TB, TC>) {
             if consteval {
                 return T::operator()(
@@ -105,8 +105,8 @@ struct fma_base {
 
     template <basic_simd_type TA, broadcastable_to<TA> TC>
     requires regular_invocable<T, TA, TA, TA>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(TA a, TA b, TC c) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(TA a, TA b, TC c) noexcept {
         if constexpr (implements_native<T, TA, TA, TA, TC>) {
             if consteval {
                 return T::operator()(a, b, dx::broadcast<TA>(c));
@@ -120,8 +120,8 @@ struct fma_base {
 
     template <basic_simd_type TA, broadcastable_to<TA> TB>
     requires regular_invocable<T, TA, TA, TA>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(TA a, TB b, TA c) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(TA a, TB b, TA c) noexcept {
         if constexpr (implements_native<T, TA, TA, TB, TA>) {
             if consteval {
                 return T::operator()(a, dx::broadcast<TA>(b), c);
@@ -135,8 +135,8 @@ struct fma_base {
 
     template <basic_simd_type TB, broadcastable_to<TB> TA>
     requires regular_invocable<T, TB, TB, TB>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(TA a, TB b, TB c) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(TA a, TB b, TB c) noexcept {
         if constexpr (implements_native<T, TA, TA, TB, TB>) {
             if consteval {
                 return T::operator()(dx::broadcast<TB>(a), b, c);
@@ -151,8 +151,8 @@ struct fma_base {
     template <simd_type TA, common_arithmetic_simd_with<TA> TB,
         broadcastable_to<common_arithmetic_simd_t<TA, TB>> TC>
     requires regular_invocable<T, TA, TB, common_arithmetic_simd_t<TA, TB>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(TA a, TB b, TC c) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(TA a, TB b, TC c) noexcept {
         if constexpr (implements_native<T, common_abi_t<TA, TB>, TA, TB, TC>) {
             return T::native(internal::abi<common_abi_t<TA, TB>>, a, b, c);
         } else {
@@ -164,8 +164,8 @@ struct fma_base {
     template <simd_type TA, common_arithmetic_simd_with<TA> TC,
         broadcastable_to<common_arithmetic_simd_t<TA, TC>> TB>
     requires regular_invocable<T, TA, common_arithmetic_simd_t<TA, TC>, TB>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(TA a, TB b, TC c) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(TA a, TB b, TC c) noexcept {
         if constexpr (implements_native<T, common_abi_t<TA, TC>, TA, TB, TC>) {
             return T::native(internal::abi<common_abi_t<TA, TC>>, a, b, c);
         } else {
@@ -177,8 +177,8 @@ struct fma_base {
     template <simd_type TB, common_arithmetic_simd_with<TB> TC,
         broadcastable_to<common_arithmetic_simd_t<TB, TC>> TA>
     requires regular_invocable<T, common_arithmetic_simd_t<TB, TC>, TB, TC>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(TA a, TB b, TC c) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(TA a, TB b, TC c) noexcept {
         if constexpr (implements_native<T, common_abi_t<TA, TC>, TA, TB, TC>) {
             return T::native(internal::abi<common_abi_t<TA, TC>>, a, b, c);
         } else {
@@ -189,8 +189,8 @@ struct fma_base {
 
     template <simd_type TA, broadcastable_to<TA> TB, broadcastable_to<TA> TC>
     requires regular_invocable<T, TA, TA, TA>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(TA a, TB b, TC c) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(TA a, TB b, TC c) noexcept {
         if constexpr (implements_native<T, TA, TA, TB, TC>) {
             return T::native(internal::abi<TA>, a, b, c);
         } else {
@@ -200,8 +200,8 @@ struct fma_base {
 
     template <simd_type TB, broadcastable_to<TB> TA, broadcastable_to<TB> TC>
     requires regular_invocable<T, TB, TB, TB>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(TA a, TB b, TC c) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(TA a, TB b, TC c) noexcept {
         if constexpr (implements_native<T, TB, TA, TB, TC>) {
             return T::native(internal::abi<TA>, a, b, c);
         } else {
@@ -211,8 +211,8 @@ struct fma_base {
 
     template <simd_type TC, broadcastable_to<TC> TA, broadcastable_to<TC> TB>
     requires regular_invocable<T, TC, TC, TC>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(TA a, TB b, TC c) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(TA a, TB b, TC c) noexcept {
         if constexpr (implements_native<T, TC, TA, TB, TC>) {
             return T::native(internal::abi<TA>, a, b, c);
         } else {
@@ -233,8 +233,8 @@ private:
     }
 
     template <basic_simd_element E, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto fallback(
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL fallback(
         basic_simd<E, A> a, basic_simd<E, A> b, basic_simd<E, A> c) noexcept {
         return dx::add(dx::mul(a, b), c);
     }
@@ -260,7 +260,7 @@ public:
     requires floating_point_simd<A> && floating_point_simd<B> &&
         floating_point_simd<C> && only_unqualified_fma<A, B, C> &&
         unqualified_fmadd<common_abi_t<A, B, C>, A, B, C>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(A a, B b, C c) noexcept {
         return fmadd(internal::abi<common_abi_t<A, B, C>>, a, b, c);
     }
@@ -271,7 +271,7 @@ public:
         floating_point_simd<C> &&
         (!basic_simd_type<A> || !basic_simd_type<B> || !basic_simd_type<C>) &&
         (!unqualified_fmadd<common_abi_t<A, B, C>, A, B, C>)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(A a, B b, C c) noexcept {
         return operator()(
             dx::to_basic_type(a), dx::to_basic_type(b), dx::to_basic_type(c));
@@ -292,8 +292,8 @@ private:
     }
 
     template <basic_simd_element E, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto fallback(
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL fallback(
         basic_simd<E, A> a, basic_simd<E, A> b, basic_simd<E, A> c) noexcept {
         return dx::sub(dx::mul(a, b), c);
     }
@@ -319,7 +319,7 @@ public:
     requires floating_point_simd<A> && floating_point_simd<B> &&
         floating_point_simd<C> && only_unqualified_fma<A, B, C> &&
         unqualified_fmsub<common_abi_t<A, B, C>, A, B, C>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(A a, B b, C c) noexcept {
         return fmsub(internal::abi<common_abi_t<A, B, C>>, a, b, c);
     }
@@ -330,7 +330,7 @@ public:
         floating_point_simd<C> &&
         (!basic_simd_type<A> || !basic_simd_type<B> || !basic_simd_type<C>) &&
         (!unqualified_fmsub<common_abi_t<A, B, C>, A, B, C>)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(A a, B b, C c) noexcept {
         return operator()(
             dx::to_basic_type(a), dx::to_basic_type(b), dx::to_basic_type(c));
@@ -351,8 +351,8 @@ private:
     }
 
     template <basic_simd_element E, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto fallback(
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL fallback(
         basic_simd<E, A> a, basic_simd<E, A> b, basic_simd<E, A> c) noexcept {
         return dx::sub(c, dx::mul(a, b));
     }
@@ -378,7 +378,7 @@ public:
     requires floating_point_simd<A> && floating_point_simd<B> &&
         floating_point_simd<C> && only_unqualified_fma<A, B, C> &&
         unqualified_fnmadd<common_abi_t<A, B, C>, A, B, C>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(A a, B b, C c) noexcept {
         return fnmadd(internal::abi<common_abi_t<A, B, C>>, a, b, c);
     }
@@ -389,7 +389,7 @@ public:
         floating_point_simd<C> &&
         (!basic_simd_type<A> || !basic_simd_type<B> || !basic_simd_type<C>) &&
         (!unqualified_fnmadd<common_abi_t<A, B, C>, A, B, C>)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(A a, B b, C c) noexcept {
         return operator()(
             dx::to_basic_type(a), dx::to_basic_type(b), dx::to_basic_type(c));
@@ -410,8 +410,8 @@ private:
     }
 
     template <basic_simd_element E, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto fallback(
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL fallback(
         basic_simd<E, A> a, basic_simd<E, A> b, basic_simd<E, A> c) noexcept {
         return dx::sub(dx::negate(dx::mul(a, b)), c);
     }
@@ -437,7 +437,7 @@ public:
     requires floating_point_simd<A> && floating_point_simd<B> &&
         floating_point_simd<C> && only_unqualified_fma<A, B, C> &&
         unqualified_fnmsub<common_abi_t<A, B, C>, A, B, C>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(A a, B b, C c) noexcept {
         return fnmsub(internal::abi<common_abi_t<A, B, C>>, a, b, c);
     }
@@ -448,7 +448,7 @@ public:
         floating_point_simd<C> &&
         (!basic_simd_type<A> || !basic_simd_type<B> || !basic_simd_type<C>) &&
         (!unqualified_fnmsub<common_abi_t<A, B, C>, A, B, C>)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(A a, B b, C c) noexcept {
         return operator()(
             dx::to_basic_type(a), dx::to_basic_type(b), dx::to_basic_type(c));
@@ -468,8 +468,8 @@ private:
     }
 
     template <basic_simd_element E, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto fallback(
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL fallback(
         basic_simd<E, A> a, basic_simd<E, A> b, basic_simd<E, A> c) noexcept {
         return fmadd_t::operator()(a, b, dx::negatei<0b0101>(c));
     }
@@ -495,7 +495,7 @@ public:
     requires floating_point_simd<A> && floating_point_simd<B> &&
         floating_point_simd<C> && only_unqualified_fma<A, B, C> &&
         unqualified_fmaddsub<common_abi_t<A, B, C>, A, B, C>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(A a, B b, C c) noexcept {
         return fmaddsub(internal::abi<common_abi_t<A, B, C>>, a, b, c);
     }
@@ -506,7 +506,7 @@ public:
         floating_point_simd<C> &&
         (!basic_simd_type<A> || !basic_simd_type<B> || !basic_simd_type<C>) &&
         (!unqualified_fmaddsub<common_abi_t<A, B, C>, A, B, C>)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(A a, B b, C c) noexcept {
         return operator()(
             dx::to_basic_type(a), dx::to_basic_type(b), dx::to_basic_type(c));
@@ -527,8 +527,8 @@ private:
     }
 
     template <basic_simd_element E, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto fallback(
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL fallback(
         basic_simd<E, A> a, basic_simd<E, A> b, basic_simd<E, A> c) noexcept {
         return fmadd_t::operator()(a, b, dx::negatei<0b1010>(c));
     }
@@ -554,7 +554,7 @@ public:
     requires floating_point_simd<A> && floating_point_simd<B> &&
         floating_point_simd<C> && only_unqualified_fma<A, B, C> &&
         unqualified_fmsubadd<common_abi_t<A, B, C>, A, B, C>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(A a, B b, C c) noexcept {
         return fmsubadd(internal::abi<common_abi_t<A, B, C>>, a, b, c);
     }
@@ -565,7 +565,7 @@ public:
         floating_point_simd<C> &&
         (!basic_simd_type<A> || !basic_simd_type<B> || !basic_simd_type<C>) &&
         (!unqualified_fmsubadd<common_abi_t<A, B, C>, A, B, C>)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(A a, B b, C c) noexcept {
         return operator()(
             dx::to_basic_type(a), dx::to_basic_type(b), dx::to_basic_type(c));

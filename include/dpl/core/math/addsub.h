@@ -38,14 +38,14 @@ private:
     }
 
     template <floating_point E, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<E, A> left, basic_simd<E, A> right) noexcept {
         return dx::add(left, dx::negatei<0b0101>(right));
     }
 
     template <simd_type L, simd_type R>
-    using result_for =
+    using result_for DPL_NODEBUG =
         common_arithmetic_simd_t<basic_type_t<L>, basic_type_t<R>>;
 
 public:
@@ -99,14 +99,14 @@ private:
     }
 
     template <floating_point E, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<E, A> left, basic_simd<E, A> right) noexcept {
         return dx::add(left, dx::negatei<0b1010>(right));
     }
 
     template <simd_type L, simd_type R>
-    using result_for =
+    using result_for DPL_NODEBUG =
         common_arithmetic_simd_t<basic_type_t<L>, basic_type_t<R>>;
 
 public:

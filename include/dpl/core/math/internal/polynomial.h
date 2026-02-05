@@ -5,7 +5,6 @@
 
 #include "dpl/core/math/fma.h"
 #if !DPL_MODULES
-#  include "dpl/core/basic/basic_simd.h"
 #  include "dpl/core/basic/immediate.h"
 #  include "dpl/std/concepts/floating_point.h"
 #  include "dpl/std/utility/forward.h"

@@ -22,13 +22,13 @@ template <simd_type T>
 struct cload_t<T> {
     using value_type = typename T::value_type;
 
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto operator()(value_type const* src,
         value_type const* alt DPL_ATTRIBUTE(NONNULL)) noexcept {
         return dx::load<T>(src ? src : alt);
     }
 
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto operator()(value_type const* src,
         broadcastable_to<T> auto val = dx::zero) noexcept {
         return operator()(src, dx::broadcast<T>(val));
@@ -58,13 +58,13 @@ struct cload_t<A> {
     using abi_type = A;
 
     template <simd_element E>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto operator()(E const* src, E const* alt) noexcept {
         return cload_t<basic_simd<E, A>>::operator()(src, alt);
     }
 
     template <simd_element E>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto operator()(
         E const* src, broadcastable_to<A> auto val = datapar::zero) noexcept {
         return cload_t<basic_simd<E, A>>::operator()(src, val);
@@ -72,7 +72,7 @@ struct cload_t<A> {
 
     template <simd_element E, equivalent_simd_as<basic_simd<E, A>> U>
     requires regular_invocable<cload_t<basic_simd<E, A>>, U>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto operator()(E const* src, U val) noexcept {
         return cload_t<basic_simd<E, A>>::operator()(src, val);
     }

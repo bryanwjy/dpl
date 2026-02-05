@@ -3,6 +3,10 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/math/fma.h"
+#include "dpl/core/math/rsqrt.h"
+#include "dpl/core/math/sqrt.h"
+
 #if !DPL_MODULES
 #  include "dpl/core/basic/basic_simd.h" // IWYU pragma: export
 #  include "dpl/core/basic/broadcast.h"
@@ -11,7 +15,6 @@
 #  include "dpl/core/constants/ln2.h"
 #  include "dpl/core/constants/one.h"
 #  include "dpl/core/constants/zero.h"
-#  include "dpl/core/math/fma.h"
 #  include "dpl/core/operations/abs.h"
 #  include "dpl/core/operations/select.h"
 #  include "dpl/std/concepts/convertible_to.h"
@@ -19,15 +22,11 @@
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
-namespace datapar::internal {
-struct sqrt_t;
-struct rsqrt_t;
-} // namespace datapar::internal
 namespace datapar::fmath {
 namespace dx = __DPL datapar;
-namespace dxi = __DPL datapar::internal;
+
 template <typename T, typename... Args>
-DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr auto cpo(Args... args) noexcept {
     constexpr T func;
     return func(args...);
@@ -306,7 +305,7 @@ template <simd_abi A, abi_float_type<A> T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 constexpr pair<T, A> DPL_VECTORCALL sqrt(pair<T, A> arg) noexcept {
     using simd = typename pair<T, A>::element_type;
-    auto x = fmath::cpo<dxi::rsqrt_t>(arg.upper + arg.lower);
+    auto x = dx::rsqrt(arg.upper + arg.lower);
     auto r = arg * x;
     constexpr auto n3 = dx::broadcast<simd>(-3.0);
     return fmath::scale(r * (r * x + n3), -0.5);
@@ -325,7 +324,7 @@ struct single<basic_simd<T, A>> {
     __DPL_HIDE_FROM_ABI explicit constexpr single(element_type val) noexcept
         : value(val) {}
 
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     constexpr operator element_type(this single self) noexcept {
         return self.value;
     }
@@ -341,7 +340,7 @@ struct single<basic_simd<T, A>> {
         };
     }
 
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     friend constexpr auto DPL_VECTORCALL operator+(
         element_type left, single right) noexcept {
         return single(left) + right.value;
@@ -357,7 +356,7 @@ struct single<basic_simd<T, A>> {
         };
     }
 
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     friend constexpr auto DPL_VECTORCALL operator-(
         element_type left, single right) noexcept {
         return single(left) + right.value;
@@ -373,7 +372,7 @@ struct single<basic_simd<T, A>> {
         };
     }
 
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     friend constexpr auto DPL_VECTORCALL operator*(
         element_type left, single right) noexcept {
         return single(left) * right.value;
@@ -402,7 +401,7 @@ constexpr pair_of<T> DPL_VECTORCALL rcp(single<T> arg) noexcept {
 template <simd_type T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 constexpr pair_of<T> DPL_VECTORCALL sqrt(single<T> arg) noexcept {
-    auto t = fmath::cpo<dxi::sqrt_t>(arg.value);
+    auto t = dx::sqrt(arg.value);
     return fmath::scale(
         arg + (single(t) * t) * fmath::rcp(single(t)), dx::broadcast<T>(0.5));
 }
@@ -416,7 +415,7 @@ struct single<pair<T, A>> {
     __DPL_HIDE_FROM_ABI explicit constexpr single(element_type val) noexcept
         : value(val) {}
 
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     constexpr operator element_type(this single self) noexcept {
         return self.value;
     }
@@ -455,7 +454,7 @@ struct fast<basic_simd<E, A>> {
     __DPL_HIDE_FROM_ABI explicit constexpr fast(element_type val) noexcept
         : value(val) {}
 
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     constexpr operator element_type() const noexcept { return value; }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
@@ -496,7 +495,7 @@ struct fast<T> {
 
     __DPL_HIDE_FROM_ABI explicit constexpr fast(T val) noexcept : value(val) {}
 
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     constexpr operator T() const noexcept { return value; }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
