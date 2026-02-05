@@ -29,7 +29,7 @@ class packed_indices {
 public:
     static constexpr auto index_width = __DPL bit_width(N - 1);
     static constexpr auto width = N * index_width;
-    using underlying_type = bit_type_t<__DPL bit_ceil(width)>;
+    using underlying_type DPL_NODEBUG = bit_type_t<__DPL bit_ceil(width)>;
 
     consteval packed_indices(zero_t) noexcept : value_{} {}
 
