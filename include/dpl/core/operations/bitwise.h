@@ -35,6 +35,10 @@ void bwornot(...) noexcept = delete;
 void bwnot(...) noexcept = delete;
 void bwshift_left(...) noexcept = delete;
 void bwshift_right(...) noexcept = delete;
+template <auto>
+void bwshift_left(...) noexcept = delete;
+template <auto>
+void bwshift_right(...) noexcept = delete;
 
 template <typename A, typename L, typename R>
 concept unqualified_bwor =
@@ -63,6 +67,14 @@ concept unqualified_bwshift_left =
 template <typename A, typename L, typename R>
 concept unqualified_bwshift_right =
     requires(L lhs, R rhs) { bwshift_right(internal::abi<A>, lhs, rhs); };
+
+template <typename A, typename L, typename R>
+concept unqualified_bwshift_lefti =
+    requires(L lhs) { bwshift_left<R::value>(internal::abi<A>, lhs); };
+
+template <typename A, typename L, typename R>
+concept unqualified_bwshift_righti =
+    requires(L lhs) { bwshift_right<R::value>(internal::abi<A>, lhs); };
 
 template <simd_type L, simd_type R>
 using bwsimd_for DPL_NODEBUG =
@@ -677,44 +689,56 @@ concept shiftable_basic_simd =
 struct bwshift_left_t {
 private:
     template <shiftable_type L, integral R, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto fallback(
-        basic_simd<L, A> arg, basic_simd<R, A> shift) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL
+        fallback(basic_simd<L, A> arg, basic_simd<R, A> shift) noexcept {
         using bit_type = bit_type_t<sizeof(L) * char_bit_v>;
         return internal::transform<basic_simd<L, A>>(
             arg, shift, [](auto lhs, auto rhs) {
-                return __DPL bit_cast<L>(__DPL bit_cast<bit_type>(lhs) << rhs);
+                if constexpr (integral<L> && sizeof(L) < sizeof(int)) {
+                    return static_cast<L>(__DPL bit_cast<bit_type>(lhs) << rhs);
+                } else {
+                    return __DPL bit_cast<L>(__DPL bit_cast<bit_type>(lhs) << rhs);
+                }
             });
     }
 
-    template <shiftable_type L, simd_abi A, integral auto V>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto fallback(
-        basic_simd<L, A> arg, immediate<V> shift) noexcept {
+    template <shiftable_type L, simd_abi A, integral_constant_like R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL
+        fallback(basic_simd<L, A> arg, R shift) noexcept {
         using bit_type = bit_type_t<sizeof(L) * char_bit_v>;
         return internal::transform<basic_simd<L, A>>(arg, [](auto lhs) {
-            return __DPL bit_cast<L>(__DPL bit_cast<bit_type>(lhs) << V);
+            if constexpr (integral<L> && sizeof(L) < sizeof(int)) {
+                return static_cast<L>(__DPL bit_cast<bit_type>(lhs) << R::value);
+            } else {
+                return __DPL bit_cast<L>(__DPL bit_cast<bit_type>(lhs) << R::value);
+            }
         });
     }
 
     template <shiftable_type L, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto fallback(basic_simd<L, A> arg, int shift) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL
+        fallback(basic_simd<L, A> arg, int shift) noexcept {
         using bit_type = bit_type_t<sizeof(L) * char_bit_v>;
         return internal::transform<basic_simd<L, A>>(arg, [shift](auto lhs) {
-            return __DPL bit_cast<L>(__DPL bit_cast<bit_type>(lhs) << shift);
+            if constexpr (integral<L> && sizeof(L) < sizeof(int)) {
+                return static_cast<L>(__DPL bit_cast<bit_type>(lhs) << shift);
+            } else {
+                return __DPL bit_cast<L>(__DPL bit_cast<bit_type>(lhs) << shift);
+            }
         });
     }
 
-    template <simd_element L, simd_abi A, integral auto V>
+    template <simd_element L, simd_abi A, integral_constant_like R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto fallback(
-        simd_mask<L, A> arg, immediate<V> shift) noexcept {
+    static constexpr auto fallback(simd_mask<L, A> arg, R shift) noexcept {
         using bit_type = bit_type_t<sizeof(L) * char_bit_v>;
         using mask_type = simd_mask<L, A>;
         return []<size_t... Is>(mask_type arg, index_sequence<Is...>) {
             return dx::initialize<mask_type>(
-                (Is >= V ? arg[Is - V] : false)...);
+                (Is >= R::value ? arg[Is - R::value] : false)...);
         }(arg, iota_sequence<L, A>);
     }
 
@@ -736,9 +760,7 @@ public:
         same_abi_simd_as<L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L arg, R shift) noexcept {
-        if constexpr (requires {
-                          bwshift_left(internal::abi<L>, arg, shift);
-                      }) {
+        if constexpr (unqualified_bwshift_left<L, L, R>) {
             if consteval {
                 return fallback(arg, shift);
             } else {
@@ -769,31 +791,29 @@ public:
         return operator()(dx::to_basic_type(arg), dx::to_basic_type(shift));
     }
 
-    template <basic_simd_class L, integral auto V>
+    template <basic_simd_class L, integral_constant_like R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(
-        L arg, immediate<V> shift) noexcept {
-        static_assert(V > 0 && V < sizeof(typename L::value_type) * char_bit_v);
-        if constexpr (requires {
-                          bwshift_left(internal::abi<L>, arg, shift);
-                      }) {
+    static constexpr auto DPL_VECTORCALL operator()(L arg, R shift) noexcept {
+        static_assert(R::value > 0 &&
+            R::value < sizeof(typename L::value_type) * char_bit_v);
+        if constexpr (unqualified_bwshift_lefti<L, L, R>) {
             if consteval {
                 return fallback(arg, shift);
             } else {
-                return bwshift_left(internal::abi<L>, arg, shift);
+                return bwshift_left<R::value>(internal::abi<L>, arg);
             }
         } else {
             return fallback(arg, shift);
         }
     }
 
-    template <simd_class L, integral auto V>
+    template <simd_class L, integral_constant_like R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(
-        L arg, immediate<V> shift) noexcept {
-        static_assert(V > 0 && V < sizeof(typename L::value_type) * char_bit_v);
-        if constexpr (unqualified_bwshift_left<L, L, immediate<V>>) {
-            return bwshift_left(internal::abi<L>, arg, shift);
+    static constexpr auto DPL_VECTORCALL operator()(L arg, R shift) noexcept {
+        static_assert(R::value > 0 &&
+            R::value < sizeof(typename L::value_type) * char_bit_v);
+        if constexpr (unqualified_bwshift_left<L, L, R>) {
+            return bwshift_left<R::value>(internal::abi<L>, arg);
         } else {
             return operator()(dx::to_basic_type(arg), shift);
         }
@@ -802,9 +822,7 @@ public:
     template <basic_simd_class L>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L arg, int shift) noexcept {
-        if constexpr (requires {
-                          bwshift_left(internal::abi<L>, arg, shift);
-                      }) {
+        if constexpr (unqualified_bwshift_left<L, L, int>) {
             if consteval {
                 return fallback(arg, shift);
             } else {
@@ -829,50 +847,65 @@ public:
 struct bwshift_right_t {
 private:
     template <shiftable_type L, integral R, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto fallback(
-        basic_simd<L, A> arg, basic_simd<R, A> shift) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL
+        fallback(basic_simd<L, A> arg, basic_simd<R, A> shift) noexcept {
         using bit_type = bit_type_t<sizeof(L) * char_bit_v>;
         return internal::transform<basic_simd<L, A>>(
             arg, shift, [](auto lhs, auto rhs) {
-                return __DPL bit_cast<L>(__DPL bit_cast<bit_type>(lhs) >> rhs);
+                if constexpr (integral<L> && sizeof(L) < sizeof(int)) {
+                    return static_cast<L>(__DPL bit_cast<bit_type>(lhs) >> rhs);
+                } else {
+                    return __DPL bit_cast<L>(__DPL bit_cast<bit_type>(lhs) >> rhs);
+                }
             });
     }
 
-    template <shiftable_type L, simd_abi A, integral auto V>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto fallback(
-        basic_simd<L, A> arg, immediate<V> shift) noexcept {
+    template <shiftable_type L, simd_abi A, integral_constant_like R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL
+        fallback(basic_simd<L, A> arg, R shift) noexcept {
         using bit_type = bit_type_t<sizeof(L) * char_bit_v>;
         return internal::transform<basic_simd<L, A>>(arg, [](auto lhs) {
-            return __DPL bit_cast<L>(__DPL bit_cast<bit_type>(lhs) >> V);
+            if constexpr (integral<L> && sizeof(L) < sizeof(int)) {
+                return static_cast<L>(__DPL bit_cast<bit_type>(lhs) >> R::value);
+            } else {
+                return __DPL bit_cast<L>(__DPL bit_cast<bit_type>(lhs) >> R::value);
+            }
         });
     }
 
     template <shiftable_type L, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto fallback(basic_simd<L, A> arg, int shift) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL
+        fallback(basic_simd<L, A> arg, int shift) noexcept {
         using bit_type = bit_type_t<sizeof(L) * char_bit_v>;
         return internal::transform<basic_simd<L, A>>(arg, [shift](auto lhs) {
-            return __DPL bit_cast<L>(__DPL bit_cast<bit_type>(lhs) >> shift);
+            if constexpr (integral<L> && sizeof(L) < sizeof(int)) {
+                return static_cast<L>(__DPL bit_cast<bit_type>(lhs) >> shift);
+            } else {
+                return __DPL bit_cast<L>(__DPL bit_cast<bit_type>(lhs) >> shift);
+            }
         });
     }
 
-    template <simd_element L, simd_abi A, integral auto V>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto fallback(
-        simd_mask<L, A> arg, immediate<V> shift) noexcept {
+    template <simd_element L, simd_abi A, integral_constant_like R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL
+        fallback(simd_mask<L, A> arg, R shift) noexcept {
         using bit_type = bit_type_t<sizeof(L) * char_bit_v>;
         using mask_type = simd_mask<L, A>;
         return []<size_t... Is>(mask_type arg, index_sequence<Is...>) {
             return dx::initialize<mask_type>(
-                (Is + V < element_count<L, A> ? arg[Is + V] : false)...);
+                (Is + R::value < element_count<L, A> ? arg[Is + R::value]
+                                                     : false)...);
         }(arg, iota_sequence<L, A>);
     }
 
     template <simd_element L, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto fallback(simd_mask<L, A> arg, int shift) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL
+        fallback(simd_mask<L, A> arg, int shift) noexcept {
         using bit_type = bit_type_t<sizeof(L) * char_bit_v>;
         using mask_type = simd_mask<L, A>;
         return []<size_t... Is>(
@@ -886,11 +919,9 @@ public:
     template <shiftable_basic_simd L, basic_simd_type R>
     requires common_size_simd_with<L, R> && integral_simd<R> &&
         same_abi_simd_as<L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(L arg, R shift) noexcept {
-        if constexpr (requires {
-                          bwshift_right(internal::abi<L>, arg, shift);
-                      }) {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(L arg, R shift) noexcept {
+        if constexpr (unqualified_bwshift_right<L, L, R>) {
             if consteval {
                 return fallback(arg, shift);
             } else {
@@ -905,8 +936,8 @@ public:
     requires common_size_simd_with<L, R> && integral_simd<R> &&
         only_unqualified<L, R> &&
         unqualified_bwshift_right<common_abi_t<L, R>, L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(L arg, R shift) noexcept
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(L arg, R shift) noexcept
         -> simd_with<typename L::value_type, common_abi_t<L, R>> auto {
         return bwshift_right(internal::abi<common_abi_t<L, R>>, arg, shift);
     }
@@ -915,45 +946,43 @@ public:
     requires common_size_simd_with<L, R> && integral_simd<R> &&
         (!shiftable_basic_simd<L> || !basic_simd_type<R>) &&
         (!unqualified_bwshift_right<common_abi_t<L, R>, L, R>)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(L arg, R shift) noexcept
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(L arg, R shift) noexcept
         -> simd_with<typename L::value_type, common_abi_t<L, R>> auto {
         return operator()(dx::to_basic_type(arg), dx::to_basic_type(shift));
     }
 
-    template <basic_simd_class L, integral auto V>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(
-        L arg, immediate<V> shift) noexcept {
-        static_assert(V > 0 && V < sizeof(typename L::value_type) * char_bit_v);
-        if constexpr (requires {
-                          bwshift_right(internal::abi<L>, arg, shift);
-                      }) {
+    template <basic_simd_class L, integral_constant_like R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(L arg, R shift) noexcept {
+        static_assert(R::value > 0 &&
+            R::value < sizeof(typename L::value_type) * char_bit_v);
+        if constexpr (unqualified_bwshift_righti<L, L, R>) {
             if consteval {
                 return fallback(arg, shift);
             } else {
-                return bwshift_right(internal::abi<L>, arg, shift);
+                return bwshift_right<R::value>(internal::abi<L>, arg);
             }
         } else {
             return fallback(arg, shift);
         }
     }
 
-    template <simd_class L, integral auto V>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(
-        L arg, immediate<V> shift) noexcept {
-        static_assert(V > 0 && V < sizeof(typename L::value_type) * char_bit_v);
-        if constexpr (unqualified_bwshift_right<L, L, immediate<V>>) {
-            return bwshift_right(internal::abi<L>, arg, shift);
+    template <simd_class L, integral_constant_like R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(L arg, R shift) noexcept {
+        static_assert(R::value > 0 &&
+            R::value < sizeof(typename L::value_type) * char_bit_v);
+        if constexpr (unqualified_bwshift_righti<L, L, R>) {
+            return bwshift_right<R::value>(internal::abi<L>, arg);
         } else {
             return operator()(dx::to_basic_type(arg), shift);
         }
     }
 
     template <basic_simd_class L>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(L arg, int shift) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(L arg, int shift) noexcept {
         if constexpr (requires {
                           bwshift_right(internal::abi<L>, arg, shift);
                       }) {
@@ -968,8 +997,8 @@ public:
     }
 
     template <simd_class L>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(L arg, int shift) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(L arg, int shift) noexcept {
         if constexpr (unqualified_bwshift_right<L, L, int>) {
             return bwshift_right(internal::abi<L>, arg, shift);
         } else {

@@ -15,10 +15,13 @@ struct integral_constant {
     static constexpr T value = N;
     using value_type DPL_NODEBUG = T;
     using type DPL_NODEBUG = integral_constant;
-    __DPL_HIDE_FROM_ABI constexpr operator value_type() const noexcept {
+    __DPL_HIDE_FROM_ABI constexpr operator value_type(
+        this integral_constant) noexcept {
         return N;
     }
-    __DPL_HIDE_FROM_ABI constexpr value_type operator()() const noexcept {
+
+    __DPL_HIDE_FROM_ABI constexpr value_type operator()(
+        this integral_constant) noexcept {
         return N;
     }
 };
