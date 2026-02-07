@@ -38,7 +38,7 @@ private:
     }
 
     template <floating_point E, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<E, A> left, basic_simd<E, A> right) noexcept {
         return dx::add(left, dx::negatei<0b0101>(right));
@@ -51,8 +51,8 @@ private:
 public:
     template <basic_simd_type T>
     requires floating_point_simd<T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(T left, T right) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T left, T right) noexcept {
         if constexpr (unqualified_addsub<T, T, T>) {
             if consteval {
                 return fallback(left, right);
@@ -67,8 +67,8 @@ public:
     template <simd_type L, common_arithmetic_simd_with<L> R>
     requires floating_point_simd<L> && floating_point_simd<R> &&
         only_unqualified<L, R> && unqualified_addsub<common_abi_t<L, R>, L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(L left, R right) noexcept
         -> equivalent_simd_as<result_for<L, R>> auto {
         using A = common_abi_t<L, R>;
         return addsub(internal::abi<A>, left, right);
@@ -78,8 +78,8 @@ public:
     requires floating_point_simd<L> && floating_point_simd<R> &&
         (!basic_simd_type<L> || !basic_simd_type<R>) &&
         (!unqualified_addsub<common_abi_t<L, R>, L, R>)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(L left, R right) noexcept
         -> equivalent_simd_as<result_for<L, R>> auto {
         return operator()(dx::to_basic_type(left), dx::to_basic_type(right));
     }
@@ -99,7 +99,7 @@ private:
     }
 
     template <floating_point E, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<E, A> left, basic_simd<E, A> right) noexcept {
         return dx::add(left, dx::negatei<0b1010>(right));
@@ -112,8 +112,8 @@ private:
 public:
     template <basic_simd_type T>
     requires floating_point_simd<T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(T left, T right) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T left, T right) noexcept {
         if constexpr (unqualified_subadd<T, T, T>) {
             if consteval {
                 return fallback(left, right);
@@ -128,8 +128,8 @@ public:
     template <simd_type L, common_arithmetic_simd_with<L> R>
     requires floating_point_simd<L> && floating_point_simd<R> &&
         only_unqualified<L, R> && unqualified_subadd<common_abi_t<L, R>, L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(L left, R right) noexcept
         -> equivalent_simd_as<result_for<L, R>> auto {
         using A = common_abi_t<L, R>;
         return subadd(internal::abi<A>, left, right);
@@ -139,8 +139,8 @@ public:
     requires floating_point_simd<L> && floating_point_simd<R> &&
         (!basic_simd_type<L> || !basic_simd_type<R>) &&
         (!unqualified_subadd<common_abi_t<L, R>, L, R>)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(L left, R right) noexcept
         -> equivalent_simd_as<result_for<L, R>> auto {
         return operator()(dx::to_basic_type(left), dx::to_basic_type(right));
     }

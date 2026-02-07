@@ -24,15 +24,15 @@ struct copysign_t {
 private:
     template <floating_point E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_simd<E, A> fallback(
-        basic_simd<E, A> magnitude, basic_simd<E, A> sign) noexcept {
+    static constexpr basic_simd<E, A> DPL_VECTORCALL
+        fallback(basic_simd<E, A> magnitude, basic_simd<E, A> sign) noexcept {
         return dx::bwor(dx::abs(magnitude), dx::bwand(dx::msb, sign));
     }
 
 public:
     template <basic_simd_type T>
     requires floating_point_simd<T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T magnitude, T sign) noexcept {
         if constexpr (unqualified_copysign<T, T>) {
             if not consteval {
@@ -47,7 +47,7 @@ public:
 
     template <floating_point_simd L, common_arithmetic_simd_with<L> R>
     requires only_unqualified<L, R> && unqualified_copysign<L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L magnitude, R sign) noexcept
         -> equivalent_simd_as<common_arithmetic_simd_t<L, R>> auto {
         return copysign(internal::abi<common_abi_t<L, R>>, magnitude, sign);
@@ -57,9 +57,8 @@ public:
     requires (!basic_simd_type<L> || !basic_simd_type<R> ||
                  !same_abi_simd_as<L, R>) &&
         (!unqualified_copysign<L, R>)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(
-        L magnitude, R sign) noexcept
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(L magnitude, R sign) noexcept
         -> equivalent_simd_as<common_arithmetic_simd_t<L, R>> auto {
         return operator()(
             dx::to_basic_type(magnitude), dx::to_basic_type(sign));

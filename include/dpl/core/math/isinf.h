@@ -21,17 +21,17 @@ void isinf(...) noexcept = delete;
 struct isinf_t {
 private:
     template <floating_point E, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr simd_mask<E, A> fallback(basic_simd<E, A> arg) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr simd_mask<E, A> DPL_VECTORCALL
+        fallback(basic_simd<E, A> arg) noexcept {
         return dx::cmpeq(dx::bwand(arg, dx::value_bits), dx::infinity);
     }
 
 public:
     template <basic_simd_type T>
     requires floating_point_simd<T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr to_simd_mask_type_t<T> DPL_VECTORCALL operator()(
-        T arg) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr to_simd_mask_type_t<T> operator()(T arg) noexcept {
         if constexpr (requires { isinf(internal::abi<T>, arg); }) {
             if consteval {
                 return fallback(arg);
@@ -44,8 +44,8 @@ public:
     }
 
     template <floating_point_simd T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(T arg) noexcept
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T arg) noexcept
         -> compatible_mask_for<T> auto {
         if constexpr (requires { isinf(internal::abi<T>, arg); }) {
             return isinf(internal::abi<T>, arg);

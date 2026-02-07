@@ -98,8 +98,8 @@ private:
 public:
     template <basic_simd_type T>
     requires floating_point_simd<T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr T DPL_VECTORCALL operator()(T val) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(T val) noexcept {
         if constexpr (unqualified_cmath_round<T>) {
             if not consteval {
                 return round(internal::abi<T>, val);
@@ -113,23 +113,22 @@ public:
 
     template <floating_point_simd T>
     requires (!basic_simd_type<T>) && unqualified_cmath_round<T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(T val) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T val) noexcept {
         return round(internal::abi<T>, val);
     }
 
     template <floating_point_simd T>
     requires (!basic_simd_type<T> && !unqualified_cmath_round<T>)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(T val) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T val) noexcept {
         return operator()(dx::to_basic_type(val));
     }
 
     template <basic_simd_type T, rounding_flags R>
     requires floating_point_simd<T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr T DPL_VECTORCALL operator()(
-        T val, rounding_t<R> flags) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(T val, rounding_t<R> flags) noexcept {
         if constexpr (unqualified_round<T, R>) {
             if not consteval {
                 return round(internal::abi<T>, val, flags);
@@ -143,17 +142,15 @@ public:
 
     template <floating_point_simd T, rounding_flags R>
     requires (!basic_simd_type<T>) && unqualified_round<T, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(
-        T val, rounding_t<R> flags) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T val, rounding_t<R> flags) noexcept {
         return round(internal::abi<T>, val, flags);
     }
 
     template <floating_point_simd T, rounding_flags R>
     requires (!basic_simd_type<T> && !unqualified_round<T, R>)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(
-        T val, rounding_t<R> flags) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T val, rounding_t<R> flags) noexcept {
         return operator()(dx::to_basic_type(val), flags);
     }
 };

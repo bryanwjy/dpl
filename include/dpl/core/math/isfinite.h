@@ -30,9 +30,8 @@ private:
 public:
     template <basic_simd_type T>
     requires floating_point_simd<T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr to_simd_mask_type_t<T> DPL_VECTORCALL operator()(
-        T arg) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr to_simd_mask_type_t<T> operator()(T arg) noexcept {
         if constexpr (requires { isfinite(internal::abi<T>, arg); }) {
             if consteval {
                 return fallback(arg);
@@ -45,8 +44,8 @@ public:
     }
 
     template <floating_point_simd T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(T arg) noexcept
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T arg) noexcept
         -> compatible_mask_for<T> auto {
         if constexpr (requires { isfinite(internal::abi<T>, arg); }) {
             return isfinite(internal::abi<T>, arg);

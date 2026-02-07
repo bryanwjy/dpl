@@ -4,8 +4,6 @@
 #include "dpl/config.h"
 
 #include "dpl/core/math/fma.h"
-#include "dpl/core/math/internal/decompose.h"
-#include "dpl/core/math/internal/ldexp.h"
 #include "dpl/core/math/isinf.h"
 #include "dpl/core/math/isnan.h"
 
@@ -19,39 +17,46 @@
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
-namespace mx = datapar::fmath;
 
 void rcp(...) noexcept = delete;
 
 struct rcp_t {
 private:
-    template <simd_abi A>
+    template <floating_point E>
+    static constexpr auto useed = []() {
+        if constexpr (common_float_with<E, double>) {
+            return internal::bit_type_for_t<E>(0x7FDE6238DA3C2118);
+        } else if constexpr (common_float_with<E, float>) {
+            return internal::bit_type_for_t<E>(0x7EF311C3);
+        } else if constexpr (brain_float<E>) {
+            return internal::bit_type_for_t<E>(0x7EF3);
+        } else {
+            static_assert(sizeof(E) == 2);
+            return internal::bit_type_for_t<E>(0x7800);
+        }
+    }();
+
+    template <floating_point E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto newton_step(
-        basic_simd<float, A> y, basic_simd<float, A> x) noexcept {
-        using simd = basic_simd<float, A>;
-        return y * dx::fnmadd(x, y, 2.0f);
+    static constexpr auto refine(
+        basic_simd<E, A> y, basic_simd<E, A> x) noexcept {
+        return y * dx::fnmadd(x, y, 2.0);
     }
 
-    template <simd_abi A>
+    template <floating_point E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr basic_simd<float, A> calculate(
+    static constexpr basic_simd<float, A> approximate(
         basic_simd<float, A> val) noexcept {
-        using simd = basic_simd<float, A>;
-        auto const i = dx::sub(0x7EF311C3u, dx::reinterpret<uint32>(val));
-        auto result = dx::reinterpret<float>(i);
-        result = newton_step(result, val);
-        return result;
+        auto const seed =
+            useed<E> - dx::reinterpret<internal::bit_type_for_t<E>>(val);
+        return refine(dx::reinterpret<E>(seed), val);
     }
 
     template <simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<float, A> val) noexcept {
-        auto const decomp = mx::decompose(val);
-        auto const sig = calculate(decomp.significand);
-        auto const result =
-            mx::ldexp(mx::compliance::unsafe, sig, -decomp.exponent);
+        auto const result = approximate(val);
         return dx::select(
             dx::isnan(val), val, dx::bit_drop(dx::isinf(val), result));
     }

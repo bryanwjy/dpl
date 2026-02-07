@@ -22,8 +22,9 @@ void isnan(...) noexcept = delete;
 struct isnan_t {
 private:
     template <floating_point E, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr simd_mask<E, A> fallback(basic_simd<E, A> arg) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr simd_mask<E, A> DPL_VECTORCALL
+        fallback(basic_simd<E, A> arg) noexcept {
         using bit_type = bit_type_for_t<E>;
         constexpr auto inf_bits =
             dx::reinterpret<bit_type>(dx::infinity_v<basic_simd<E, A>>);
@@ -35,9 +36,8 @@ private:
 public:
     template <basic_simd_type T>
     requires floating_point_simd<T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr to_simd_mask_type_t<T> DPL_VECTORCALL operator()(
-        T arg) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr to_simd_mask_type_t<T> operator()(T arg) noexcept {
         if constexpr (requires { isnan(internal::abi<T>, arg); }) {
             if consteval {
                 return fallback(arg);
@@ -50,8 +50,8 @@ public:
     }
 
     template <floating_point_simd T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(T arg) noexcept
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T arg) noexcept
         -> compatible_mask_for<T> auto {
         if constexpr (requires { isnan(internal::abi<T>, arg); }) {
             return isnan(internal::abi<T>, arg);

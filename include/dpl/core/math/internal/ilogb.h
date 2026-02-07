@@ -21,7 +21,7 @@ namespace dx = __DPL datapar;
 namespace dxi = __DPL datapar::internal;
 
 template <floating_point T, simd_abi A>
-DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, VECTORCALL, NODISCARD)
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 constexpr auto DPL_VECTORCALL
     ilogb(compliance::unsafe_t, basic_simd<T, A> val) noexcept {
     // disregards subnormal/inf/nans

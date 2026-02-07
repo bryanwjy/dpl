@@ -6,12 +6,13 @@
 #include "dpl/core/math/internal/accuracy.h"
 #include "dpl/core/math/internal/decompose.h"
 #include "dpl/core/math/internal/ldexp.h"
-#include "dpl/core/math/internal/rsqrt.h"
+#include "dpl/core/math/internal/rsqrt2.h"
 #include "dpl/core/math/isfinite.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/simd_abi.h"
+#  include "dpl/core/concepts/simd_equivalence.h"
 #  include "dpl/core/concepts/simd_type.h"
 #  include "dpl/core/operations/arithmetic.h"
 #  include "dpl/core/operations/bitwise.h"
@@ -27,24 +28,32 @@ void sqrt(...) noexcept = delete;
 
 struct sqrt_t {
 private:
-    template <simd_abi A>
+    template <simd_element E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
-        fallback(basic_simd<float, A> val) noexcept {
-        auto const decomp = mx::decompose(val);
-        auto const sig = dx::mul(decomp.significand,
-            mx::rsqrt(mx::accuracy::maximum, decomp.significand));
-        auto const result =
-            mx::ldexp(mx::compliance::unsafe, sig, decomp.exponent >> imm<1>);
-        return dx::select(dx::isfinite(val) & (val != dx::zero),
-            dx::bit_fill(dx::cmplt(val, dx::zero), result), val);
+        fallback(basic_simd<E, A> val) noexcept {
+        // 2 * sqrt(2)
+        constexpr E sqrt8 = 2.8284271247461900976033774484;
+        constexpr E two = 2.0;
+        constexpr auto vsqrt8 = dx::broadcast<A>(sqrt8);
+
+        auto const decomp = fmath::frexp(val);
+        auto const remtwo = decomp.exponent & dx::one;
+        auto const ifodd = dx::select(remtwo == dx::zero, vsqrt8, two);
+        auto const sig = (ifodd * decomp.significand) *
+            mx::rsqrt2(mx::accuracy::maximum, decomp.significand);
+        auto const result = mx::ldexp(mx::compliance::unsafe, //
+            sig, (decomp.exponent - dx::one) >> imm<1>);
+
+        return dx::select(dx::isfinite(val) && val != dx::zero,
+            dx::bit_fill(val < dx::zero, result), val);
     }
 
 public:
     template <basic_simd_type T>
     requires floating_point_simd<T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr T DPL_VECTORCALL operator()(T val) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(T val) noexcept {
         if constexpr (requires { sqrt(internal::abi<T>, val); }) {
             if not consteval {
                 return sqrt(internal::abi<T>, val);
@@ -57,8 +66,9 @@ public:
     }
 
     template <floating_point_simd T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(T val) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T val) noexcept
+        -> equivalent_simd_as<T> auto {
         if constexpr (requires(T val) { sqrt(internal::abi<T>, val); }) {
             return sqrt(internal::abi<T>, val);
         } else {

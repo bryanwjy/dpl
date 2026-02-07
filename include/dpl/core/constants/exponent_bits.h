@@ -18,6 +18,20 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
+struct nexponent_bits_t : broadcastable_base {
+    __DPL_HIDE_FROM_ABI explicit constexpr nexponent_bits_t() noexcept =
+        default;
+
+    template <floating_point T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    constexpr operator T(this nexponent_bits_t) noexcept {
+        using bit_type = bit_type_t<char_bit_v * sizeof(T)>;
+        auto const ninf = all_bits_v<bit_type> << digits_v<T>;
+        auto const mask = ninf & ~msb_v<bit_type>;
+        return __DPL bit_cast<T>(~mask);
+    }
+};
+
 inline constexpr struct exponent_bits_t : broadcastable_base {
     __DPL_HIDE_FROM_ABI explicit constexpr exponent_bits_t() noexcept = default;
 
@@ -28,6 +42,11 @@ inline constexpr struct exponent_bits_t : broadcastable_base {
         auto const ninf = all_bits_v<bit_type> << digits_v<T>;
         auto const mask = ninf & ~msb_v<bit_type>;
         return __DPL bit_cast<T>(mask);
+    }
+
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    constexpr nexponent_bits_t operator~(this exponent_bits_t) noexcept {
+        return nexponent_bits_t{};
     }
 } exponent_bits{};
 
