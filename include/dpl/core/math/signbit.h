@@ -11,6 +11,7 @@
 #  include "dpl/core/constants/zero.h"
 #  include "dpl/core/operations/bitwise.h"
 #  include "dpl/core/operations/compare.h"
+#  include "dpl/core/type_traits/to_integral.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -24,9 +25,9 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr simd_mask<E, A> DPL_VECTORCALL
         fallback(basic_simd<E, A> arg) noexcept {
-        using sbit_type = sbit_type_for_t<E>;
+        using sint = to_signed_integral_t<E>;
         return dx::reinterpret<E>(
-            dx::cmplt(dx::reinterpret<sbit_type>(arg), dx::zero));
+            dx::cmplt(dx::reinterpret<sint>(arg), dx::zero));
     }
 
 public:

@@ -89,7 +89,7 @@ private:
         using T = common_bits_type_t<L, R>;
         return internal::transform<basic_simd<T, A>>(
             left, right, [](auto lhs, auto rhs) {
-                using bit_type = bit_type_for_t<T>;
+                using bit_type = bit_type_t<sizeof(T) * char_bit_v>;
                 return __DPL bit_cast<T>(__DPL bit_cast<bit_type>(lhs) |
                     __DPL bit_cast<bit_type>(rhs));
             });
@@ -196,7 +196,7 @@ private:
         using T = common_bits_type_t<L, R>;
         return internal::transform<basic_simd<T, A>>(
             left, right, [](auto lhs, auto rhs) {
-                using bit_type = bit_type_for_t<T>;
+                using bit_type = bit_type_t<sizeof(T) * char_bit_v>;
                 return __DPL bit_cast<T>(__DPL bit_cast<bit_type>(lhs) &
                     __DPL bit_cast<bit_type>(rhs));
             });
@@ -303,7 +303,7 @@ private:
         using T = common_bits_type_t<L, R>;
         return internal::transform<basic_simd<T, A>>(
             left, right, [](auto lhs, auto rhs) {
-                using bit_type = bit_type_for_t<T>;
+                using bit_type = bit_type_t<sizeof(T) * char_bit_v>;
                 return __DPL bit_cast<T>(__DPL bit_cast<bit_type>(lhs) ^
                     __DPL bit_cast<bit_type>(rhs));
             });
@@ -410,7 +410,7 @@ private:
         using T = common_bits_type_t<L, R>;
         return internal::transform<basic_simd<T, A>>(
             left, right, [](auto lhs, auto rhs) {
-                using bit_type = bit_type_for_t<T>;
+                using bit_type = bit_type_t<sizeof(T) * char_bit_v>;
                 return __DPL bit_cast<T>(__DPL bit_cast<bit_type>(lhs) &
                     ~__DPL bit_cast<bit_type>(rhs));
             });
@@ -517,7 +517,7 @@ private:
         using T = common_bits_type_t<L, R>;
         return internal::transform<basic_simd<T, A>>(
             left, right, [](auto lhs, auto rhs) {
-                using bit_type = bit_type_for_t<T>;
+                using bit_type = bit_type_t<sizeof(T) * char_bit_v>;
                 return __DPL bit_cast<T>(__DPL bit_cast<bit_type>(lhs) |
                     ~__DPL bit_cast<bit_type>(rhs));
             });
@@ -617,7 +617,7 @@ private:
                 dx::broadcast<basic_simd<E, A>>(dx::all_bits_v<E>);
             return bwandnot_t::operator()(dx::reinterpret<E>(arg), all);
         } else {
-            using bit_type = bit_type_for_t<E>;
+            using bit_type = bit_type_t<sizeof(E) * char_bit_v>;
             return internal::transform<basic_simd<E, A>>(arg, [](auto arg) {
                 return __DPL bit_cast<E>(~__DPL bit_cast<bit_type>(arg));
             });
@@ -632,7 +632,7 @@ private:
             constexpr auto all = dx::broadcast<simd_mask<E, A>>(true);
             return bwandnot_t::operator()(dx::reinterpret<E>(arg), all);
         } else {
-            using bit_type = bit_type_for_t<E>;
+            using bit_type = bit_type_t<sizeof(E) * char_bit_v>;
             return internal::transform<simd_mask<E, A>>(arg, [](auto arg) {
                 return __DPL bit_cast<E>(~__DPL bit_cast<bit_type>(arg));
             });
@@ -680,7 +680,7 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto fallback(
         basic_simd<L, A> arg, basic_simd<R, A> shift) noexcept {
-        using bit_type = bit_type_for_t<L>;
+        using bit_type = bit_type_t<sizeof(L) * char_bit_v>;
         return internal::transform<basic_simd<L, A>>(
             arg, shift, [](auto lhs, auto rhs) {
                 return __DPL bit_cast<L>(__DPL bit_cast<bit_type>(lhs) << rhs);
@@ -691,7 +691,7 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto fallback(
         basic_simd<L, A> arg, immediate<V> shift) noexcept {
-        using bit_type = bit_type_for_t<L>;
+        using bit_type = bit_type_t<sizeof(L) * char_bit_v>;
         return internal::transform<basic_simd<L, A>>(arg, [](auto lhs) {
             return __DPL bit_cast<L>(__DPL bit_cast<bit_type>(lhs) << V);
         });
@@ -700,7 +700,7 @@ private:
     template <shiftable_type L, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto fallback(basic_simd<L, A> arg, int shift) noexcept {
-        using bit_type = bit_type_for_t<L>;
+        using bit_type = bit_type_t<sizeof(L) * char_bit_v>;
         return internal::transform<basic_simd<L, A>>(arg, [shift](auto lhs) {
             return __DPL bit_cast<L>(__DPL bit_cast<bit_type>(lhs) << shift);
         });
@@ -710,7 +710,7 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto fallback(
         simd_mask<L, A> arg, immediate<V> shift) noexcept {
-        using bit_type = bit_type_for_t<L>;
+        using bit_type = bit_type_t<sizeof(L) * char_bit_v>;
         using mask_type = simd_mask<L, A>;
         return []<size_t... Is>(mask_type arg, index_sequence<Is...>) {
             return dx::initialize<mask_type>(
@@ -721,7 +721,7 @@ private:
     template <simd_element L, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto fallback(simd_mask<L, A> arg, int shift) noexcept {
-        using bit_type = bit_type_for_t<L>;
+        using bit_type = bit_type_t<sizeof(L) * char_bit_v>;
         using mask_type = simd_mask<L, A>;
         return []<size_t... Is>(
                    mask_type arg, unsigned shift, index_sequence<Is...>) {
@@ -832,7 +832,7 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto fallback(
         basic_simd<L, A> arg, basic_simd<R, A> shift) noexcept {
-        using bit_type = bit_type_for_t<L>;
+        using bit_type = bit_type_t<sizeof(L) * char_bit_v>;
         return internal::transform<basic_simd<L, A>>(
             arg, shift, [](auto lhs, auto rhs) {
                 return __DPL bit_cast<L>(__DPL bit_cast<bit_type>(lhs) >> rhs);
@@ -843,7 +843,7 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto fallback(
         basic_simd<L, A> arg, immediate<V> shift) noexcept {
-        using bit_type = bit_type_for_t<L>;
+        using bit_type = bit_type_t<sizeof(L) * char_bit_v>;
         return internal::transform<basic_simd<L, A>>(arg, [](auto lhs) {
             return __DPL bit_cast<L>(__DPL bit_cast<bit_type>(lhs) >> V);
         });
@@ -852,7 +852,7 @@ private:
     template <shiftable_type L, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto fallback(basic_simd<L, A> arg, int shift) noexcept {
-        using bit_type = bit_type_for_t<L>;
+        using bit_type = bit_type_t<sizeof(L) * char_bit_v>;
         return internal::transform<basic_simd<L, A>>(arg, [shift](auto lhs) {
             return __DPL bit_cast<L>(__DPL bit_cast<bit_type>(lhs) >> shift);
         });
@@ -862,7 +862,7 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto fallback(
         simd_mask<L, A> arg, immediate<V> shift) noexcept {
-        using bit_type = bit_type_for_t<L>;
+        using bit_type = bit_type_t<sizeof(L) * char_bit_v>;
         using mask_type = simd_mask<L, A>;
         return []<size_t... Is>(mask_type arg, index_sequence<Is...>) {
             return dx::initialize<mask_type>(
@@ -873,7 +873,7 @@ private:
     template <simd_element L, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto fallback(simd_mask<L, A> arg, int shift) noexcept {
-        using bit_type = bit_type_for_t<L>;
+        using bit_type = bit_type_t<sizeof(L) * char_bit_v>;
         using mask_type = simd_mask<L, A>;
         return []<size_t... Is>(
                    mask_type arg, unsigned shift, index_sequence<Is...>) {

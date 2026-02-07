@@ -14,6 +14,7 @@
 #  include "dpl/core/operations/arithmetic.h"
 #  include "dpl/core/operations/bit.h"
 #  include "dpl/core/operations/select.h"
+#  include "dpl/core/type_traits/to_integral.h"
 #  include "dpl/core/utility/rounding.h"
 #endif
 
@@ -39,10 +40,10 @@ private:
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<E, A> val) noexcept {
         // Based on musl libm
-        using sbit = sbit_type_for_t<E>;
-        using ubit = bit_type_for_t<E>;
+        using sint = to_signed_integral_t<E>;
+        using uint = to_unsigned_integral_t<E>;
         static constexpr auto width =
-            dx::broadcast<sbit, A>(sizeof(E) * char_bit_v);
+            dx::broadcast<sint, A>(sizeof(E) * char_bit_v);
         static constexpr auto margin = width - dx::digits<E>;
         auto const exp = [](auto exp) {
             return dx::select(exp < margin, dx::one, exp);
@@ -51,7 +52,7 @@ private:
         auto const m = dx::all_bits_v<decltype(val)> >> exp;
         auto const result = dx::bit_drop(m, val);
         return dx::select(exp >= width ||
-                dx::bwand(dx::reinterpret<ubit>(val), m) == dx::zero,
+                dx::bwand(dx::reinterpret<uint>(val), m) == dx::zero,
             val, result);
     }
 

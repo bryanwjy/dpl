@@ -12,6 +12,7 @@
 #  include "dpl/core/constants/value_bits.h"
 #  include "dpl/core/operations/bitwise.h"
 #  include "dpl/core/operations/compare.h"
+#  include "dpl/core/type_traits/to_integral.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -25,11 +26,10 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr simd_mask<E, A> DPL_VECTORCALL
         fallback(basic_simd<E, A> arg) noexcept {
-        using bit_type = bit_type_for_t<E>;
+        using uint = to_unsigned_integral_t<E>;
         constexpr auto inf_bits =
-            dx::reinterpret<bit_type>(dx::infinity_v<basic_simd<E, A>>);
-        auto const abs_val =
-            dx::reinterpret<bit_type>(dx::bwand(arg, value_bits));
+            dx::reinterpret<uint>(dx::infinity_v<basic_simd<E, A>>);
+        auto const abs_val = dx::reinterpret<uint>(dx::bwand(arg, value_bits));
         return dx::cmpgt(abs_val, inf_bits);
     }
 

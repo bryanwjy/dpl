@@ -15,7 +15,7 @@
 #  include "dpl/core/operations/bitwise.h"
 #  include "dpl/core/operations/compare.h"
 #  include "dpl/core/operations/select.h"
-#  include "dpl/core/type_traits/bit_type.h"
+#  include "dpl/core/type_traits/to_integral.h"
 #  include "dpl/std/concepts/floating_point.h"
 #endif
 
@@ -26,7 +26,7 @@ namespace dxi = __DPL datapar::internal;
 template <floating_point T, simd_abi A>
 struct decomposition {
     basic_simd<T, A> significand;
-    basic_simd<dxi::sbit_type_for_t<T>, A> exponent;
+    basic_simd<dx::to_signed_integral_t<T>, A> exponent;
 };
 
 /**
@@ -72,7 +72,7 @@ constexpr auto DPL_VECTORCALL frexp(basic_simd<E, A> val) noexcept {
         }
     }();
 
-    using int_type = dxi::bit_type_for_t<E>;
+    using int_type = dx::to_signed_integral_t<E>;
     constexpr auto k = dx::broadcast<A>(ki);
     constexpr auto k2 = k * k;
     constexpr auto exp_bits = __DPL bit_cast<int_type>(dx::exponent_bits_v<E>);

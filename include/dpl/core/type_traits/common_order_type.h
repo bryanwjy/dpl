@@ -3,9 +3,9 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/type_traits/bit_type.h"
 #include "dpl/core/type_traits/common_float_type.h"
 #include "dpl/core/type_traits/simd_element_type.h"
+#include "dpl/core/type_traits/to_integral.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/common_float_with.h"
@@ -13,8 +13,6 @@
 #  include "dpl/core/concepts/common_order_with.h"
 #  include "dpl/core/concepts/simd_class.h"
 #  include "dpl/core/concepts/simd_element.h"
-#  include "dpl/std/type_traits/make_signed.h"
-#  include "dpl/std/type_traits/make_unsigned.h"
 #  include "dpl/std/type_traits/underlying_type.h"
 #endif
 
@@ -58,10 +56,10 @@ private:
         if constexpr (same_as<A, B>) {
             return type_identity<A>{};
         } else if constexpr (signed_integral<A> && signed_integral<B>) {
-            return make_signed<internal::bit_type_for_t<A>>{};
+            return to_signed_integral<A>{};
         } else {
             static_assert(unsigned_integral<A> && unsigned_integral<B>);
-            return make_unsigned<internal::bit_type_for_t<A>>{};
+            return to_unsigned_integral<A>{};
         }
     }
 

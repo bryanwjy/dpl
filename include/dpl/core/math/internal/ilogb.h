@@ -11,14 +11,13 @@
 #  include "dpl/core/constants/digits.h"
 #  include "dpl/core/constants/exponent_bias.h"
 #  include "dpl/core/constants/exponent_bits.h"
-#  include "dpl/core/type_traits/bit_type.h"
+#  include "dpl/core/type_traits/to_integral.h"
 #  include "dpl/std/concepts/floating_point.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::fmath {
 namespace dx = __DPL datapar;
-namespace dxi = __DPL datapar::internal;
 
 template <floating_point T, simd_abi A>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
@@ -26,7 +25,7 @@ constexpr auto DPL_VECTORCALL
     ilogb(compliance::unsafe_t, basic_simd<T, A> val) noexcept {
     // disregards subnormal/inf/nans
     auto const bexp = (val & dx::exponent_bits) >> imm<dx::digits<T>>;
-    using int_type = dxi::sbit_type_for_t<T>;
+    using int_type = dx::to_signed_integral_t<T>;
     return dx::reinterpret<int_type>(bexp) -
         dx::broadcast<int_type, A>(dx::exponent_bias<T>);
 }

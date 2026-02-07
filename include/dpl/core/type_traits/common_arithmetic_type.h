@@ -3,9 +3,9 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/type_traits/bit_type.h"
 #include "dpl/core/type_traits/common_float_type.h"
 #include "dpl/core/type_traits/simd_element_type.h"
+#include "dpl/core/type_traits/to_integral.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/common_arithmetic_with.h"
@@ -14,8 +14,6 @@
 #  include "dpl/core/concepts/simd_class.h"
 #  include "dpl/core/concepts/simd_element.h"
 #  include "dpl/std/concepts/common_with.h"
-#  include "dpl/std/type_traits/make_signed.h"
-#  include "dpl/std/type_traits/make_unsigned.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -93,11 +91,12 @@ private:
         } else if constexpr (common_arithmetic_with_common_type<A, B>) {
             return common_type<A, B>{};
         } else if constexpr (signed_integral<A> && signed_integral<B>) {
-            return make_signed<internal::bit_type_for_t<A>>{};
+            return to_signed_integral<A>{};
         } else if constexpr (unsigned_integral<A> && unsigned_integral<B>) {
-            return make_unsigned<internal::bit_type_for_t<A>>{};
+            return to_unsigned_integral<A>{};
         } else {
-            return internal::bit_type_for<A>{};
+            static_assert(same_as<basic_element_t<A>, basic_element_t<B>>);
+            return basic_element<A>{};
         }
     }
 

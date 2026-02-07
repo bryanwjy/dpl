@@ -10,20 +10,19 @@
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/constants/digits.h"
 #  include "dpl/core/constants/exponent_bias.h"
-#  include "dpl/core/type_traits/bit_type.h"
+#  include "dpl/core/type_traits/to_integral.h"
 #  include "dpl/std/concepts/floating_point.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::fmath {
 namespace dx = __DPL datapar;
-namespace dxi = __DPL datapar::internal;
 
 template <floating_point T, simd_abi A>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 constexpr auto DPL_VECTORCALL ldexp(compliance::unsafe_t, basic_simd<T, A> val,
-    basic_simd<dxi::sbit_type_for_t<T>, A> exp) noexcept {
-    using int_type = dxi::sbit_type_for_t<T>;
+    basic_simd<dx::to_signed_integral_t<T>, A> exp) noexcept {
+    using int_type = dx::to_signed_integral_t<T>;
     return dx::reinterpret<T>(
         dx::reinterpret<int_type>(val) + (exp << imm<dx::digits_v<T>>));
 }
@@ -31,8 +30,7 @@ constexpr auto DPL_VECTORCALL ldexp(compliance::unsafe_t, basic_simd<T, A> val,
 template <floating_point T, simd_abi A>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 constexpr auto DPL_VECTORCALL ldexp(compliance::speed_t, basic_simd<T, A> val,
-    basic_simd<dxi::sbit_type_for_t<T>, A> exp) noexcept {
-    using int_type = dxi::sbit_type_for_t<T>;
+    basic_simd<dx::to_signed_integral_t<T>, A> exp) noexcept {
     using simdi = decltype(exp);
     constexpr auto pow2i = [](simdi exp) {
         return dx::reinterpret<T>(

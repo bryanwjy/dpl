@@ -53,7 +53,7 @@ private:
     static constexpr basic_simd<E, A> DPL_VECTORCALL
         fallback(basic_simd<E, A> left, basic_simd<E, A> right) noexcept {
         if constexpr (floating_point<E>) {
-            return dx::bwxor(left, dx::bwand(right, dx::msb));
+            return left ^ (right & dx::msb);
         } else {
             auto const negated =
                 dx::select(right < dx::zero, dx::negate(left), left);

@@ -27,6 +27,7 @@
 #  include "dpl/core/type_traits/basic_type.h"
 #  include "dpl/core/type_traits/iota_sequence.h"
 #  include "dpl/core/type_traits/rebind_simd.h"
+#  include "dpl/core/type_traits/to_integral.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -74,9 +75,9 @@ private:
 
     template <floating_point E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_simd<sbit_type_for_t<E>, A> DPL_VECTORCALL
+    static constexpr basic_simd<to_signed_integral_t<E>, A> DPL_VECTORCALL
         ilogb(basic_simd<E, A> arg) noexcept {
-        using int_type = sbit_type_for_t<E>;
+        using int_type = to_signed_integral_t<E>;
         auto const biased = (arg & exponent_bits) >> imm<digits_v<E>>;
         return biased - static_cast<int_type>(exponent_bias_v<E>);
     }

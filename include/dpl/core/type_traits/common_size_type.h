@@ -3,17 +3,16 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/type_traits/bit_type.h"
 #include "dpl/core/type_traits/simd_element_type.h"
+#include "dpl/core/type_traits/to_integral.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/common_size_with.h"
 #  include "dpl/core/concepts/simd_class.h"
 #  include "dpl/core/concepts/simd_element.h"
+#  include "dpl/std/bit/bit_type.h"
 #  include "dpl/std/concepts/common_with.h"
 #  include "dpl/std/type_traits/common_type.h"
-#  include "dpl/std/type_traits/make_signed.h"
-#  include "dpl/std/type_traits/make_unsigned.h"
 #  include "dpl/std/type_traits/type_identity.h"
 #  include "dpl/std/type_traits/underlying_type.h"
 #endif
@@ -64,9 +63,9 @@ private:
         } else if constexpr (common_size_with_common_type<A, B>) {
             return common_type<A, B>{};
         } else if constexpr (signed_integral<A> && signed_integral<B>) {
-            return make_signed<internal::bit_type_for_t<A>>{};
+            return to_signed_integral<A>{};
         } else if constexpr (unsigned_integral<A> && unsigned_integral<B>) {
-            return make_unsigned<internal::bit_type_for_t<A>>{};
+            return to_unsigned_integral<A>{};
         } else if constexpr (enumeration<A> && enumeration<B>) {
             return common_size_type<underlying_type_t<A>,
                 underlying_type_t<B>>{};
@@ -75,7 +74,7 @@ private:
         } else if constexpr (enumeration<B>) {
             return common_size_type<A, underlying_type_t<B>>{};
         } else {
-            return internal::bit_type_for<A>{};
+            return bit_type<sizeof(A) * char_bit_v>{};
         }
     }
 

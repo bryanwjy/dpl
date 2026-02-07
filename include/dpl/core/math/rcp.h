@@ -13,6 +13,7 @@
 #  include "dpl/core/concepts/simd_type.h"
 #  include "dpl/core/operations/arithmetic.h"
 #  include "dpl/core/operations/select.h"
+#  include "dpl/core/type_traits/to_integral.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -25,14 +26,14 @@ private:
     template <floating_point E>
     static constexpr auto useed = []() {
         if constexpr (common_float_with<E, double>) {
-            return internal::bit_type_for_t<E>(0x7FDE6238DA3C2118);
+            return to_unsigned_integral_t<E>(0x7FDE6238DA3C2118);
         } else if constexpr (common_float_with<E, float>) {
-            return internal::bit_type_for_t<E>(0x7EF311C3);
+            return to_unsigned_integral_t<E>(0x7EF311C3);
         } else if constexpr (brain_float<E>) {
-            return internal::bit_type_for_t<E>(0x7EF3);
+            return to_unsigned_integral_t<E>(0x7EF3);
         } else {
             static_assert(sizeof(E) == 2);
-            return internal::bit_type_for_t<E>(0x7800);
+            return to_unsigned_integral_t<E>(0x7800);
         }
     }();
 
@@ -48,7 +49,7 @@ private:
     static constexpr basic_simd<float, A> approximate(
         basic_simd<float, A> val) noexcept {
         auto const seed =
-            useed<E> - dx::reinterpret<internal::bit_type_for_t<E>>(val);
+            useed<E> - dx::reinterpret<to_unsigned_integral_t<E>>(val);
         return refine(dx::reinterpret<E>(seed), val);
     }
 

@@ -16,7 +16,6 @@ import :core.concepts;
 #include "dpl/core/type_traits/array_for.h"
 #include "dpl/core/type_traits/basic_element.h"
 #include "dpl/core/type_traits/basic_type.h"
-#include "dpl/core/type_traits/bit_type.h"
 #include "dpl/core/type_traits/common_abi.h"
 #include "dpl/core/type_traits/common_arithmetic_type.h"
 #include "dpl/core/type_traits/common_bits_type.h"
@@ -27,6 +26,7 @@ import :core.concepts;
 #include "dpl/core/type_traits/iota_sequence.h"
 #include "dpl/core/type_traits/rebind_simd.h"
 #include "dpl/core/type_traits/simd_element_type.h"
+#include "dpl/core/type_traits/to_integral.h"
 #include "dpl/core/type_traits/to_simd_mask_type.h"
 #include "dpl/core/type_traits/to_simd_type.h"
 // IWYU pragma: end_exports

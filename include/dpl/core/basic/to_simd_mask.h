@@ -9,8 +9,8 @@
 #if !DPL_MODULES
 #  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/simd_equivalence.h"
-#  include "dpl/core/type_traits/bit_type.h"
 #  include "dpl/core/type_traits/iota_sequence.h"
+#  include "dpl/core/type_traits/to_integral.h"
 #  include "dpl/core/type_traits/to_simd_mask_type.h"
 #  include "dpl/std/bit/bit_cast.h"
 #  include "dpl/std/concepts/enumeration.h"
@@ -52,7 +52,7 @@ private:
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, FLATTEN, NODISCARD)
     static constexpr bool is_true(floating_point auto val) noexcept {
-        using int_type = sbit_type_for_t<decltype(val)>;
+        using int_type = to_signed_integral_t<decltype(val)>;
         return is_true(__DPL bit_cast<int_type>(val));
     }
 
