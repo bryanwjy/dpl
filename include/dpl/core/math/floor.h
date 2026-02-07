@@ -69,7 +69,8 @@ public:
     template <floating_point_simd T>
     requires (!basic_simd_type<T>) && unqualified_floor<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T val) noexcept {
+    static constexpr auto operator()(T val) noexcept
+        -> equivalent_simd_as<T> auto {
         return round(internal::abi<T>, val, rounding::to_neg_inf);
     }
 
@@ -99,7 +100,8 @@ public:
     template <floating_point_simd T>
     requires (!basic_simd_type<T>) && unqualified_floor_noexc<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T val, rounding::no_exc_t) noexcept {
+    static constexpr auto operator()(T val, rounding::no_exc_t) noexcept
+        -> equivalent_simd_as<T> auto {
         return round(
             internal::abi<T>, val, rounding::to_neg_inf | rounding::no_exc);
     }

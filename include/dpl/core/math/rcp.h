@@ -79,7 +79,8 @@ public:
 
     template <floating_point_simd T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(T val) noexcept {
+    static constexpr auto DPL_VECTORCALL operator()(T val) noexcept
+        -> equivalent_simd_as<T> auto {
         if constexpr (requires(T val) { rcp(internal::abi<T>, val); }) {
             return rcp(internal::abi<T>, val);
         } else {

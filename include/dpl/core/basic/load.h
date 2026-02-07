@@ -24,26 +24,22 @@ namespace datapar::internal {
 void load(...) noexcept = delete;
 void aligned_load(...) noexcept = delete;
 
-template <typename>
+template <typename...>
 struct load_t {};
-template <typename>
+template <typename...>
 struct aligned_load_t {};
 
-template <basic_simd_type T>
-requires requires(typename T::value_type const* data) {
-    { load(internal::abi<T>, data) } -> same_as<T>;
-}
-struct load_t<T> {
-private:
-    using A DPL_NODEBUG = typename T::abi_type;
-    using E DPL_NODEBUG = typename T::value_type;
-
-public:
+template <simd_abi A, simd_element E>
+struct load_t<A, E> {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr T operator()(E const* data) noexcept {
+    static constexpr basic_simd<E, A> operator()(E const* data) noexcept
+    requires requires(E const* data) {
+        { load(internal::abi<A>, data) } -> same_as<basic_simd<E, A>>;
+    }
+    {
         if consteval {
             return [&]<size_t... Is>(index_sequence<Is...>) {
-                return dx::initialize<T>(data[Is]...);
+                return dx::initialize<E, A>(data[Is]...);
             }(iota_sequence<E, A>);
         } else {
             return load(internal::abi<A>, data);
@@ -51,18 +47,25 @@ public:
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr T operator()(aligned_t, E const* data) noexcept {
+    static constexpr basic_simd<E, A> operator()(
+        aligned_t, E const* data) noexcept {
         if consteval {
             return operator()(data);
         } else {
             if constexpr (requires { aligned_load(internal::abi<A>, data); }) {
                 return aligned_load(internal::abi<A>, data);
             } else {
-                return load(internal::abi<A>, data);
+                return operator()(data);
             }
         }
     }
 };
+
+template <simd_element E, simd_abi A>
+struct load_t<E, A> : load_t<A, E> {};
+
+template <basic_simd_type T>
+struct load_t<T> : load_t<typename T::value_type, typename T::abi_type> {};
 
 template <simd_type T>
 struct load_t<T> {
@@ -109,11 +112,26 @@ public:
     }
 };
 
+template <simd_abi A, simd_element E>
+struct aligned_load_t<A, E> {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(E const* src) noexcept
+    requires regular_invocable<load_t<E, A>, E const*>
+    {
+        return load_t<E, A>::operator()(aligned, src);
+    }
+};
+
+template <simd_element E, simd_abi A>
+struct aligned_load_t<E, A> : aligned_load_t<A, E> {};
+
 template <simd_type T>
-requires regular_invocable<load_t<T>, aligned_t, typename T::value_type const*>
 struct aligned_load_t<T> : private load_t<T> {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(typename T::value_type const* src) noexcept {
+    static constexpr T operator()(typename T::value_type const* src) noexcept
+    requires regular_invocable<load_t<T>, aligned_t,
+        typename T::value_type const*>
+    {
         return load_t<T>::operator()(aligned, src);
     }
 };

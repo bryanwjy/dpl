@@ -114,7 +114,8 @@ public:
     template <floating_point_simd T>
     requires (!basic_simd_type<T>) && unqualified_cmath_round<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T val) noexcept {
+    static constexpr auto operator()(T val) noexcept
+        -> equivalent_simd_as<T> auto {
         return round(internal::abi<T>, val);
     }
 
@@ -143,7 +144,8 @@ public:
     template <floating_point_simd T, rounding_flags R>
     requires (!basic_simd_type<T>) && unqualified_round<T, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T val, rounding_t<R> flags) noexcept {
+    static constexpr auto operator()(T val, rounding_t<R> flags) noexcept
+        -> equivalent_simd_as<T> auto {
         return round(internal::abi<T>, val, flags);
     }
 

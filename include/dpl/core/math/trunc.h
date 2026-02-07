@@ -39,10 +39,10 @@ private:
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<E, A> val) noexcept {
         // Based on musl libm
-        using simdi = basic_simd<sbit_type_for_t<E>, A>;
+        using sbit = sbit_type_for_t<E>;
         using ubit = bit_type_for_t<E>;
         static constexpr auto width =
-            dx::broadcast<simdi>(sizeof(E) * char_bit_v);
+            dx::broadcast<sbit, A>(sizeof(E) * char_bit_v);
         static constexpr auto margin = width - dx::digits<E>;
         auto const exp = [](auto exp) {
             return dx::select(exp < margin, dx::one, exp);
@@ -74,7 +74,8 @@ public:
     template <floating_point_simd T>
     requires (!basic_simd_type<T>) && unqualified_trunc<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T val) noexcept {
+    static constexpr auto operator()(T val) noexcept
+        -> equivalent_simd_as<T> auto {
         return round(internal::abi<T>, val, rounding::to_zero);
     }
 
@@ -104,7 +105,8 @@ public:
     template <floating_point_simd T>
     requires (!basic_simd_type<T>) && unqualified_trunc_noexc<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T val, rounding::no_exc_t) noexcept {
+    static constexpr auto operator()(T val, rounding::no_exc_t) noexcept
+        -> equivalent_simd_as<T> auto {
         return round(
             internal::abi<T>, val, rounding::to_pos_inf | rounding::no_exc);
     }

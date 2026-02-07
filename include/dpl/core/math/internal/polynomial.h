@@ -137,7 +137,7 @@ private:
                 return dx::fmadd(result, x, coeffs<T>[imm<I>]);
             }
         }
-        (dx::broadcast<simd>(coeffs<T>.back()), x);
+        (dx::broadcast<A>(coeffs<T>.back()), x);
     }
 
 public:

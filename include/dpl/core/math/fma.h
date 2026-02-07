@@ -261,7 +261,8 @@ public:
         floating_point_simd<C> && only_unqualified_fma<A, B, C> &&
         unqualified_fmadd<common_abi_t<A, B, C>, A, B, C>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(A a, B b, C c) noexcept {
+    static constexpr auto DPL_VECTORCALL operator()(A a, B b, C c) noexcept
+        -> common_arithmetic_simd_with<common_arithmetic_simd_t<A, B, C>> auto {
         return fmadd(internal::abi<common_abi_t<A, B, C>>, a, b, c);
     }
 
@@ -320,7 +321,8 @@ public:
         floating_point_simd<C> && only_unqualified_fma<A, B, C> &&
         unqualified_fmsub<common_abi_t<A, B, C>, A, B, C>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(A a, B b, C c) noexcept {
+    static constexpr auto DPL_VECTORCALL operator()(A a, B b, C c) noexcept
+        -> common_arithmetic_simd_with<common_arithmetic_simd_t<A, B, C>> auto {
         return fmsub(internal::abi<common_abi_t<A, B, C>>, a, b, c);
     }
 
@@ -379,7 +381,8 @@ public:
         floating_point_simd<C> && only_unqualified_fma<A, B, C> &&
         unqualified_fnmadd<common_abi_t<A, B, C>, A, B, C>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(A a, B b, C c) noexcept {
+    static constexpr auto DPL_VECTORCALL operator()(A a, B b, C c) noexcept
+        -> common_arithmetic_simd_with<common_arithmetic_simd_t<A, B, C>> auto {
         return fnmadd(internal::abi<common_abi_t<A, B, C>>, a, b, c);
     }
 
@@ -438,7 +441,8 @@ public:
         floating_point_simd<C> && only_unqualified_fma<A, B, C> &&
         unqualified_fnmsub<common_abi_t<A, B, C>, A, B, C>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(A a, B b, C c) noexcept {
+    static constexpr auto DPL_VECTORCALL operator()(A a, B b, C c) noexcept
+        -> common_arithmetic_simd_with<common_arithmetic_simd_t<A, B, C>> auto {
         return fnmsub(internal::abi<common_abi_t<A, B, C>>, a, b, c);
     }
 
@@ -496,7 +500,8 @@ public:
         floating_point_simd<C> && only_unqualified_fma<A, B, C> &&
         unqualified_fmaddsub<common_abi_t<A, B, C>, A, B, C>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(A a, B b, C c) noexcept {
+    static constexpr auto DPL_VECTORCALL operator()(A a, B b, C c) noexcept
+        -> common_arithmetic_simd_with<common_arithmetic_simd_t<A, B, C>> auto {
         return fmaddsub(internal::abi<common_abi_t<A, B, C>>, a, b, c);
     }
 
@@ -555,7 +560,8 @@ public:
         floating_point_simd<C> && only_unqualified_fma<A, B, C> &&
         unqualified_fmsubadd<common_abi_t<A, B, C>, A, B, C>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(A a, B b, C c) noexcept {
+    static constexpr auto DPL_VECTORCALL operator()(A a, B b, C c) noexcept
+        -> common_arithmetic_simd_with<common_arithmetic_simd_t<A, B, C>> auto {
         return fmsubadd(internal::abi<common_abi_t<A, B, C>>, a, b, c);
     }
 

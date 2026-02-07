@@ -15,7 +15,7 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 namespace internal {
-template <typename T>
+template <typename...>
 struct broadcast_t;
 }
 

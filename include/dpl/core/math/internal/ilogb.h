@@ -27,9 +27,8 @@ constexpr auto DPL_VECTORCALL
     // disregards subnormal/inf/nans
     auto const bexp = (val & dx::exponent_bits) >> imm<dx::digits<T>>;
     using int_type = dxi::sbit_type_for_t<T>;
-    using simdi = basic_simd<int_type, A>;
     return dx::reinterpret<int_type>(bexp) -
-        dx::broadcast<simdi>(dx::exponent_bias<T>);
+        dx::broadcast<int_type, A>(dx::exponent_bias<T>);
 }
 
 } // namespace datapar::fmath

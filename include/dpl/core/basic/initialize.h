@@ -25,12 +25,44 @@ namespace datapar::internal {
 template <typename>
 void initialize(...) noexcept = delete;
 
-template <typename>
+template <typename...>
 struct initialize_t {};
+
+template <simd_abi A, simd_element E>
+struct initialize_t<A, E> {
+private:
+    using barray_type DPL_NODEBUG = bool[element_count<E, A>];
+    using array_type DPL_NODEBUG = E[element_count<E, A>];
+
+public:
+    template <core_convertible_to<E>... Args>
+    requires array_initializable<array_type, Args...>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr basic_simd<E, A> operator()(Args&&... args) noexcept
+    requires requires { initialize<E>(internal::abi<A>, array_type{}); }
+    {
+        array_type buffer{__DPL forward<Args>(args)...};
+        return initialize<E>(internal::abi<A>, buffer);
+    }
+
+    template <same_as<bool>... Bs>
+    requires array_initializable<barray_type, Bs...>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr simd_mask<E, A> operator()(Bs... args) noexcept
+    requires requires { initialize<E>(internal::abi<A>, barray_type{}); }
+    {
+        barray_type buffer{__DPL forward<Bs>(args)...};
+        return initialize<E>(internal::abi<A>, buffer);
+    }
+};
+
+template <simd_abi A, simd_element E>
+struct initialize_t<E, A> : initialize_t<A, E> {};
 
 template <basic_simd_class T>
 struct initialize_t<T> {
 private:
+    using A DPL_NODEBUG = typename T::abi_type;   // bool for masks
     using E DPL_NODEBUG = typename T::value_type; // bool for masks
     using Array DPL_NODEBUG = E[element_count<T>];
 
@@ -39,24 +71,18 @@ public:
     requires array_initializable<Array, Args...>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr T operator()(Args&&... args) noexcept
-    requires simd_type<T> && requires {
-        { initialize<E>(internal::abi<T>, Array{}) } -> same_as<T>;
-    }
+    requires simd_type<T> && regular_invocable<initialize_t<A, E>, Args...>
     {
-        Array buffer{__DPL forward<Args>(args)...};
-        return initialize<E>(internal::abi<T>, buffer);
+        return initialize_t<A, E>::operator()(__DPL forward<Args>(args)...);
     }
 
     template <same_as<bool>... Bs>
     requires array_initializable<Array, Bs...>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr T operator()(Bs... args) noexcept
-    requires simd_mask_type<T> && requires {
-        { initialize<E>(internal::abi<T>, Array{}) } -> same_as<T>;
-    }
+    requires simd_mask_type<T> && regular_invocable<initialize_t<A, E>, Bs...>
     {
-        Array buffer{__DPL forward<Bs>(args)...};
-        return initialize<E>(internal::abi<T>, buffer);
+        return initialize_t<A, E>::operator()(args...);
     }
 };
 
@@ -116,8 +142,8 @@ public:
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT template <typename T>
-inline constexpr internal::initialize_t<T> initialize{};
+DPL_EXPORT template <typename T, typename... Ts>
+inline constexpr internal::initialize_t<T, Ts...> initialize{};
 }
 } // namespace datapar
 DPL_DEFAULT_NAMESPACE_END

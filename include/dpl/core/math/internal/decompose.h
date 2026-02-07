@@ -37,10 +37,10 @@ template <simd_abi A>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 constexpr auto DPL_VECTORCALL
     frexp_balanced(basic_simd<float, A> val) noexcept {
-    using simd = basic_simd<float, A>;
-    constexpr auto k = dx::broadcast<simd>(static_cast<float>(int64(1) << 32));
+    constexpr auto k =
+        dx::broadcast<float, A>(static_cast<float>(int64(1) << 32));
     constexpr auto k2 = k * k;
-    constexpr auto fourthirds = dx::broadcast<simd>(1.0 / 0.75);
+    constexpr auto fourthirds = dx::broadcast<float, A>(1.0 / 0.75);
     auto const issubnormal = val < dx::min_value;
     auto const dval = dx::select(issubnormal, val * k, val);
     auto const exp = fmath::ilogb(compliance::unsafe, dval * fourthirds);

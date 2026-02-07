@@ -31,8 +31,7 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<E, A> val) noexcept {
-        using simd = basic_simd<E, A>;
-        constexpr auto inv_sqrt2 = dx::broadcast<simd>(mx::rsqrt2(dx::one));
+        constexpr auto inv_sqrt2 = dx::broadcast<E, A>(mx::rsqrt2(dx::one));
 
         auto const decomp = fmath::frexp(val);
         auto const remtwo = decomp.exponent & dx::one;
@@ -63,7 +62,8 @@ public:
 
     template <floating_point_simd T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T val) noexcept {
+    static constexpr auto operator()(T val) noexcept
+        -> equivalent_simd_as<T> auto {
         if constexpr (requires(T val) { rsqrt(internal::abi<T>, val); }) {
             return rsqrt(internal::abi<T>, val);
         } else {

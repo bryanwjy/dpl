@@ -206,10 +206,9 @@ template <simd_element E, simd_abi A, broadcastable_to<basic_simd<E, A>> T1,
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 constexpr pair<E, A> DPL_VECTORCALL
     make_pair(T1 upper, T2 lower = {}) noexcept {
-    using simd = basic_simd<E, A>;
-    return pair_of<simd>{
-        .upper = dx::broadcast<simd>(upper),
-        .lower = dx::broadcast<simd>(lower),
+    return pair<E, A>{
+        .upper = dx::broadcast<E, A>(upper),
+        .lower = dx::broadcast<E, A>(lower),
     };
 }
 
@@ -218,9 +217,9 @@ template <simd_abi A, simd_element E,
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 constexpr pair<E, A> DPL_VECTORCALL make_pair(E upper, T2 lower = {}) noexcept {
     using simd = basic_simd<E, A>;
-    return pair_of<simd>{
-        .upper = dx::broadcast<simd>(upper),
-        .lower = dx::broadcast<simd>(lower),
+    return pair<E, A>{
+        .upper = dx::broadcast<E, A>(upper),
+        .lower = dx::broadcast<E, A>(lower),
     };
 }
 

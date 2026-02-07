@@ -33,9 +33,9 @@ private:
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<E, A> val) noexcept {
         // 2 * sqrt(2)
-        constexpr E sqrt8 = 2.8284271247461900976033774484;
-        constexpr E two = 2.0;
-        constexpr auto vsqrt8 = dx::broadcast<A>(sqrt8);
+        constexpr auto two = dx::broadcast<E, A>(2.0);
+        constexpr auto vsqrt8 =
+            dx::broadcast<E, A>(2.8284271247461900976033774484);
 
         auto const decomp = fmath::frexp(val);
         auto const remtwo = decomp.exponent & dx::one;
