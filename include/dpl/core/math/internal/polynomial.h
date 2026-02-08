@@ -7,30 +7,103 @@
 #if !DPL_MODULES
 #  include "dpl/core/basic/immediate.h"
 #  include "dpl/core/constants/digits.h"
+#  include "dpl/std/bit/bit_width.h"
 #  include "dpl/std/concepts/floating_point.h"
 #  include "dpl/std/type_traits/remove_const.h"
-#  include "dpl/std/utility/forward.h"
-#  include "dpl/std/utility/sequence.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::fmath {
 namespace dx = __DPL datapar;
-template <floating_point auto... Vs>
-struct polynomial {
-    static_assert(sizeof...(Vs) >= 2);
+namespace estrin {
+struct unintialized_t {};
+
+/**
+ * Use a union for easier debugging at constexpr
+ */
+template <floating_point E, simd_abi A>
+union optional {
+    unintialized_t none;
+    basic_simd<E, A> val;
+};
+
+/**
+ * Union based storage used to reduce register pressure
+ * on estrin evalutaions.
+ */
+template <size_t S, floating_point E, simd_abi A>
+class vpowers : protected vpowers<S - 1, E, A> {
+    using base_type = vpowers<S - 1, E, A>;
+
+public:
+    __DPL_HIDE_FROM_ABI constexpr vpowers() noexcept = default;
+    __DPL_HIDE_FROM_ABI explicit constexpr vpowers(basic_simd<E, A> x0) noexcept
+    requires (S == 0)
+        : data{
+              .val = x0,
+          } {}
+
+    __DPL_HIDE_FROM_ABI explicit constexpr vpowers(basic_simd<E, A> x0) noexcept
+        : base_type(nullptr, x0)
+        , data{.none = {}} {}
+
+    template <integral auto I>
+    requires (S > 0 && I <= S)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    constexpr basic_simd<E, A> operator[](immediate<I>) const noexcept {
+        if constexpr (I == S) {
+            return data.val;
+        } else {
+            return vpowers<I, E, A>::data.val;
+        }
+    }
+
+    template <integral auto I>
+    requires (I < S && S >= 0)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
+    constexpr void initialize() noexcept {
+        vpowers<I, E, A>::data.val = dx::mul(
+            vpowers<I - 1, E, A>::data.val, vpowers<I - 1, E, A>::data.val);
+    }
+
+protected:
+    __DPL_HIDE_FROM_ABI explicit constexpr vpowers(
+        decltype(nullptr), basic_simd<E, A> x0) noexcept
+    requires (S == 1)
+        : base_type(x0)
+        , data{.none = {}} {}
+
+    __DPL_HIDE_FROM_ABI explicit constexpr vpowers(
+        decltype(nullptr) tag, basic_simd<E, A> x0) noexcept
+        : base_type(tag, x0)
+        , data{.none = {}} {}
+
+    optional<E, A> data;
+};
+
+template <floating_point E, simd_abi A>
+class vpowers<static_cast<size_t>(-1), E, A> {};
+
+} // namespace estrin
+
+template <floating_point auto V0, floating_point auto... Vs>
+class polynomial {
+private:
+    static_assert(sizeof...(Vs) >= 1);
     template <floating_point T>
     struct coeffs_t {
-        template <size_t I>
+        static consteval T operator[](immediate<0>) noexcept { return V0; }
+
+        template <int I>
         static consteval T operator[](immediate<I>) noexcept {
 #if __cpp_pack_indexing >= 202311L & (DPL_CXX26 | DPL_COMPILER_CLANG)
 #  if DPL_COMPILER_CLANG & !DPL_CXX26
             DPL_DISABLE_WARNING_PUSH()
             DPL_DISABLE_WARNING("-Wc++26-extensions")
 #  endif
-            static_assert(
-                digits_v<T> <= digits_v<remove_const_t<decltype(Vs...[I])>>);
-            return static_cast<T>(Vs...[I]);
+            static_assert(digits_v<T> <=
+                digits_v<remove_const_t<decltype(Vs...[I - 1])>>);
+            return static_cast<T>(Vs...[I - 1]);
 #  if DPL_COMPILER_CLANG & !DPL_CXX26
             DPL_DISABLE_WARNING_POP()
 #  endif
@@ -38,124 +111,116 @@ struct polynomial {
             static_assert((... &&
                 (digits_v<T> <= digits_v<remove_const_t<decltype(Vs)>>)));
             using array = T[sizeof...(Vs)];
-            return array{Vs...}[I];
+            return array{Vs...}[I - 1];
 #endif
         }
 
         consteval T back(this coeffs_t self) noexcept {
             return self[imm<sizeof...(Vs) - 1>];
         }
+
+        consteval T front(this coeffs_t self) noexcept { return V0; }
     };
 
     template <floating_point T>
-    static constexpr coeffs_t<T> coeffs;
+    static constexpr coeffs_t<T> coeffs{};
 
-    static consteval auto front(auto val, auto...) noexcept { return val; }
+    static constexpr auto degree = sizeof...(Vs);
+    static constexpr size_t depth = __DPL bit_width(degree) - 1;
 
-private:
-    template <basic_simd_type T0, same_abi_simd_as<T0>... Ts>
-    requires floating_point_simd<T0> &&
-        (... && (floating_point_simd<Ts> && basic_simd_type<Ts>))
+    template <typename Powers, floating_point E, simd_abi A, size_t B = 0zu,
+        size_t L = depth>
+    requires same_as<decay_t<Powers>, fmath::estrin::vpowers<depth, E, A>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto eval_estrin(
+        Powers&& x, immediate<B> = {}, immediate<L> = {}) noexcept {
+        constexpr auto S = 1 << L;      // stride for the next level
+        constexpr auto Sp = (S << 1);   // current level's stride
+        constexpr auto Sgp = (Sp << 1); // parent level's stride
+        constexpr auto parent_consumes = B + Sp <= degree;
+        constexpr auto parent_maximal = B + Sgp + Sp > degree;
+        if constexpr (L == 0) {
+            // Leaf
+            if constexpr (B + S <= degree) {
+                if constexpr (parent_consumes && parent_maximal) {
+                    x.template initialize<L + 1>();
+                }
+                return dx::fmadd(
+                    x[imm<L>], coeffs<E>[imm<B + S>], coeffs<E>[imm<B>]);
+            } else {
+                return dx::broadcast<A>(coeffs<E>[imm<B>]);
+            }
+        } else if constexpr (B + S <= degree) {
+            auto const left = eval_estrin(x, imm<B + S>, imm<L - 1>);
+            auto const right = eval_estrin(x, imm<B>, imm<L - 1>);
+            if constexpr (parent_consumes && parent_maximal) {
+                // initialize squares as late as possible with the fma
+                // below hiding the latency of the multiplication
+
+                // parent_consumes => parent consumes x^2^(L+1)
+                // parent_maximal => parent is earliest consumer
+                x.template initialize<L + 1>();
+            }
+            // x[L] => x^2^L
+            return dx::fmadd(x[imm<L>], left, right);
+        } else {
+            return eval_estrin(x, imm<B>, imm<L - 1>);
+        }
+    }
+
+    template <floating_point E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
-        estrin(T0 x, T0 t0, Ts... ts) noexcept {
-        using simd = T0;
-        constexpr size_t size = (sizeof...(Ts) + 1);
-        static constexpr auto terms = []<size_t I>(this auto self, immediate<I>,
-                                          auto&& first,
-                                          auto&&... params) -> decltype(auto) {
-            if constexpr (I == 0) {
-                return first;
-            } else {
-                return self(
-                    imm<I - 1>, __DPL forward<decltype(params)>(params)...);
-            }
-        };
+        eval_estrin(basic_simd<E, A> x) noexcept {
+        // Compiler Explorer: https://godbolt.org/z/rbKK8T31a
+        // Evaluates estrin with lower register pressure by deferring
+        // the square operation as late as possible, leaving
+        // at least one fma between the square operation and the use
+        // of the square's result. This results in 2 less active powers
+        // during evaluation and about 3-4 less active registers for
+        // large polynomials, e.g. 18th degree, on clang
 
-        auto x2 = x * x;
-        auto accumulate = [&]<size_t I = 1>(
-                              this auto self, simd xi, immediate<I> = {}) {
-            static_assert(I >= 1);
-            t0 = dx::fmadd(terms(imm<I>, t0, ts...), xi, t0);
-            if constexpr (I + 1 < size) {
-                self(xi * x2, imm<I + 1>);
-            }
-        };
+        // On GCC, this resulted in 1 extra register use compared
+        // to the naive implementation of preinitializing all even
+        // powers.
 
-        if constexpr ((sizeof...(Vs) % 2) == 0) {
-            accumulate(x2);
-        } else {
-            accumulate(x);
-        }
-
-        return t0;
+        // Since it's a lot better on clang and only slightly worse
+        // on GCC, the deferred method will be used. It's not
+        // too difficult to switch back to the naive implementation
+        // if required.
+        return eval_estrin(estrin::vpowers<depth, E, A>(x));
     }
 
-    template <floating_point T, simd_abi A>
+    template <floating_point E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL estrin(basic_simd<T, A> x) noexcept {
-        // Can define more if needed, but for now, limit to 8
-        static_assert(sizeof...(Vs) <= 8);
-        if constexpr (sizeof...(Vs) == 8) {
-            static constexpr size_t size = sizeof...(Vs) / 2;
-            static constexpr make_index_sequence<size> indices{};
-            return []<size_t... Is>(index_sequence<Is...>, auto x) {
-                constexpr polynomial<coeffs<T>[imm<Is>]...> first{};
-                constexpr polynomial<coeffs<T>[imm<size + Is>]...> second{};
-                auto x2 = x * x;
-                return dx::fmadd(x2 * x2, first(x), second(x));
-            }(indices, x);
-        } else {
-            using simd = basic_simd<T, A>;
-            constexpr size_t size = (sizeof...(Vs) + 1) / 2;
-            constexpr make_index_sequence<size> indices{};
-            return []<size_t... Is>(index_sequence<Is...>, auto x) {
-                if constexpr ((sizeof...(Vs) % 2) == 0) {
-                    return estrin(x,
-                        dx::fmadd(coeffs<T>[imm<Is * 2 + 1>], x,
-                            coeffs<T>[imm<Is * 2>])...);
-                } else {
-                    return estrin(x,
-                        dx::fmadd(coeffs<T>[imm<Is * 2 + 1>], x,
-                            coeffs<T>[imm<Is * 2>])...,
-                        dx::broadcast<A>(coeffs<T>.back()));
-                }
-            }(indices, x);
-        }
-    }
-
-    template <floating_point T, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL horner(basic_simd<T, A> x) noexcept {
-        using simd = basic_simd<T, A>;
-        return []<size_t I = sizeof...(Vs) - 2>(
+    static constexpr auto DPL_VECTORCALL
+        eval_horner(basic_simd<E, A> x) noexcept {
+        using simd = basic_simd<E, A>;
+        return []<int I = sizeof...(Vs) - 1>(
             this auto self, simd result, simd x, immediate<I> = {}) {
             if constexpr (I > 0) {
                 return self(
-                    dx::fmadd(result, x, coeffs<T>[imm<I>]), x, imm<I - 1>);
+                    dx::fmadd(result, x, coeffs<E>[imm<I>]), x, imm<I - 1>);
             } else {
-                return dx::fmadd(result, x, coeffs<T>[imm<I>]);
+                return dx::fmadd(result, x, coeffs<E>[imm<I>]);
             }
         }
-        (dx::broadcast<A>(coeffs<T>.back()), x);
+        (dx::broadcast<A>(coeffs<E>.back()), x);
     }
 
 public:
     template <floating_point T, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(basic_simd<T, A> x) noexcept {
-        if constexpr (sizeof...(Vs) <= 5) {
-            return horner(x);
+        if constexpr (sizeof...(Vs) <= 4) {
+            return eval_horner(x);
         } else {
-            return estrin(x);
+            return eval_estrin(x);
         }
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(dx::zero_t) noexcept {
-        constexpr auto val = front(Vs...);
-        return val;
-    }
+    static constexpr auto operator()(dx::zero_t) noexcept { return V0; }
 };
 } // namespace datapar::fmath
 DPL_DEFAULT_NAMESPACE_END
