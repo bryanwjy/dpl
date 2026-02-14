@@ -85,4 +85,6 @@ inline constexpr rounding_t<rounding_flags::current_dir> current_dir{};
 inline constexpr rounding_t<rounding_flags::no_exc> no_exc{};
 } // namespace rounding
 } // namespace datapar
+
+DPL_EXPORT namespace rounding = __DPL datapar::rounding; // NOLINT
 DPL_DEFAULT_NAMESPACE_END

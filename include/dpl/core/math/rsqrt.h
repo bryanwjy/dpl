@@ -3,11 +3,11 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/math/fixup.h"
 #include "dpl/core/math/internal/accuracy.h"
-#include "dpl/core/math/internal/decompose.h"
+#include "dpl/core/math/internal/frexp.h"
 #include "dpl/core/math/internal/ldexp.h"
 #include "dpl/core/math/internal/rsqrt2.h"
-#include "dpl/core/math/isfinite.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/basic_type.h"
@@ -40,8 +40,11 @@ private:
         auto result = mx::ldexp(mx::compliance::unsafe, reduced,
             -((decomp.exponent - dx::one) >> imm<1>));
         result *= dx::select(remtwo == dx::zero, inv_sqrt2, dx::one);
-        return dx::select(
-            dx::isfinite(val), dx::bit_fill(val <= dx::zero, result), val);
+
+        return dx::fixup(val, result,
+            fpfix::condition<fpfix::nan, fpfix::revert>       //
+                | fpfix::condition<fpfix::infinity, dx::zero> //
+                | fpfix::condition<fpfix::negative, dx::nan>);
     }
 
 public:

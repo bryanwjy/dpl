@@ -29,7 +29,7 @@ private:
     using negated_simd DPL_NODEBUG = common_arithmetic_simd_t<T, T>;
 
     template <arithmetic_type E, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<E, A> val) noexcept {
         if constexpr (floating_point<E>) {
@@ -41,7 +41,7 @@ private:
     }
 
     template <integral auto V, arithmetic_type E, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallbacki(basic_simd<E, A> val) noexcept {
         static constexpr immediate_mask<element_count<E, A>, V> mask{};
@@ -65,8 +65,8 @@ private:
 public:
     template <basic_simd_type T>
     requires arithmetic_simd<T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr negated_simd<T> DPL_VECTORCALL operator()(T val) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr negated_simd<T> operator()(T val) noexcept {
         if constexpr (requires { negate(internal::abi<T>, val); }) {
             if consteval {
                 return fallback(val);
@@ -79,8 +79,8 @@ public:
     }
 
     template <arithmetic_simd T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(T val) noexcept
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T val) noexcept
         -> equivalent_simd_as<negated_simd<T>> auto {
         if constexpr (requires { negate(internal::abi<T>, val); }) {
             return negate(internal::abi<T>, val);
@@ -92,9 +92,8 @@ public:
     template <basic_simd_mask_type M, basic_simd_type T>
     requires arithmetic_simd<T> && compatible_mask_for<M, T> &&
         same_abi_simd_as<T, M>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr negated_simd<T> DPL_VECTORCALL operator()(
-        M mask, T val) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr negated_simd<T> operator()(M mask, T val) noexcept {
         if constexpr (requires { negate(internal::abi<T>, mask, val); }) {
             if consteval {
                 return dx::select(
@@ -110,8 +109,8 @@ public:
 
     template <basic_simd_mask_type M, basic_simd_type T>
     requires arithmetic_simd<T> && compatible_mask_for<M, T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(M mask, T val) noexcept
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(M mask, T val) noexcept
         -> equivalent_simd_as<negated_simd<T>> auto {
         using A = common_abi_t<M, T>;
         return negate(internal::abi<A>, mask, val);
@@ -119,8 +118,8 @@ public:
 
     template <simd_type T, compatible_mask_for<T> M>
     requires arithmetic_simd<T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(M mask, T val) noexcept
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(M mask, T val) noexcept
         -> equivalent_simd_as<negated_simd<T>> auto {
         if constexpr (requires { negate(internal::abi<T>, mask, val); }) {
             return negate(internal::abi<T>, mask, val);
@@ -131,9 +130,8 @@ public:
 
     template <basic_simd_type T, immediate_mask_for<T> M>
     requires arithmetic_simd<T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr negated_simd<T> DPL_VECTORCALL operator()(
-        M mask, T val) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr negated_simd<T> operator()(M mask, T val) noexcept {
         constexpr auto V = decltype(dx::to_immediate_mask<T>(mask))::value;
         if constexpr (requires { negate<V>(internal::abi<T>, val); }) {
             if consteval {
@@ -147,8 +145,8 @@ public:
     }
 
     template <arithmetic_simd T, immediate_mask_for<T> M>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(M mask, T val) noexcept
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(M mask, T val) noexcept
         -> equivalent_simd_as<negated_simd<T>> auto {
         constexpr auto V = decltype(dx::to_immediate_mask<T>(mask))::value;
         if constexpr (requires { negate<V>(internal::abi<T>, val); }) {
@@ -172,7 +170,7 @@ public:
         requires regular_invocable<negate_t, mask_type<T>, T>;
     }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(T arg) noexcept {
+    static constexpr auto operator()(T arg) noexcept {
         constexpr mask_type<T> mask{};
         return negate_t::operator()(mask, arg);
     }

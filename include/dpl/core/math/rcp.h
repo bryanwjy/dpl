@@ -3,17 +3,16 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/math/fixup.h"
 #include "dpl/core/math/fma.h"
-#include "dpl/core/math/isinf.h"
-#include "dpl/core/math/isnan.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_type.h"
 #  include "dpl/core/operations/arithmetic.h"
-#  include "dpl/core/operations/select.h"
 #  include "dpl/core/type_traits/to_integral.h"
+#  include "dpl/core/utility/fpfix.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -58,8 +57,10 @@ private:
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<float, A> val) noexcept {
         auto const result = approximate(val);
-        return dx::select(
-            dx::isnan(val), val, dx::bit_drop(dx::isinf(val), result));
+        // nan is implicitly handled
+        return dx::fixup(val, result,
+            fpfix::condition<fpfix::infinity, dx::zero> |
+                fpfix::condition<fpfix::zero, fpfix::signed_inf>);
     }
 
 public:

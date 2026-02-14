@@ -16,9 +16,9 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void copysign(...) noexcept = delete;
 
-template <typename L, typename R>
-concept unqualified_copysign = requires(
-    L lhs, R rhs) { copysign(internal::abi<common_abi_t<L, R>>, lhs, rhs); };
+template <typename A, typename L, typename R>
+concept unqualified_copysign =
+    requires(L lhs, R rhs) { copysign(internal::abi<A>, lhs, rhs); };
 
 struct copysign_t {
 private:
@@ -34,7 +34,7 @@ public:
     requires floating_point_simd<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T magnitude, T sign) noexcept {
-        if constexpr (unqualified_copysign<T, T>) {
+        if constexpr (unqualified_copysign<T, T, T>) {
             if not consteval {
                 return copysign(internal::abi<T>, magnitude, sign);
             } else {
@@ -46,7 +46,8 @@ public:
     }
 
     template <floating_point_simd L, common_arithmetic_simd_with<L> R>
-    requires only_unqualified<L, R> && unqualified_copysign<L, R>
+    requires only_unqualified<L, R> &&
+        unqualified_copysign<common_abi_t<L, R>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L magnitude, R sign) noexcept
         -> equivalent_simd_as<common_arithmetic_simd_t<L, R>> auto {
@@ -56,12 +57,34 @@ public:
     template <floating_point_simd L, common_arithmetic_simd_with<L> R>
     requires (!basic_simd_type<L> || !basic_simd_type<R> ||
                  !same_abi_simd_as<L, R>) &&
-        (!unqualified_copysign<L, R>)
+        (!unqualified_copysign<common_abi_t<L, R>, L, R>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L magnitude, R sign) noexcept
         -> equivalent_simd_as<common_arithmetic_simd_t<L, R>> auto {
         return operator()(
             dx::to_basic_type(magnitude), dx::to_basic_type(sign));
+    }
+
+    template <basic_simd_type R, broadcastable_to<R> L>
+    requires floating_point_simd<R> && unqualified_copysign<R, L, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(L magnitude, R sign) noexcept {
+        if consteval {
+            return operator()(dx::broadcast<R>(magnitude), sign);
+        } else {
+            return copysign(internal::abi<R>, magnitude, sign);
+        }
+    }
+
+    template <floating_point_simd R, broadcastable_to<R> L>
+    requires unqualified_copysign<R, L, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(L magnitude, R sign) noexcept {
+        if consteval {
+            return operator()(magnitude, dx::to_basic_type(sign));
+        } else {
+            return copysign(internal::abi<R>, magnitude, sign);
+        }
     }
 };
 

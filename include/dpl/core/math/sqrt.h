@@ -4,7 +4,7 @@
 #include "dpl/config.h"
 
 #include "dpl/core/math/internal/accuracy.h"
-#include "dpl/core/math/internal/decompose.h"
+#include "dpl/core/math/internal/frexp.h"
 #include "dpl/core/math/internal/ldexp.h"
 #include "dpl/core/math/internal/rsqrt2.h"
 #include "dpl/core/math/isfinite.h"

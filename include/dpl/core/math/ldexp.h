@@ -46,7 +46,8 @@ struct ldexp_t : binary_operation_base<ldexp_t> {
         fallback(basic_simd<E, A> num,
             basic_simd<to_signed_integral_t<E>, A> exp) noexcept {
 
-        constexpr auto exp_mask = dx::exponent_mask<E> >> dx::digits<E>;
+        using sint = to_signed_integral_t<E>;
+        constexpr auto exp_mask = dx::exponent_mask_v<E, sint> >> dx::digits<E>;
         constexpr auto exp_bias = dx::exponent_bias<E>;
         constexpr auto chunk =
             __DPL popcount(static_cast<unsigned>(exp_bias)) - 1;
@@ -60,7 +61,6 @@ struct ldexp_t : binary_operation_base<ldexp_t> {
         m = dx::bit_drop(dx::zero > m, m);
         m = dx::select(m > exp_mask, exp_mask, m);
 
-        using sint = to_signed_integral_t<E>;
         using simdi = basic_simd<sint, A>;
         auto u = dx::reinterpret<E>(m << dx::digits<E>);
 

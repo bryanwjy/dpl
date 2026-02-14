@@ -20,6 +20,7 @@ import :core.type_traits;
 #include "dpl/core/constants/epsilon.h"
 #include "dpl/core/constants/exponent_bias.h"
 #include "dpl/core/constants/exponent_bits.h"
+#include "dpl/core/constants/exponent_mask.h"
 #include "dpl/core/constants/infinity.h"
 #include "dpl/core/constants/ln2.h"
 #include "dpl/core/constants/lsb.h"

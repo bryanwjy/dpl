@@ -4,6 +4,7 @@
 #include "dpl/config.h"
 
 #if !DPL_MODULES
+#  include "dpl/core/concepts/immediate_like.h"
 #  include "dpl/std/concepts/convertible_to.h"
 #  include "dpl/std/type_traits/constants.h"
 #  include "dpl/std/type_traits/remove_const.h"
@@ -11,7 +12,7 @@
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
-template <auto V>
+DPL_EXPORT template <auto V>
 struct immediate : integral_constant<remove_const_t<decltype(V)>, V> {
 private:
     using base_type DPL_NODEBUG =
@@ -19,7 +20,7 @@ private:
     using typename base_type::value_type;
 
 public:
-    __DPL_HIDE_FROM_ABI constexpr immediate() noexcept = default;
+    consteval immediate() noexcept = default;
 
     template <auto U>
     requires core_convertible_to<value_type,
@@ -28,20 +29,54 @@ public:
             U == V;
             requires U == V;
         }
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    constexpr operator immediate<U>() noexcept {
+    consteval operator immediate<U>(this immediate) noexcept {
         return {};
     }
 
     template <typename T, T U>
     requires core_convertible_to<value_type, T> && (U == V)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    constexpr operator integral_constant<T, U>() noexcept {
+    consteval operator integral_constant<T, U>(this immediate) noexcept {
         return {};
+    }
+
+    consteval bool operator==(this immediate, immediate) noexcept = default;
+
+    consteval bool operator<(this immediate, immediate) noexcept
+    requires requires { V < V; }
+    {
+        return false;
+    }
+
+    template <auto V2>
+    requires requires { V == V2; }
+    consteval bool operator==(this immediate<V>, immediate<V2>) noexcept {
+        return V == V2;
+    }
+
+    template <auto V2>
+    requires requires { V < V2; }
+    consteval bool operator<(this immediate<V>, immediate<V2>) noexcept {
+        return V < V2;
     }
 };
 
-template <auto V>
+DPL_EXPORT template <auto V>
 inline constexpr immediate<V> imm{};
+
+DPL_EXPORT template <auto V>
+consteval immediate<V> to_immediate(immediate<V> imm) noexcept {
+    return imm;
+}
+
+DPL_EXPORT template <internal::immediate_like T>
+consteval immediate<T::value> to_immediate(T imm) noexcept {
+    return {};
+}
+
+DPL_EXPORT template <typename E, internal::immediate_like_of<E> T>
+consteval auto to_immediate(T) noexcept -> immediate<static_cast<E>(T())> {
+    return {};
+}
+
 } // namespace datapar
 DPL_DEFAULT_NAMESPACE_END

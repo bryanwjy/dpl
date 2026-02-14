@@ -25,6 +25,8 @@ struct infinity_t : broadcastable_base {
     constexpr operator T(this infinity_t) noexcept {
         return static_cast<T>(exponent_bits);
     }
+
+    consteval auto operator-(this infinity_t) noexcept;
 };
 DPL_EXPORT
 using pinfinity_t = infinity_t;
@@ -50,6 +52,8 @@ struct ninfinity_t : broadcastable_base {
     constexpr operator T(this ninfinity_t) noexcept {
         return -static_cast<T>(exponent_bits);
     }
+
+    consteval auto operator-(this ninfinity_t) noexcept;
 };
 
 DPL_EXPORT
@@ -59,13 +63,11 @@ DPL_EXPORT template <typename T>
 requires explicitly_convertible_to<ninfinity_t, T>
 inline constexpr auto ninfinity_v = static_cast<T>(ninfinity);
 
-DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-constexpr auto operator-(infinity_t) noexcept {
+consteval auto infinity_t::operator-(this infinity_t) noexcept {
     return ninfinity;
 }
 
-DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-constexpr auto operator-(ninfinity_t) noexcept {
+consteval auto ninfinity_t::operator-(this ninfinity_t) noexcept {
     return infinity;
 }
 
