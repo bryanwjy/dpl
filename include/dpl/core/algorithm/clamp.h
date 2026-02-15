@@ -3,8 +3,9 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/math/fma.h"
+
 #if !DPL_MODULES
-#  include "dpl/core/math/fma.h"
 #  include "dpl/core/operations/minmax.h"
 #endif
 
