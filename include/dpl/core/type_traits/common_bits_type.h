@@ -13,7 +13,6 @@
 #  include "dpl/std/concepts/common_with.h"
 #  include "dpl/std/type_traits/common_type.h"
 #  include "dpl/std/type_traits/type_identity.h"
-#  include "dpl/std/type_traits/underlying_type.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN

@@ -15,7 +15,7 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void cload(...) noexcept = delete;
 
-template <typename>
+template <typename...>
 struct cload_t;
 
 template <simd_type T>
@@ -77,6 +77,13 @@ struct cload_t<A> {
         return cload_t<basic_simd<E, A>>::operator()(src, val);
     }
 };
+
+template <simd_abi A, simd_element E>
+struct cload_t<A, E> : cload_t<basic_simd<E, A>> {};
+
+template <simd_element E, simd_abi A>
+struct cload_t<E, A> : cload_t<basic_simd<E, A>> {};
+
 } // namespace datapar::internal
 
 namespace datapar {
