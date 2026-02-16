@@ -59,7 +59,7 @@ public:
     }
 
     template <integral auto I>
-    requires (I < S && S >= 0)
+    requires (I <= S && S > 0)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
     constexpr void initialize() noexcept {
         vpowers<I, E, A>::data.val = dx::mul(
@@ -128,7 +128,7 @@ private:
     static constexpr auto degree = sizeof...(Vs);
     static constexpr size_t depth = __DPL bit_width(degree) - 1;
 
-    template <typename Powers, floating_point E, simd_abi A, size_t B = 0zu,
+    template <floating_point E, simd_abi A, typename Powers, size_t B = 0zu,
         size_t L = depth>
     requires same_as<decay_t<Powers>, fmath::estrin::vpowers<depth, E, A>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -151,8 +151,8 @@ private:
                 return dx::broadcast<A>(coeffs<E>[imm<B>]);
             }
         } else if constexpr (B + S <= degree) {
-            auto const left = eval_estrin(x, imm<B + S>, imm<L - 1>);
-            auto const right = eval_estrin(x, imm<B>, imm<L - 1>);
+            auto const left = eval_estrin<E, A>(x, imm<B + S>, imm<L - 1>);
+            auto const right = eval_estrin<E, A>(x, imm<B>, imm<L - 1>);
             if constexpr (parent_consumes && parent_maximal) {
                 // initialize squares as late as possible with the fma
                 // below hiding the latency of the multiplication
@@ -164,7 +164,7 @@ private:
             // x[L] => x^2^L
             return dx::fmadd(x[imm<L>], left, right);
         } else {
-            return eval_estrin(x, imm<B>, imm<L - 1>);
+            return eval_estrin<E, A>(x, imm<B>, imm<L - 1>);
         }
     }
 
@@ -188,7 +188,7 @@ private:
         // on GCC, the deferred method will be used. It's not
         // too difficult to switch back to the naive implementation
         // if required.
-        return eval_estrin(estrin::vpowers<depth, E, A>(x));
+        return eval_estrin<E, A>(estrin::vpowers<depth, E, A>(x));
     }
 
     template <floating_point E, simd_abi A>
