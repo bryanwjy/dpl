@@ -170,40 +170,41 @@ public:
     template <fpc CR, typename TR>
     requires ((all & CR) == fpc::none)
     consteval auto operator|(this set self, pair<CR, TR> rhs) noexcept {
-        return [rhs]<fpc C0, typename T0, fpc... Cn, typename... Tn>(
-                   this auto self, pair<C0, T0> head, pair<Cn, Tn>... tail) {
+        return [rhs]<fpc... Cn, typename... Tn, fpc C0, typename T0, fpc... Cm,
+                   typename... Tm>(this auto self, set<pair<Cn, Tn>...>,
+                   pair<C0, T0>, pair<Cm, Tm>... tail) {
             if constexpr (same_as<T0, TR>) {
-                return pair<C0 | CR, T0>{} | set<pair<Cn, Ts>...>{};
-            } else if constexpr (sizeof...(Cn) == 0) {
-                return rhs;
+                return set<pair<Cn, Tn>..., pair<C0 | CR, T0>,
+                    pair<Cm, Tm>...>{};
+            } else if constexpr (sizeof...(Cm) == 0) {
+                return set<pair<Cn, Tn>..., pair<C0, T0>, pair<CR, TR>>{};
             } else {
-                return head | self(tail...);
+                return self(set<pair<Cn, Tn>..., pair<C0, T0>>{}, tail...);
             }
-        }(pair<Cs, Ts>()...);
+        }(set<>{}, pair<Cs, Ts>()...);
     }
 
     template <fpc CL, typename TL>
     requires ((all & CL) == fpc::none)
     friend consteval auto operator|(pair<CL, TL> lhs, set self) noexcept {
         return []<fpc C0, typename T0, fpc... Cm, typename... Tm, fpc... Cn,
-                   typename... Tn>(this auto self,
-                   set<pair<C0, T0>, pair<Cm, Tm>...>, set<pair<Cn, Tn>...>) {
+                   typename... Tn>(this auto self, set<pair<Cn, Tn>...>,
+                   pair<C0, T0>, pair<Cm, Tm>... next) {
             if constexpr (same_as<T0, TL>) {
                 return set<pair<Cn, Tn>..., pair<C0 | CL, T0>,
                     pair<Cm, Tm>...>{};
             } else if constexpr (sizeof...(Cm) == 0) {
-                return set<pair<Cn, Tn>..., pair<C0, T0>>{};
+                return set<pair<CL, TL>, pair<Cn, Tn>..., pair<C0, T0>>{};
             } else {
-                return self(set<pair<Cm, Tm>...>{},
-                    set<pair<Cn, Tn>..., pair<C0, T0>>{});
+                return self(set<pair<Cn, Tn>..., pair<C0, T0>>{}, next...);
             }
-        }(self, set<>{});
+        }(set<>{}, pair<Cs, Ts>()...);
     }
 
     template <fpc... CR, typename... TR>
     requires ((all & (fpc::none | ... | CR)) == fpc::none)
-    consteval auto operator|(this set self, set<pair<Cs, Ts>...>) noexcept {
-        return (self | ... | pair<Cs, Ts>{});
+    consteval auto operator|(this set self, set<pair<CR, TR>...>) noexcept {
+        return (self | ... | pair<CR, TR>{});
     }
 
     template <floating_point E, fpc CT>
