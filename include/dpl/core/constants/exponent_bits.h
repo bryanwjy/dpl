@@ -4,7 +4,7 @@
 #include "dpl/config.h"
 
 #include "dpl/core/constants/all_bits.h"
-#include "dpl/core/constants/digits.h"
+#include "dpl/core/constants/mantissa_width.h"
 #include "dpl/core/constants/msb.h"
 
 #if !DPL_MODULES
@@ -26,7 +26,7 @@ struct nexponent_bits_t : broadcastable_base {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     constexpr operator T(this nexponent_bits_t) noexcept {
         using bit_type = bit_type_t<char_bit_v * sizeof(T)>;
-        auto const ninf = all_bits_v<bit_type> << digits_v<T>;
+        auto const ninf = all_bits_v<bit_type> << mantissa_width_v<T>;
         auto const mask = ninf & ~msb_v<bit_type>;
         return __DPL bit_cast<T>(~mask);
     }
@@ -39,7 +39,7 @@ inline constexpr struct exponent_bits_t : broadcastable_base {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     constexpr operator T(this exponent_bits_t) noexcept {
         using bit_type = bit_type_t<char_bit_v * sizeof(T)>;
-        auto const ninf = all_bits_v<bit_type> << digits_v<T>;
+        auto const ninf = all_bits_v<bit_type> << mantissa_width_v<T>;
         auto const mask = ninf & ~msb_v<bit_type>;
         return __DPL bit_cast<T>(mask);
     }

@@ -25,6 +25,7 @@ import :core.type_traits;
 #include "dpl/core/constants/ln2.h"
 #include "dpl/core/constants/lsb.h"
 #include "dpl/core/constants/mantissa_bits.h"
+#include "dpl/core/constants/mantissa_width.h"
 #include "dpl/core/constants/max_value.h"
 #include "dpl/core/constants/min_value.h"
 #include "dpl/core/constants/msb.h"

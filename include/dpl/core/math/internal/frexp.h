@@ -9,6 +9,7 @@
 #if !DPL_MODULES
 #  include "dpl/core/basic/basic_simd.h" // IWYU pragma: keep
 #  include "dpl/core/concepts/simd_abi.h"
+#  include "dpl/core/constants/mantissa_width.h"
 #  include "dpl/core/constants/min_value.h"
 #  include "dpl/core/constants/zero.h"
 #  include "dpl/core/operations/arithmetic.h"
@@ -72,12 +73,13 @@ constexpr auto DPL_VECTORCALL frexp(basic_simd<E, A> val) noexcept {
     using int_type = dx::to_signed_integral_t<E>;
     constexpr auto exp_bits = __DPL bit_cast<int_type>(dx::exponent_bits_v<E>);
     constexpr auto magic = static_cast<int_type>(exponent_bias_v<E> - 1);
-    constexpr auto magic_exp = __DPL bit_cast<E>(magic << dx::digits_v<E>);
+    constexpr auto magic_exp =
+        __DPL bit_cast<E>(magic << dx::mantissa_width_v<E>);
 
     auto const issubnormal = val < dx::min_value;
     auto const dval = dx::select(issubnormal, val * denormalizer<E>, val);
     auto exp = dx::reinterpret<int_type>(
-        (val & dx::exponent_bits) >> imm<dx::digits_v<E>>);
+        (val & dx::exponent_bits) >> imm<dx::mantissa_width_v<E>>);
     exp -= dx::select(exp != dx::zero && exp != exp_bits, magic, dx::zero);
     return decomposition<E, A>{
         .significand = (val & ~exponent_bits) | magic_exp,

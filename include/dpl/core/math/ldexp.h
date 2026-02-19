@@ -7,6 +7,7 @@
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/constants/exponent_bias.h"
 #  include "dpl/core/constants/exponent_mask.h"
+#  include "dpl/core/constants/mantissa_width.h"
 #  include "dpl/core/operations/arithmetic.h"
 #  include "dpl/core/operations/bit.h"
 #  include "dpl/core/operations/bitwise.h"
@@ -46,8 +47,10 @@ struct ldexp_t : binary_operation_base<ldexp_t> {
         fallback(basic_simd<E, A> num,
             basic_simd<to_signed_integral_t<E>, A> exp) noexcept {
 
+        constexpr auto mantissa_shift = imm<dx::mantissa_width_v<E>>;
         using sint = to_signed_integral_t<E>;
-        constexpr auto exp_mask = dx::exponent_mask_v<E, sint> >> dx::digits<E>;
+        constexpr auto exp_mask =
+            dx::exponent_mask_v<E, sint> >> mantissa_shift;
         constexpr auto exp_bias = dx::exponent_bias<E>;
         constexpr auto chunk =
             __DPL popcount(static_cast<unsigned>(exp_bias)) - 1;
@@ -62,11 +65,11 @@ struct ldexp_t : binary_operation_base<ldexp_t> {
         m = dx::select(m > exp_mask, exp_mask, m);
 
         using simdi = basic_simd<sint, A>;
-        auto u = dx::reinterpret<E>(m << dx::digits<E>);
+        auto u = dx::reinterpret<E>(m << mantissa_shift);
 
         num *= [](auto u2) { return u2 * u2; }(u * u);
 
-        return num * dx::reinterpret<E>((exp + exp_bias) << dx::digits<E>);
+        return num * dx::reinterpret<E>((exp + exp_bias) << mantissa_shift);
     }
 
     template <simd_type T>

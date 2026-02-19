@@ -32,12 +32,8 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<E, A> val) noexcept {
-        if constexpr (floating_point<E>) {
-            return dx::reinterpret<E>(dx::bwxor(val, dx::msb));
-        } else {
-            using T = negated_type<E>;
-            return dx::reinterpret<T>(dx::sub(dx::zero, val));
-        }
+        using T = negated_type<E>;
+        return dx::reinterpret<T>(dx::sub(dx::zero, val));
     }
 
     template <integral auto V, arithmetic_type E, simd_abi A>
@@ -50,17 +46,43 @@ private:
         } else if constexpr (none_of(mask)) {
             using T = negated_type<E>;
             return dx::reinterpret<T>(val);
-        } else if constexpr (floating_point<E>) {
-            constexpr auto nmask = ~mask;
-            constexpr auto msb =
-                dx::bit_drop(nmask, dx::msb_v<basic_simd<E, A>>);
-            return dx::reinterpret<E>(dx::bwxor(val, msb));
         } else {
             using T = negated_type<E>;
             return dx::selecti<V>(dx::reinterpret<T>(dx::sub(dx::zero, val)),
                 dx::reinterpret<T>(val));
         }
     }
+
+#ifndef DPL_DISABLE_IEC559_FALLBACK
+
+    template <arithmetic_type E, simd_abi A>
+    requires floating_point<E>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL
+        fallback(basic_simd<E, A> val) noexcept {
+        return dx::reinterpret<E>(dx::bwxor(val, dx::msb));
+    }
+
+    template <integral auto V, arithmetic_type E, simd_abi A>
+    requires floating_point<E>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL
+        fallbacki(basic_simd<E, A> val) noexcept {
+        static constexpr immediate_mask<element_count<E, A>, V> mask{};
+        if constexpr (all_of(mask)) {
+            return fallback(val);
+        } else if constexpr (none_of(mask)) {
+            using T = negated_type<E>;
+            return dx::reinterpret<T>(val);
+        } else {
+            constexpr auto nmask = ~mask;
+            constexpr auto msb =
+                dx::bit_drop(nmask, dx::msb_v<basic_simd<E, A>>);
+            return dx::reinterpret<E>(dx::bwxor(val, msb));
+        }
+    }
+
+#endif
 
 public:
     template <basic_simd_type T>

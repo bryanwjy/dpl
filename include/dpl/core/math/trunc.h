@@ -44,7 +44,7 @@ private:
         using uint = to_unsigned_integral_t<E>;
         static constexpr auto width =
             dx::broadcast<sint, A>(sizeof(E) * char_bit_v);
-        static constexpr auto margin = width - dx::digits<E>;
+        static constexpr auto margin = width - dx::mantissa_width_v<E>;
         auto const exp = [](auto exp) {
             return dx::select(exp < margin, dx::one, exp);
         }(mx::ilogb(mx::compliance::unsafe, val) + margin);

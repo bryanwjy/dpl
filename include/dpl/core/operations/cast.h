@@ -36,6 +36,9 @@ namespace datapar::internal {
 template <typename>
 struct cast_t {};
 
+template <typename>
+void cast(...) noexcept = delete;
+
 template <basic_simd_element To>
 struct cast_t<To> {
 private:
@@ -73,17 +76,25 @@ private:
         }(arg, iota_sequence<R>);
     }
 
+    template <basic_simd_element F, simd_abi A>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr basic_simd<To, A> fallback(basic_simd<F, A> arg) noexcept {
+        return safe_cast(arg);
+    }
+
+#ifndef DPL_DISABLE_IEC559_FALLBACK
     template <floating_point E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr basic_simd<to_signed_integral_t<E>, A> DPL_VECTORCALL
         ilogb(basic_simd<E, A> arg) noexcept {
         using int_type = to_signed_integral_t<E>;
-        auto const biased = (arg & exponent_bits) >> imm<digits_v<E>>;
-        return biased - static_cast<int_type>(exponent_bias_v<E>);
+        auto const biased =
+            (arg & exponent_bits) >> imm<dx::mantissa_width_v<E>>;
+        return biased - static_cast<int_type>(dx::exponent_bias_v<E>);
     }
 
     template <simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr basic_simd<To, A> DPL_VECTORCALL
         fallback(basic_simd<float, A> arg) noexcept
     requires integral<To>
@@ -93,8 +104,9 @@ private:
                                   auto arg, index_sequence<Is...>) {
                 return dx::permute<(Is / 2)...>(arg);
             }(arg, iota_sequence<float, A>);
-            constexpr auto hidden_bit = 1 << dx::digits_v<float>;
-            constexpr auto du64 = static_cast<uint64>(dx::digits_v<float>);
+            constexpr auto hidden_bit = 1 << dx::mantissa_width_v<float>;
+            constexpr auto du64 =
+                static_cast<uint64>(dx::mantissa_width_v<float>);
             auto const exp = ilogb(arg);
             auto const mantissa =
                 dx::reinterpret<int32>(parg & dx::mantissa_bits) | hidden_bit;
@@ -119,15 +131,15 @@ private:
             }
         } else if constexpr (common_size_with<int32, To>) {
             constexpr auto hidden_bit =
-                dx::one_v<uint32> << dx::digits_v<float>;
+                dx::one_v<uint32> << dx::mantissa_width_v<float>;
             auto const exp = ilogb(arg);
             auto const umantissa =
                 dx::reinterpret<uint32>(arg & dx::mantissa_bits) | hidden_bit;
-            auto const shift = dx::abs(exp - dx::digits_v<float>);
+            auto const shift = dx::abs(exp - dx::mantissa_width_v<float>);
             auto const large = dx::reinterpret<int32>(umantissa << shift);
             auto const small = dx::reinterpret<int32>(umantissa >> shift);
             auto const result =
-                dx::select(exp < dx::digits_v<float>, small, large);
+                dx::select(exp < dx::mantissa_width_v<float>, small, large);
             if constexpr (signed_integral<To>) {
                 return dx::reinterpret<To>(dx::negate(
                     arg < dx::zero, dx::select(exp > dx::zero, result)));
@@ -141,14 +153,15 @@ private:
     }
 
     template <simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr basic_simd<To, A> DPL_VECTORCALL
         fallback(basic_simd<double, A> arg) noexcept
     requires integral<To>
     {
         if constexpr (common_arithmetic_with<int64, To>) {
             using result_type = basic_simd<To, A>;
-            constexpr auto d64 = static_cast<int64>(dx::digits_v<double>);
+            constexpr auto d64 =
+                static_cast<int64>(dx::mantissa_width_v<double>);
             constexpr auto hidden_bit = dx::one_v<uint64> << d64;
             auto const exp = ilogb(arg);
             auto const umantissa =
@@ -170,12 +183,7 @@ private:
             return operator()(cast_t<int64>::operator()(arg));
         }
     }
-
-    template <basic_simd_element F, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_simd<To, A> fallback(basic_simd<F, A> arg) noexcept {
-        return safe_cast(arg);
-    }
+#endif
 
 public:
     template <basic_simd_class From>

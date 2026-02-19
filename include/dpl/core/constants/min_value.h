@@ -3,7 +3,7 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/constants/digits.h"
+#include "dpl/core/constants/mantissa_width.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/broadcastable_base.h"
@@ -36,7 +36,7 @@ struct min_value_t : broadcastable_base {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     constexpr operator T(this min_value_t) noexcept {
         using bit_type = bit_type_t<sizeof(T) * char_bit_v>;
-        auto const mask = static_cast<bit_type>(1) << digits_v<T>;
+        auto const mask = static_cast<bit_type>(1) << mantissa_width_v<T>;
         return __DPL bit_cast<T>(static_cast<bit_type>(mask));
     }
 };

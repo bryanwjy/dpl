@@ -8,7 +8,7 @@
 #  include "dpl/core/concepts/compatible_mask_for.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_type.h"
-#  include "dpl/core/constants/digits.h"
+#  include "dpl/core/constants/mantissa_width.h"
 #  include "dpl/core/constants/value_bits.h"
 #  include "dpl/core/operations/abs.h"
 #  include "dpl/core/operations/bitwise.h"
@@ -28,7 +28,7 @@ private:
     static constexpr simd_mask<E, A> DPL_VECTORCALL
         fallback(basic_simd<E, A> val) noexcept {
         constexpr to_signed_integral_t<E> signaling_bit =
-            to_signed_integral_t<E>(1) << (dx::digits_v<E> - 1);
+            to_signed_integral_t<E>(1) << (dx::mantissa_width_v<E> - 1);
         constexpr to_signed_integral_t<E> max_snan =
             __DPL bit_cast<to_signed_integral_t<E>>(dx::value_bits_v<E>) ^
             signaling_bit;

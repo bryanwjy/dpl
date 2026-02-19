@@ -59,7 +59,7 @@ private:
             // underflow
             return dx::bit_keep(val >= -133.0, u);
         } else {
-            static_assert(digits_v<E> == 11 && sizeof(E) == 2);
+            static_assert(digits_v<E> == 12 && sizeof(E) == 2);
             u = dx::select(val >= 16.0, dx::infinity, u);
             // underflow
             return dx::bit_keep(val >= -24.0, u);

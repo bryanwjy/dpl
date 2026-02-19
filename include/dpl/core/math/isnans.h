@@ -8,7 +8,7 @@
 #  include "dpl/core/concepts/compatible_mask_for.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_type.h"
-#  include "dpl/core/constants/digits.h"
+#  include "dpl/core/constants/mantissa_width.h"
 #  include "dpl/core/constants/zero.h"
 #  include "dpl/core/operations/bitwise.h"
 #  include "dpl/core/operations/compare.h"
@@ -28,7 +28,7 @@ private:
         fallback(basic_simd<E, A> val) noexcept {
         using uint = to_unsigned_integral_t<E>;
         using sint = to_signed_integral_t<E>;
-        constexpr auto shift = sizeof(E) * char_bit_v - dx::digits_v<E>;
+        constexpr auto shift = sizeof(E) * char_bit_v - dx::mantissa_width_v<E>;
         return dx::cmpgt(
             dx::bwshift_left(dx::reinterpret<sint>(val), imm<shift>), dx::zero);
     }

@@ -25,7 +25,7 @@ struct exponent_bias_t : broadcastable_base {
     constexpr operator int(this exponent_bias_t) noexcept {
         using bit_type = bit_type_t<char_bit_v * sizeof(T)>;
         constexpr auto exp =
-            __DPL bit_cast<bit_type>(exponent_bits_v<T>) >> (digits_v<T> + 1);
+            __DPL bit_cast<bit_type>(exponent_bits_v<T>) >> digits_v<T>;
         return static_cast<int>(exp);
     }
 };

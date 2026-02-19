@@ -45,7 +45,7 @@ struct exponent_mask_t : broadcastable_base {
     constexpr to_signed_integral_t<T> operator>>(
         this exponent_mask_t, digits_t<T>) noexcept {
         using sbit = to_signed_integral_t<T>;
-        return __DPL bit_cast<sbit>(exponent_bits_v<T>) >> digits_v<T>;
+        return __DPL bit_cast<sbit>(exponent_bits_v<T>) >> mantissa_width_v<T>;
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)

@@ -315,11 +315,9 @@ private:
         fallback(basic_simd<E, A> val) noexcept {
         if constexpr (enumeration<E>) {
             return dx::reinterpret<result<E>>(val);
-        } else if constexpr (integral<E>) {
-            return dx::reinterpret<E>(sub_t::operator()(dx::zero, val));
         } else {
-            static_assert(floating_point<E>);
-            return dx::reinterpret<E>(dx::msb ^ val);
+            // do not assume ieee for floats
+            return dx::reinterpret<E>(sub_t::operator()(dx::zero, val));
         }
     }
 

@@ -58,7 +58,7 @@ private:
             // underflow
             return dx::bit_keep(val >= -92.186785, u);
         } else {
-            static_assert(digits_v<E> == 11 && sizeof(E) == 2);
+            static_assert(digits_v<E> == 12 && sizeof(E) == 2);
             static constexpr E max_ln = 11.089866;
             static constexpr E min_ln = -16.63553;
             u = dx::select(val > max_ln, dx::infinity, u);
