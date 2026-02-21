@@ -15,8 +15,7 @@
 #  include "dpl/core/constants/nan.h"
 #  include "dpl/core/operations/arithmetic.h" // IWYU pragma: keep
 #  include "dpl/core/operations/bitwise.h"    // IWYU pragma: keep
-#  include "dpl/core/operations/cast.h"
-#  include "dpl/core/operations/compare.h" // IWYU pragma: keep
+#  include "dpl/core/operations/compare.h"    // IWYU pragma: keep
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -36,11 +35,11 @@ private:
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<E, A> val) noexcept {
         using simdf = basic_simd<E, A>;
-        auto const decomp = fmath::frexp_balanced(val);
+        auto const decomp =
+            fmath::frexp(val, fmath::fr::reduced, fmath::fr::fpexp);
         constexpr auto n_one = fmath::single(dx::broadcast<A, E>(-1));
         constexpr auto one = fmath::single(dx::broadcast<A, E>(1));
-        auto const x =
-            (n_one + decomp.significand) / (one + decomp.significand);
+        auto const x = (n_one + decomp.fr) / (one + decomp.fr);
         auto const x2 = x.upper * x.upper;
         constexpr fmath::polynomial<0.9618012905120f, //
             0.5764790177e+0f,                         //
@@ -49,7 +48,7 @@ private:
         auto const t = polynomial(x2);
         constexpr auto inv_halfln2 = fmath::make_pair<E, A>(
             2.8853900432586669922f, 3.2734474483568488616e-08f);
-        auto s = dx::cast<E>(decomp.exponent) + x * inv_halfln2;
+        auto s = decomp.exp + x * inv_halfln2;
         s = s + x2 * x * t;
         auto result = s.upper + s.lower;
 
@@ -64,22 +63,21 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<double, A> val) noexcept {
-        auto const decomp = fmath::frexp_balanced(val);
+        auto const decomp =
+            fmath::frexp(val, fmath::fr::reduced, fmath::fr::fpexp);
         constexpr auto n_one = fmath::single(dx::broadcast<A, double>(-1));
         constexpr auto one = fmath::single(dx::broadcast<A, double>(1));
-        auto const x =
-            (n_one + decomp.significand) / (one + decomp.significand);
+        auto const x = (n_one + decomp.fr) / (one + decomp.fr);
         auto const x2 = x.upper * x.upper;
         constexpr fmath::polynomial<0.96179669392608091449,
-            0.5770780162997058982e+0, 0.4121985945485324709e+0,
-            0.3205977477944495502e+0, 0.2623708057488514656e+0,
-            0.2200768693152277689e+0, 0.2211941750456081490e+0>
+            0.5770780162997058982, 0.4121985945485324709, 0.3205977477944495502,
+            0.2623708057488514656, 0.2200768693152277689, 0.2211941750456081490>
             polynomial;
         auto const t = polynomial(x2);
         constexpr auto inv_halfln2 = fmath::make_pair<double, A>(
             2.885390081777926774, 6.0561604995516736434e-18);
 
-        auto s = dx::cast<double>(decomp.exponent) + x * inv_halfln2;
+        auto s = decomp.exp + x * inv_halfln2;
         s = s + x2 * x * t;
         auto result = s.upper + s.lower;
 
@@ -96,10 +94,10 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(T val) noexcept {
         if constexpr (unqualified_log2<T>) {
-            if not consteval {
-                return log2(internal::abi<T>, val);
-            } else {
+            if consteval {
                 return fallback(val);
+            } else {
+                return log2(internal::abi<T>, val);
             }
         } else {
             return fallback(val);

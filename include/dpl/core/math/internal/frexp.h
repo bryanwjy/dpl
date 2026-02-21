@@ -14,6 +14,7 @@
 #  include "dpl/core/constants/zero.h"
 #  include "dpl/core/operations/arithmetic.h"
 #  include "dpl/core/operations/bitwise.h"
+#  include "dpl/core/operations/cast.h"
 #  include "dpl/core/operations/compare.h"
 #  include "dpl/core/operations/select.h"
 #  include "dpl/core/type_traits/to_integral.h"
@@ -23,10 +24,34 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::fmath {
 
-template <floating_point T, simd_abi A>
-struct decomposition {
-    basic_simd<T, A> significand;
-    basic_simd<dx::to_signed_integral_t<T>, A> exponent;
+enum class exp_type {
+    intergral,
+    floating_point,
+};
+
+enum class fr_sign {
+    copy,
+    positive,
+    nan_ifltz
+};
+
+enum class fr_interval {
+    canonical, // [1,2)
+    cmath,     // [0.5,1)
+    wide,      // [0.5,2)
+    reduced    // [0.75,1.5)
+};
+
+template <floating_point E, simd_abi A, exp_type T = exp_type::intergral>
+struct frexp_result {
+    basic_simd<E, A> fr;
+    basic_simd<E, A> exp;
+};
+
+template <floating_point E, simd_abi A>
+struct frexp_result<E, A, exp_type::intergral> {
+    basic_simd<E, A> fr;
+    basic_simd<dx::to_signed_integral_t<E>, A> exp;
 };
 
 template <floating_point E>
@@ -46,45 +71,115 @@ inline constexpr auto subnormal_offset = []() {
     }
 }();
 
-/**
- * Decompose a POSITIVE argument into a sigficand in the interval [0.75, 1.5)
- * and it's exponent, such that ldexp(significand, exponent) ~ arg
- */
-template <floating_point E, simd_abi A>
-DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-constexpr auto DPL_VECTORCALL frexp_balanced(basic_simd<E, A> val) noexcept {
-    constexpr auto fourthirds = dx::broadcast<E, A>(1.0 / 0.75);
-    auto const issubnormal = val < dx::min_value;
-    auto const dval = dx::select(issubnormal, val * denormalizer<E>, val);
-    auto const exp = fmath::ilogb(compliance::unsafe, dval * fourthirds);
-    return decomposition<E, A>{
-        .significand = fmath::ldexp(compliance::unsafe, dval, -exp),
-        .exponent = dx::select(issubnormal, exp - subnormal_offset<E>, exp),
-    };
-}
+namespace fr {
+inline constexpr auto copysign = imm<fr_sign::copy>;
+inline constexpr auto positive = imm<fr_sign::positive>;
+inline constexpr auto nan_ifltz = imm<fr_sign::nan_ifltz>;
+inline constexpr auto canonical = imm<fr_interval::canonical>;
+inline constexpr auto cmath = imm<fr_interval::cmath>;
+inline constexpr auto wide = imm<fr_interval::wide>;
+inline constexpr auto reduced = imm<fr_interval::reduced>;
+inline constexpr auto fpexp = imm<exp_type::floating_point>;
+} // namespace fr
 
-/**
- * Decompose a POSITIVE argument into a sigficand in the interval [0.5, 1.0)
- * and it's exponent, such that ldexp(significand, exponent) ~ arg
- */
-template <floating_point E, simd_abi A>
+template <floating_point E, simd_abi A, fr_interval N = fr_interval::cmath,
+    exp_type TE = exp_type::intergral, fr_sign S = fr_sign::copy>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-constexpr auto DPL_VECTORCALL frexp(basic_simd<E, A> val) noexcept {
-    using int_type = dx::to_signed_integral_t<E>;
-    constexpr auto exp_bits = __DPL bit_cast<int_type>(dx::exponent_bits_v<E>);
-    constexpr auto magic = static_cast<int_type>(exponent_bias_v<E> - 1);
-    constexpr auto magic_exp =
-        __DPL bit_cast<E>(magic << dx::mantissa_width_v<E>);
+constexpr frexp_result<E, A, TE> DPL_VECTORCALL
+    frexp(basic_simd<E, A> val, immediate<N> interval = {},
+        immediate<TE> etype = {}, immediate<S> sign = {}) noexcept {
+    if not consteval {
+        if constexpr (requires {
+                          frexp(internal::abi<A>, val, etype, sign, interval);
+                      }) {
+            auto const [fr, exp] =
+                frexp(internal::abi<A>, val, etype, sign, interval);
+            return frexp_result<E, A, TE>{
+                .fr = fr,
+                .exp = exp,
+            };
+        }
+    }
 
-    auto const issubnormal = val < dx::min_value;
-    auto const dval = dx::select(issubnormal, val * denormalizer<E>, val);
-    auto exp = dx::reinterpret<int_type>(
-        (val & dx::exponent_bits) >> imm<dx::mantissa_width_v<E>>);
-    exp -= dx::select(exp != dx::zero && exp != exp_bits, magic, dx::zero);
-    return decomposition<E, A>{
-        .significand = (val & ~exponent_bits) | magic_exp,
-        .exponent = dx::select(issubnormal, exp - subnormal_offset<E>, exp),
-    };
+    auto const issubnormal = [](auto val) {
+        if constexpr (S == fr_sign::nan_ifltz) {
+            return val < dx::min_value;
+        } else {
+            return (val & dx::exponent_bits) == dx::zero;
+        }
+    }(val);
+    auto const dval = [](auto issubnormal, auto val) {
+        auto const dval = dx::select(issubnormal, val * denormalizer<E>, val);
+        if constexpr (S == fr_sign::positive) {
+            return dx::abs(val);
+        } else {
+            return val;
+        }
+    }(issubnormal, val);
+
+    if constexpr (N == fr_interval::reduced) {
+        constexpr auto fourthirds = dx::broadcast<E, A>(1.0 / 0.75);
+        auto const exp = [](auto issubnormal, auto exp) {
+            return dx::select(issubnormal, exp - subnormal_offset<E>, exp);
+        }(issubnormal, fmath::ilogb(compliance::unsafe, dval * fourthirds));
+        auto const fr = [](auto val, auto fr) {
+            if constexpr (S == fr_sign::nan_ifltz) {
+                return dx::bit_fill(val < dx::zero, fr);
+            } else {
+                return fr;
+            }
+        }(fmath::ldexp(compliance::unsafe, dval, -exp));
+        if constexpr (TE == exp_type::intergral) {
+            return frexp_result<E, A, TE>{
+                .fr = fr,
+                .exp = exp,
+            };
+        } else {
+            return frexp_result<E, A, TE>{
+                .fr = fr,
+                .exp = dx::cast<E>(exp),
+            };
+        }
+    } else if constexpr (N == fr_interval::cmath) {
+        using int_type = dx::to_signed_integral_t<E>;
+        constexpr auto exp_bits =
+            __DPL bit_cast<int_type>(dx::exponent_bits_v<E>);
+        constexpr auto magic =
+            dx::broadcast<int_type, A>(exponent_bias_v<E> - 1);
+        constexpr auto magic_exp =
+            __DPL bit_cast<E>(magic << dx::mantissa_width_v<E>);
+
+        auto const exp = [&]() {
+            auto const mexp =
+                dx::reinterpret<int_type>(val & dx::exponent_bits);
+            auto const exp_offset =
+                dx::bit_drop(mexp == dx::zero || mexp == exp_bits, magic);
+            auto const exp = (mexp >> imm<dx::mantissa_width_v<E>>)-exp_offset;
+
+            return dx::select(issubnormal, exp - subnormal_offset<E>, exp);
+        }();
+        auto const fr = [&]() {
+            auto const fr = (val & ~exponent_bits) | magic_exp;
+            if constexpr (S == fr_sign::nan_ifltz) {
+                return dx::bit_fill(val < dx::zero, fr);
+            } else {
+                return fr;
+            }
+        }();
+        if constexpr (TE == exp_type::intergral) {
+            return frexp_result<E, A, TE>{
+                .fr = fr,
+                .exp = exp,
+            };
+        } else {
+            return frexp_result<E, A, TE>{
+                .fr = fr,
+                .exp = dx::cast<E>(exp),
+            };
+        }
+    } else {
+        static_assert(sizeof(E) == 0, "Unimplemented");
+    }
 }
 
 } // namespace datapar::fmath

@@ -34,11 +34,10 @@ private:
         constexpr auto inv_sqrt2 = dx::broadcast<E, A>(mx::rsqrt2(dx::one));
 
         auto const decomp = fmath::frexp(val);
-        auto const remtwo = decomp.exponent & dx::one;
-        auto const reduced =
-            mx::rsqrt2(mx::accuracy::speed, decomp.significand);
+        auto const remtwo = decomp.exp & dx::one;
+        auto const reduced = mx::rsqrt2(mx::accuracy::speed, decomp.fr);
         auto result = mx::ldexp(mx::compliance::unsafe, reduced,
-            -((decomp.exponent - dx::one) >> imm<1>));
+            -((decomp.exp - dx::one) >> imm<1>));
         result *= dx::select(remtwo == dx::zero, inv_sqrt2, dx::one);
 
         return dx::fixup(val, result,

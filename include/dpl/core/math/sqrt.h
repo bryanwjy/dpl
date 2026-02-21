@@ -38,12 +38,12 @@ private:
             dx::broadcast<E, A>(2.8284271247461900976033774484);
 
         auto const decomp = fmath::frexp(val);
-        auto const remtwo = decomp.exponent & dx::one;
+        auto const remtwo = decomp.exp & dx::one;
         auto const ifodd = dx::select(remtwo == dx::zero, vsqrt8, two);
-        auto const sig = (ifodd * decomp.significand) *
-            mx::rsqrt2(mx::accuracy::maximum, decomp.significand);
+        auto const sig =
+            (ifodd * decomp.fr) * mx::rsqrt2(mx::accuracy::maximum, decomp.fr);
         auto const result = mx::ldexp(mx::compliance::unsafe, //
-            sig, (decomp.exponent - dx::one) >> imm<1>);
+            sig, (decomp.exp - dx::one) >> imm<1>);
 
         return dx::select(dx::isfinite(val) && val != dx::zero,
             dx::bit_fill(val < dx::zero, result), val);

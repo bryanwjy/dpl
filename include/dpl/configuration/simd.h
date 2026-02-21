@@ -85,7 +85,7 @@
 #  endif
 
 #  ifdef __AVX512F__
-#    define DPL_SIMD_X86_AVX512 __AVX512F__
+#    define DPL_SIMD_X86_AVX512F __AVX512F__
 #  endif
 
 #elif DPL_ARCH_ARM
