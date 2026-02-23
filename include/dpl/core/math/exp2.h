@@ -45,14 +45,13 @@ private:
         constexpr auto ln2 = fmath::ln2_v<fpair>;
         auto const s =
             dx::fnmadd(qf, ln2.lower, dx::fnmadd(qf, ln2.upper, val));
-        static constexpr fmath::polynomial<1.0f, //
-            0.6931471825f,                       //
-            0.2402264476f,                       //
-            0.5550347269e-1f,                    //
+        static constexpr fmath::polynomial<0.6931471825f, //
+            0.2402264476f,                                //
+            0.5550347269e-1f,                             //
             0.9618384764e-2f>
             polynomial;
         static constexpr E max_log = 11;
-        auto u = polynomial(s);
+        auto u = dx::fmadd(polynomial(s), s, dx::one);
         u = fmath::ldexp(fmath::compliance::speed, u, q);
         if constexpr (brain_float<E>) {
             u = dx::select(val >= 128.0f, dx::infinity, u);
@@ -78,16 +77,14 @@ private:
         constexpr auto ln2 = fmath::ln2_v<fpair>;
         auto const s =
             dx::fnmadd(qf, ln2.lower, dx::fnmadd(qf, ln2.upper, val));
-        static constexpr fmath::polynomial<1.0f, //
-            0.6931471825f,                       //
-            0.2402264476f,                       //
-            0.5550347269e-1f,                    //
-            0.9618384764e-2f,                    //
-            0.1339262701e-2f,                    //
+        static constexpr fmath::polynomial<0.6931471825f, //
+            0.2402264476f,                                //
+            0.5550347269e-1f,                             //
+            0.9618384764e-2f,                             //
+            0.1339262701e-2f,                             //
             0.1535920892e-3f>
             polynomial;
-        // x * f +  1
-        auto u = polynomial(s);
+        auto u = dx::fmadd(polynomial(s), s, dx::one);
         u = fmath::ldexp(fmath::compliance::speed, u, q);
         u = dx::select(val >= 128.0f, dx::infinity, u);
         // underflow
@@ -105,14 +102,14 @@ private:
         constexpr auto ln2 = fmath::ln2_v<fpair>;
         auto const s =
             dx::fnmadd(qf, ln2.lower, dx::fnmadd(qf, ln2.upper, val));
-        static constexpr fmath::polynomial<1.0, 0.6931471805599452862,
+        static constexpr fmath::polynomial<0.6931471805599452862,
             0.2402265069591012214e+0, 0.5550410866482046596e-1,
             0.9618129107597600536e-2, 0.1333355814670499073e-2,
             0.1540353045101147808e-3, 0.1525273353517584730e-4,
             0.1321543872511327615e-5, 0.1017819260921760451e-6,
             0.7073164598085707425e-8, 0.4434359082926529454e-9>
             polynomial;
-        auto u = polynomial(s);
+        auto u = dx::fmadd(polynomial(s), s, dx::one);
         u = fmath::ldexp(fmath::compliance::speed, u, q);
         u = dx::select(val >= 1024.0, dx::infinity, u);
         // underflow

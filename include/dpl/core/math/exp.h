@@ -45,13 +45,13 @@ private:
         constexpr auto ln2 = fmath::ln2_v<fpair>;
         auto const s =
             dx::fnmadd(qf, ln2.lower, dx::fnmadd(qf, ln2.upper, val));
-        static constexpr fmath::polynomial<1.0f, 1.0f, 0.5f,
+        static constexpr fmath::polynomial<0.5f,
             0.166666671633720397949219f,   //
             0.0416664853692054748535156f,  //
             0.00833336077630519866943359f, //
             0.00139304355252534151077271f>
             polynomial;
-        auto u = polynomial(s);
+        auto u = dx::fmadd(dx::mul(s, s), polynomial(s), s) + dx::one;
         u = fmath::ldexp(fmath::compliance::speed, u, q);
         if constexpr (brain_float<E>) {
             u = dx::select(val > 100.0, dx::infinity, u);
@@ -79,7 +79,7 @@ private:
         constexpr auto ln2 = fmath::ln2_v<fpair>;
         auto const s =
             dx::fnmadd(qf, ln2.lower, dx::fnmadd(qf, ln2.upper, val));
-        static constexpr fmath::polynomial<1.0f, 1.0f, 0.5f,
+        static constexpr fmath::polynomial<0.5f,
             0.166666671633720397949219f,   //
             0.0416664853692054748535156f,  //
             0.00833336077630519866943359f, //
@@ -87,7 +87,7 @@ private:
             0.000198527617612853646278381f>
             polynomial;
         // x2 * f + x + 1
-        auto u = polynomial(s);
+        auto u = dx::fmadd(dx::mul(s, s), polynomial(s), s) + dx::one;
         u = fmath::ldexp(fmath::compliance::speed, u, q);
         u = dx::select(val > 100.0f, dx::infinity, u);
         // underflow
@@ -105,14 +105,14 @@ private:
         constexpr auto ln2 = fmath::ln2_v<fpair>;
         auto const s =
             dx::fnmadd(qf, ln2.lower, dx::fnmadd(qf, ln2.upper, val));
-        static constexpr fmath::polynomial<1.0, 1.0, 0.5,
-            0.1666666666666669072e+0, 0.4166666666666602598e-1,
-            0.8333333333314938210e-2, 0.1388888888914497797e-2,
-            0.1984126989855865850e-3, 0.2480158687479686264e-4,
-            0.2755723402025388239e-5, 0.2755762628169491192e-6,
-            0.2511210703042288022e-7, 0.2081276378237164457e-8>
+        static constexpr fmath::polynomial<0.5, 0.1666666666666669072e+0,
+            0.4166666666666602598e-1, 0.8333333333314938210e-2,
+            0.1388888888914497797e-2, 0.1984126989855865850e-3,
+            0.2480158687479686264e-4, 0.2755723402025388239e-5,
+            0.2755762628169491192e-6, 0.2511210703042288022e-7,
+            0.2081276378237164457e-8>
             polynomial;
-        auto u = polynomial(s);
+        auto u = dx::fmadd(dx::mul(s, s), polynomial(s), s) + dx::one;
         u = fmath::ldexp(fmath::compliance::speed, u, q);
         static constexpr auto max_log = 0x1.62e42fefa39efp+9;
         u = dx::select(val > max_log, dx::infinity, u);
