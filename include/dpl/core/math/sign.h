@@ -102,4 +102,9 @@ public:
     using binary_operation_base<sign_t>::operator();
 };
 } // namespace datapar::internal
+
+namespace datapar {
+DPL_EXPORT inline constexpr internal::sign_t sign{};
+}
+
 DPL_DEFAULT_NAMESPACE_END
