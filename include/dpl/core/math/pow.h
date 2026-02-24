@@ -219,6 +219,8 @@ public:
 } // namespace datapar::internal
 
 namespace datapar {
+inline namespace cpo {
 DPL_EXPORT inline constexpr internal::pow_t pow{};
 }
+} // namespace datapar
 DPL_DEFAULT_NAMESPACE_END

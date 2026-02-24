@@ -22,6 +22,7 @@ import :core.type_traits;
 #include "dpl/core/constants/exponent_bits.h"
 #include "dpl/core/constants/exponent_mask.h"
 #include "dpl/core/constants/infinity.h"
+#include "dpl/core/constants/inv_pi.h"
 #include "dpl/core/constants/ln2.h"
 #include "dpl/core/constants/lsb.h"
 #include "dpl/core/constants/mantissa_bits.h"
@@ -31,7 +32,6 @@ import :core.type_traits;
 #include "dpl/core/constants/msb.h"
 #include "dpl/core/constants/nan.h"
 #include "dpl/core/constants/one.h"
-#include "dpl/core/constants/rcp_pi.h"
 #include "dpl/core/constants/value_bits.h"
 #include "dpl/core/constants/zero.h"
 // IWYU pragma: end_exports

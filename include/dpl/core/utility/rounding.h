@@ -11,6 +11,10 @@
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
+namespace internal {
+void round(...) noexcept = delete;
+}
+
 enum class rounding_flags {
     to_nearest_int = 1,
     to_pos_inf = 2,

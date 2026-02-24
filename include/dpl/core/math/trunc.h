@@ -22,8 +22,6 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 namespace mx = datapar::fmath;
 
-void trunc(...) noexcept = delete;
-
 template <typename T>
 concept unqualified_trunc =
     requires(T val) { round(internal::abi<T>, val, rounding::to_zero); };
@@ -94,7 +92,7 @@ public:
         if constexpr (unqualified_trunc_noexc<T>) {
             if not consteval {
                 return round(internal::abi<T>, val,
-                    rounding::to_pos_inf | rounding::no_exc);
+                    rounding::to_zero | rounding::no_exc);
             } else {
                 return fallback(val);
             }
@@ -109,7 +107,7 @@ public:
     static constexpr auto operator()(T val, rounding::no_exc_t) noexcept
         -> equivalent_simd_as<T> auto {
         return round(
-            internal::abi<T>, val, rounding::to_pos_inf | rounding::no_exc);
+            internal::abi<T>, val, rounding::to_zero | rounding::no_exc);
     }
 
     template <floating_point_simd T>

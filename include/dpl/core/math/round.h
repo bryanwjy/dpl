@@ -29,8 +29,6 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 namespace mx = datapar::fmath;
 
-void round(...) noexcept = delete;
-
 template <typename T>
 concept unqualified_cmath_round =
     requires(T val) { round(internal::abi<T>, val); };

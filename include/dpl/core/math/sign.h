@@ -104,7 +104,9 @@ public:
 } // namespace datapar::internal
 
 namespace datapar {
+inline namespace cpo {
 DPL_EXPORT inline constexpr internal::sign_t sign{};
 }
+} // namespace datapar
 
 DPL_DEFAULT_NAMESPACE_END
