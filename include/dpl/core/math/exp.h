@@ -91,7 +91,7 @@ private:
         u = fmath::ldexp(fmath::compliance::speed, u, q);
         u = dx::select(val > 100.0f, dx::infinity, u);
         // underflow
-        return dx::bit_drop(val < -103.2789299f, u);
+        return dx::bit_drop(val < -103.97208f, u);
     }
 
     template <simd_abi A>
@@ -117,7 +117,7 @@ private:
         static constexpr auto max_log = 0x1.62e42fefa39efp+9;
         u = dx::select(val > max_log, dx::infinity, u);
         // underflow
-        return dx::bit_drop(val < -1000.0, u);
+        return dx::bit_drop(val < -745.133, u);
     }
 
 public:

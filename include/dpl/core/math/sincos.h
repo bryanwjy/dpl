@@ -90,16 +90,19 @@ protected:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr basic_simd<float, A> rempi_mid(
         basic_simd<float, A> qf, basic_simd<float, A> arg) noexcept {
-        constexpr float a = 3.140625f;                  // NOLINT
-        constexpr float b = 0.0009670257568359375f;     // NOLINT
-        constexpr float c = 6.2771141529083251953e-07f; // NOLINT
-        constexpr float d = 1.2154201256553420762e-10f; // NOLINT
+        constexpr float a0 = 3.140625f;               // NOLINT
+        constexpr float b0 = 0.0009675025939941406f;  // NOLINT
+        constexpr float c0 = 1.7881393432617188e-07f; // NOLINT
+        constexpr float d0 = -2.781813535079891e-08f; // NOLINT
+        constexpr float a1 = 1.5703125f;              // NOLINT
+        constexpr float b1 = 0.0004837512969970703f;  // NOLINT
+        constexpr float c1 = 5.960464477539063e-08f;  // NOLINT
+        constexpr float d1 = 1.5893254712295857e-08f; // NOLINT
         using simdf = basic_simd<float, A>;
-        constexpr auto scale = dx::selecti<V>(fmath::half, dx::one_v<simdf>);
-        constexpr auto sa = a * scale;
-        constexpr auto sb = b * scale;
-        constexpr auto sc = c * scale;
-        constexpr auto sd = d * scale;
+        constexpr auto sa = dx::selecti<V>(dx::broadcast<A>(a1), a0);
+        constexpr auto sb = dx::selecti<V>(dx::broadcast<A>(b1), b0);
+        constexpr auto sc = dx::selecti<V>(dx::broadcast<A>(c1), c0);
+        constexpr auto sd = dx::selecti<V>(dx::broadcast<A>(d1), d0);
 
         return dx::fnmadd(qf, sd,
             dx::fnmadd(qf, sc, dx::fnmadd(qf, sb, dx::fnmadd(qf, sa, arg))));
@@ -316,11 +319,11 @@ protected:
                 }();
                 q2 = [q2]() {
                     if constexpr (dx::none_of(mask)) {
-                        return q2 >> imm<1>;
-                    } else if constexpr (dx::all_of(mask)) {
                         return q2 >> imm<2>;
+                    } else if constexpr (dx::all_of(mask)) {
+                        return q2 >> imm<1>;
                     } else {
-                        return dx::selecti<V>(q2 >> imm<2>, q2 >> imm<1>);
+                        return dx::selecti<V>(q2 >> imm<1>, q2 >> imm<2>);
                     }
                 }();
                 constexpr auto nhalfpi = fmath::scale(pi_pair<E, A>, -0.5);
@@ -394,11 +397,7 @@ struct sin_t : private internal::sincos_base {
     requires floating_point_simd<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
     static constexpr basic_type_t<T> DPL_VECTORCALL operator()(T val) noexcept {
-        if constexpr (requires {
-                          {
-                              sin(internal::abi<T>, val)
-                          } -> equivalent_simd_as<basic_type_t<T>>;
-                      }) {
+        if constexpr (requires { sin(internal::abi<T>, val); }) {
             if not consteval {
                 return sin(internal::abi<T>, val);
             } else {
@@ -411,12 +410,9 @@ struct sin_t : private internal::sincos_base {
 
     template <floating_point_simd T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(T val) noexcept {
-        if constexpr (requires(T val) {
-                          {
-                              sin(internal::abi<T>, val)
-                          } -> equivalent_simd_as<basic_type_t<T>>;
-                      }) {
+    static constexpr auto DPL_VECTORCALL operator()(T val) noexcept
+        -> equivalent_simd_as<T> auto {
+        if constexpr (requires { sin(internal::abi<T>, val); }) {
             return sin(internal::abi<T>, val);
         } else {
             return operator()(dx::to_basic_type(val));
@@ -430,11 +426,7 @@ struct cos_t : private internal::sincos_base {
     requires floating_point_simd<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
     static constexpr basic_type_t<T> DPL_VECTORCALL operator()(T val) noexcept {
-        if constexpr (requires {
-                          {
-                              cos(internal::abi<T>, val)
-                          } -> equivalent_simd_as<basic_type_t<T>>;
-                      }) {
+        if constexpr (requires { cos(internal::abi<T>, val); }) {
             if not consteval {
                 return cos(internal::abi<T>, val);
             } else {
@@ -447,12 +439,9 @@ struct cos_t : private internal::sincos_base {
 
     template <floating_point_simd T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(T val) noexcept {
-        if constexpr (requires(T val) {
-                          {
-                              cos(internal::abi<T>, val)
-                          } -> equivalent_simd_as<basic_type_t<T>>;
-                      }) {
+    static constexpr auto DPL_VECTORCALL operator()(T val) noexcept
+        -> equivalent_simd_as<T> auto {
+        if constexpr (requires { cos(internal::abi<T>, val); }) {
             return cos(internal::abi<T>, val);
         } else {
             return operator()(dx::to_basic_type(val));
@@ -466,11 +455,7 @@ struct sincosi_t : private internal::sincos_base {
     requires floating_point_simd<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
     static constexpr basic_type_t<T> DPL_VECTORCALL operator()(T val) noexcept {
-        if constexpr (requires {
-                          {
-                              sincos<V>(internal::abi<T>, val)
-                          } -> equivalent_simd_as<basic_type_t<T>>;
-                      }) {
+        if constexpr (requires { sincos<V>(internal::abi<T>, val); }) {
             if not consteval {
                 return sincos<V>(internal::abi<T>, val);
             } else {
@@ -483,12 +468,9 @@ struct sincosi_t : private internal::sincos_base {
 
     template <floating_point_simd T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(T val) noexcept {
-        if constexpr (requires(T val) {
-                          {
-                              sincos<V>(internal::abi<T>, val)
-                          } -> equivalent_simd_as<basic_type_t<T>>;
-                      }) {
+    static constexpr auto DPL_VECTORCALL operator()(T val) noexcept
+        -> equivalent_simd_as<T> auto {
+        if constexpr (requires { sincos<V>(internal::abi<T>, val); }) {
             return sincos<V>(internal::abi<T>, val);
         } else {
             return operator()(dx::to_basic_type(val));
