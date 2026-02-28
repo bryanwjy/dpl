@@ -19,7 +19,7 @@ else
 CXXFLAGS += -std=c++23
 endif
 
-CPPFLAGS += -I$(INCLUDE_DIR)
+CPPFLAGS += -I$(INCLUDE_DIR) -msse4.2 -mfma
 
 MODULE_SRCS := $(shell find $(MODULES_DIR) -name '*.cppm') $(shell find $(SRC_DIR) -name '*.cppm') \
 $(shell find $(TEST_DIR) -name '*.cppm')

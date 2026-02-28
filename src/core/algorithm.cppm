@@ -17,6 +17,7 @@ import :core.type_traits;
 import :core.utility;
 
 // IWYU pragma: begin_exports
+#include "dpl/core/algorithm/bf16.h"
 #include "dpl/core/algorithm/clamp.h"
 #include "dpl/core/algorithm/cload.h"
 #include "dpl/core/algorithm/cswap.h"

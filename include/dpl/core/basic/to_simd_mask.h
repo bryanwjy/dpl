@@ -21,62 +21,25 @@
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
-DPL_EXPORT struct assume_cannonical_t {
-    __DPL_HIDE_FROM_ABI explicit constexpr assume_cannonical_t() noexcept =
+DPL_EXPORT struct assume_cannonical_mask_t {
+    __DPL_HIDE_FROM_ABI explicit constexpr assume_cannonical_mask_t() noexcept =
         default;
 };
 
-DPL_EXPORT inline constexpr assume_cannonical_t assume_cannonical{};
+DPL_EXPORT inline constexpr assume_cannonical_mask_t assume_cannonical_mask{};
 } // namespace datapar
 
 namespace datapar::internal {
 void to_simd_mask(...) noexcept = delete;
 
 struct to_simd_mask_t {
-private:
-    template <enumeration T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr bool is_true(T val) noexcept {
-        return is_true(__DPL to_underlying(val));
-    }
-
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr bool is_true(signed_integral auto val) noexcept {
-        return val < 0;
-    }
-
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr bool is_true(unsigned_integral auto val) noexcept {
-        return is_true(__DPL to_signed(val));
-    }
-
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, FLATTEN, NODISCARD)
-    static constexpr bool is_true(floating_point auto val) noexcept {
-        using int_type = to_signed_integral_t<decltype(val)>;
-        return is_true(__DPL bit_cast<int_type>(val));
-    }
-
-    template <simd_element E, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr simd_mask<E, A> fallback(basic_simd<E, A> src) noexcept {
-        return [&]<size_t... Is>(index_sequence<Is...>) {
-            return dx::initialize<simd_mask<E, A>>(is_true(src[Is])...);
-        }(iota_sequence<E, A>);
-    }
-
 public:
     template <basic_simd_type T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr to_simd_mask_type_t<T> operator()(T src) noexcept {
-        if constexpr (requires { to_simd_mask(internal::abi<T>, src); }) {
-            if consteval {
-                return fallback(src);
-            } else {
-                return to_simd_mask(internal::abi<T>, src);
-            }
-        } else {
-            return fallback(src);
-        }
+    static constexpr to_simd_mask_type_t<T> operator()(T src) noexcept
+    requires requires { to_simd_mask(internal::abi<T>, src); }
+    {
+        return to_simd_mask(internal::abi<T>, src);
     }
 
     template <simd_type T>
@@ -93,7 +56,7 @@ public:
     template <basic_simd_type T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr to_simd_mask_type_t<T> operator()(
-        assume_cannonical_t tag, T src) noexcept {
+        assume_cannonical_mask_t tag, T src) noexcept {
         if constexpr (requires { to_simd_mask(internal::abi<T>, tag, src); }) {
             if consteval {
                 return operator()(src);
@@ -108,7 +71,7 @@ public:
     template <simd_type T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr equivalent_mask_as<to_simd_mask_type_t<T>> auto operator()(
-        assume_cannonical_t tag, T src) noexcept {
+        assume_cannonical_mask_t tag, T src) noexcept {
         if constexpr (requires { to_simd_mask(internal::abi<T>, tag, src); }) {
             return to_simd_mask(internal::abi<T>, tag, src);
         } else {

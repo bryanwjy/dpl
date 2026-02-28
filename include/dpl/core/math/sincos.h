@@ -279,7 +279,7 @@ protected:
         using sint = to_signed_integral_t<E>;
         using simdi = basic_simd<sint, A>;
         static constexpr immediate_mask<element_count<E, A>, V> mask;
-        simdf const qf = [arg]() {
+        simdf const qf = [](basic_simd<E, A> arg) {
             if constexpr (dx::none_of(mask)) {
                 return dx::round(arg * dx::inv_pi,
                     rounding::to_nearest_int | rounding::no_exc);
@@ -299,7 +299,7 @@ protected:
                 // magnitude of qf is small < (threshold_mid / pi)
                 return dx::fmadd(a, qf, c);
             }
-        }();
+        }(arg);
 
         auto q = dx::cast<sint>(qf);
         auto rem = rempi_low<V>(qf, arg);

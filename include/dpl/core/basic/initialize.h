@@ -41,8 +41,7 @@ public:
     static constexpr basic_simd<E, A> operator()(Args&&... args) noexcept
     requires requires { initialize<E>(internal::abi<A>, array_type{}); }
     {
-        array_type buffer{__DPL forward<Args>(args)...};
-        return initialize<E>(internal::abi<A>, buffer);
+        return initialize<E>(internal::abi<A>, __DPL forward<Args>(args)...);
     }
 
     template <same_as<bool>... Bs>
@@ -51,8 +50,7 @@ public:
     static constexpr simd_mask<E, A> operator()(Bs... args) noexcept
     requires requires { initialize<E>(internal::abi<A>, barray_type{}); }
     {
-        barray_type buffer{__DPL forward<Bs>(args)...};
-        return initialize<E>(internal::abi<A>, buffer);
+        return initialize<E>(internal::abi<A>, __DPL forward<Bs>(args)...);
     }
 };
 
@@ -105,7 +103,7 @@ public:
     template <simd_element... Args>
     requires requires { typename deduced_simd<Args...>; } &&
         regular_invocable<initialize_t<deduced_simd<Args...>>, Args...>
-    DPL_ATTRIBUTES(SYL_HIDE_FROM_ABI, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr deduced_simd<Args...> operator()(Args&&... args) noexcept {
         return initialize_t<deduced_simd<Args...>>::operator()(
             __DPL forward<Args>(args)...);
@@ -114,7 +112,7 @@ public:
     template <same_as<bool>... Bs>
     requires requires { typename deduced_mask<Bs...>; } &&
         regular_invocable<initialize_t<deduced_mask<Bs...>>, Bs...>
-    DPL_ATTRIBUTES(SYL_HIDE_FROM_ABI, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr deduced_simd<Bs...> operator()(Bs... args) noexcept {
         return initialize_t<deduced_simd<Bs...>>::operator()(args...);
     }

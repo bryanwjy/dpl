@@ -4,18 +4,15 @@
 #include "dpl/config.h"
 
 #include "dpl/core/basic/aligned.h"
-#include "dpl/core/basic/initialize.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/fwd.h"
 
 #  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/type_traits/basic_type.h"
-#  include "dpl/core/type_traits/iota_sequence.h"
 #  include "dpl/std/concepts/convertible_to.h"
 #  include "dpl/std/concepts/invocable.h"
 #  include "dpl/std/concepts/same_as.h"
-#  include "dpl/std/utility/sequence.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -37,13 +34,7 @@ struct load_t<A, E> {
         { load(internal::abi<A>, data) } -> same_as<basic_simd<E, A>>;
     }
     {
-        if consteval {
-            return [&]<size_t... Is>(index_sequence<Is...>) {
-                return dx::initialize<E, A>(data[Is]...);
-            }(iota_sequence<E, A>);
-        } else {
-            return load(internal::abi<A>, data);
-        }
+        return load(internal::abi<A>, data);
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)

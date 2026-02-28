@@ -5,6 +5,7 @@
 
 #include "dpl/core/basic/extract.h"
 #include "dpl/core/basic/immediate.h"
+#include "dpl/core/basic/initialize.h"
 #include "dpl/core/basic/load.h"
 #include "dpl/core/basic/store.h"
 
@@ -38,7 +39,7 @@ public:
 
     template <simd_class T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(T arg) noexcept {
+    static constexpr auto operator()(T arg) noexcept {
         if constexpr (requires { reinterpret<E>(internal::abi<T>, arg); }) {
             return reinterpret<E>(internal::abi<T>, arg);
         } else {
@@ -49,14 +50,13 @@ public:
     template <basic_simd_type T>
     requires same_as<E, simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T DPL_VECTORCALL operator()(T arg) noexcept {
+    static constexpr T operator()(T arg) noexcept {
         return arg;
     }
 
     template <basic_simd_type T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr rebind_simd_t<T, E> DPL_VECTORCALL operator()(
-        T arg) noexcept {
+    static constexpr rebind_simd_t<T, E> operator()(T arg) noexcept {
         if consteval {
             using A = typename T::abi_type;
             static_assert(sizeof(array_for<T>) == sizeof(array_for<E, A>));
@@ -67,7 +67,7 @@ public:
             auto const tmp = __DPL bit_cast<array_for<E, A>>(from);
             return dx::load<A>(tmp.data);
         } else {
-            if constexpr (requires(T arg) {
+            if constexpr (requires {
                               { reinterpret<E>(internal::abi<T>, arg) };
                           }) {
                 return reinterpret<E>(internal::abi<T>, arg);
@@ -95,7 +95,7 @@ public:
                 return dx::initialize<To>(dx::extract(arg, imm<Is>)...);
             }(arg, iota_sequence<To>);
         } else {
-            if constexpr (requires(T arg) {
+            if constexpr (requires {
                               { reinterpret<E>(internal::abi<T>, arg) };
                           }) {
                 return reinterpret<E>(internal::abi<T>, arg);

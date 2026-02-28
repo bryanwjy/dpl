@@ -37,12 +37,12 @@ struct broadcast_t<A> {
 public:
     template <simd_element E>
     requires regular_invocable<broadcast_t<simd<E>>, E>
-    DPL_ATTRIBUTES(SYL_HIDE_FROM_ABI, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr simd<E> operator()(E scalar) noexcept {
         return broadcast_t<simd<E>>::operator()(scalar);
     }
 
-    DPL_ATTRIBUTES(SYL_HIDE_FROM_ABI, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr mask operator()(same_as<bool> auto scalar) noexcept {
         return broadcast_t<mask>::operator()(scalar);
     }
@@ -51,20 +51,20 @@ public:
 template <simd_abi A, simd_element E>
 struct broadcast_t<A, E> {
     template <size_t... Is>
-    DPL_ATTRIBUTES(SYL_HIDE_FROM_ABI, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr basic_simd<E, A> fallback(
         E val, index_sequence<Is...>) noexcept {
         return dx::initialize<basic_simd<E, A>>(
             [val]<size_t I>(immediate<I>) { return val; }(imm<Is>)...);
     }
 
-    DPL_ATTRIBUTES(SYL_HIDE_FROM_ABI, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr basic_simd<E, A> fallback(E val) noexcept {
         return fallback(val, iota_sequence<E, A>);
     }
 
 public:
-    DPL_ATTRIBUTES(SYL_HIDE_FROM_ABI, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr basic_simd<E, A> operator()(E scalar) noexcept
     requires requires { broadcast<E>(internal::abi<A>, scalar); }
     {
@@ -75,7 +75,7 @@ public:
         }
     }
 
-    DPL_ATTRIBUTES(SYL_HIDE_FROM_ABI, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr simd_mask<E, A> operator()(
         same_as<bool> auto scalar) noexcept
     requires requires { broadcast<E>(internal::abi<A>, scalar); }
@@ -105,7 +105,7 @@ public:
         return broadcast_t<A, E>::operator()(scalar);
     }
 
-    DPL_ATTRIBUTES(SYL_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(same_as<bool> auto scalar) noexcept
     requires simd_mask_type<T> && regular_invocable<broadcast_t<A, E>, bool>
     {
