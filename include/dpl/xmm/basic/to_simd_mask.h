@@ -27,7 +27,7 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::xmm {
 
-template <simd_element E>
+DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr mask<E> DPL_VECTORCALL
     to_simd_mask(abi_tag tag, simd<E> src) noexcept {
@@ -72,7 +72,7 @@ constexpr mask<E> DPL_VECTORCALL
     }
 }
 
-template <simd_element E>
+DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr mask<E> DPL_VECTORCALL
     to_simd_mask(abi_tag tag, assume_cannonical_mask_t, simd<E> src) noexcept {

@@ -26,7 +26,7 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::xmm {
 
-template <simd_element E, simd_element F>
+DPL_EXPORT template <simd_element E, simd_element F>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr simd<E> reinterpret(abi_tag tag, simd<F> src) noexcept {
     if consteval {
@@ -114,7 +114,7 @@ constexpr simd<E> reinterpret(abi_tag tag, simd<F> src) noexcept {
     }
 }
 
-template <simd_element E, simd_element F>
+DPL_EXPORT template <simd_element E, simd_element F>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr mask<E> reinterpret(abi_tag tag, mask<F> src) noexcept {
     return +dx::xmm::reinterpret<E>(tag, simd<F>(+src));

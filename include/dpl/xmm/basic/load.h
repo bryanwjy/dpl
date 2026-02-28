@@ -26,7 +26,7 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::xmm {
-template <simd_element E>
+DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
 constexpr simd<E> load(abi_tag tag, E const* data) noexcept {
     static_assert(!is_const_v<E> && !is_volatile_v<E>);
@@ -52,7 +52,7 @@ constexpr simd<E> load(abi_tag tag, E const* data) noexcept {
     }
 }
 
-template <simd_element E>
+DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
 constexpr simd<E> aligned_load(abi_tag tag, E const* data) noexcept {
     static_assert(!is_const_v<E> && !is_volatile_v<E>);

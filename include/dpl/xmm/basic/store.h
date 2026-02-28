@@ -24,7 +24,7 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::xmm {
-template <simd_element E>
+DPL_EXPORT template <simd_element E>
 __DPL_HIDE_FROM_ABI constexpr void store(
     abi_tag tag, simd<E> src, E* dst) noexcept {
     if consteval {
@@ -60,7 +60,7 @@ __DPL_HIDE_FROM_ABI constexpr void store(
     }
 }
 
-template <simd_element E>
+DPL_EXPORT template <simd_element E>
 __DPL_HIDE_FROM_ABI constexpr void aligned_store(
     abi_tag tag, simd<E> src, E* dst) noexcept {
     if consteval {

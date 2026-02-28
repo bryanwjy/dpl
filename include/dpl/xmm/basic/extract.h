@@ -29,7 +29,7 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::xmm {
 
-template <simd_element E>
+DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr E extract(abi_tag, basic_simd<E, abi_tag> src, size_t idx) noexcept {
 #if !DPL_COMPILER_MSVC
@@ -67,7 +67,7 @@ constexpr E extract(abi_tag, basic_simd<E, abi_tag> src, size_t idx) noexcept {
 #endif
 }
 
-template <simd_element E>
+DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr E extract(
     abi_tag tag, simd<E> src, integral_constant_like auto idx) noexcept {
@@ -135,13 +135,13 @@ constexpr bool is_true(T val) noexcept {
     return dx::xmm::is_true(__DPL to_underlying(val));
 }
 
-template <simd_element E>
+DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr bool extract(abi_tag tag, mask<E> src, size_t idx) noexcept {
     return dx::xmm::is_true(extract(tag, simd<E>(+src), idx));
 }
 
-template <simd_element E>
+DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr bool extract(
     abi_tag tag, mask<E> src, integral_constant_like auto idx) noexcept {

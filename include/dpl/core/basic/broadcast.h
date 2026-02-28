@@ -58,8 +58,21 @@ struct broadcast_t<A, E> {
             [val]<size_t I>(immediate<I>) { return val; }(imm<Is>)...);
     }
 
+    template <size_t... Is>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr basic_simd_mask<E, A> fallback(
+        bool val, index_sequence<Is...>) noexcept {
+        return dx::initialize<basic_simd<E, A>>(
+            [val]<size_t I>(immediate<I>) { return val; }(imm<Is>)...);
+    }
+
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr basic_simd<E, A> fallback(E val) noexcept {
+        return fallback(val, iota_sequence<E, A>);
+    }
+
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr basic_simd_mask<E, A> fallback(bool val) noexcept {
         return fallback(val, iota_sequence<E, A>);
     }
 

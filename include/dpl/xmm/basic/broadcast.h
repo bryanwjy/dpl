@@ -15,6 +15,7 @@
 #  include "dpl/core/concepts/common_float_with.h"
 #  include "dpl/core/concepts/simd_element.h"
 #  include "dpl/core/constants/all_bits.h"
+#  include "dpl/core/constants/zero.h"
 #  include "dpl/std/bit/bit_cast.h"
 #  include "dpl/std/type_traits/is_const.h"
 #  include "dpl/std/type_traits/is_volatile.h"
@@ -26,7 +27,7 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::xmm {
-template <simd_element E>
+DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 inline simd<E> broadcast(abi_tag, type_identity_t<E> scalar) noexcept {
     static_assert(!is_const_v<E> && !is_volatile_v<E>);
@@ -46,11 +47,11 @@ inline simd<E> broadcast(abi_tag, type_identity_t<E> scalar) noexcept {
     }
 }
 
-template <simd_element E>
+DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 inline mask<E> broadcast(abi_tag tag, same_as<bool> auto scalar) noexcept {
     static_assert(!is_const_v<E> && !is_volatile_v<E>);
-    return +xmm::broadcast(tag, dx::all_bits_v<E>);
+    return +xmm::broadcast(tag, scalar ? dx::all_bits_v<E> : dx::zero);
 }
 } // namespace datapar::xmm
 
