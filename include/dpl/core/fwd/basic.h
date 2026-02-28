@@ -5,7 +5,7 @@
 #include "dpl/config.h"
 
 #if !DPL_MODULES
-#  include "dpl/std/stddef.h"
+#  include "dpl/std/stddef.h" // IWYU pragma: export
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN

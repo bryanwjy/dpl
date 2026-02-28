@@ -38,7 +38,7 @@ constexpr simd<E> initialize(abi_tag tag, Args&&... args) noexcept {
 #if !DPL_COMPILER_MSVC
         using array = E[element_count<E, abi_tag>];
         alignas(abi_tag::alignment)
-            array buffer{__DPL forward<Args>(args)...};
+            array buffer{static_cast<E>(__DPL forward<Args>(args))...};
         return __DPL bit_cast<native_vector_t<E>>(buffer);
 #else
         if constexpr (common_float_with<float, E>) {
@@ -97,42 +97,42 @@ constexpr simd<E> initialize(abi_tag tag, Args&&... args) noexcept {
         }
 #endif
     } else {
+
+        if constexpr (common_float_with<E, float>) {
+            return _mm_setr_ps( __DPL bit_cast<float>(static_cast<E>(args))...);
+        } else if constexpr (common_float_with<E, double>) {
+            return _mm_setr_pd(
+                __DPL bit_cast<double>(static_cast<E>(args))...);
+        } else if constexpr (common_size_with<int64, E>) {
 #if __cpp_pack_indexing >= 202311L
 #  if (DPL_COMPILER_CLANG | DPL_COMPILER_GCC) & !DPL_CXX26
-        DPL_DISABLE_WARNING_PUSH()
-        DPL_DISABLE_WARNING("-Wc++26-extensions")
+            DPL_DISABLE_WARNING_PUSH()
+            DPL_DISABLE_WARNING("-Wc++26-extensions")
 #  endif
-        return []<size_t... Is>(index_sequence<Is...>, auto&&... args) {
-            if constexpr (common_float_with<E, float>) {
-                return _mm_set_ps( __DPL bit_cast<float>(static_cast<E>(
-                    args...[element_count<E, abi_tag> - 1 - Is]))...);
-            } else if constexpr (common_float_with<E, double>) {
-                return _mm_set_pd( __DPL bit_cast<double>(static_cast<E>(
-                    args...[element_count<E, abi_tag> - 1 - Is]))...);
-            } else if constexpr (common_size_with<int64, E>) {
-                return _mm_set_epi64x( __DPL bit_cast<int64>(static_cast<E>(
-                    args...[element_count<E, abi_tag> - 1 - Is]))...);
-            } else if constexpr (common_size_with<int32, E>) {
-                return _mm_set_epi64x( __DPL bit_cast<int32>(static_cast<E>(
-                    args...[element_count<E, abi_tag> - 1 - Is]))...);
-            } else if constexpr (common_size_with<int16, E>) {
-                return _mm_set_epi16( __DPL bit_cast<int16>(static_cast<E>(
-                    args...[element_count<E, abi_tag> - 1 - Is]))...);
-            } else {
-                static_assert(common_size_with<int8, E>);
-                return _mm_set_epi8( __DPL bit_cast<int8>(static_cast<E>(
-                    args...[element_count<E, abi_tag> - 1 - Is]))...);
-            }
-        }(iota_sequence<E, abi_tag>, __DPL forward<Args>(args)...);
+            static_assert(sizeof...(Args) == 2);
+            return _mm_set_epi64x(
+                __DPL bit_cast<int64>(static_cast<E>(args...[1])),
+                __DPL bit_cast<int64>(static_cast<E>(args...[0])));
 #  if DPL_COMPILER_CLANG & !DPL_CXX26
-        DPL_DISABLE_WARNING_POP()
+            DPL_DISABLE_WARNING_POP()
 #  endif
 #else
-        using array = E[element_count<E, abi_tag>];
-        alignas(abi_tag::alignment)
-            array buffer{__DPL forward<Args>(args)...};
-        return __DPL bit_cast<native_vector_t<E>>(buffer);
+            using array = E[element_count<E, abi_tag>];
+            alignas(abi_tag::alignment)
+                array buffer{static_cast<E>(__DPL forward<Args>(args))...};
+            return __DPL bit_cast<native_vector_t<E>>(buffer);
 #endif
+        } else if constexpr (common_size_with<int32, E>) {
+            return _mm_setr_epi32(
+                __DPL bit_cast<int32>(static_cast<E>(args))...);
+        } else if constexpr (common_size_with<int16, E>) {
+            return _mm_setr_epi16(
+                __DPL bit_cast<int16>(static_cast<E>(args))...);
+        } else {
+            static_assert(common_size_with<int8, E>);
+            return _mm_setr_epi8(
+                __DPL bit_cast<int8>(static_cast<E>(args))...);
+        }
     }
 }
 

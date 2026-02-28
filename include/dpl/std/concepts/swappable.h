@@ -88,6 +88,6 @@ concept swappable_with =
     };
 
 DPL_EXPORT template <typename T>
-concept swappable = requires(T && (*lhs)()) { ranges::swap(lhs(), lhs()); };
+concept swappable = requires(T& lhs, T& rhs) { ranges::swap(lhs, rhs); };
 
 DPL_DEFAULT_NAMESPACE_END

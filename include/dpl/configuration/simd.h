@@ -3,7 +3,7 @@
 #pragma once
 
 #include "dpl/configuration/architecture.h"
-#include "dpl/configuration/compiler.h"
+#include "dpl/configuration/compiler.h" // IWYU pragma: keep
 
 #if DPL_ARCH_x86
 
@@ -52,12 +52,40 @@
 #    endif
 #  endif
 
+#  ifdef __AVX512VPOPCNTDQ__
+#    define DPL_SIMD_X86_AVX512VPOPCNTDQ __AVX512VPOPCNTDQ__
+#  elif DPL_COMPILER_MSVC && defined(__AVX512VL__)
+#    ifndef DPL_ENABLE_MSVC_AVX512VPOPCNTDQ
+#      define DPL_ENABLE_MSVC_AVX512VPOPCNTDQ 0
+#    endif
+#    define DPL_SIMD_X86_AVX512VPOPCNTDQ DPL_ENABLE_MSVC_AVX512VPOPCNTDQ
+#  endif
+
+#  ifdef __AVX512BITALG__
+#    define DPL_SIMD_X86_AVX512BITALG __AVX512BITALG__
+#  elif DPL_COMPILER_MSVC && defined(__AVX512VL__)
+#    ifndef DPL_ENABLE_MSVC_AVX512BITALG
+#      define DPL_ENABLE_MSVC_AVX512BITALG 0
+#    endif
+#    define DPL_SIMD_X86_AVX512BITALG DPL_ENABLE_MSVC_AVX512BITALG
+#  endif
+
 #  ifdef __AVX512BF16__
 #    define DPL_SIMD_X86_AVX512BF16 __AVX512BF16__
+#  elif DPL_COMPILER_MSVC && defined(__AVX512F__)
+#    ifndef DPL_ENABLE_MSVC_AVX512BF16
+#      define DPL_ENABLE_MSVC_AVX512BF16 0
+#    endif
+#    define DPL_SIMD_X86_AVX512BF16 DPL_ENABLE_MSVC_AVX512BF16
 #  endif
 
 #  ifdef __AVX512FP16__
 #    define DPL_SIMD_X86_AVX512FP16 __AVX512FP16__
+#  elif DPL_COMPILER_MSVC && defined(__AVX512F__)
+#    ifndef DPL_ENABLE_MSVC_AVX512FP16
+#      define DPL_ENABLE_MSVC_AVX512FP16 0
+#    endif
+#    define DPL_SIMD_X86_AVX512FP16 DPL_ENABLE_MSVC_AVX512FP16
 #  endif
 
 #  ifdef __AVX512BW__
@@ -68,8 +96,16 @@
 #    define DPL_SIMD_X86_AVX512CD __AVX512CD__
 #  endif
 
+#  ifdef __AVX512F__
+#    define DPL_SIMD_X86_AVX512F __AVX512F__
+#  endif
+
 #  ifdef __AVX512DQ__
 #    define DPL_SIMD_X86_AVX512DQ __AVX512DQ__
+#  endif
+
+#  ifdef __AVX512VL__
+#    define DPL_SIMD_X86_AVX512VL __AVX512VL__
 #  endif
 
 #  ifdef __AVX512ER__
@@ -78,14 +114,6 @@
 
 #  ifdef __AVX512PF__
 #    define DPL_SIMD_X86_AVX512PF __AVX512PF__
-#  endif
-
-#  ifdef __AVX512VL__
-#    define DPL_SIMD_X86_AVX512VL __AVX512VL__
-#  endif
-
-#  ifdef __AVX512F__
-#    define DPL_SIMD_X86_AVX512F __AVX512F__
 #  endif
 
 #elif DPL_ARCH_ARM

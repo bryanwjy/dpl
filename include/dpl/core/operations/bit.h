@@ -5,6 +5,7 @@
 
 #include "dpl/core/operations/bitwise.h"
 #include "dpl/core/operations/operation_base.h"
+#include "dpl/core/operations/pack.h"
 #include "dpl/core/operations/select.h"
 #include "dpl/core/operations/transform.h"
 
@@ -103,7 +104,7 @@ private:
         }
     }
 
-    template <auto V, basic_simd_type T>
+    template <auto V, basic_simd_class T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto fallbacki(T arg) noexcept {
         if constexpr (basic_simd_type<T>) {
@@ -297,7 +298,7 @@ private:
         }
     }
 
-    template <auto V, basic_simd_type T>
+    template <auto V, basic_simd_class T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto fallbacki(T arg) noexcept {
         if constexpr (basic_simd_type<T>) {
@@ -491,7 +492,7 @@ private:
         }
     }
 
-    template <auto V, basic_simd_type T>
+    template <auto V, basic_simd_class T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto fallbacki(T arg) noexcept {
         if constexpr (basic_simd_type<T>) {
@@ -685,7 +686,7 @@ private:
         }
     }
 
-    template <auto V, basic_simd_type T>
+    template <auto V, basic_simd_class T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto fallbacki(T arg) noexcept {
         if constexpr (basic_simd_type<T>) {
@@ -1120,10 +1121,8 @@ private:
     template <simd_element E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr int fallback(basic_simd_mask<E, A> arg) noexcept {
-        return
-            []<size_t... Is>(basic_simd_mask<E, A> arg, index_sequence<Is...>) {
-                return (... + static_cast<int>(arg[Is]));
-            }(arg, iota_sequence<E, A>);
+        // TODO: What if pack is not an integer?
+        return __DPL popcount(dx::pack(arg));
     }
 
 public:
@@ -1197,15 +1196,8 @@ private:
     template <simd_element E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto fallback(basic_simd_mask<E, A> arg) noexcept {
-        return []<size_t I>(this auto self, basic_simd_mask<E, A> arg,
-                   immediate<I> idx) -> int {
-            auto const val = static_cast<int>(!arg[idx]);
-            if constexpr (I == 0) {
-                return val;
-            } else {
-                return val + (-val & self(arg, imm<I - 1>));
-            }
-        }(arg, imm<element_count<E, A> - 1>);
+        // TODO: What if pack is not an integer?
+        return __DPL countl_zero(dx::pack(arg));
     }
 
 public:
@@ -1279,15 +1271,8 @@ private:
     template <simd_element E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto fallback(basic_simd_mask<E, A> arg) noexcept {
-        return []<size_t I>(this auto self, basic_simd_mask<E, A> arg,
-                   immediate<I> idx) -> int {
-            auto const val = static_cast<int>(arg[idx]);
-            if constexpr (I == 0) {
-                return val;
-            } else {
-                return val + (-val & self(arg, imm<I - 1>));
-            }
-        }(arg, imm<element_count<E, A> - 1>);
+        // TODO: What if pack is not an integer?
+        return __DPL countl_one(dx::pack(arg));
     }
 
 public:
@@ -1361,15 +1346,8 @@ private:
     template <simd_element E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto fallback(basic_simd_mask<E, A> arg) noexcept {
-        return []<size_t I>(this auto self, basic_simd_mask<E, A> arg,
-                   immediate<I> idx) -> int {
-            auto const val = static_cast<int>(!arg[idx]);
-            if constexpr (I == element_count<E, A>) {
-                return 0;
-            } else {
-                return val + (-val & self(arg, imm<I + 1>));
-            }
-        }(arg, imm<0>);
+        // TODO: What if pack is not an integer?
+        return __DPL countr_zero(dx::pack(arg));
     }
 
 public:
@@ -1443,15 +1421,8 @@ private:
     template <simd_element E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto fallback(basic_simd_mask<E, A> arg) noexcept {
-        return []<size_t I>(this auto self, basic_simd_mask<E, A> arg,
-                   immediate<I> idx) -> int {
-            auto const val = static_cast<int>(arg[idx]);
-            if constexpr (I == element_count<E, A>) {
-                return 0;
-            } else {
-                return val + (-val & self(arg, imm<I + 1>));
-            }
-        }(arg, imm<0>);
+        // TODO: What if pack is not an integer?
+        return __DPL countr_one(dx::pack(arg));
     }
 
 public:
