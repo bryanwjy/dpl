@@ -226,8 +226,8 @@ constexpr pair<E, A> DPL_VECTORCALL make_pair(E upper, T2 lower = {}) noexcept {
 template <simd_abi A, abi_float_type<A> T, simd_element E>
 requires common_size_with<T, E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-constexpr pair<T, A> DPL_VECTORCALL
-    select(simd_mask<E, A> mask, pair<T, A> left, pair<T, A> right) noexcept {
+constexpr pair<T, A> DPL_VECTORCALL select(
+    basic_simd_mask<E, A> mask, pair<T, A> left, pair<T, A> right) noexcept {
     return pair<T, A>{
         .upper = dx::select(mask, left.upper, right.upper),
         .lower = dx::select(mask, left.lower, right.lower),

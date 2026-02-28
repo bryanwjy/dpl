@@ -106,9 +106,9 @@ struct common_size_simd<basic_simd<E1, A1>, basic_simd<E2, A2>> {
 
 DPL_EXPORT template <simd_element E1, simd_abi A1, simd_element E2, simd_abi A2>
 requires requires { typename common_size_type_t<E1, E2>; }
-struct common_size_simd<simd_mask<E1, A1>, simd_mask<E2, A2>> {
+struct common_size_simd<basic_simd_mask<E1, A1>, basic_simd_mask<E2, A2>> {
     using type DPL_NODEBUG =
-        simd_mask<common_size_type_t<E1, E2>, common_abi_t<A1, A2>>;
+        basic_simd_mask<common_size_type_t<E1, E2>, common_abi_t<A1, A2>>;
 };
 
 DPL_EXPORT template <simd_type T1, common_class_with<T1> T2>
@@ -122,7 +122,7 @@ DPL_EXPORT template <simd_mask_type T1, common_class_with<T1> T2>
 requires requires { typename common_size_type_t<T1, T2>; }
 struct common_size_simd<T1, T2> {
     using type DPL_NODEBUG =
-        simd_mask<common_size_type_t<T1, T2>, common_abi_t<T1, T2>>;
+        basic_simd_mask<common_size_type_t<T1, T2>, common_abi_t<T1, T2>>;
 };
 
 } // namespace datapar

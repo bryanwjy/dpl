@@ -23,7 +23,7 @@ struct signbit_t {
 private:
     template <floating_point E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr simd_mask<E, A> DPL_VECTORCALL
+    static constexpr basic_simd_mask<E, A> DPL_VECTORCALL
         fallback(basic_simd<E, A> arg) noexcept {
         using sint = to_signed_integral_t<E>;
         return dx::reinterpret<E>(

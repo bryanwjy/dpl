@@ -864,7 +864,7 @@ private:
     template <auto V, basic_simd_element ET, basic_simd_element EF, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto fallbacki(
-        simd_mask<ET, A> tval, simd_mask<EF, A> fval) noexcept {
+        basic_simd_mask<ET, A> tval, basic_simd_mask<EF, A> fval) noexcept {
         using ER = common_size_type_t<ET, EF>;
         return dx::selecti<V>(
             dx::reinterpret<ER>(tval), dx::reinterpret<ER>(fval));
@@ -873,7 +873,7 @@ private:
     template <basic_simd_element EM, basic_simd_element ET,
         basic_simd_element EF, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto fallback(simd_mask<EM, A> mask,
+    static constexpr auto fallback(basic_simd_mask<EM, A> mask,
         basic_simd<ET, A> tval, basic_simd<EF, A> fval) noexcept {
         using ER = common_bits_type_t<ET, EF>;
         return dx::select(
@@ -883,8 +883,8 @@ private:
     template <basic_simd_element EM, basic_simd_element ET,
         basic_simd_element EF, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto fallback(simd_mask<EM, A> mask, simd_mask<ET, A> tval,
-        simd_mask<EF, A> fval) noexcept {
+    static constexpr auto fallback(basic_simd_mask<EM, A> mask,
+        basic_simd_mask<ET, A> tval, basic_simd_mask<EF, A> fval) noexcept {
         using ER = common_size_type_t<ET, EF>;
         return dx::select(
             mask, dx::reinterpret<ER>(tval), dx::reinterpret<ER>(fval));
@@ -1119,10 +1119,11 @@ private:
 
     template <simd_element E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr int fallback(simd_mask<E, A> arg) noexcept {
-        return []<size_t... Is>(simd_mask<E, A> arg, index_sequence<Is...>) {
-            return (... + static_cast<int>(arg[Is]));
-        }(arg, iota_sequence<E, A>);
+    static constexpr int fallback(basic_simd_mask<E, A> arg) noexcept {
+        return
+            []<size_t... Is>(basic_simd_mask<E, A> arg, index_sequence<Is...>) {
+                return (... + static_cast<int>(arg[Is]));
+            }(arg, iota_sequence<E, A>);
     }
 
 public:
@@ -1195,8 +1196,8 @@ private:
 
     template <simd_element E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto fallback(simd_mask<E, A> arg) noexcept {
-        return []<size_t I>(this auto self, simd_mask<E, A> arg,
+    static constexpr auto fallback(basic_simd_mask<E, A> arg) noexcept {
+        return []<size_t I>(this auto self, basic_simd_mask<E, A> arg,
                    immediate<I> idx) -> int {
             auto const val = static_cast<int>(!arg[idx]);
             if constexpr (I == 0) {
@@ -1277,8 +1278,8 @@ private:
 
     template <simd_element E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto fallback(simd_mask<E, A> arg) noexcept {
-        return []<size_t I>(this auto self, simd_mask<E, A> arg,
+    static constexpr auto fallback(basic_simd_mask<E, A> arg) noexcept {
+        return []<size_t I>(this auto self, basic_simd_mask<E, A> arg,
                    immediate<I> idx) -> int {
             auto const val = static_cast<int>(arg[idx]);
             if constexpr (I == 0) {
@@ -1359,8 +1360,8 @@ private:
 
     template <simd_element E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto fallback(simd_mask<E, A> arg) noexcept {
-        return []<size_t I>(this auto self, simd_mask<E, A> arg,
+    static constexpr auto fallback(basic_simd_mask<E, A> arg) noexcept {
+        return []<size_t I>(this auto self, basic_simd_mask<E, A> arg,
                    immediate<I> idx) -> int {
             auto const val = static_cast<int>(!arg[idx]);
             if constexpr (I == element_count<E, A>) {
@@ -1441,8 +1442,8 @@ private:
 
     template <simd_element E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto fallback(simd_mask<E, A> arg) noexcept {
-        return []<size_t I>(this auto self, simd_mask<E, A> arg,
+    static constexpr auto fallback(basic_simd_mask<E, A> arg) noexcept {
+        return []<size_t I>(this auto self, basic_simd_mask<E, A> arg,
                    immediate<I> idx) -> int {
             auto const val = static_cast<int>(arg[idx]);
             if constexpr (I == element_count<E, A>) {

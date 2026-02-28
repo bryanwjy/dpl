@@ -27,7 +27,7 @@ inline constexpr bool is_basic_simd<basic_simd<E, A>> = true;
 template <typename>
 inline constexpr bool is_simd_mask = false;
 template <simd_element E, simd_abi A>
-inline constexpr bool is_simd_mask<simd_mask<E, A>> = true;
+inline constexpr bool is_simd_mask<basic_simd_mask<E, A>> = true;
 template <typename T>
 concept basic_simd_specialization = is_basic_simd<T>;
 template <typename T>

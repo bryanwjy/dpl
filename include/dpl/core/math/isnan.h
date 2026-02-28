@@ -24,7 +24,7 @@ struct isnan_t {
 private:
     template <floating_point E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr simd_mask<E, A> DPL_VECTORCALL
+    static constexpr basic_simd_mask<E, A> DPL_VECTORCALL
         fallback(basic_simd<E, A> arg) noexcept {
         using uint = to_unsigned_integral_t<E>;
         constexpr auto inf_bits =

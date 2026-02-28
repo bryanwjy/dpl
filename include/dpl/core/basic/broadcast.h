@@ -32,7 +32,7 @@ struct broadcast_t<A> {
     template <simd_element E>
     using simd DPL_NODEBUG = basic_simd<E, A>;
 
-    using mask DPL_NODEBUG = simd_mask<float, A>;
+    using mask DPL_NODEBUG = basic_simd_mask<float, A>;
 
 public:
     template <simd_element E>
@@ -76,7 +76,7 @@ public:
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr simd_mask<E, A> operator()(
+    static constexpr basic_simd_mask<E, A> operator()(
         same_as<bool> auto scalar) noexcept
     requires requires { broadcast<E>(internal::abi<A>, scalar); }
     {

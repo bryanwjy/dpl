@@ -26,7 +26,7 @@ struct basic_type<T> {
 DPL_EXPORT template <simd_mask_type T>
 struct basic_type<T> {
     using type DPL_NODEBUG =
-        simd_mask<basic_element_t<typename T::simd_type::value_type>,
+        basic_simd_mask<basic_element_t<typename T::simd_type::value_type>,
             typename T::abi_type>;
 };
 } // namespace datapar

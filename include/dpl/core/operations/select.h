@@ -93,7 +93,7 @@ struct select_t {
 private:
     template <simd_element M, simd_element ET, simd_element EF, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto DPL_VECTORCALL fallback(simd_mask<M, A> mask,
+    static constexpr auto DPL_VECTORCALL fallback(basic_simd_mask<M, A> mask,
         basic_simd<ET, A> tval, basic_simd<EF, A> fval) noexcept {
         using ER = ternary_type_t<ET, EF>;
         return internal::transform<basic_simd<ER, A>>(
@@ -104,10 +104,10 @@ private:
 
     template <simd_element M, simd_element ET, simd_element EF, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto DPL_VECTORCALL fallback(simd_mask<M, A> mask,
-        simd_mask<ET, A> tval, simd_mask<EF, A> fval) noexcept {
+    static constexpr auto DPL_VECTORCALL fallback(basic_simd_mask<M, A> mask,
+        basic_simd_mask<ET, A> tval, basic_simd_mask<EF, A> fval) noexcept {
         using ER = common_size_type_t<M, ET, EF>;
-        return internal::transform<simd_mask<ER, A>>(
+        return internal::transform<basic_simd_mask<ER, A>>(
             mask, tval, fval, [](bool cond, bool tval, bool fval) -> bool {
                 return cond ? tval : fval;
             });
@@ -127,11 +127,11 @@ private:
 
     template <auto V, simd_element ET, simd_element EF, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallbacki(simd_mask<ET, A> tval, simd_mask<EF, A> fval) noexcept {
+    static constexpr auto DPL_VECTORCALL fallbacki(
+        basic_simd_mask<ET, A> tval, basic_simd_mask<EF, A> fval) noexcept {
         static constexpr immediate_mask<element_count<ET, A>, V> mask{};
         using ER = common_size_type_t<ET, EF>;
-        return internal::itransform<simd_mask<ER, A>>(
+        return internal::itransform<basic_simd_mask<ER, A>>(
             tval, fval, [](size_t idx, ET tval, EF fval) -> ER {
                 return mask[idx] ? tval : fval;
             });
@@ -139,7 +139,7 @@ private:
 
     template <typename M, typename T, typename F>
     using mask_result DPL_NODEBUG =
-        simd_mask<common_size_type_t<T, F>, common_abi_t<M, T, F>>;
+        basic_simd_mask<common_size_type_t<T, F>, common_abi_t<M, T, F>>;
 
     template <typename M, typename T, typename F>
     using result DPL_NODEBUG =

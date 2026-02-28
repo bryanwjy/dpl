@@ -36,7 +36,7 @@ concept simd_with = simd_element<E> && simd_abi<A> && simd_type<T> &&
 
 DPL_EXPORT template <typename T, typename E, typename A = typename T::abi_type>
 concept mask_with = simd_element<E> && simd_abi<A> && simd_mask_type<T> &&
-    equivalent_mask_as<T, simd_mask<E, A>>;
+    equivalent_mask_as<T, basic_simd_mask<E, A>>;
 
 } // namespace datapar
 

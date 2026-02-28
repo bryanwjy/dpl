@@ -28,7 +28,7 @@ private:
     template <basic_simd_element E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr bool DPL_VECTORCALL
-        fallback(simd_mask<E, A> mask) noexcept {
+        fallback(basic_simd_mask<E, A> mask) noexcept {
         return []<size_t... Is>(auto mask, index_sequence<Is...>) {
             return (... && mask[Is]);
         }(mask, iota_sequence<E, A>);
@@ -76,7 +76,7 @@ private:
     template <basic_simd_element E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr bool DPL_VECTORCALL
-        fallback(simd_mask<E, A> mask) noexcept {
+        fallback(basic_simd_mask<E, A> mask) noexcept {
         return []<size_t... Is>(auto mask, index_sequence<Is...>) {
             return (... || mask[Is]);
         }(mask, iota_sequence<E, A>);
@@ -124,7 +124,7 @@ private:
     template <basic_simd_element E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr bool DPL_VECTORCALL
-        fallback(simd_mask<E, A> mask) noexcept {
+        fallback(basic_simd_mask<E, A> mask) noexcept {
         return !any_of_t::operator()(mask);
     }
 
@@ -170,7 +170,7 @@ private:
     template <basic_simd_element E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr bool DPL_VECTORCALL
-        fallback(simd_mask<E, A> mask) noexcept {
+        fallback(basic_simd_mask<E, A> mask) noexcept {
         return any_of_t::operator()(mask) && !all_of_t::operator()(mask);
     }
 

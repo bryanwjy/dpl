@@ -45,7 +45,7 @@ struct cload_t<T> {
                 return dx::reinterpret<T>(val);
             }
         } else {
-            using mask_type = simd_mask<value_type, typename T::abi_type>;
+            using mask_type = basic_simd_mask<value_type, typename T::abi_type>;
             auto const mask = dx::broadcast<mask_type>(src != nullptr);
             auto const loaded = operator()(src);
             return dx::select(mask, loaded, val);

@@ -34,7 +34,7 @@ struct to_simd_mask_type<T> {
 DPL_EXPORT template <simd_class T>
 struct to_simd_mask_type<T> {
     using type DPL_NODEBUG =
-        simd_mask<simd_element_type_t<T>, typename T::abi_type>;
+        basic_simd_mask<simd_element_type_t<T>, typename T::abi_type>;
 };
 
 } // namespace datapar

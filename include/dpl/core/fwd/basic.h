@@ -13,6 +13,6 @@ namespace datapar {
 DPL_EXPORT template <typename E, typename A>
 class basic_simd;
 DPL_EXPORT template <typename E, typename A>
-class simd_mask;
+class basic_simd_mask;
 } // namespace datapar
 DPL_DEFAULT_NAMESPACE_END

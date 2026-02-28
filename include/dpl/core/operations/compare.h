@@ -36,7 +36,7 @@ private:
     static constexpr auto fallback(
         basic_simd<L, A> lhs, basic_simd<R, A> rhs) noexcept {
         using T = common_order_type_t<L, R>;
-        return internal::transform<simd_mask<T, A>>(
+        return internal::transform<basic_simd_mask<T, A>>(
             lhs, rhs, [](auto lhs, auto rhs) -> bool { return lhs == rhs; });
     }
 
@@ -89,7 +89,7 @@ private:
     static constexpr auto fallback(
         basic_simd<L, A> lhs, basic_simd<R, A> rhs) noexcept {
         using T = common_order_type_t<L, R>;
-        return internal::transform<simd_mask<T, A>>(
+        return internal::transform<basic_simd_mask<T, A>>(
             lhs, rhs, [](auto lhs, auto rhs) -> bool { return lhs != rhs; });
     }
 
@@ -142,7 +142,7 @@ private:
     static constexpr auto fallback(
         basic_simd<L, A> lhs, basic_simd<R, A> rhs) noexcept {
         using T = common_order_type_t<L, R>;
-        return internal::transform<simd_mask<T, A>>(
+        return internal::transform<basic_simd_mask<T, A>>(
             lhs, rhs, [](auto lhs, auto rhs) -> bool { return lhs < rhs; });
     }
 
@@ -195,7 +195,7 @@ private:
     static constexpr auto fallback(
         basic_simd<L, A> lhs, basic_simd<R, A> rhs) noexcept {
         using T = common_order_type_t<L, R>;
-        return internal::transform<simd_mask<T, A>>(
+        return internal::transform<basic_simd_mask<T, A>>(
             lhs, rhs, [](auto lhs, auto rhs) -> bool { return lhs <= rhs; });
     }
 

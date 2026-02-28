@@ -3,20 +3,12 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/basic/initialize.h"
 #include "dpl/core/basic/to_basic_type.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/simd_equivalence.h"
-#  include "dpl/core/type_traits/iota_sequence.h"
-#  include "dpl/core/type_traits/to_integral.h"
 #  include "dpl/core/type_traits/to_simd_mask_type.h"
-#  include "dpl/std/bit/bit_cast.h"
-#  include "dpl/std/concepts/enumeration.h"
-#  include "dpl/std/utility/sequence.h"
-#  include "dpl/std/utility/to_signed.h"
-#  include "dpl/std/utility/to_underlying.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -44,8 +36,8 @@ public:
 
     template <simd_type T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr equivalent_mask_as<to_simd_mask_type_t<T>> auto operator()(
-        T src) noexcept {
+    static constexpr auto operator()(T src) noexcept
+        -> equivalent_mask_as<to_simd_mask_type_t<T>> auto {
         if constexpr (requires { to_simd_mask(internal::abi<T>, src); }) {
             return to_simd_mask(internal::abi<T>, src);
         } else {
@@ -70,8 +62,8 @@ public:
 
     template <simd_type T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr equivalent_mask_as<to_simd_mask_type_t<T>> auto operator()(
-        assume_cannonical_mask_t tag, T src) noexcept {
+    static constexpr auto operator()(assume_cannonical_mask_t tag,
+        T src) noexcept -> equivalent_mask_as<to_simd_mask_type_t<T>> auto {
         if constexpr (requires { to_simd_mask(internal::abi<T>, tag, src); }) {
             return to_simd_mask(internal::abi<T>, tag, src);
         } else {

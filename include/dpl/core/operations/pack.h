@@ -27,17 +27,17 @@ private:
     template <simd_element E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr bit_type_t<element_count<E, A>> DPL_VECTORCALL
-        fallback(simd_mask<E, A> arg) noexcept {
+        fallback(basic_simd_mask<E, A> arg) noexcept {
         if constexpr (convertible_to<decltype(+arg),
                           bit_type_t<element_count<E, A>>>) {
             return +arg;
         } else {
-            return
-                []<size_t... Is>(simd_mask<E, A> arg, index_sequence<Is...>) {
-                    using bit = bit_type_t<element_count<E, A>>;
-                    return static_cast<bit>((... |
-                        (static_cast<bit>(dx::extract(arg, imm<Is>)) << Is)));
-                }(arg, iota_sequence<E, A>);
+            return []<size_t... Is>(
+                       basic_simd_mask<E, A> arg, index_sequence<Is...>) {
+                using bit = bit_type_t<element_count<E, A>>;
+                return static_cast<bit>((
+                    ... | (static_cast<bit>(dx::extract(arg, imm<Is>)) << Is)));
+            }(arg, iota_sequence<E, A>);
         }
     }
 

@@ -18,7 +18,7 @@ namespace datapar {
 DPL_EXPORT template <typename T>
 inline constexpr bool enable_simd_mask = false;
 DPL_EXPORT template <simd_element T, simd_abi Abi>
-inline constexpr bool enable_simd_mask<simd_mask<T, Abi>> = true;
+inline constexpr bool enable_simd_mask<basic_simd_mask<T, Abi>> = true;
 
 DPL_EXPORT template <typename M>
 concept simd_mask_type = enable_simd_mask<M> && requires(M const mask) {

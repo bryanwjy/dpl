@@ -1,3 +1,5 @@
 CompileFlags:
   Add:
     - "-std=c++23"
+    - "-mfma"
+    - "-msse4.2"

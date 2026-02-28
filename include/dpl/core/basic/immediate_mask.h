@@ -66,7 +66,7 @@ struct basic_immediate_mask {
     template <simd_element E, simd_abi A>
     requires (element_count<E, A> == W)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    constexpr operator simd_mask<E, A>() const noexcept {
+    constexpr operator basic_simd_mask<E, A>() const noexcept {
         return []<size_t... Is>(index_sequence<Is...>) {
             return basic_simd<E, A>(operator[](Is)...);
         }(iota_sequence<E, A>);

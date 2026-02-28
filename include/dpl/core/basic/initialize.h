@@ -47,7 +47,7 @@ public:
     template <same_as<bool>... Bs>
     requires array_initializable<barray_type, Bs...>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr simd_mask<E, A> operator()(Bs... args) noexcept
+    static constexpr basic_simd_mask<E, A> operator()(Bs... args) noexcept
     requires requires { initialize<E>(internal::abi<A>, barray_type{}); }
     {
         return initialize<E>(internal::abi<A>, __DPL forward<Bs>(args)...);
@@ -97,7 +97,7 @@ private:
     template <same_as<bool>... Bs>
     requires (has_single_bit(sizeof...(Bs)) && A::size >= sizeof...(Bs))
     using deduced_mask DPL_NODEBUG =
-        simd_mask<bit_type_t<(A::size / sizeof...(Bs)) * char_bit_v>, A>;
+        basic_simd_mask<bit_type_t<(A::size / sizeof...(Bs)) * char_bit_v>, A>;
 
 public:
     template <simd_element... Args>

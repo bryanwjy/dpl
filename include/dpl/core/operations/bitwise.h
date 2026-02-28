@@ -109,10 +109,10 @@ private:
 
     template <simd_element L, common_size_with<L> R, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallback(simd_mask<L, A> left, simd_mask<R, A> right) noexcept {
+    static constexpr auto DPL_VECTORCALL fallback(
+        basic_simd_mask<L, A> left, basic_simd_mask<R, A> right) noexcept {
         using T = common_bits_type_t<L, R>;
-        return internal::transform<simd_mask<T, A>>(
+        return internal::transform<basic_simd_mask<T, A>>(
             left, right, [](bool lhs, bool rhs) { return lhs || rhs; });
     }
 
@@ -216,10 +216,10 @@ private:
 
     template <simd_element L, common_size_with<L> R, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallback(simd_mask<L, A> left, simd_mask<R, A> right) noexcept {
+    static constexpr auto DPL_VECTORCALL fallback(
+        basic_simd_mask<L, A> left, basic_simd_mask<R, A> right) noexcept {
         using T = common_bits_type_t<L, R>;
-        return internal::transform<simd_mask<T, A>>(
+        return internal::transform<basic_simd_mask<T, A>>(
             left, right, [](bool lhs, bool rhs) { return lhs && rhs; });
     }
 
@@ -323,10 +323,10 @@ private:
 
     template <simd_element L, common_size_with<L> R, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallback(simd_mask<L, A> left, simd_mask<R, A> right) noexcept {
+    static constexpr auto DPL_VECTORCALL fallback(
+        basic_simd_mask<L, A> left, basic_simd_mask<R, A> right) noexcept {
         using T = common_bits_type_t<L, R>;
-        return internal::transform<simd_mask<T, A>>(
+        return internal::transform<basic_simd_mask<T, A>>(
             left, right, [](bool lhs, bool rhs) { return lhs != rhs; });
     }
 
@@ -430,10 +430,10 @@ private:
 
     template <simd_element L, common_size_with<L> R, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallback(simd_mask<L, A> left, simd_mask<R, A> right) noexcept {
+    static constexpr auto DPL_VECTORCALL fallback(
+        basic_simd_mask<L, A> left, basic_simd_mask<R, A> right) noexcept {
         using T = common_bits_type_t<L, R>;
-        return internal::transform<simd_mask<T, A>>(
+        return internal::transform<basic_simd_mask<T, A>>(
             left, right, [](bool lhs, bool rhs) { return lhs && !rhs; });
     }
 
@@ -537,10 +537,10 @@ private:
 
     template <simd_element L, common_size_with<L> R, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallback(simd_mask<L, A> left, simd_mask<R, A> right) noexcept {
+    static constexpr auto DPL_VECTORCALL fallback(
+        basic_simd_mask<L, A> left, basic_simd_mask<R, A> right) noexcept {
         using T = common_bits_type_t<L, R>;
-        return internal::transform<simd_mask<T, A>>(
+        return internal::transform<basic_simd_mask<T, A>>(
             left, right, [](bool lhs, bool rhs) { return lhs || !rhs; });
     }
 
@@ -639,15 +639,16 @@ private:
     template <simd_element E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
-        fallback(simd_mask<E, A> arg) noexcept {
-        if constexpr (is_invocable_v<bwandnot_t, simd_mask<E, A>>) {
-            constexpr auto all = dx::broadcast<simd_mask<E, A>>(true);
+        fallback(basic_simd_mask<E, A> arg) noexcept {
+        if constexpr (is_invocable_v<bwandnot_t, basic_simd_mask<E, A>>) {
+            constexpr auto all = dx::broadcast<basic_simd_mask<E, A>>(true);
             return bwandnot_t::operator()(dx::reinterpret<E>(arg), all);
         } else {
             using bit_type = bit_type_t<sizeof(E) * char_bit_v>;
-            return internal::transform<simd_mask<E, A>>(arg, [](auto arg) {
-                return __DPL bit_cast<E>(~__DPL bit_cast<bit_type>(arg));
-            });
+            return internal::transform<basic_simd_mask<E, A>>(
+                arg, [](auto arg) {
+                    return __DPL bit_cast<E>(~__DPL bit_cast<bit_type>(arg));
+                });
         }
     }
 
@@ -733,9 +734,10 @@ private:
 
     template <simd_element L, simd_abi A, integral_constant_like R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto fallback(simd_mask<L, A> arg, R shift) noexcept {
+    static constexpr auto fallback(
+        basic_simd_mask<L, A> arg, R shift) noexcept {
         using bit_type = bit_type_t<sizeof(L) * char_bit_v>;
-        using mask_type = simd_mask<L, A>;
+        using mask_type = basic_simd_mask<L, A>;
         return []<size_t... Is>(mask_type arg, index_sequence<Is...>) {
             return dx::initialize<mask_type>(
                 (Is >= R::value ? arg[Is - R::value] : false)...);
@@ -744,9 +746,10 @@ private:
 
     template <simd_element L, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto fallback(simd_mask<L, A> arg, int shift) noexcept {
+    static constexpr auto fallback(
+        basic_simd_mask<L, A> arg, int shift) noexcept {
         using bit_type = bit_type_t<sizeof(L) * char_bit_v>;
-        using mask_type = simd_mask<L, A>;
+        using mask_type = basic_simd_mask<L, A>;
         return []<size_t... Is>(
                    mask_type arg, unsigned shift, index_sequence<Is...>) {
             return dx::initialize<mask_type>(
@@ -892,9 +895,9 @@ private:
     template <simd_element L, simd_abi A, integral_constant_like R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
-        fallback(simd_mask<L, A> arg, R shift) noexcept {
+        fallback(basic_simd_mask<L, A> arg, R shift) noexcept {
         using bit_type = bit_type_t<sizeof(L) * char_bit_v>;
-        using mask_type = simd_mask<L, A>;
+        using mask_type = basic_simd_mask<L, A>;
         return []<size_t... Is>(mask_type arg, index_sequence<Is...>) {
             return dx::initialize<mask_type>(
                 (Is + R::value < element_count<L, A> ? arg[Is + R::value]
@@ -905,9 +908,9 @@ private:
     template <simd_element L, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
-        fallback(simd_mask<L, A> arg, int shift) noexcept {
+        fallback(basic_simd_mask<L, A> arg, int shift) noexcept {
         using bit_type = bit_type_t<sizeof(L) * char_bit_v>;
-        using mask_type = simd_mask<L, A>;
+        using mask_type = basic_simd_mask<L, A>;
         return []<size_t... Is>(
                    mask_type arg, unsigned shift, index_sequence<Is...>) {
             return dx::initialize<mask_type>((

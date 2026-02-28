@@ -22,7 +22,7 @@ struct isfinite_t {
 private:
     template <floating_point E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr simd_mask<E, A> DPL_VECTORCALL
+    static constexpr basic_simd_mask<E, A> DPL_VECTORCALL
         fallback(basic_simd<E, A> arg) noexcept {
         return dx::cmpneq(dx::bwand(arg, dx::infinity), dx::infinity);
     }

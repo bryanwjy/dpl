@@ -18,7 +18,7 @@ namespace datapar {
  * Specializable trait to rebind a simd class's element abi type
  *
  * It is undefined behaviour to define specializations (partial or otherwise)
- * to rebind basic classes, i.e. basic_simd, simd_mask.
+ * to rebind basic classes, i.e. basic_simd, basic_simd_mask.
  */
 DPL_EXPORT template <simd_class T, typename U,
     typename A = typename T::abi_type>
@@ -35,7 +35,7 @@ struct rebind_simd<T, E, A> {
 
 DPL_EXPORT template <simd_mask_type T, simd_element E, simd_abi A>
 struct rebind_simd<T, E, A> {
-    using type DPL_NODEBUG = simd_mask<E, A>;
+    using type DPL_NODEBUG = basic_simd_mask<E, A>;
 };
 
 } // namespace datapar
