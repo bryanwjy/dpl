@@ -14,7 +14,7 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 #  error "Unsupported compiler"
 #endif
 
-template <typename To, typename From>
+DPL_EXPORT template <typename To, typename From>
 requires (sizeof(To) == sizeof(From) && is_trivially_copyable_v<To> &&
     is_trivially_copyable_v<From>)
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)

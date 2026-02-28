@@ -134,7 +134,7 @@ constexpr T byteswap(T val) noexcept {
 
 } // namespace details::bit
 
-template <integral T>
+DPL_EXPORT template <integral T>
 requires requires(T val) { __DPL details::bit::byteswap(val); }
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr T byteswap(T val) noexcept {

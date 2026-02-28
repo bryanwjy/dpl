@@ -33,7 +33,7 @@ constexpr T bit_ceil(T val) noexcept {
 
 } // namespace details::bit
 
-template <unsigned_integral T>
+DPL_EXPORT template <unsigned_integral T>
 requires (!same_as<bool, T>)
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 constexpr T bit_ceil(T val) noexcept {

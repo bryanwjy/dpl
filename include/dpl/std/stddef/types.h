@@ -30,17 +30,17 @@ DPL_EXPORT using bfloat16 = decltype(0.0bf16);
 #endif
 
 #if DPL_SUPPORTS_INT128
-using int128 = __int128_t;
-using uint128 = __uint128_t;
+DPL_EXPORT using int128 = __int128_t;
+DPL_EXPORT using uint128 = __uint128_t;
 #endif
 
-using int64 = int64_t;
-using int32 = int32_t;
-using int16 = int16_t;
-using int8 = int8_t;
-using uint64 = uint64_t;
-using uint32 = uint32_t;
-using uint16 = uint16_t;
-using uint8 = uint8_t;
+DPL_EXPORT using int64 = int64_t;
+DPL_EXPORT using int32 = int32_t;
+DPL_EXPORT using int16 = int16_t;
+DPL_EXPORT using int8 = int8_t;
+DPL_EXPORT using uint64 = uint64_t;
+DPL_EXPORT using uint32 = uint32_t;
+DPL_EXPORT using uint16 = uint16_t;
+DPL_EXPORT using uint8 = uint8_t;
 
 DPL_DEFAULT_NAMESPACE_END

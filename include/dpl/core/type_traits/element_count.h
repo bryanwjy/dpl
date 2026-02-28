@@ -11,8 +11,11 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
-template <typename, typename...>
-inline constexpr size_t element_count = 0;
+DPL_EXPORT template <typename T, typename...>
+inline constexpr size_t element_count = []() {
+    static_assert(sizeof(T) == 0);
+    return 0zu;
+}();
 
 DPL_EXPORT template <simd_class T>
 inline constexpr size_t element_count<T> =

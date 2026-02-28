@@ -12,6 +12,6 @@
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
-template <typename T>
+DPL_EXPORT template <typename T>
 concept regular = semiregular<T> && equality_comparable<T>;
 DPL_DEFAULT_NAMESPACE_END

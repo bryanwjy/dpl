@@ -118,7 +118,7 @@ constexpr int popcount(unsigned char x) noexcept {
 #endif
 } // namespace details::bit
 
-template <unsigned_integral T>
+DPL_EXPORT template <unsigned_integral T>
 requires (!same_as<bool, T>)
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr int popcount(T val) noexcept {

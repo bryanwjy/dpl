@@ -4,7 +4,7 @@ module;
 #define DPL_MODULES 1
 #include "dpl/config.h"
 
-export module dpl:core.algorithms;
+export module dpl:core.algorithm;
 export import :core.fwd;
 export import :core.operations;
 import :std.concepts;

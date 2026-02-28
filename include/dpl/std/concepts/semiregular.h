@@ -9,7 +9,7 @@
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 
-template <typename T>
+DPL_EXPORT template <typename T>
 concept semiregular = copyable<T> && default_initializable<T>;
 
 DPL_DEFAULT_NAMESPACE_END

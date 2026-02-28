@@ -22,6 +22,7 @@
 #  include "dpl/std/concepts/enumeration.h"
 #  include "dpl/std/concepts/floating_point.h"
 #  include "dpl/std/concepts/integral.h"
+#  include "dpl/std/concepts/integral_constant_like.h"
 #  include "dpl/std/type_traits/enable_if.h"
 #endif
 

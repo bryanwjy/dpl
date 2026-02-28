@@ -122,14 +122,14 @@ constexpr int clz(T x) noexcept {
 #endif
 } // namespace details::bit
 
-template <unsigned_integral T>
+DPL_EXPORT template <unsigned_integral T>
 requires (!same_as<bool, T>)
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr int countl_zero(T val) noexcept {
     return __DPL_clz(val);
 }
 
-template <unsigned_integral T>
+DPL_EXPORT template <unsigned_integral T>
 requires (!same_as<bool, T>)
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr int countl_one(T val) noexcept {

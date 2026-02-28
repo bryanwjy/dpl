@@ -13,7 +13,7 @@
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 
-template <unsigned_integral T>
+DPL_EXPORT template <unsigned_integral T>
 requires (!same_as<bool, T>)
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr bool has_single_bit(T val) noexcept {

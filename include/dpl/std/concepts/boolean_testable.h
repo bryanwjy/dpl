@@ -42,7 +42,7 @@ concept boolean_testable =
 
 } // namespace details::concepts
 
-template <typename T>
+DPL_EXPORT template <typename T>
 concept boolean_testable =
     details::concepts::boolean_testable<T> && requires(T&& val) {
         { !static_cast<T&&>(val) } -> details::concepts::boolean_testable;

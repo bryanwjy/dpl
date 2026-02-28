@@ -11,7 +11,7 @@
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
-template <typename... Ts>
+DPL_EXPORT template <typename... Ts>
 inline constexpr auto iota_sequence =
     make_index_sequence<element_count<Ts...>>{};
 } // namespace datapar

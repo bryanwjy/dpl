@@ -1,0 +1,83 @@
+// Copyright 2025 Bryan Wong
+
+#pragma once
+
+#include "dpl/config.h"
+
+#if !DPL_ARCH_x86_64 || !DPL_SIMD_X86_SSE4_2
+#  error "Unsupported platform"
+#endif
+
+#include "dpl/xmm/basic/abi.h"
+#include "dpl/xmm/basic/initialize.h"
+
+#if !DPL_MODULES
+#  include "dpl/core/concepts/common_float_with.h"
+#  include "dpl/core/concepts/simd_element.h"
+#  include "dpl/core/type_traits/iota_sequence.h"
+#  include "dpl/std/bit/bit_cast.h"
+#  include "dpl/std/type_traits/is_const.h"
+#  include "dpl/std/type_traits/is_volatile.h"
+#  include "dpl/std/utility/sequence.h"
+
+#  include <immintrin.h>
+#endif
+
+DPL_DEFAULT_NAMESPACE_BEGIN
+
+namespace datapar::xmm {
+template <simd_element E>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
+constexpr simd<E> load(abi_tag tag, E const* data) noexcept {
+    static_assert(!is_const_v<E> && !is_volatile_v<E>);
+    if consteval {
+        return []<size_t... Is>(
+                   index_sequence<Is...>, abi_tag tag, E const* data) {
+            return dx::xmm::initialize(tag, data[Is]...);
+        }(iota_sequence<E, abi_tag>, tag, data);
+    } else {
+        if constexpr (common_float_with<float, E>) {
+            return _mm_loadu_ps(reinterpret_cast<float const*>(data));
+        } else if constexpr (common_float_with<double, E>) {
+            return _mm_loadu_pd(reinterpret_cast<double const*>(data));
+        } else if constexpr (brain_float<E>) {
+            return __DPL bit_cast<native_vector_t<E>>(
+                _mm_loadu_si128(reinterpret_cast<__m128i const*>(data)));
+        } else if constexpr (floating_point<E> && sizeof(E) == 2) {
+            return _mm_castsi128_ph(
+                _mm_loadu_si128(reinterpret_cast<__m128i const*>(data)));
+        } else {
+            return _mm_loadu_si128(reinterpret_cast<__m128i const*>(data));
+        }
+    }
+}
+
+template <simd_element E>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
+constexpr simd<E> aligned_load(abi_tag tag, E const* data) noexcept {
+    static_assert(!is_const_v<E> && !is_volatile_v<E>);
+    if consteval {
+        return []<size_t... Is>(
+                   index_sequence<Is...>, abi_tag tag, E const* data) {
+            return dx::xmm::initialize(tag, data[Is]...);
+        }(iota_sequence<E, abi_tag>, tag, data);
+    } else {
+        if constexpr (common_float_with<float, E>) {
+            return _mm_load_ps(reinterpret_cast<float const*>(data));
+        } else if constexpr (common_float_with<double, E>) {
+            return _mm_load_pd(reinterpret_cast<double const*>(data));
+        } else if constexpr (brain_float<E>) {
+            return __DPL bit_cast<native_vector_t<E>>(
+                _mm_load_si128(reinterpret_cast<__m128i const*>(data)));
+        } else if constexpr (floating_point<E> && sizeof(E) == 2) {
+            return _mm_castsi128_ph(
+                _mm_load_si128(reinterpret_cast<__m128i const*>(data)));
+        } else {
+            return _mm_load_si128(reinterpret_cast<__m128i const*>(data));
+        }
+    }
+}
+
+} // namespace datapar::xmm
+
+DPL_DEFAULT_NAMESPACE_END

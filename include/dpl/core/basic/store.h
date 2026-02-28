@@ -4,8 +4,7 @@
 #include "dpl/config.h"
 
 #include "dpl/core/basic/aligned.h"
-#include "dpl/core/basic/extract.h"
-#include "dpl/core/basic/immediate.h"
+#include "dpl/core/basic/to_basic_type.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/fwd.h"
@@ -13,7 +12,6 @@
 #  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/type_traits/array_for.h"
 #  include "dpl/core/type_traits/basic_type.h"
-#  include "dpl/core/type_traits/iota_sequence.h"
 #  include "dpl/std/concepts/invocable.h"
 #endif
 
@@ -47,13 +45,7 @@ struct store_t {
         T src, typename T::value_type* dst) noexcept
     requires requires { store(internal::abi<T>, src, dst); }
     {
-        if consteval {
-            [&]<size_t... I>(index_sequence<I...>) {
-                (..., (dst[I] = dx::extract(src, imm<I>)));
-            }(iota_sequence<T>);
-        } else {
-            store(internal::abi<T>, src, dst);
-        }
+        store(internal::abi<T>, src, dst);
     }
 
     template <basic_simd_type T>
