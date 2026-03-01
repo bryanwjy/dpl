@@ -7,7 +7,7 @@
 #  include "dpl/core/basic/broadcastable_base.h"
 #  include "dpl/core/constants/epsilon.h"
 #  include "dpl/core/constants/mantissa_bits.h"
-#  include "dpl/core/type_traits/to_integral.h"
+#  include "dpl/core/type_traits/representation.h"
 #  include "dpl/std/bit/bit_cast.h"
 #  include "dpl/std/concepts/floating_point.h"
 #endif
@@ -34,7 +34,7 @@ struct maxint_t : broadcastable_base {
     template <floating_point T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     constexpr operator T(this maxint_t) noexcept {
-        using uint = dx::to_unsigned_integral_t<T>;
+        using uint = dx::unsigned_representation_t<T>;
         return static_cast<T>( __DPL bit_cast<uint>(mantissa_bits_v<T>) + 1);
     }
 };
@@ -59,7 +59,7 @@ struct underhalf_t : broadcastable_base {
     template <floating_point T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     constexpr operator T(this underhalf_t) noexcept {
-        using uint = dx::to_unsigned_integral_t<T>;
+        using uint = dx::unsigned_representation_t<T>;
         constexpr auto half_rep = __DPL bit_cast<uint>(static_cast<T>(half));
         return __DPL bit_cast<T>(half_rep - 1);
     }

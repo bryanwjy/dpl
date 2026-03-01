@@ -9,7 +9,7 @@
 #if !DPL_MODULES
 #  include "dpl/core/basic/broadcastable_base.h"
 #  include "dpl/core/concepts/common_bits_with.h"
-#  include "dpl/core/type_traits/to_integral.h"
+#  include "dpl/core/type_traits/representation.h"
 #  include "dpl/std/bit/bit_cast.h"
 #  include "dpl/std/concepts/convertible_to.h"
 #  include "dpl/std/concepts/floating_point.h"
@@ -25,8 +25,9 @@ struct nexponent_mask_t : broadcastable_base {
         default;
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    constexpr operator to_signed_integral_t<T>(this nexponent_mask_t) noexcept {
-        using sbit = to_signed_integral_t<T>;
+    constexpr operator signed_representation_t<T>(
+        this nexponent_mask_t) noexcept {
+        using sbit = signed_representation_t<T>;
         return ~__DPL bit_cast<sbit>(exponent_bits_v<T>);
     }
 };
@@ -36,15 +37,16 @@ struct exponent_mask_t : broadcastable_base {
     __DPL_HIDE_FROM_ABI explicit constexpr exponent_mask_t() noexcept = default;
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    constexpr operator to_signed_integral_t<T>(this exponent_mask_t) noexcept {
-        using sbit = to_signed_integral_t<T>;
+    constexpr operator signed_representation_t<T>(
+        this exponent_mask_t) noexcept {
+        using sbit = signed_representation_t<T>;
         return __DPL bit_cast<sbit>(exponent_bits_v<T>);
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    constexpr to_signed_integral_t<T> operator>>(
+    constexpr signed_representation_t<T> operator>>(
         this exponent_mask_t, digits_t<T>) noexcept {
-        using sbit = to_signed_integral_t<T>;
+        using sbit = signed_representation_t<T>;
         return __DPL bit_cast<sbit>(exponent_bits_v<T>) >> mantissa_width_v<T>;
     }
 

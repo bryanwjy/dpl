@@ -140,13 +140,15 @@ inline arithmetic_result<E> mul(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
     }
 }
 
-DPL_EXPORT template <common_float_with<float> E>
+DPL_EXPORT template <arithmetic_type E>
+requires common_float_with<E, float>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<E> mul(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
     return _mm_mul_ps(+lhs, +rhs);
 }
 
-DPL_EXPORT template <common_float_with<double> E>
+DPL_EXPORT template <arithmetic_type E>
+requires common_float_with<E, double>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<E> mul(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
     return _mm_mul_pd(+lhs, +rhs);
@@ -207,7 +209,7 @@ inline simd<E> add(abi_tag tag, simd<E> lhs, simd<E> rhs) noexcept {
 #if DPL_SIMD_X86_AVX512BF16 & DPL_SIMD_X86_AVX512VL
     return _mm_cvtne2ps_pbh(hi, lo);
 #else
-    using sbit = to_signed_integral_t<E>;
+    using sbit = signed_representation_t<E>;
     auto const packed =
         _mm_packus_epi32(__DPL bit_cast<__m128i>(+xmm::cast<E>(tag, lo)),
             __DPL bit_cast<__m128i>(+xmm::cast<E>(tag, hi)));
@@ -229,7 +231,7 @@ inline simd<E> sub(abi_tag tag, simd<E> lhs, simd<E> rhs) noexcept {
 #if DPL_SIMD_X86_AVX512BF16 & DPL_SIMD_X86_AVX512VL
     return _mm_cvtne2ps_pbh(hi, lo);
 #else
-    using sbit = to_signed_integral_t<E>;
+    using sbit = signed_representation_t<E>;
     auto const packed =
         _mm_packus_epi32(__DPL bit_cast<__m128i>(+xmm::cast<E>(tag, lo)),
             __DPL bit_cast<__m128i>(+xmm::cast<E>(tag, hi)));
@@ -251,7 +253,7 @@ inline simd<E> mul(abi_tag tag, simd<E> lhs, simd<E> rhs) noexcept {
 #if DPL_SIMD_X86_AVX512BF16 & DPL_SIMD_X86_AVX512VL
     return _mm_cvtne2ps_pbh(hi, lo);
 #else
-    using sbit = to_signed_integral_t<E>;
+    using sbit = signed_representation_t<E>;
     auto const packed =
         _mm_packus_epi32(__DPL bit_cast<__m128i>(+xmm::cast<E>(tag, lo)),
             __DPL bit_cast<__m128i>(+xmm::cast<E>(tag, hi)));
@@ -273,7 +275,7 @@ inline simd<E> div(abi_tag tag, simd<E> lhs, simd<E> rhs) noexcept {
 #if DPL_SIMD_X86_AVX512BF16 & DPL_SIMD_X86_AVX512VL
     return _mm_cvtne2ps_pbh(hi, lo);
 #else
-    using sbit = to_signed_integral_t<E>;
+    using sbit = signed_representation_t<E>;
     auto const packed =
         _mm_packus_epi32(__DPL bit_cast<__m128i>(+xmm::cast<E>(tag, lo)),
             __DPL bit_cast<__m128i>(+xmm::cast<E>(tag, hi)));

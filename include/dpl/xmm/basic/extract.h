@@ -14,7 +14,7 @@
 #  include "dpl/core/concepts/common_float_with.h" // IWYU pragma: keep
 #  include "dpl/core/concepts/common_order_with.h" // IWYU pragma: keep
 #  include "dpl/core/concepts/simd_element.h"
-#  include "dpl/core/type_traits/to_integral.h"
+#  include "dpl/core/type_traits/representation.h"
 #  include "dpl/std/bit/bit_cast.h"
 #  include "dpl/std/concepts/integral_constant_like.h"
 #  include "dpl/std/type_traits/conditional.h"     // IWYU pragma: keep
@@ -125,7 +125,7 @@ constexpr bool is_true(unsigned_integral auto val) noexcept {
 
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, FLATTEN, NODISCARD)
 constexpr bool is_true(floating_point auto val) noexcept {
-    using int_type = to_signed_integral_t<decltype(val)>;
+    using int_type = signed_representation_t<decltype(val)>;
     return dx::xmm::is_true(__DPL bit_cast<int_type>(val));
 }
 

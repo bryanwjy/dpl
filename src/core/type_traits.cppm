@@ -25,8 +25,8 @@ import :core.concepts;
 #include "dpl/core/type_traits/element_count.h"
 #include "dpl/core/type_traits/iota_sequence.h"
 #include "dpl/core/type_traits/rebind_simd.h"
+#include "dpl/core/type_traits/representation.h"
 #include "dpl/core/type_traits/simd_element_type.h"
-#include "dpl/core/type_traits/to_integral.h"
 #include "dpl/core/type_traits/to_simd_mask_type.h"
 #include "dpl/core/type_traits/to_simd_type.h"
 // IWYU pragma: end_exports

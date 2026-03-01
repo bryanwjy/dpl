@@ -33,7 +33,7 @@ constexpr mask<E> DPL_VECTORCALL
     to_simd_mask(abi_tag tag, simd<E> src) noexcept {
     if consteval {
         []<size_t... Is>(abi_tag tag, simd<E> src, index_sequence<Is...>) {
-            using bit = to_signed_integral_t<E>;
+            using bit = signed_representation_t<E>;
             return xmm::initialize<E>(tag,
                 (__DPL bit_cast<bit>(xmm::extract(tag, src, imm<Is>)) !=
                     0)...);
@@ -47,7 +47,7 @@ constexpr mask<E> DPL_VECTORCALL
             } else if constexpr (floating_point<E> && sizeof(E) == 2) {
                 auto const vsrc = __DPL bit_cast<__m128i>(+src);
                 auto const abs = _mm_and_si128(vsrc, _mm_set1_epi16(0x7fff));
-                using sbit = to_signed_integral_t<E>;
+                using sbit = signed_representation_t<E>;
                 auto const mask = _mm_xor_si128(
                     _mm_cmpeq_epi16(zero, +src), _mm_set1_epi16(-1));
                 return +xmm::reinterpret<E>(tag, simd<sbit>(mask));

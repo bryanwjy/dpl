@@ -26,8 +26,8 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr basic_simd_mask<E, A> DPL_VECTORCALL
         fallback(basic_simd<E, A> val) noexcept {
-        using uint = to_unsigned_integral_t<E>;
-        using sint = to_signed_integral_t<E>;
+        using uint = unsigned_rep_t<E>;
+        using sint = signed_rep_t<E>;
         constexpr auto shift = sizeof(E) * char_bit_v - dx::mantissa_width_v<E>;
         return dx::cmpgt(
             dx::bwshift_left(dx::reinterpret<sint>(val), imm<shift>), dx::zero);

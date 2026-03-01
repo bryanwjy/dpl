@@ -67,7 +67,7 @@ inline simd<negated_type<E>> abs(abi_tag tag, simd<E> val) noexcept {
     } else if constexpr (common_float_with<E, double>) {
         return _mm_andnot_pd(_mm_set1_pd(-0.0), +val);
     } else if constexpr (brain_float<E>) {
-        using sbit = to_signed_integral_t<E>;
+        using sbit = signed_representation_t<E>;
         auto const vval = +xmm::reinterpret<sbit>(tag, val);
         simd<sbit> const result =
             _mm_and_si128(vval, _mm_set1_epi16(dx::value_bits));
@@ -77,7 +77,7 @@ inline simd<negated_type<E>> abs(abi_tag tag, simd<E> val) noexcept {
 #if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
         return _mm_abs_ph(+val);
 #else
-        using sbit = to_signed_integral_t<E>;
+        using sbit = signed_representation_t<E>;
         auto const vval = +xmm::reinterpret<sbit>(tag, val);
         simd<sbit> const result =
             _mm_and_si128(vval, _mm_set1_epi16(dx::value_bits));

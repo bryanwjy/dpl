@@ -27,7 +27,7 @@
 #  include "dpl/core/type_traits/basic_type.h"
 #  include "dpl/core/type_traits/iota_sequence.h"
 #  include "dpl/core/type_traits/rebind_simd.h"
-#  include "dpl/core/type_traits/to_integral.h"
+#  include "dpl/core/type_traits/representation.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -85,9 +85,9 @@ private:
 #ifndef DPL_DISABLE_IEC559_FALLBACK
     template <floating_point E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_simd<to_signed_integral_t<E>, A> DPL_VECTORCALL
+    static constexpr basic_simd<signed_rep_t<E>, A> DPL_VECTORCALL
         ilogb(basic_simd<E, A> arg) noexcept {
-        using int_type = to_signed_integral_t<E>;
+        using int_type = signed_rep_t<E>;
         auto const biased =
             (arg & exponent_bits) >> imm<dx::mantissa_width_v<E>>;
         return biased - static_cast<int_type>(dx::exponent_bias_v<E>);

@@ -18,45 +18,57 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
 DPL_EXPORT template <typename T>
-struct to_signed_integral {};
+struct signed_representation {};
+
 DPL_EXPORT template <typename T>
-using to_signed_integral_t = typename to_signed_integral<T>::type;
+using signed_representation_t = typename signed_representation<T>::type;
 
 DPL_EXPORT template <simd_element T>
 requires integral<T>
-struct to_signed_integral<T> {
-    using type DPL_NODEBUG = T;
+struct signed_representation<T> {
+    using type DPL_NODEBUG = make_signed_t<T>;
 };
 DPL_EXPORT template <simd_element T>
 requires enumeration<T>
-struct to_signed_integral<T> {
-    using type DPL_NODEBUG = underlying_type_t<T>;
+struct signed_representation<T> {
+    using type DPL_NODEBUG = make_signed_t<underlying_type_t<T>>;
 };
 DPL_EXPORT template <simd_element T>
-struct to_signed_integral<T> {
+struct signed_representation<T> {
     using type DPL_NODEBUG = make_signed_t<bit_type_t<sizeof(T) * char_bit_v>>;
 };
 
 DPL_EXPORT template <typename T>
-struct to_unsigned_integral {};
+struct unsigned_representation {};
 DPL_EXPORT template <typename T>
-using to_unsigned_integral_t = typename to_unsigned_integral<T>::type;
+using unsigned_representation_t = typename unsigned_representation<T>::type;
 
 DPL_EXPORT template <simd_element T>
 requires integral<T>
-struct to_unsigned_integral<T> {
-    using type DPL_NODEBUG = T;
+struct unsigned_representation<T> {
+    using type DPL_NODEBUG = make_unsigned_t<T>;
 };
 DPL_EXPORT template <simd_element T>
 requires enumeration<T>
-struct to_unsigned_integral<T> {
-    using type DPL_NODEBUG = underlying_type_t<T>;
+struct unsigned_representation<T> {
+    using type DPL_NODEBUG = make_unsigned_t<underlying_type_t<T>>;
 };
 DPL_EXPORT template <simd_element T>
-struct to_unsigned_integral<T> {
+struct unsigned_representation<T> {
     using type DPL_NODEBUG =
         make_unsigned_t<bit_type_t<sizeof(T) * char_bit_v>>;
 };
+
+namespace internal {
+template <typename T>
+using signed_rep DPL_NODEBUG = signed_representation<T>;
+template <typename T>
+using signed_rep_t DPL_NODEBUG = signed_representation_t<T>;
+template <typename T>
+using unsigned_rep DPL_NODEBUG = unsigned_representation<T>;
+template <typename T>
+using unsigned_rep_t DPL_NODEBUG = unsigned_representation_t<T>;
+} // namespace internal
 
 } // namespace datapar
 

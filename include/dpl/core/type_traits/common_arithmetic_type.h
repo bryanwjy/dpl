@@ -4,8 +4,8 @@
 #include "dpl/config.h"
 
 #include "dpl/core/type_traits/common_float_type.h"
+#include "dpl/core/type_traits/representation.h"
 #include "dpl/core/type_traits/simd_element_type.h"
-#include "dpl/core/type_traits/to_integral.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/common_arithmetic_with.h"
@@ -91,9 +91,9 @@ private:
         } else if constexpr (common_arithmetic_with_common_type<A, B>) {
             return common_type<A, B>{};
         } else if constexpr (signed_integral<A> && signed_integral<B>) {
-            return to_signed_integral<A>{};
+            return signed_representation<A>{};
         } else if constexpr (unsigned_integral<A> && unsigned_integral<B>) {
-            return to_unsigned_integral<A>{};
+            return unsigned_representation<A>{};
         } else {
             static_assert(same_as<basic_element_t<A>, basic_element_t<B>>);
             return basic_element<A>{};

@@ -11,7 +11,7 @@
 #  include "dpl/core/constants/exponent_bias.h"
 #  include "dpl/core/constants/exponent_bits.h"
 #  include "dpl/core/constants/mantissa_width.h"
-#  include "dpl/core/type_traits/to_integral.h"
+#  include "dpl/core/type_traits/representation.h"
 #  include "dpl/std/concepts/floating_point.h"
 #endif
 
@@ -25,7 +25,7 @@ constexpr auto DPL_VECTORCALL
     ilogb(compliance::unsafe_t, basic_simd<T, A> val) noexcept {
     // disregards subnormal/inf/nans
     auto const bexp = (val & dx::exponent_bits) >> imm<dx::mantissa_width_v<T>>;
-    using int_type = dx::to_signed_integral_t<T>;
+    using int_type = dx::signed_representation_t<T>;
     return dx::reinterpret<int_type>(bexp) -
         dx::broadcast<int_type, A>(dx::exponent_bias<T>);
 }

@@ -14,7 +14,7 @@
 #  include "dpl/core/operations/arithmetic.h"
 #  include "dpl/core/operations/bit.h"
 #  include "dpl/core/operations/select.h"
-#  include "dpl/core/type_traits/to_integral.h"
+#  include "dpl/core/type_traits/representation.h"
 #  include "dpl/core/utility/rounding.h"
 #endif
 
@@ -38,8 +38,8 @@ private:
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<E, A> val) noexcept {
         // Based on musl libm
-        using sint = to_signed_integral_t<E>;
-        using uint = to_unsigned_integral_t<E>;
+        using sint = signed_rep_t<E>;
+        using uint = unsigned_rep_t<E>;
         static constexpr auto width =
             dx::broadcast<sint, A>(sizeof(E) * char_bit_v);
         static constexpr auto margin = width - dx::mantissa_width_v<E>;

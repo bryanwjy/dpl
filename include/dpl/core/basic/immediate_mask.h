@@ -193,6 +193,18 @@ DPL_EXPORT template <size_t W, convertible_to<bit_type_t<W>> auto V>
 using immediate_mask DPL_NODEBUG =
     basic_immediate_mask<W, static_cast<bit_type_t<W>>(V)>;
 
+DPL_EXPORT template <typename C, auto>
+struct make_immediate_mask {};
+
+DPL_EXPORT template <typename C, auto V>
+using make_immediate_mask_t DPL_NODEBUG =
+    typename make_immediate_mask<C, V>::type;
+
+DPL_EXPORT template <simd_class C, auto V>
+struct make_immediate_mask<C, V> {
+    using type DPL_NODEBUG = immediate_mask<element_count<C>, V>;
+};
+
 DPL_EXPORT template <typename M, typename T>
 concept immediate_mask_for = simd_class<T> && requires(M mask) {
     typename immediate<M::value>;
@@ -212,31 +224,31 @@ inline constexpr auto immediate_mask_v =
     decltype(datapar::to_immediate_mask<T>(M{}))::value;
 
 DPL_EXPORT template <convertible_to<bit_type_t<1>> auto V>
-using mask1_t DPL_NODEBUG =
+using imm_mask1_t DPL_NODEBUG =
     basic_immediate_mask<1, static_cast<bit_type_t<1>>(V)>;
 DPL_EXPORT template <convertible_to<bit_type_t<2>> auto V>
-using mask2_t DPL_NODEBUG =
+using imm_mask2_t DPL_NODEBUG =
     basic_immediate_mask<2, static_cast<bit_type_t<2>>(V)>;
 DPL_EXPORT template <convertible_to<bit_type_t<4>> auto V>
-using mask4_t DPL_NODEBUG =
+using imm_mask4_t DPL_NODEBUG =
     basic_immediate_mask<4, static_cast<bit_type_t<4>>(V)>;
 DPL_EXPORT template <convertible_to<bit_type_t<8>> auto V>
-using mask8_t DPL_NODEBUG =
+using imm_mask8_t DPL_NODEBUG =
     basic_immediate_mask<8, static_cast<bit_type_t<8>>(V)>;
 DPL_EXPORT template <convertible_to<bit_type_t<16>> auto V>
-using mask16_t DPL_NODEBUG =
+using imm_mask16_t DPL_NODEBUG =
     basic_immediate_mask<16, static_cast<bit_type_t<16>>(V)>;
 
 DPL_EXPORT template <convertible_to<bit_type_t<1>> auto V>
-inline constexpr mask1_t<V> mask1{};
+inline constexpr imm_mask1_t<V> imm_mask1{};
 DPL_EXPORT template <convertible_to<bit_type_t<2>> auto V>
-inline constexpr mask2_t<V> mask2{};
+inline constexpr imm_mask2_t<V> imm_mask2{};
 DPL_EXPORT template <convertible_to<bit_type_t<4>> auto V>
-inline constexpr mask4_t<V> mask4{};
+inline constexpr imm_mask4_t<V> imm_mask4{};
 DPL_EXPORT template <convertible_to<bit_type_t<8>> auto V>
-inline constexpr mask8_t<V> mask8{};
+inline constexpr imm_mask8_t<V> imm_mask8{};
 DPL_EXPORT template <convertible_to<bit_type_t<16>> auto V>
-inline constexpr mask16_t<V> mask16{};
+inline constexpr imm_mask16_t<V> imm_mask16{};
 
 } // namespace datapar
 DPL_DEFAULT_NAMESPACE_END

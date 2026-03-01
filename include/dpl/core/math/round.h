@@ -21,7 +21,7 @@
 #  include "dpl/core/operations/cast.h"
 #  include "dpl/core/operations/compare.h"
 #  include "dpl/core/operations/select.h"
-#  include "dpl/core/type_traits/to_integral.h"
+#  include "dpl/core/type_traits/representation.h"
 #  include "dpl/core/utility/rounding.h"
 #endif
 
@@ -84,7 +84,7 @@ private:
             x += dx::bit_keep(fr > mx::half, dx::one_v<decltype(val)>);
             // there are bit tricks alternatives to casting available but
             // they usually just add more instructions
-            using sint = to_signed_integral_t<E>;
+            using sint = signed_rep_t<E>;
             auto const iseven = (dx::cast<sint>(i) & dx::one) == dx::zero;
             i += dx::bit_drop(iseven, dx::one_v<decltype(val)>);
 

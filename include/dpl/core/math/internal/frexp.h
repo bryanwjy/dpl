@@ -17,7 +17,7 @@
 #  include "dpl/core/operations/cast.h"
 #  include "dpl/core/operations/compare.h"
 #  include "dpl/core/operations/select.h"
-#  include "dpl/core/type_traits/to_integral.h"
+#  include "dpl/core/type_traits/representation.h"
 #  include "dpl/std/concepts/floating_point.h"
 #endif
 
@@ -51,7 +51,7 @@ struct frexp_result {
 template <floating_point E, simd_abi A>
 struct frexp_result<E, A, exp_type::intergral> {
     basic_simd<E, A> fr;
-    basic_simd<dx::to_signed_integral_t<E>, A> exp;
+    basic_simd<dx::signed_representation_t<E>, A> exp;
 };
 
 template <floating_point E>
@@ -141,7 +141,7 @@ constexpr frexp_result<E, A, TE> DPL_VECTORCALL
             };
         }
     } else if constexpr (N == fr_interval::cmath) {
-        using int_type = dx::to_signed_integral_t<E>;
+        using int_type = dx::signed_representation_t<E>;
         constexpr auto exp_bits =
             __DPL bit_cast<int_type>(dx::exponent_bits_v<E>);
         constexpr auto magic =
