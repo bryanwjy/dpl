@@ -40,7 +40,7 @@ DPL_ATTRIBUTES(_HIDE_FROM_ABI, FLATTEN, NODISCARD)
 constexpr Result itransform(Ts... args, Op func) noexcept {
     return []<size_t... Is>(Ts... args, Op func, index_sequence<Is...>) {
         return Result{ __DPL invoke_r<typename Result::value_type>(
-            func, imm<Is>, args[Is]...)...};
+            func, imm<Is>, args[imm<Is>]...)...};
     }(args..., func, iota_sequence<Result>);
 }
 

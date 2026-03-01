@@ -655,8 +655,8 @@ private:
 
 public:
     template <basic_simd_class T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(T val) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T val) noexcept {
         if constexpr (requires { bwnot(internal::abi<T>, val); }) {
             if not consteval {
                 return bwnot(internal::abi<T>, val);
@@ -669,7 +669,7 @@ public:
     }
 
     template <simd_class T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(T val) noexcept
         -> equivalent_class_as<T> auto {
         if constexpr (requires { bwnot(internal::abi<T>, val); }) {

@@ -30,7 +30,8 @@ using arithmetic_result DPL_NODEBUG = simd<common_arithmetic_type_t<E, E>>;
 
 DPL_EXPORT template <arithmetic_type E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline arithmetic_result<E> add(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
+inline arithmetic_result<E> DPL_VECTORCALL
+    add(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
     if constexpr (common_arithmetic_with<E, int64>) {
         return _mm_add_epi64(+lhs, +rhs);
     } else if constexpr (common_arithmetic_with<E, int32>) {
@@ -45,19 +46,20 @@ inline arithmetic_result<E> add(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
 
 DPL_EXPORT template <common_float_with<float> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<E> add(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
+inline simd<E> DPL_VECTORCALL add(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
     return _mm_add_ps(+lhs, +rhs);
 }
 
 DPL_EXPORT template <common_float_with<double> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<E> add(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
+inline simd<E> DPL_VECTORCALL add(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
     return _mm_add_pd(+lhs, +rhs);
 }
 
 DPL_EXPORT template <arithmetic_type E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline arithmetic_result<E> sub(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
+inline arithmetic_result<E> DPL_VECTORCALL
+    sub(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
     if constexpr (common_arithmetic_with<E, int64>) {
         return _mm_sub_epi64(+lhs, +rhs);
     } else if constexpr (common_arithmetic_with<E, int32>) {
@@ -72,19 +74,20 @@ inline arithmetic_result<E> sub(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
 
 DPL_EXPORT template <common_float_with<float> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<E> sub(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
+inline simd<E> DPL_VECTORCALL sub(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
     return _mm_sub_ps(+lhs, +rhs);
 }
 
 DPL_EXPORT template <common_float_with<double> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<E> sub(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
+inline simd<E> DPL_VECTORCALL sub(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
     return _mm_sub_pd(+lhs, +rhs);
 }
 
 DPL_EXPORT template <arithmetic_type E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline arithmetic_result<E> mul(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
+inline arithmetic_result<E> DPL_VECTORCALL
+    mul(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
     if constexpr (common_arithmetic_with<E, int64>) {
 #if DPL_SIMD_X86_AVX512DQ & DPL_SIMD_X86_AVX512VL
         return _mm_mullo_epi64(+lhs, +rhs);
@@ -143,26 +146,26 @@ inline arithmetic_result<E> mul(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
 DPL_EXPORT template <arithmetic_type E>
 requires common_float_with<E, float>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<E> mul(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
+inline simd<E> DPL_VECTORCALL mul(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
     return _mm_mul_ps(+lhs, +rhs);
 }
 
 DPL_EXPORT template <arithmetic_type E>
 requires common_float_with<E, double>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<E> mul(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
+inline simd<E> DPL_VECTORCALL mul(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
     return _mm_mul_pd(+lhs, +rhs);
 }
 
 DPL_EXPORT template <common_float_with<float> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<E> div(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
+inline simd<E> DPL_VECTORCALL div(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
     return _mm_div_ps(+lhs, +rhs);
 }
 
 DPL_EXPORT template <common_float_with<double> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<E> div(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
+inline simd<E> DPL_VECTORCALL div(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
     return _mm_div_pd(+lhs, +rhs);
 }
 
@@ -170,35 +173,36 @@ inline simd<E> div(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
 DPL_EXPORT template <floating_point E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 requires (sizeof(E) == 2 && !brain_float<E>)
-inline simd<E> add(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
+inline simd<E> DPL_VECTORCALL add(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
     return _mm_add_ph(+lhs, +rhs);
 }
 
 DPL_EXPORT template <floating_point E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 requires (sizeof(E) == 2 && !brain_float<E>)
-inline simd<E> sub(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
+inline simd<E> DPL_VECTORCALL sub(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
     return _mm_sub_ph(+lhs, +rhs);
 }
 
 DPL_EXPORT template <floating_point E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 requires (sizeof(E) == 2 && !brain_float<E>)
-inline simd<E> mul(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
+inline simd<E> DPL_VECTORCALL mul(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
     return _mm_mul_ph(+lhs, +rhs);
 }
 
 DPL_EXPORT template <floating_point E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 requires (sizeof(E) == 2 && !brain_float<E>)
-inline simd<E> div(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
+inline simd<E> DPL_VECTORCALL div(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
     return _mm_div_ph(+lhs, +rhs);
 }
 #endif
 
 DPL_EXPORT template <brain_float E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<E> add(abi_tag tag, simd<E> lhs, simd<E> rhs) noexcept {
+inline simd<E> DPL_VECTORCALL
+    add(abi_tag tag, simd<E> lhs, simd<E> rhs) noexcept {
     auto const hlhs = simd<E>(_mm_srli_si128(+lhs, 8));
     auto const hrhs = simd<E>(_mm_srli_si128(+rhs, 8));
     auto const lo =
@@ -220,7 +224,8 @@ inline simd<E> add(abi_tag tag, simd<E> lhs, simd<E> rhs) noexcept {
 
 DPL_EXPORT template <brain_float E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<E> sub(abi_tag tag, simd<E> lhs, simd<E> rhs) noexcept {
+inline simd<E> DPL_VECTORCALL
+    sub(abi_tag tag, simd<E> lhs, simd<E> rhs) noexcept {
     auto const hlhs = simd<E>(_mm_srli_si128(+lhs, 8));
     auto const hrhs = simd<E>(_mm_srli_si128(+rhs, 8));
     auto const lo =
@@ -242,7 +247,8 @@ inline simd<E> sub(abi_tag tag, simd<E> lhs, simd<E> rhs) noexcept {
 
 DPL_EXPORT template <brain_float E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<E> mul(abi_tag tag, simd<E> lhs, simd<E> rhs) noexcept {
+inline simd<E> DPL_VECTORCALL
+    mul(abi_tag tag, simd<E> lhs, simd<E> rhs) noexcept {
     auto const hlhs = simd<E>(_mm_srli_si128(+lhs, 8));
     auto const hrhs = simd<E>(_mm_srli_si128(+rhs, 8));
     auto const lo =
@@ -264,7 +270,8 @@ inline simd<E> mul(abi_tag tag, simd<E> lhs, simd<E> rhs) noexcept {
 
 DPL_EXPORT template <brain_float E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<E> div(abi_tag tag, simd<E> lhs, simd<E> rhs) noexcept {
+inline simd<E> DPL_VECTORCALL
+    div(abi_tag tag, simd<E> lhs, simd<E> rhs) noexcept {
     auto const hlhs = simd<E>(_mm_srli_si128(+lhs, 8));
     auto const hrhs = simd<E>(_mm_srli_si128(+rhs, 8));
     auto const lo =

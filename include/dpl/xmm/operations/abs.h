@@ -32,7 +32,8 @@ using negated_type DPL_NODEBUG = common_arithmetic_type_t<E, E>;
 
 DPL_EXPORT template <arithmetic_type E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<negated_type<E>> abs(abi_tag tag, simd<E> val) noexcept {
+inline simd<negated_type<E>> DPL_VECTORCALL
+    abs(abi_tag tag, simd<E> val) noexcept {
     if constexpr (unsigned_integral<E> || requires {
                       requires enumeration<E> &&
                           unsigned_integral<underlying_type_t<E>>;
@@ -61,7 +62,8 @@ inline simd<negated_type<E>> abs(abi_tag tag, simd<E> val) noexcept {
 DPL_EXPORT template <arithmetic_type E>
 requires floating_point<E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<negated_type<E>> abs(abi_tag tag, simd<E> val) noexcept {
+inline simd<negated_type<E>> DPL_VECTORCALL
+    abs(abi_tag tag, simd<E> val) noexcept {
     if constexpr (common_float_with<E, float>) {
         return _mm_andnot_ps(_mm_set1_ps(-0.0f), +val);
     } else if constexpr (common_float_with<E, double>) {

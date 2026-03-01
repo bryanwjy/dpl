@@ -14,4 +14,5 @@ import :basic;
 #include "dpl/xmm/operations/abs.h"
 #include "dpl/xmm/operations/arithmetic.h"
 #include "dpl/xmm/operations/bit.h"
+#include "dpl/xmm/operations/bitwise.h"
 // IWYU pragma: end_exports
