@@ -15,14 +15,14 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
 DPL_EXPORT template <typename T>
-struct to_simd_mask_type {};
+struct make_simd_mask_type {};
 
 DPL_EXPORT template <simd_class T>
-using to_simd_mask_type_t = typename to_simd_mask_type<T>::type;
+using make_simd_mask_type_t = typename make_simd_mask_type<T>::type;
 
 DPL_EXPORT template <simd_class T>
 requires simd_mask_type<T>
-struct to_simd_mask_type<T> {
+struct make_simd_mask_type<T> {
     using type DPL_NODEBUG = T;
 };
 
@@ -32,7 +32,7 @@ struct to_simd_mask_type<T> {
  * behaviour is undefined.
  */
 DPL_EXPORT template <simd_class T>
-struct to_simd_mask_type<T> {
+struct make_simd_mask_type<T> {
     using type DPL_NODEBUG =
         basic_simd_mask<simd_element_type_t<T>, typename T::abi_type>;
 };

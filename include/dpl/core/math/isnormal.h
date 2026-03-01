@@ -33,7 +33,7 @@ public:
     template <basic_simd_type T>
     requires floating_point_simd<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr to_simd_mask_type_t<T> operator()(T arg) noexcept {
+    static constexpr make_simd_mask_type_t<T> operator()(T arg) noexcept {
         if constexpr (requires { isnormal(internal::abi<T>, arg); }) {
             if consteval {
                 return fallback(arg);

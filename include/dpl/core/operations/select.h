@@ -15,7 +15,7 @@
 #  include "dpl/core/concepts/simd_class.h"
 #  include "dpl/core/concepts/simd_equivalence.h"
 #  include "dpl/core/type_traits/common_size_type.h"
-#  include "dpl/core/type_traits/to_simd_type.h"
+#  include "dpl/core/type_traits/make_simd_type.h"
 #  include "dpl/std/concepts/integral.h"
 #  include "dpl/std/concepts/invocable.h"
 #  include "dpl/std/type_traits/declval.h"
@@ -403,12 +403,12 @@ public:
         }
     }
 
-    template <basic_simd_mask_type M, broadcastable_to<to_simd_type_t<M>> TF,
-        broadcastable_to<to_simd_type_t<M>> TT>
+    template <basic_simd_mask_type M, broadcastable_to<make_simd_type_t<M>> TF,
+        broadcastable_to<make_simd_type_t<M>> TT>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto operator()(M mask, TT tval, TF fval) noexcept
-        -> equivalent_simd_as<to_simd_type_t<M>> auto {
-        using T = to_simd_type_t<M>;
+        -> equivalent_simd_as<make_simd_type_t<M>> auto {
+        using T = make_simd_type_t<M>;
         if constexpr (unqualified_select<M, M, TT, TF>) {
             if consteval {
                 return operator()(
@@ -450,12 +450,12 @@ public:
         }
     }
 
-    template <simd_mask_type M, broadcastable_to<to_simd_type_t<M>> TF,
-        broadcastable_to<to_simd_type_t<M>> TT>
+    template <simd_mask_type M, broadcastable_to<make_simd_type_t<M>> TF,
+        broadcastable_to<make_simd_type_t<M>> TT>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto operator()(M mask, TT tval, TF fval) noexcept
-        -> equivalent_simd_as<to_simd_type_t<M>> auto {
-        using T = to_simd_type_t<M>;
+        -> equivalent_simd_as<make_simd_type_t<M>> auto {
+        using T = make_simd_type_t<M>;
         if constexpr (unqualified_select<M, M, TT, TF>) {
             return select(internal::abi<M>, mask, tval, fval);
         } else {

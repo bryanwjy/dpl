@@ -8,7 +8,7 @@
 #if !DPL_MODULES
 #  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/simd_equivalence.h"
-#  include "dpl/core/type_traits/to_simd_mask_type.h"
+#  include "dpl/core/type_traits/make_simd_mask_type.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -28,7 +28,7 @@ struct to_simd_mask_t {
 public:
     template <basic_simd_type T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr to_simd_mask_type_t<T> operator()(T src) noexcept
+    static constexpr make_simd_mask_type_t<T> operator()(T src) noexcept
     requires requires { to_simd_mask(internal::abi<T>, src); }
     {
         return to_simd_mask(internal::abi<T>, src);
@@ -37,7 +37,7 @@ public:
     template <simd_type T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto operator()(T src) noexcept
-        -> equivalent_mask_as<to_simd_mask_type_t<T>> auto {
+        -> equivalent_mask_as<make_simd_mask_type_t<T>> auto {
         if constexpr (requires { to_simd_mask(internal::abi<T>, src); }) {
             return to_simd_mask(internal::abi<T>, src);
         } else {
@@ -47,7 +47,7 @@ public:
 
     template <basic_simd_type T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr to_simd_mask_type_t<T> operator()(
+    static constexpr make_simd_mask_type_t<T> operator()(
         assume_cannonical_mask_t tag, T src) noexcept {
         if constexpr (requires { to_simd_mask(internal::abi<T>, tag, src); }) {
             if consteval {
@@ -63,7 +63,7 @@ public:
     template <simd_type T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto operator()(assume_cannonical_mask_t tag,
-        T src) noexcept -> equivalent_mask_as<to_simd_mask_type_t<T>> auto {
+        T src) noexcept -> equivalent_mask_as<make_simd_mask_type_t<T>> auto {
         if constexpr (requires { to_simd_mask(internal::abi<T>, tag, src); }) {
             return to_simd_mask(internal::abi<T>, tag, src);
         } else {

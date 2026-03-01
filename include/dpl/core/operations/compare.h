@@ -12,7 +12,7 @@
 #  include "dpl/core/concepts/common_order_with.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/type_traits/common_order_type.h"
-#  include "dpl/core/type_traits/to_simd_mask_type.h"
+#  include "dpl/core/type_traits/make_simd_mask_type.h"
 #  include "dpl/std/type_traits/is_invocable.h"
 #endif
 
@@ -27,7 +27,7 @@ void cmpge(...) noexcept = delete;
 
 template <typename L, typename R>
 using compare_result DPL_NODEBUG =
-    to_simd_mask_type_t<common_order_simd_t<L, R>>;
+    make_simd_mask_type_t<common_order_simd_t<L, R>>;
 
 struct cmpeq_t : binary_operation_base<cmpeq_t> {
 private:
