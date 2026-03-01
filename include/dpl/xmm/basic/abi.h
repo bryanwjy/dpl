@@ -102,6 +102,11 @@ DPL_EXPORT template <simd_element E>
 using simd DPL_NODEBUG = dx::basic_simd<E, abi_tag>;
 DPL_EXPORT template <simd_element E>
 using mask DPL_NODEBUG = dx::basic_simd_mask<E, abi_tag>;
+
+template <typename T>
+concept fp16_like =
+    floating_point<T> && !brain_float<T> && sizeof(T) == sizeof(int16);
+
 } // namespace datapar::xmm
 
 DPL_DEFAULT_NAMESPACE_END

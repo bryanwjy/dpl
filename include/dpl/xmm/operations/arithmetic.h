@@ -15,6 +15,7 @@
 
 #  include "dpl/core/concepts/arithmetic_type.h"
 #  include "dpl/core/concepts/common_float_with.h"
+#  include "dpl/core/type_traits/common_arithmetic_type.h"
 #  include "dpl/xmm/basic/abi.h"
 #  include "dpl/xmm/basic/reinterpret.h"
 

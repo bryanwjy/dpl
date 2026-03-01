@@ -213,6 +213,8 @@ inline mask<E> DPL_VECTORCALL
         auto const idx = _mm_load_si128(
             reinterpret_cast<__m128i const*>(details::niota_epi8));
         auto const vshift = _mm_set1_epi8(static_cast<char>(shift));
+
+        // if msb is set: dst = 0; else: dst = src[idx % 16]
         return _mm_shuffle_epi8(+val, _mm_add_epi8(idx, vshift));
     }
 }
@@ -651,6 +653,7 @@ inline simd<L> DPL_VECTORCALL
         auto xmm1 = _mm_slli_epi32(+rhs, 23);
         xmm1 = _mm_add_epi32(xmm1, _mm_set1_epi32(magic));
         xmm1 = _mm_cvttps_epi32(_mm_castsi128_ps(xmm1));
+        xmm1 = _mm_and_si128(_mm_cmplt_epi32(rhs, _mm_set1_epi32(32)), xmm1);
         return _mm_mullo_epi32(xmm0, xmm1);
     } else if constexpr (sizeof(L) == sizeof(int16)) {
         auto xmm0 = +lhs;

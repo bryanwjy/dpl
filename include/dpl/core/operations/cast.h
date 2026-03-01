@@ -19,6 +19,7 @@
 #  include "dpl/core/concepts/simd_equivalence.h"
 #  include "dpl/core/constants/exponent_bias.h"
 #  include "dpl/core/constants/exponent_bits.h"
+#  include "dpl/core/constants/infinity.h"
 #  include "dpl/core/constants/max_value.h"
 #  include "dpl/core/constants/min_value.h"
 #  include "dpl/core/constants/zero.h"
@@ -104,7 +105,8 @@ private:
                                   auto arg, index_sequence<Is...>) {
                 return dx::permute<(Is / 2)...>(arg);
             }(arg, iota_sequence<float, A>);
-            constexpr auto hidden_bit = 1 << dx::mantissa_width_v<float>;
+            constexpr auto hidden_bit =
+                dx::one_v<uint32> << dx::mantissa_width_v<float>;
             constexpr auto du64 =
                 static_cast<uint64>(dx::mantissa_width_v<float>);
             auto const exp = ilogb(arg);
@@ -188,8 +190,8 @@ private:
 public:
     template <basic_simd_class From>
     requires simd_type<From>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(From arg) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(From arg) noexcept {
         if constexpr (requires { cast<To>(internal::abi<From>, arg); }) {
             if consteval {
                 return fallback(arg);
@@ -202,8 +204,8 @@ public:
     }
 
     template <simd_type From>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(From arg) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(From arg) noexcept {
         if constexpr (requires { cast<To>(internal::abi<From>, arg); }) {
             return cast<To>(internal::abi<From>, arg);
         } else {
@@ -221,8 +223,8 @@ struct cast_t<To> {
 public:
     template <simd_type From>
     requires unqualified_element_castable_to<From, To>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(From arg) noexcept
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(From arg) noexcept
         -> equivalent_simd_as<rebind_simd_t<From, To>> auto {
         return cast<To>(internal::abi<From>, arg);
     }
@@ -236,8 +238,8 @@ public:
             invoke_result_t<cast_t<basic_element_t<To>>, basic_type_t<From>>,
             rebind_simd_t<From, To>>;
     }
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(From arg) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(From arg) noexcept {
         using result = rebind_simd_t<From, To>;
         using base = cast_t<basic_element_t<To>>;
         return static_cast<result>(base::operator()(dx::to_basic_type(arg)));
@@ -255,22 +257,22 @@ struct cast_t<To> {
 public:
     template <basic_simd_type From>
     requires same_abi_simd_as<To, From>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr To DPL_VECTORCALL operator()(From arg) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr To operator()(From arg) noexcept {
         return cast_t<typename To::value_type>::operator()(arg);
     }
 
     template <simd_type From>
     requires same_abi_simd_as<To, From>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr To DPL_VECTORCALL operator()(From arg) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr To operator()(From arg) noexcept {
         return operator()(dx::to_basic_type(arg));
     }
 
     template <unqualified_castable_to<To> From>
     requires common_abi_simd_with<To, From>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr To DPL_VECTORCALL operator()(From arg) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr To operator()(From arg) noexcept {
         return cast<To>(internal::abi<common_abi_t<From, To>>, arg);
     }
 };
@@ -280,8 +282,8 @@ struct cast_t<To> {
 public:
     template <unqualified_castable_to<To> From>
     requires common_abi_simd_with<To, From>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr To DPL_VECTORCALL operator()(From arg) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr To operator()(From arg) noexcept {
         return cast<To>(internal::abi<common_abi_t<From, To>>, arg);
     }
 
@@ -292,8 +294,8 @@ public:
         requires explicitly_convertible_to<
             invoke_result_t<cast_t<basic_type_t<To>>, From>, To>;
     }
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr To DPL_VECTORCALL operator()(From arg) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr To operator()(From arg) noexcept {
         using base = cast_t<basic_type_t<To>>;
         return static_cast<To>(base::operator()(arg));
     }
