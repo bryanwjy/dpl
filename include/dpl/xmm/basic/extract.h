@@ -78,18 +78,21 @@ constexpr E extract(
         if constexpr (common_float_with<float, E>) {
             return __DPL bit_cast<E>(_mm_extract_ps(+src, imm8));
         } else if constexpr (common_float_with<double, E>) {
-            return __DPL bit_cast<E>(_mm_extract_pd(+src, imm8));
+            return __DPL bit_cast<E>(
+                _mm_extract_epi64(_mm_castpd_si128(+src), idx));
         } else if constexpr (floating_point<E> && sizeof(E) == 2) {
-            if constexpr (brain_float<E>) {
-#if DPL_COMPILER_MSVC
-                return __DPL bit_cast<E>(_mm_extract_epi16(+src, imm8));
-#else
-                return __DPL bit_cast<E>(__DPL bit_cast<__m128i>(+src), imm8);
-#endif
-            } else {
+#if DPL_SIMD_X86_AVX512FP16
+            if constexpr (!brain_float<E>) {
                 return __DPL bit_cast<E>(
                     _mm_extract_epi16(_mm_castph_si128(+src), imm8));
+            } else {
+                return __DPL bit_cast<E>(
+                    _mm_extract_epi16(__DPL bit_cast<__m128i>(+src), imm8));
             }
+#else
+            return __DPL bit_cast<E>(
+                _mm_extract_epi16(__DPL bit_cast<__m128i>(+src), imm8));
+#endif
         } else {
             using T = conditional_t<enumeration<E>, underlying_type_t<E>, E>;
             if constexpr (common_order_with<T, int32>) {

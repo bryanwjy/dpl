@@ -52,6 +52,15 @@
 #    endif
 #  endif
 
+#  ifdef __F16C__
+#    define DPL_SIMD_X86_F16C __F16C__
+#  elif DPL_COMPILER_MSVC && __AVX2__
+#    ifndef DPL_ENABLE_MSVC_F16C
+#      define DPL_ENABLE_MSVC_F16C 0
+#    endif
+#    define DPL_SIMD_X86_F16C DPL_ENABLE_MSVC_F16C
+#  endif
+
 #  ifdef __AVX512VPOPCNTDQ__
 #    define DPL_SIMD_X86_AVX512VPOPCNTDQ __AVX512VPOPCNTDQ__
 #  elif DPL_COMPILER_MSVC && defined(__AVX512VL__)
