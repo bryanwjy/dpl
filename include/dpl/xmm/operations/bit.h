@@ -15,6 +15,7 @@
 
 #  include "dpl/core/concepts/common_bits_with.h"
 #  include "dpl/core/type_traits/common_bits_type.h"
+#  include "dpl/std/bit/countl.h"
 #  include "dpl/xmm/basic/abi.h"
 #  include "dpl/xmm/basic/broadcast.h"
 #  include "dpl/xmm/basic/reinterpret.h"
@@ -213,36 +214,41 @@ inline simd<signed_representation_t<E>> DPL_VECTORCALL
     }
 }
 
-#if DPL_SIMD_X86_AVX512CD && DPL_SIMD_X86_AVX512VL
-template <simd_element E>
-requires (sizeof(E) == 4)
-DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<signed_representation_t<E>> DPL_VECTORCALL
-    countl_zero(abi_tag tag, simd<E> val) noexcept {
-    return _mm_lzcnt_epi32(
-        +xmm::reinterpret<signed_representation_t<E>>(tag, val));
-}
-
 template <simd_element E>
 requires (sizeof(E) == 8)
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<signed_representation_t<E>> DPL_VECTORCALL
     countl_zero(abi_tag tag, simd<E> val) noexcept {
+#if DPL_SIMD_X86_AVX512CD && DPL_SIMD_X86_AVX512VL
     return _mm_lzcnt_epi64(
         +xmm::reinterpret<signed_representation_t<E>>(tag, val));
+#else
+    using sint = signed_representation_t<E>;
+    auto const vval = xmm::reinterpret<sint>(tag, val);
+    return xmm::initialize<sint>(tag,
+        __DPL countl_zero(xmm::extract<0>(tag, vval)),
+        __DPL countl_zero(xmm::extract<1>(tag, vval)));
+#endif
 }
 
 template <simd_element E>
-requires (sizeof(E) == 8 || sizeof(E) == 4)
+requires (sizeof(E) == 4)
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<signed_representation_t<E>> DPL_VECTORCALL
-    countl_one(abi_tag tag, simd<E> val) noexcept {
-    using sbit = signed_representation_t<E>;
-    auto vval = +xmm::reinterpret<sbit>(tag, val);
-    return xmm::countl_zero(
-        tag, simd<sbit>(_mm_xor_si128(vval, _mm_cmpeq_epi32(vval, vval))));
-}
+    countl_zero(abi_tag tag, simd<E> val) noexcept {
+#if DPL_SIMD_X86_AVX512CD && DPL_SIMD_X86_AVX512VL
+    return _mm_lzcnt_epi32(
+        +xmm::reinterpret<signed_representation_t<E>>(tag, val));
+#else
+    using sint = signed_representation_t<E>;
+    auto const vval = xmm::reinterpret<sint>(tag, val);
+    return xmm::initialize<sint>(tag,
+        __DPL countl_zero(xmm::extract<0>(tag, vval)),
+        __DPL countl_zero(xmm::extract<1>(tag, vval)),
+        __DPL countl_zero(xmm::extract<3>(tag, vval)),
+        __DPL countl_zero(xmm::extract<4>(tag, vval)));
 #endif
+}
 
 template <simd_element E>
 requires (sizeof(E) == 2)
@@ -270,14 +276,13 @@ inline simd<signed_representation_t<E>> DPL_VECTORCALL
 }
 
 template <simd_element E>
-requires (sizeof(E) <= 2)
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<signed_representation_t<E>> DPL_VECTORCALL
     countl_one(abi_tag tag, simd<E> val) noexcept {
     using sbit = signed_representation_t<E>;
     auto vval = +xmm::reinterpret<sbit>(tag, val);
     return xmm::countl_zero(
-        tag, simd<sbit>(_mm_xor_si128(vval, _mm_cmpeq_epi32(vval, vval))));
+        tag, simd<sbit>(_mm_xor_si128(vval, _mm_set1_epi32(-1))));
 }
 
 template <simd_element E>

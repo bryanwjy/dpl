@@ -45,9 +45,8 @@ inline simd<negated_type<E>> DPL_VECTORCALL
 #else
         auto const vval = +val;
         auto const zero = _mm_setzero_si128();
-        auto const ones = _mm_srli_epi64(vval, 63); // subtract 1 if negative
-        auto const flipper = _mm_cmpgt_epi64(zero, vval); // flip if negative
-        return _mm_add_epi64(_mm_xor_si128(vval, flipper), ones);
+        auto const sign = _mm_cmpgt_epi64(zero, vval);
+        return _mm_sub_epi64(_mm_xor_si128(vval, sign), sign);
 #endif
     } else if constexpr (common_size_with<int32, E>) {
         return _mm_abs_epi32(+val);

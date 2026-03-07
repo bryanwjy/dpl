@@ -28,73 +28,73 @@
 
 #  ifdef __AVX__
 #    ifndef DPL_SIMD_X86_SSE3
-#      define DPL_SIMD_X86_SSE3 1
+#      define DPL_SIMD_X86_SSE3 __AVX__
 #    endif
 #    ifndef DPL_SIMD_X86_SSE4_1
-#      define DPL_SIMD_X86_SSE4_1 1
+#      define DPL_SIMD_X86_SSE4_1 __AVX__
 #    endif
 #    ifndef DPL_SIMD_X86_SSE4_2
-#      define DPL_SIMD_X86_SSE4_2 1
+#      define DPL_SIMD_X86_SSE4_2 __AVX__
 #    endif
 #    define DPL_SIMD_X86_AVX __AVX__
 #  endif
 
-#  ifdef __FMA__
-#    define DPL_SIMD_X86_FMA __FMA__
-#  endif
-
 #  ifdef __AVX2__
 #    define DPL_SIMD_X86_AVX2 __AVX2__
-#    if DPL_COMPILER_MSVC
-#      ifndef __FMA__
-#        define DPL_SIMD_X86_FMA 1
-#      endif
+#  endif
+
+#  ifdef __FMA__
+#    define DPL_SIMD_X86_FMA __FMA__
+#  elif DPL_COMPILER_MSVC && __AVX2__
+#    ifndef DPL_DISABLE_MSVC_FMA
+#      define DPL_DISABLE_MSVC_FMA 0
 #    endif
+#    define DPL_SIMD_X86_FMA (!DPL_DISABLE_MSVC_FMA)
 #  endif
 
 #  ifdef __F16C__
 #    define DPL_SIMD_X86_F16C __F16C__
 #  elif DPL_COMPILER_MSVC && __AVX2__
-#    ifndef DPL_ENABLE_MSVC_F16C
-#      define DPL_ENABLE_MSVC_F16C 0
+#    ifndef DPL_DISABLE_MSVC_F16C
+#      define DPL_DISABLE_MSVC_F16C 0
 #    endif
-#    define DPL_SIMD_X86_F16C DPL_ENABLE_MSVC_F16C
+#    define DPL_SIMD_X86_F16C (!DPL_DISABLE_MSVC_F16C)
 #  endif
 
 #  ifdef __AVX512VPOPCNTDQ__
 #    define DPL_SIMD_X86_AVX512VPOPCNTDQ __AVX512VPOPCNTDQ__
 #  elif DPL_COMPILER_MSVC && defined(__AVX512VL__)
-#    ifndef DPL_ENABLE_MSVC_AVX512VPOPCNTDQ
-#      define DPL_ENABLE_MSVC_AVX512VPOPCNTDQ 0
+#    ifndef DPL_DISABLE_MSVC_AVX512VPOPCNTDQ
+#      define DPL_DISABLE_MSVC_AVX512VPOPCNTDQ 0
 #    endif
-#    define DPL_SIMD_X86_AVX512VPOPCNTDQ DPL_ENABLE_MSVC_AVX512VPOPCNTDQ
+#    define DPL_SIMD_X86_AVX512VPOPCNTDQ (!DPL_DISABLE_MSVC_AVX512VPOPCNTDQ)
 #  endif
 
 #  ifdef __AVX512BITALG__
 #    define DPL_SIMD_X86_AVX512BITALG __AVX512BITALG__
 #  elif DPL_COMPILER_MSVC && defined(__AVX512VL__)
-#    ifndef DPL_ENABLE_MSVC_AVX512BITALG
-#      define DPL_ENABLE_MSVC_AVX512BITALG 0
+#    ifndef DPL_DISABLE_MSVC_AVX512BITALG
+#      define DPL_DISABLE_MSVC_AVX512BITALG 0
 #    endif
-#    define DPL_SIMD_X86_AVX512BITALG DPL_ENABLE_MSVC_AVX512BITALG
+#    define DPL_SIMD_X86_AVX512BITALG (!DPL_DISABLE_MSVC_AVX512BITALG)
 #  endif
 
 #  ifdef __AVX512BF16__
 #    define DPL_SIMD_X86_AVX512BF16 __AVX512BF16__
 #  elif DPL_COMPILER_MSVC && defined(__AVX512F__)
-#    ifndef DPL_ENABLE_MSVC_AVX512BF16
-#      define DPL_ENABLE_MSVC_AVX512BF16 0
+#    ifndef DPL_DISABLE_MSVC_AVX512BF16
+#      define DPL_DISABLE_MSVC_AVX512BF16 0
 #    endif
-#    define DPL_SIMD_X86_AVX512BF16 DPL_ENABLE_MSVC_AVX512BF16
+#    define DPL_SIMD_X86_AVX512BF16 (!DPL_DISABLE_MSVC_AVX512BF16)
 #  endif
 
 #  ifdef __AVX512FP16__
 #    define DPL_SIMD_X86_AVX512FP16 __AVX512FP16__
 #  elif DPL_COMPILER_MSVC && defined(__AVX512F__)
-#    ifndef DPL_ENABLE_MSVC_AVX512FP16
-#      define DPL_ENABLE_MSVC_AVX512FP16 0
+#    ifndef DPL_DISABLE_MSVC_AVX512FP16
+#      define DPL_DISABLE_MSVC_AVX512FP16 0
 #    endif
-#    define DPL_SIMD_X86_AVX512FP16 DPL_ENABLE_MSVC_AVX512FP16
+#    define DPL_SIMD_X86_AVX512FP16 (!DPL_DISABLE_MSVC_AVX512FP16)
 #  endif
 
 #  ifdef __AVX512BW__

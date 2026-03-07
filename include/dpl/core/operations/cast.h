@@ -3,23 +3,13 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/operations/abs.h"
-#include "dpl/core/operations/bit.h"
 #include "dpl/core/operations/bitwise.h"
-#include "dpl/core/operations/negate.h"
-#include "dpl/core/operations/permute.h"
-#include "dpl/core/operations/select.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/load.h"
-#  include "dpl/core/basic/reinterpret.h"
 #  include "dpl/core/basic/to_basic_type.h"
-#  include "dpl/core/concepts/common_size_with.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_equivalence.h"
-#  include "dpl/core/constants/exponent_bias.h"
-#  include "dpl/core/constants/exponent_bits.h"
-#  include "dpl/core/constants/infinity.h"
 #  include "dpl/core/constants/max_value.h"
 #  include "dpl/core/constants/min_value.h"
 #  include "dpl/core/constants/zero.h"
@@ -28,7 +18,6 @@
 #  include "dpl/core/type_traits/basic_type.h"
 #  include "dpl/core/type_traits/iota_sequence.h"
 #  include "dpl/core/type_traits/rebind_simd.h"
-#  include "dpl/core/type_traits/representation.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -47,13 +36,13 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr To safe_cast(From val) noexcept {
         if consteval {
+            // Do we need this?
             if constexpr (floating_point<From> && integral<To>) {
-                if (val < min_value_v<To>) {
-                    return min_value_v<To>;
-                }
-
-                if (val > max_value_v<To>) {
-                    return max_value_v<To>;
+                auto const lt = val < min_value_v<To>;
+                auto const gt = val > max_value_v<To>;
+                if (lt || gt ||
+                    !(val <= max_value_v<To> && val >= min_value_v<To>)) {
+                    return dx::msb;
                 }
             }
         }
@@ -82,110 +71,6 @@ private:
     static constexpr basic_simd<To, A> fallback(basic_simd<F, A> arg) noexcept {
         return safe_cast(arg);
     }
-
-#ifndef DPL_DISABLE_IEC559_FALLBACK
-    template <floating_point E, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_simd<signed_rep_t<E>, A> DPL_VECTORCALL
-        ilogb(basic_simd<E, A> arg) noexcept {
-        using int_type = signed_rep_t<E>;
-        auto const biased =
-            (arg & exponent_bits) >> imm<dx::mantissa_width_v<E>>;
-        return biased - static_cast<int_type>(dx::exponent_bias_v<E>);
-    }
-
-    template <simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_simd<To, A> DPL_VECTORCALL
-        fallback(basic_simd<float, A> arg) noexcept
-    requires integral<To>
-    {
-        if constexpr (common_size_with<int64, To>) {
-            auto const parg = []<size_t... Is>(
-                                  auto arg, index_sequence<Is...>) {
-                return dx::permute<(Is / 2)...>(arg);
-            }(arg, iota_sequence<float, A>);
-            constexpr auto hidden_bit =
-                dx::one_v<uint32> << dx::mantissa_width_v<float>;
-            constexpr auto du64 =
-                static_cast<uint64>(dx::mantissa_width_v<float>);
-            auto const exp = ilogb(arg);
-            auto const mantissa =
-                dx::reinterpret<int32>(parg & dx::mantissa_bits) | hidden_bit;
-
-            auto const uexp = dx::reinterpret<uint64>(exp) >> imm<32>;
-            auto const umantissa = dx::reinterpret<uint64>(mantissa) >> imm<32>;
-            auto const shift = dx::abs(uexp - du64);
-            auto const large = dx::reinterpret<int64>(umantissa << shift);
-            auto const small = dx::reinterpret<int64>(umantissa >> shift);
-
-            constexpr auto signbits =
-                dx::reinterpret<uint64>(dx::msb_v<basic_simd<int32, A>>);
-            auto const is_lt_zero = dx::reinterpret<uint64>(parg) > signbits;
-            if constexpr (signed_integral<To>) {
-                auto const result = dx::bit_keep(
-                    uexp > dx::zero, dx::select(uexp < du64, small, large));
-                return dx::reinterpret<To>(dx::negate(is_lt_zero, result));
-            } else {
-                return dx::reinterpret<To>(
-                    dx::bit_keep(dx::bwandnot(uexp > dx::zero, is_lt_zero),
-                        dx::select(uexp < du64, small, large)));
-            }
-        } else if constexpr (common_size_with<int32, To>) {
-            constexpr auto hidden_bit =
-                dx::one_v<uint32> << dx::mantissa_width_v<float>;
-            auto const exp = ilogb(arg);
-            auto const umantissa =
-                dx::reinterpret<uint32>(arg & dx::mantissa_bits) | hidden_bit;
-            auto const shift = dx::abs(exp - dx::mantissa_width_v<float>);
-            auto const large = dx::reinterpret<int32>(umantissa << shift);
-            auto const small = dx::reinterpret<int32>(umantissa >> shift);
-            auto const result =
-                dx::select(exp < dx::mantissa_width_v<float>, small, large);
-            if constexpr (signed_integral<To>) {
-                return dx::reinterpret<To>(dx::negate(
-                    arg < dx::zero, dx::select(exp > dx::zero, result)));
-            } else {
-                return dx::reinterpret<To>(
-                    dx::bit_keep((exp > dx::zero) & (arg > dx::zero), result));
-            }
-        } else {
-            return operator()(cast_t<int32>::operator()(arg));
-        }
-    }
-
-    template <simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_simd<To, A> DPL_VECTORCALL
-        fallback(basic_simd<double, A> arg) noexcept
-    requires integral<To>
-    {
-        if constexpr (common_arithmetic_with<int64, To>) {
-            using result_type = basic_simd<To, A>;
-            constexpr auto d64 =
-                static_cast<int64>(dx::mantissa_width_v<double>);
-            constexpr auto hidden_bit = dx::one_v<uint64> << d64;
-            auto const exp = ilogb(arg);
-            auto const umantissa =
-                dx::reinterpret<uint64>(arg & dx::mantissa_bits) | hidden_bit;
-
-            auto const shift = dx::abs(exp - d64);
-            auto const large = dx::reinterpret<int64>(umantissa << shift);
-            auto const small = dx::reinterpret<int64>(umantissa >> shift);
-            auto const result = dx::select(exp < d64, small, large);
-
-            if constexpr (signed_integral<To>) {
-                return dx::reinterpret<result_type>(dx::negate(
-                    arg < dx::zero, dx::select(exp > dx::zero, result)));
-            } else {
-                return dx::reinterpret<result_type>(
-                    dx::bit_keep((exp > dx::zero) & (arg > dx::zero), result));
-            }
-        } else {
-            return operator()(cast_t<int64>::operator()(arg));
-        }
-    }
-#endif
 
 public:
     template <basic_simd_class From>

@@ -8,8 +8,6 @@
 #  error "Unsupported platform"
 #endif
 
-#include "dpl/xmm/operations/cast.h"
-
 #if !DPL_MODULES
 #  include "dpl/core/fwd.h"
 
@@ -25,6 +23,9 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::xmm {
+
+template <typename>
+void cast(...) noexcept = delete;
 
 template <arithmetic_type E>
 using arithmetic_result DPL_NODEBUG = simd<common_arithmetic_type_t<E, E>>;
@@ -171,30 +172,26 @@ inline simd<E> DPL_VECTORCALL div(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
 }
 
 #if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
-DPL_EXPORT template <floating_point E>
+DPL_EXPORT template <fp16_like E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-requires (sizeof(E) == 2 && !brain_float<E>)
 inline simd<E> DPL_VECTORCALL add(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
     return _mm_add_ph(+lhs, +rhs);
 }
 
-DPL_EXPORT template <floating_point E>
+DPL_EXPORT template <fp16_like E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-requires (sizeof(E) == 2 && !brain_float<E>)
 inline simd<E> DPL_VECTORCALL sub(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
     return _mm_sub_ph(+lhs, +rhs);
 }
 
-DPL_EXPORT template <floating_point E>
+DPL_EXPORT template <fp16_like E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-requires (sizeof(E) == 2 && !brain_float<E>)
 inline simd<E> DPL_VECTORCALL mul(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
     return _mm_mul_ph(+lhs, +rhs);
 }
 
-DPL_EXPORT template <floating_point E>
+DPL_EXPORT template <fp16_like E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-requires (sizeof(E) == 2 && !brain_float<E>)
 inline simd<E> DPL_VECTORCALL div(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
     return _mm_div_ph(+lhs, +rhs);
 }
