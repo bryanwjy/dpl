@@ -28,9 +28,9 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr bit_type_t<element_count<E, A>> DPL_VECTORCALL
         fallback(basic_simd_mask<E, A> arg) noexcept {
-        if constexpr (convertible_to<decltype(+arg),
+        if constexpr (convertible_to<decltype(dx::to_native_vector(arg)),
                           bit_type_t<element_count<E, A>>>) {
-            return +arg;
+            return dx::to_native_vector(arg);
         } else {
             return []<size_t... Is>(
                        basic_simd_mask<E, A> arg, index_sequence<Is...>) {

@@ -7,6 +7,7 @@
 #  include "dpl/core/basic/immediate.h"
 #  include "dpl/core/basic/immediate_mask.h"
 #  include "dpl/core/basic/reinterpret.h"
+#  include "dpl/core/basic/to_native_vector.h"
 #  include "dpl/core/operations/bit.h"
 #  include "dpl/core/operations/logic.h"
 #  include "dpl/core/operations/permute.h"
@@ -46,9 +47,9 @@ public:
         : result_(vec) {}
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    constexpr auto DPL_VECTORCALL operator+(
+    explicit constexpr DPL_VECTORCALL operator vector_type(
         this reduction_result self) noexcept {
-        return +self.result_;
+        return datapar::to_native_vector(self.result_);
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
@@ -167,8 +168,8 @@ struct reducei_t<V> {
                 }
             };
 
-        using R = reduction_result<T, V>;
-        return R(+reducer(popcount));
+        return reduction_result<T, V>(
+            datapar::to_native_vector(reducer(popcount)));
     }
 };
 

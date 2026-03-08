@@ -76,6 +76,11 @@ public:
         return datapar::extract(self, idx);
     }
 
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    explicit constexpr operator mask_type(this basic_simd_mask self) noexcept {
+        return self.mask_;
+    }
+
 private:
     mask_type mask_;
 };
