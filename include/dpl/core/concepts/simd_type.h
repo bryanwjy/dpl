@@ -11,7 +11,6 @@
 #  include "dpl/std/concepts/enumeration.h"
 #  include "dpl/std/concepts/floating_point.h"
 #  include "dpl/std/concepts/integral.h"
-#  include "dpl/std/concepts/same_as.h"
 #  include "dpl/std/type_traits/is_object.h"
 #  include "dpl/std/type_traits/is_trivially_copyable.h"
 #endif
@@ -26,7 +25,8 @@ inline constexpr bool enable_simd_type<basic_simd<T, Abi>> = true;
 
 DPL_EXPORT template <typename T>
 concept simd_type = enable_simd_type<T> && is_object_v<T> && semiregular<T> &&
-    is_trivially_copyable_v<T> && requires {
+    is_trivially_copyable_v<T> &&
+    requires {
         typename T::value_type;
         typename T::abi_type;
         requires simd_element<typename T::value_type>;
@@ -34,12 +34,9 @@ concept simd_type = enable_simd_type<T> && is_object_v<T> && semiregular<T> &&
         requires sizeof(typename T::value_type) <= T::abi_type::size &&
                 alignof(typename T::value_type) <= T::abi_type::alignment;
         requires alignof(T) >= T::abi_type::alignment;
-    } && requires(T const val) {
-        {
-            +val
-        } -> same_as<
-            typename T::abi_type::template native_type<typename T::value_type>>;
-    };
+    } &&
+    explicitly_convertible_to<T,
+        typename T::abi_type::template native_type<typename T::value_type>>;
 
 DPL_EXPORT template <simd_type T>
 struct simd_element_type<T> {

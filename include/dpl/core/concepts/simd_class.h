@@ -9,7 +9,7 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar {
-template <typename T>
+DPL_EXPORT template <typename T>
 concept simd_class = simd_mask_type<T> || simd_type<T>;
 
 } // namespace datapar

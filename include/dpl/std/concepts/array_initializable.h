@@ -9,13 +9,15 @@
 #if !DPL_MODULES
 #  include "dpl/std/type_traits/extent.h"
 #  include "dpl/std/type_traits/is_array.h"
+#  include "dpl/std/type_traits/remove_extent.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 
 DPL_EXPORT template <typename T, typename... Args>
 concept array_initializable = is_array_v<T> && extent_v<T> == sizeof...(Args) &&
-    (... && core_convertible_to<Args, T>) && requires(Args&&... args) {
+    (... && core_convertible_to<Args, remove_extent_t<T>>) &&
+    requires(Args&&... args) {
         { T{static_cast<Args&&>(args)...} };
     };
 

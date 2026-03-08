@@ -39,7 +39,9 @@ public:
     requires array_initializable<array_type, Args...>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr basic_simd<E, A> operator()(Args&&... args) noexcept
-    requires requires { initialize<E>(internal::abi<A>, array_type{}); }
+    requires requires {
+        initialize<E>(internal::abi<A>, __DPL forward<Args>(args)...);
+    }
     {
         return initialize<E>(internal::abi<A>, __DPL forward<Args>(args)...);
     }
@@ -48,9 +50,9 @@ public:
     requires array_initializable<barray_type, Bs...>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr basic_simd_mask<E, A> operator()(Bs... args) noexcept
-    requires requires { initialize<E>(internal::abi<A>, barray_type{}); }
+    requires requires { initialize<E>(internal::abi<A>, args...); }
     {
-        return initialize<E>(internal::abi<A>, __DPL forward<Bs>(args)...);
+        return initialize<E>(internal::abi<A>, args...);
     }
 };
 

@@ -74,6 +74,7 @@ export import :std.stddef;
 #include "dpl/std/type_traits/make_unsigned.h"
 #include "dpl/std/type_traits/remove_const.h"
 #include "dpl/std/type_traits/remove_cvref.h"
+#include "dpl/std/type_traits/remove_extent.h"
 #include "dpl/std/type_traits/remove_reference.h"
 #include "dpl/std/type_traits/type_identity.h"
 #include "dpl/std/type_traits/underlying_type.h"

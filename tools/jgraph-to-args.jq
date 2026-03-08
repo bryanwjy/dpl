@@ -3,7 +3,9 @@
 # unwrap slurpfiles
 ($jmap[0]) as $jmap
 | ($jgraph[0]) as $jgraph
-| $target as $mod
+
+# extract target from jdep file itself
+| (.rules[0].provides[0]?["logical-name"] // .rules[0]["primary-output"]) as $mod
 
 # compute transitive closure using recursion
 | ($mod | [recurse(. as $m | $jgraph[$m][]?)] ) 

@@ -62,8 +62,7 @@ public:
     __DPL_HIDE_FROM_ABI constexpr basic_simd(B scalar) noexcept
         : basic_simd(datapar::broadcast<A>(scalar)) {}
 
-    template <typename... Args>
-    requires regular_invocable<internal::initialize_t<basic_simd>, Args...>
+    template <core_convertible_to<E>... Args>
     __DPL_HIDE_FROM_ABI explicit(
         !same_as<invoke_result_t<internal::initialize_t<A>, Args...>,
             basic_simd>) constexpr basic_simd(Args&&... args) noexcept
@@ -72,7 +71,7 @@ public:
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    constexpr auto DPL_VECTORCALL operator+(this basic_simd self) noexcept {
+    constexpr auto operator+(this basic_simd self) noexcept {
         return self.data_;
     }
 
@@ -81,6 +80,12 @@ public:
         this basic_simd self, internal::extraction_index auto idx) noexcept {
         assert(idx < element_count<basic_simd>);
         return datapar::extract(self, idx);
+    }
+
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    explicit constexpr operator vector_type(this basic_simd self) noexcept {
+
+        return self.data_;
     }
 
 private:
