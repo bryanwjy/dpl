@@ -29,20 +29,18 @@ endif
 CXXFLAGS += -msse4.2 -mfma
 CPPFLAGS += -I$(INCLUDE_DIR)
 
-CPPM_SRCS := $(shell find $(MODULES_DIR) -name '*.cppm') $(shell find $(SRC_DIR) -name '*.cppm') \
-$(shell find $(TEST_DIR) -name '*.cppm')
-CPP_SRCS := $(shell find $(SRC_DIR) -name '*.cpp') $(shell find $(TEST_DIR) -name '*.cpp')
-SRCS := $(CPPM_SRCS) $(CPP_SRCS)
+SRCS := $(shell find $(MODULES_DIR) $(SRC_DIR) $(TEST_DIR) -type f \( -name '*.cpp' -o -name '*.cppm' \) 2>/dev/null)
+CPP_SRCS := $(filter %.cpp,$(SRCS))
+CPPM_SRCS := $(filter %.cppm,$(SRCS))
+COMPILE_SRCS := $(CPP_SRCS) $(filter $(SRC_DIR)/%.cppm,$(CPPM_SRCS))
 
 BMI_TARGETS := $(addsuffix .pcm, $(CPPM_SRCS:$(ROOT_DIR)/%=$(OUTPUT_DIR)/%))
-BMID_TARGETS := $(addsuffix .d, $(CPPM_SRCS:$(ROOT_DIR)/%=$(OUTPUT_DIR)/%))
-
 JDEP_TARGETS := $(addsuffix .jdep, $(SRCS:$(ROOT_DIR)/%=$(OUTPUT_DIR)/%))
 ARG_TARGETS := $(addsuffix .args, $(SRCS:$(ROOT_DIR)/%=$(OUTPUT_DIR)/%))
-OBJ_TARGETS := $(addsuffix .o, $(SRCS:$(ROOT_DIR)/%=$(OUTPUT_DIR)/%))
-OBJD_TARGETS := $(addsuffix .d, $(SRCS:$(ROOT_DIR)/%=$(OUTPUT_DIR)/%))
 JCMD_TARGETS := $(addsuffix .jcmd, $(SRCS:$(ROOT_DIR)/%=$(OUTPUT_DIR)/%))
 PRE_TARGETS := $(addsuffix .pre, $(SRCS:$(ROOT_DIR)/%=$(OUTPUT_DIR)/%))
+DEP_TARGETS := $(addsuffix .d, $(SRCS:$(ROOT_DIR)/%=$(OUTPUT_DIR)/%))
+OBJ_TARGETS := $(addsuffix .o, $(COMPILE_SRCS:$(ROOT_DIR)/%=$(OUTPUT_DIR)/%))
 
 ALL_TARGETS := $(BMI_TARGETS) $(BMID_TARGETS) \
 $(JDEP_TARGETS) $(ARG_TARGETS) $(OBJ_TARGETS) \
@@ -78,7 +76,7 @@ $(OUTPUT_DIR)/%.pass.crc: $(OUTPUT_DIR)/%.pass
 	cksum $< > $@ || { echo "TEST $(OUTPUT_DIR)/%,%,$<): \033[0;31mFAILED\033[0m" && rm -f $@; exit 1; }
 
 $(OUTPUT_DIR)/%.pass: $(OUTPUT_DIR)/%.pass.cpp.o $(OUTPUT_DIR)/link.command
-	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) $< $(LDLIBS) -o '$@'
+	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) -o '$@' $< $(LDLIBS)
 
 clean:
 	@rm -f $(OUTPUT_DIR)/**/*.o $(OUTPUT_DIR)/**/*.pcm $(OUTPUT_DIR)/**/*.jdep \
@@ -130,16 +128,20 @@ $(PRE_TARGETS):%.pre: %.jdep $(OUTPUT_DIR)/jmap.json $(TOOLS_DIR)/jdep-to-d.jq
 
 -include $(PRE_TARGETS)
 
-$(OUTPUT_DIR)/%.cppm.pcm: $(ROOT_DIR)/%.cppm $(OUTPUT_DIR)/%.cppm.args | $(OUTPUT_DIR)/%.cppm.pre
-	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) -MMD -MP -MF '$(@:.pcm=.d)' -MT '$@' --precompile $< -o '$@' @$(OUTPUT_DIR)/$*.cppm.args
+$(OUTPUT_DIR)/src/%.cppm.o: $(SRC_DIR)/%.cppm $(OUTPUT_DIR)/src/%.cppm.args | $(OUTPUT_DIR)/src/%.cppm.pre
+	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) -MMD -MP -MF '$(@:.o=.d)' -MT '$@' -fmodule-output=$(@:.o=.pcm) -fmodules-reduced-bmi -c $< -o '$@' @$(@:.o=.args)
 
--include $(BMID_TARGETS)
+$(OUTPUT_DIR)/src/%.cppm.pcm: $(OUTPUT_DIR)/src/%.cppm.o
+	@
+
+$(OUTPUT_DIR)/modules/%.cppm.pcm: $(MODULES_DIR)/%.cppm $(OUTPUT_DIR)/modules/%.cppm.args | $(OUTPUT_DIR)/modules/%.cppm.pre
+	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) -MMD -MP -MF '$(@:.pcm=.d)' -MT '$@' -fmodule-output=$@ -fmodules-reduced-bmi -c $< -o '$(@:.pcm=.o)' @$(@:.pcm=.args)
 
 $(OUTPUT_DIR)/%.cppm.jcmd: $(OUTPUT_DIR)/%.cppm.args $(OUTPUT_DIR)/compile.command $(TOOLS_DIR)/generate-jcmd.jq
 	@jq -n \
 	--arg directory '$(OUTPUT_DIR)' \
 	--rawfile args '$(OUTPUT_DIR)/$*.cppm.args' \
-	--arg command '$(CXX) $(CPPFLAGS) $(CXXFLAGS) -x c++ -c $*.cppm.pcm -o $*.cppm.o' \
+	--arg command '$(CXX) $(CPPFLAGS) $(CXXFLAGS) -x c++ -fmodules-reduced-bmi -c $(ROOT_DIR)/$*.cppm -o $*.cppm.o' \
 	--arg file '$(ROOT_DIR)/$*.cppm' \
 	-f $(TOOLS_DIR)/generate-jcmd.jq > $@
 
@@ -157,12 +159,8 @@ $(OUTPUT_DIR)/%.cppm.jdep: $(ROOT_DIR)/%.cppm
 $(OUTPUT_DIR)/%.cpp.jdep: $(ROOT_DIR)/%.cpp
 	$(call replace_if_different, clang-scan-deps-21 -format=p1689 -- $(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $(@:.jdep=.o))
 
-$(OUTPUT_DIR)/%.cppm.o: $(OUTPUT_DIR)/%.cppm.pcm $(OUTPUT_DIR)/%.cppm.args
-	@mkdir -p '$(@D)'
-	@$(CXX) $(CXXFLAGS) -c $< -o '$@' @$(OUTPUT_DIR)/$*.cppm.args
-
 $(OUTPUT_DIR)/%.cpp.o: $(ROOT_DIR)/%.cpp $(OUTPUT_DIR)/%.cpp.args | $(OUTPUT_DIR)/%.cpp.pre
 	@mkdir -p '$(@D)'
-	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) -MMD -MP -MF '$(@:.o=.d)' -MT '$@' -c $< -o '$@' @$(OUTPUT_DIR)/$*.cpp.args
+	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) -MMD -MP -MF '$(@:.o=.d)' -MT '$@' -c $< -o '$@' @$(@:.o=.args)
 
--include $(OBJD_TARGETS)
+-include $(DEP_TARGETS)
