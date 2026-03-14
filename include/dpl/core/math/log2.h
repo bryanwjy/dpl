@@ -4,6 +4,7 @@
 #include "dpl/config.h"
 
 #include "dpl/core/math/fixup.h"
+#include "dpl/core/math/frexp.h"
 #include "dpl/core/math/internal/pair.h"
 #include "dpl/core/math/internal/polynomial.h"
 
@@ -36,7 +37,7 @@ private:
         fallback(basic_simd<E, A> val) noexcept {
         using simdf = basic_simd<E, A>;
         auto const decomp =
-            fmath::frexp(val, fmath::fr::reduced, fmath::fr::fpexp);
+            dx::frexp(val, frexp_reduced | frexp_floating_point);
         constexpr auto n_one = fmath::single(dx::broadcast<A, E>(-1));
         constexpr auto one = fmath::single(dx::broadcast<A, E>(1));
         auto const x = (n_one + decomp.fr) / (one + decomp.fr);
@@ -64,7 +65,7 @@ private:
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<double, A> val) noexcept {
         auto const decomp =
-            fmath::frexp(val, fmath::fr::reduced, fmath::fr::fpexp);
+            dx::frexp(val, frexp_reduced | frexp_floating_point);
         constexpr auto n_one = fmath::single(dx::broadcast<A, double>(-1));
         constexpr auto one = fmath::single(dx::broadcast<A, double>(1));
         auto const x = (n_one + decomp.fr) / (one + decomp.fr);

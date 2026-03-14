@@ -4,8 +4,8 @@
 #include "dpl/config.h"
 
 #include "dpl/core/math/fixup.h"
+#include "dpl/core/math/frexp.h"
 #include "dpl/core/math/internal/accuracy.h"
-#include "dpl/core/math/internal/frexp.h"
 #include "dpl/core/math/internal/ldexp.h"
 #include "dpl/core/math/internal/rsqrt2.h"
 
@@ -33,7 +33,7 @@ private:
         fallback(basic_simd<E, A> val) noexcept {
         constexpr auto inv_sqrt2 = dx::broadcast<E, A>(mx::rsqrt2(dx::one));
 
-        auto const decomp = fmath::frexp(val);
+        auto const decomp = dx::frexp(val);
         auto const remtwo = decomp.exp & dx::one;
         auto const reduced = mx::rsqrt2(mx::accuracy::speed, decomp.fr);
         auto result = mx::ldexp(mx::compliance::unsafe, reduced,

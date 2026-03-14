@@ -3,8 +3,8 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/math/frexp.h"
 #include "dpl/core/math/internal/accuracy.h"
-#include "dpl/core/math/internal/frexp.h"
 #include "dpl/core/math/internal/ldexp.h"
 #include "dpl/core/math/internal/rsqrt2.h"
 #include "dpl/core/math/isfinite.h"
@@ -37,7 +37,7 @@ private:
         constexpr auto vsqrt8 =
             dx::broadcast<E, A>(2.8284271247461900976033774484);
 
-        auto const decomp = fmath::frexp(val);
+        auto const decomp = dx::frexp(val);
         auto const remtwo = decomp.exp & dx::one;
         auto const ifodd = dx::select(remtwo == dx::zero, vsqrt8, two);
         auto const sig =

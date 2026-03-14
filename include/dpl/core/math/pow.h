@@ -4,6 +4,7 @@
 #include "dpl/config.h"
 
 #include "dpl/core/math/fixup.h"
+#include "dpl/core/math/frexp.h"
 #include "dpl/core/math/internal/floating_point_simd_with_abi.h"
 #include "dpl/core/math/internal/pair.h"
 #include "dpl/core/math/internal/polynomial.h"
@@ -177,7 +178,7 @@ private:
         fallback(basic_simd<E, A> lhs, basic_simd<E, A> rhs) noexcept {
         auto const absl = dx::abs(lhs);
         auto const [fr, exp] =
-            fmath::frexp(absl, fmath::fr::reduced, fmath::fr::fpexp);
+            dx::frexp(absl, frexp_reduced | frexp_floating_point);
         auto result = pow_t::exp2(rhs * (pow_t::log2(fr) + exp));
 
         constexpr auto inf = dx::infinity_v<decltype(result)>;
