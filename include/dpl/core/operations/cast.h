@@ -29,7 +29,15 @@ struct cast_t {};
 template <typename>
 void cast(...) noexcept = delete;
 
-template <basic_simd_element To>
+template <typename From, typename To>
+concept unqualified_element_castable_to =
+    simd_type<From> && simd_element<To> && requires(From arg) {
+        {
+            cast<To>(internal::abi<From>, arg)
+        } -> simd_with<To, typename From::abi_type>;
+    };
+
+template <simd_element To>
 struct cast_t<To> {
 private:
     template <basic_simd_element From>
@@ -50,9 +58,9 @@ private:
         return static_cast<To>(val);
     }
 
-    template <simd_element From, simd_abi A>
+    template <basic_simd_element From, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_simd<To, A> safe_cast(
+    static constexpr basic_simd<To, A> fallback(
         basic_simd<From, A> arg) noexcept {
         using S = basic_simd<From, A>;
         using R = basic_simd<To, A>;
@@ -66,51 +74,36 @@ private:
         }(arg, iota_sequence<R>);
     }
 
-    template <basic_simd_element F, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_simd<To, A> fallback(basic_simd<F, A> arg) noexcept {
-        return safe_cast(arg);
-    }
-
 public:
-    template <basic_simd_class From>
-    requires simd_type<From>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(From arg) noexcept {
-        if constexpr (requires { cast<To>(internal::abi<From>, arg); }) {
-            if consteval {
-                return fallback(arg);
-            } else {
-                return cast<To>(internal::abi<From>, arg);
-            }
-        } else {
-            return fallback(arg);
-        }
-    }
-
     template <simd_type From>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(From arg) noexcept {
-        if constexpr (requires { cast<To>(internal::abi<From>, arg); }) {
-            return cast<To>(internal::abi<From>, arg);
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(From mask) noexcept {
+        if constexpr (unqualified_element_castable_to<From, To>) {
+            if constexpr (basic_simd_type<From>) {
+                if consteval {
+                    return fallback(mask);
+                } else {
+                    return cast<To>(internal::abi<From>, mask);
+                }
+            } else {
+                return cast<To>(internal::abi<From>, mask);
+            }
+        } else if constexpr (basic_simd_type<From>) {
+            return fallback(mask);
         } else {
-            return operator()(dx::to_basic_type(arg));
+            return operator()(dx::to_basic_type(mask));
         }
     }
 };
 
-template <typename From, typename To>
-concept unqualified_element_castable_to = simd_type<From> && simd_element<To> &&
-    requires(From arg) { cast<To>(internal::abi<From>, arg); };
-
 template <simd_element To>
+requires (!basic_simd_element<To>)
 struct cast_t<To> {
 public:
     template <simd_type From>
     requires unqualified_element_castable_to<From, To>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(From arg) noexcept
-        -> equivalent_simd_as<rebind_simd_t<From, To>> auto {
+    static constexpr auto operator()(From arg) noexcept {
         return cast<To>(internal::abi<From>, arg);
     }
 
@@ -134,24 +127,23 @@ public:
 template <typename From, typename To>
 concept unqualified_castable_to =
     simd_type<From> && simd_type<To> && requires(From arg) {
-        cast<To>(internal::abi<common_abi_t<From, To>>, arg);
+        {
+            cast<To>(internal::abi<common_abi_t<From, To>>, arg)
+        } -> core_convertible_to<To>;
     };
 
-template <basic_simd_type To>
+template <simd_type To>
 struct cast_t<To> {
 public:
-    template <basic_simd_type From>
-    requires same_abi_simd_as<To, From>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr To operator()(From arg) noexcept {
-        return cast_t<typename To::value_type>::operator()(arg);
-    }
-
     template <simd_type From>
     requires same_abi_simd_as<To, From>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr To operator()(From arg) noexcept {
-        return operator()(dx::to_basic_type(arg));
+        if constexpr (basic_simd_type<From>) {
+            return cast_t<typename To::value_type>::operator()(arg);
+        } else {
+            return operator()(dx::to_basic_type(arg));
+        }
     }
 
     template <unqualified_castable_to<To> From>
@@ -163,6 +155,7 @@ public:
 };
 
 template <simd_type To>
+requires (!basic_simd_type<To>)
 struct cast_t<To> {
 public:
     template <unqualified_castable_to<To> From>

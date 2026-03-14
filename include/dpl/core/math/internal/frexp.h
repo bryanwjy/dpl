@@ -12,6 +12,7 @@
 #  include "dpl/core/constants/mantissa_width.h"
 #  include "dpl/core/constants/min_value.h"
 #  include "dpl/core/constants/zero.h"
+#  include "dpl/core/operations/abs.h"
 #  include "dpl/core/operations/arithmetic.h"
 #  include "dpl/core/operations/bitwise.h"
 #  include "dpl/core/operations/cast.h"

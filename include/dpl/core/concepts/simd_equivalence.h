@@ -38,6 +38,19 @@ DPL_EXPORT template <typename T, typename E, typename A = typename T::abi_type>
 concept mask_with = simd_element<E> && simd_abi<A> && simd_mask_type<T> &&
     equivalent_mask_as<T, basic_simd_mask<E, A>>;
 
+DPL_EXPORT template <typename T, typename A>
+concept simd_with_abi =
+    atom::simd_basics<T> && simd_with<T, typename T::value_type, A>;
+
+DPL_EXPORT template <typename T, typename A>
+concept mask_with_abi =
+    atom::simd_basics<T> && mask_with<T, simd_element_type_t<T>, A>;
+
+DPL_EXPORT template <typename T, typename A>
+concept simd_class_with_abi = atom::simd_basics<T> &&
+    (simd_with<T, typename T::value_type, A> ||
+        mask_with<T, simd_element_type_t<T>, A>);
+
 } // namespace datapar
 
 DPL_DEFAULT_NAMESPACE_END

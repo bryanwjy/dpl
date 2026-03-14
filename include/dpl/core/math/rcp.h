@@ -63,27 +63,25 @@ private:
     }
 
 public:
-    template <basic_simd_type T>
-    requires floating_point_simd<T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr T DPL_VECTORCALL operator()(T val) noexcept {
-        if constexpr (requires { rcp(internal::abi<T>, val); }) {
-            if not consteval {
-                return rcp(internal::abi<T>, val);
-            } else {
-                return fallback(val);
-            }
-        } else {
-            return fallback(val);
-        }
-    }
-
     template <floating_point_simd T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(T val) noexcept
-        -> equivalent_simd_as<T> auto {
-        if constexpr (requires(T val) { rcp(internal::abi<T>, val); }) {
-            return rcp(internal::abi<T>, val);
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(T val) noexcept {
+        if constexpr (requires {
+                          {
+                              rcp(internal::abi<T>, val)
+                          } -> equivalent_simd_as<T>;
+                      }) {
+            if constexpr (basic_simd_type<T>) {
+                if not consteval {
+                    return rcp(internal::abi<T>, val);
+                } else {
+                    return fallback(val);
+                }
+            } else {
+                return rcp(internal::abi<T>, val);
+            }
+        } else if constexpr (basic_simd_type<T>) {
+            return fallback(val);
         } else {
             return operator()(dx::to_basic_type(val));
         }

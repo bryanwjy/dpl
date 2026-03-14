@@ -3,7 +3,6 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/concepts/common_class_with.h"
 #include "dpl/core/concepts/simd_abi.h"
 #include "dpl/core/concepts/simd_class.h"
 
@@ -44,6 +43,11 @@ struct common_abi<T> {
     using type DPL_NODEBUG = typename T::abi_type;
 };
 
+DPL_EXPORT template <simd_class T>
+struct common_abi<T, T> {
+    using type DPL_NODEBUG = typename T::abi_type;
+};
+
 DPL_EXPORT template <simd_abi A>
 struct common_abi<A, A> {
     using type DPL_NODEBUG = A;
@@ -61,25 +65,29 @@ DPL_EXPORT template <typename T, typename U, typename... Ts>
 requires requires { typename common_abi_t<T, U>; }
 struct common_abi<T, U, Ts...> : common_abi<common_abi_t<T, U>, Ts...> {};
 
+namespace atom {
+template <typename A, typename B>
+concept common_abi_with = same_as<A, B> || requires {
+    typename common_abi_t<A, B>;
+    typename common_abi_t<B, A>;
+    requires simd_abi<common_abi_t<A, B>> && simd_abi<common_abi_t<B, A>>;
+    requires same_as<common_abi_t<A, B>, common_abi_t<B, A>>;
+};
+} // namespace atom
+
 DPL_EXPORT template <typename A, typename B>
 concept common_abi_with =
-    simd_abi<A> && simd_abi<B> && (same_as<A, B> || requires {
-        typename common_abi_t<A, B>;
-        typename common_abi_t<B, A>;
-        requires simd_abi<common_abi_t<A, B>> && simd_abi<common_abi_t<B, A>>;
-        requires same_as<common_abi_t<A, B>, common_abi_t<B, A>>;
-    });
+    simd_abi<A> && simd_abi<B> && atom::common_abi_with<A, B>;
 
 DPL_EXPORT template <typename A, typename B>
 concept same_abi_as = common_abi_with<A, B> && same_as<A, B>;
 
 DPL_EXPORT template <typename A, typename B>
-concept common_abi_simd_with =
-    simd_class<A> && simd_class<B> && common_class_with<A, B> &&
-    common_abi_with<typename A::abi_type, typename B::abi_type>;
+concept common_abi_simd_with = simd_class<A> && simd_class<B> &&
+    atom::common_abi_with<typename A::abi_type, typename B::abi_type>;
 
 DPL_EXPORT template <typename A, typename B>
-concept same_abi_simd_as = common_abi_simd_with<A, B> &&
+concept same_abi_simd_as = simd_class<A> && simd_class<B> &&
     same_abi_as<typename A::abi_type, typename B::abi_type>;
 } // namespace datapar
 

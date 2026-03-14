@@ -4,6 +4,7 @@
 #include "dpl/config.h"
 
 #include "dpl/core/math/fixup.h"
+#include "dpl/core/math/internal/floating_point_simd_with_abi.h"
 #include "dpl/core/math/internal/pair.h"
 #include "dpl/core/math/internal/polynomial.h"
 #include "dpl/core/math/round.h"
@@ -23,13 +24,27 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void pow(...) noexcept = delete;
 
-template <typename T>
-concept unqualified_pow = floating_point_simd<T> && requires(T val) {
-    { pow(internal::abi<T>, val) } -> equivalent_simd_as<T>;
+template <typename L, typename R, typename A = common_abi_t<L, R>>
+concept unqualified_pow = requires(L lhs, R rhs) {
+    { pow(internal::abi<A>, lhs, rhs) } -> arithmetic_result<L, R>;
 };
 
-struct pow_t {
+struct pow_t : binary_operation_base<pow_t> {
 private:
+    friend binary_operation_base<pow_t>;
+
+    template <simd_abi A, typename L, typename R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto native(A abi, L left, R right) noexcept
+    requires requires {
+        {
+            pow(internal::abi<A>, left, right)
+        } -> floating_point_simd_with_abi<A>;
+    }
+    {
+        return pow(internal::abi<A>, left, right);
+    }
+
     template <simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr basic_simd<float, A> DPL_VECTORCALL
@@ -190,31 +205,44 @@ private:
     }
 
 public:
-    template <basic_simd_type T>
-    requires floating_point_simd<T>
+    template <floating_point_simd L, common_float_simd_with<L> R>
+    requires same_abi_simd_as<L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(T val) noexcept {
-        if constexpr (unqualified_pow<T>) {
-            if consteval {
-                return fallback(val);
+    static constexpr auto operator()(L lhs, R rhs) noexcept {
+        using A = typename L::abi_type; // Same ABI, just pick one
+        if constexpr (unqualified_pow<L, R, A>) {
+            if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
+                if consteval {
+                    return fallback(lhs, rhs);
+                } else {
+                    return pow(internal::abi<A>, lhs, rhs);
+                }
             } else {
-                return pow(internal::abi<T>, val);
+                return pow(internal::abi<A>, lhs, rhs);
             }
+        } else if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
+            return fallback(lhs, rhs);
         } else {
-            return fallback(val);
+            return operator()(dx::to_basic_type(lhs), dx::to_basic_type(rhs));
         }
     }
 
-    template <floating_point_simd T>
+    template <floating_point_simd L, common_float_simd_with<L> R>
+    requires (!same_abi_simd_as<L, R>) &&
+        (unqualified_pow<L, R> ||
+            unqualified_pow<basic_type_t<L>, basic_type_t<R>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T val) noexcept
-        -> equivalent_simd_as<T> auto {
-        if constexpr (unqualified_pow<T>) {
-            return pow(internal::abi<T>, val);
+    static constexpr auto operator()(L lhs, R rhs) noexcept {
+        using A = common_abi_t<L, R>;
+        if constexpr (unqualified_pow<L, R>) {
+            return pow(internal::abi<A>, lhs, rhs);
         } else {
-            return operator()(dx::to_basic_type(val));
+            return pow(internal::abi<A>, dx::to_basic_type(lhs),
+                dx::to_basic_type(rhs));
         }
     }
+
+    using binary_operation_base<pow_t>::operator();
 };
 } // namespace datapar::internal
 

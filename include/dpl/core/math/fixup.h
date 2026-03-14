@@ -294,46 +294,28 @@ private:
     }
 
 public:
-    template <basic_simd_type T,
+    template <floating_point_simd T,
         fpfix::condition_set_for<typename T::value_type> F>
-    requires floating_point_simd<T> &&
-        fpfix::result_subset_of<F, typename T::value_type, dx::nan, dx::zero,
-            -dx::zero, dx::infinity, -dx::infinity>
+    requires fpfix::result_subset_of<F, typename T::value_type, dx::nan,
+        dx::zero, -dx::zero, dx::infinity, -dx::infinity>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T src, T result, F conditions) noexcept {
         if constexpr (unqualified_fixup<T, T, T, F>) {
-            if not consteval {
-                return fixup(internal::abi<T>, src, result, conditions);
+            if constexpr (basic_simd_type<T>) {
+                if not consteval {
+                    return fixup(internal::abi<T>, src, result, conditions);
+                } else {
+                    return fallback(src, result, conditions);
+                }
             } else {
-                return fallback(src, result, conditions);
+                return fixup(internal::abi<T>, src, result, conditions);
             }
-        } else {
+        } else if constexpr (basic_simd_type<T>) {
             return fallback(src, result, conditions);
+        } else {
+            return operator()(
+                dx::to_basic_type(src), dx::to_basic_type(result), conditions);
         }
-    }
-
-    template <floating_point_simd L, common_arithmetic_simd_with<L> R,
-        fpfix::condition_set_for<common_arithmetic_type_t<L, R>> F>
-    requires unqualified_fixup<common_abi_t<L, R>, L, R, F>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L src, R result, F conditions) noexcept {
-        using A = common_abi_t<L, R>;
-        return fixup(internal::abi<A>, src, result, conditions);
-    }
-
-    template <floating_point_simd L, common_arithmetic_simd_with<L> R,
-        fpfix::condition_set_for<common_arithmetic_type_t<L, R>> F>
-    requires fpfix::result_subset_of<F,
-                 basic_element_t<common_arithmetic_type_t<L, R>>, dx::nan,
-                 dx::zero, -dx::zero, dx::infinity, -dx::infinity> &&
-        (!basic_simd_type<L> || !basic_simd_type<R> ||
-            !same_abi_simd_as<L, R>) &&
-        (!unqualified_fixup<common_abi_t<L, R>, L, R, F>)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L src, R result, F conditions) noexcept
-        -> equivalent_simd_as<common_arithmetic_simd_t<L, R>> auto {
-        return operator()(
-            dx::to_basic_type(src), dx::to_basic_type(result), conditions);
     }
 };
 } // namespace datapar::internal

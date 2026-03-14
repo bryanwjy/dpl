@@ -24,21 +24,25 @@ template <typename T>
 using bit_for_t DPL_NODEBUG = typename bit_type<sizeof(T) * char_bit_v>::type;
 } // namespace internal
 
-DPL_EXPORT template <typename A, typename B>
-concept common_bits_with = same_as<A, B> || (common_size_with<A, B> &&
-    requires {
-        typename internal::bit_for_t<A>;
-        typename internal::bit_for_t<B>;
-    } && same_as<internal::bit_for_t<A>, internal::bit_for_t<B>> &&
-    requires(A a, B b) {
-        __DPL bit_cast<B>(a);
-        __DPL bit_cast<A>(b);
-        __DPL bit_cast<internal::bit_for_t<A>>(a);
-        __DPL bit_cast<internal::bit_for_t<B>>(b);
-    });
+namespace atom {
+template <typename A, typename B>
+concept common_bits_with = same_as<A, B> || requires(A a, B b) {
+    typename internal::bit_for_t<A>;
+    typename internal::bit_for_t<B>;
+    requires same_as<internal::bit_for_t<A>, internal::bit_for_t<B>>;
+    __DPL bit_cast<B>(a);
+    __DPL bit_cast<A>(b);
+    __DPL bit_cast<internal::bit_for_t<A>>(a);
+    __DPL bit_cast<internal::bit_for_t<B>>(b);
+};
+} // namespace atom
 
 DPL_EXPORT template <typename A, typename B>
-concept common_bits_simd_with = common_size_simd_with<A, B> &&
+concept common_bits_with =
+    common_size_with<A, B> && atom::common_bits_with<A, B>;
+
+DPL_EXPORT template <typename A, typename B>
+concept common_bits_simd_with = common_class_with<A, B> &&
     common_bits_with<simd_element_type_t<A>, simd_element_type_t<B>>;
 
 } // namespace datapar

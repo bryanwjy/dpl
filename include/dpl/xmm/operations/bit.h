@@ -293,9 +293,9 @@ inline simd<signed_representation_t<E>> DPL_VECTORCALL
         using bit = unsigned_representation_t<E>;
         return xmm::countr_zero(tag, xmm::reinterpret<bit>(tag, val));
     } else {
-        auto const nval = xmm::sub(tag, simd<E>(_mm_setzero_si128()), val);
+        auto const nval = xmm::subtract(tag, simd<E>(_mm_setzero_si128()), val);
         return xmm::popcount(tag,
-            xmm::sub(tag, simd<E>(_mm_and_si128(+val, +nval)),
+            xmm::subtract(tag, simd<E>(_mm_and_si128(+val, +nval)),
                 xmm::broadcast<E>(tag, 1u)));
     }
 }

@@ -7,12 +7,12 @@
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 
-namespace datapar::internal {
+namespace datapar::atom {
 template <typename T, typename U>
 concept common_basic_element_with = requires {
     typename basic_element_t<T>;
     typename basic_element_t<U>;
     requires same_as<basic_element_t<T>, basic_element_t<U>>;
 };
-} // namespace datapar::internal
+} // namespace datapar::atom
 DPL_DEFAULT_NAMESPACE_END

@@ -30,8 +30,10 @@ DPL_EXPORT template <simd_element E, simd_element F>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr simd<E> reinterpret(abi_tag tag, simd<F> src) noexcept {
     if consteval {
-        []<size_t... Is>(abi_tag tag, simd<F> src, index_sequence<Is...>) {
-            return dx::xmm::initialize(tag, dx::xmm::extract(src, imm<Is>)...);
+        return []<size_t... Is>(
+                   abi_tag tag, simd<F> src, index_sequence<Is...>) {
+            return dx::xmm::initialize<E>(tag,
+                __DPL bit_cast<E>(dx::xmm::extract(tag, src, imm<Is>))...);
         }(tag, src, iota_sequence<E, abi_tag>);
     } else {
         if constexpr (common_float_with<E, float>) {

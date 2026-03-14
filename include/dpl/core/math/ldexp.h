@@ -3,6 +3,8 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/math/internal/floating_point_simd_with_abi.h"
+
 #if !DPL_MODULES
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/constants/exponent_bias.h"
@@ -20,17 +22,18 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void ldexp(...) noexcept = delete;
 
-template <typename A, typename L, typename R>
-concept unqualified_ldexp =
-    requires(L lhs, R rhs) { ldexp(internal::abi<A>, lhs, rhs); };
-
 struct ldexp_t : binary_operation_base<ldexp_t> {
     friend binary_operation_base<ldexp_t>;
 
     template <simd_abi A, typename L, typename R>
-    requires unqualified_ldexp<A, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto native(A abi, L left, R right) noexcept {
+    static constexpr auto native(A abi, L left, R right) noexcept
+    requires requires {
+        {
+            ldexp(internal::abi<A>, left, right)
+        } -> floating_point_simd_with_abi<A>;
+    }
+    {
         return ldexp(internal::abi<A>, left, right);
     }
 
@@ -76,27 +79,25 @@ struct ldexp_t : binary_operation_base<ldexp_t> {
         rebind_simd_t<T, signed_rep_t<typename T::value_type>>;
 
 public:
-    template <basic_simd_type T>
-    requires floating_point_simd<T>
+    template <floating_point_simd T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T num, int_simd<T> exp) noexcept {
-        if constexpr (unqualified_ldexp<T, T, int_simd<T>>) {
-            if consteval {
-                return fallback(num, exp);
+        if constexpr (requires {
+                          {
+                              ldexp(internal::abi<T>, num, exp)
+                          } -> equivalent_simd_as<T>;
+                      }) {
+            if constexpr (basic_simd_type<T>) {
+                if consteval {
+                    return fallback(num, exp);
+                } else {
+                    return ldexp(internal::abi<T>, num, exp);
+                }
             } else {
                 return ldexp(internal::abi<T>, num, exp);
             }
-        } else {
+        } else if constexpr (basic_simd_type<T>) {
             return fallback(num, exp);
-        }
-    }
-
-    template <floating_point_simd T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T num, int_simd<T> exp) noexcept
-        -> equivalent_simd_as<T> auto {
-        if constexpr (unqualified_ldexp<T, T, int_simd<T>>) {
-            return ldexp(internal::abi<T>, num, exp);
         } else {
             return operator()(dx::to_basic_type(num), dx::to_basic_type(exp));
         }

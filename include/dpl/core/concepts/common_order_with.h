@@ -4,6 +4,8 @@
 #include "dpl/config.h"
 
 #include "dpl/core/concepts/arithmetic_type.h"
+#include "dpl/core/concepts/common_basic_element_with.h"
+#include "dpl/core/concepts/common_class_with.h"
 #include "dpl/core/concepts/common_float_with.h"
 #include "dpl/core/concepts/common_integral_with.h"
 
@@ -17,7 +19,7 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
-namespace internal {
+namespace atom {
 /**
  * Enum is naturally ordered when it is totally ordered
  * and there are no comparison operations found via ADL
@@ -60,17 +62,20 @@ template <typename T, typename U>
 concept enum_common_order_with = (enumeration<T> && enum_comparable<T, U>) ||
     (enumeration<U> && enum_comparable<U, T>);
 
-} // namespace internal
+template <typename A, typename B>
+concept common_order_with =
+    (atom::common_basic_element_with<A, B> &&
+        (atom::common_float_with<A, B> || atom::common_integral_with<A, B>)) ||
+    atom::enum_common_order_with<A, B>;
+
+} // namespace atom
 
 DPL_EXPORT template <typename A, typename B>
-concept common_order_with = common_size_with<A, B> &&
-    ((arithmetic_type<A> && arithmetic_type<B> &&
-         (same_as<A, B> || common_float_with<A, B> ||
-             common_integral_with<A, B>)) ||
-        internal::enum_common_order_with<A, B>);
+concept common_order_with =
+    common_size_with<A, B> && atom::common_order_with<A, B>;
 
 DPL_EXPORT template <typename A, typename B>
-concept common_order_simd_with = common_size_simd_with<A, B> &&
+concept common_order_simd_with = common_class_with<A, B> &&
     common_order_with<simd_element_type_t<A>, simd_element_type_t<B>>;
 
 } // namespace datapar

@@ -30,12 +30,14 @@ namespace datapar::internal {
 namespace mx = datapar::fmath;
 
 template <typename T>
-concept unqualified_cmath_round =
-    requires(T val) { round(internal::abi<T>, val); };
+concept unqualified_cmath_round = requires(T val) {
+    { round(internal::abi<T>, val) } -> equivalent_simd_as<T>;
+};
 
 template <typename T, rounding_flags R>
-concept unqualified_round =
-    requires(T val) { round(internal::abi<T>, val, rounding_v<R>); };
+concept unqualified_round = requires(T val) {
+    { round(internal::abi<T>, val, rounding_v<R>) } -> equivalent_simd_as<T>;
+};
 
 struct round_t {
 private:
@@ -95,64 +97,45 @@ private:
     }
 
 public:
-    template <basic_simd_type T>
-    requires floating_point_simd<T>
+    template <floating_point_simd T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(T val) noexcept {
         if constexpr (unqualified_cmath_round<T>) {
-            if not consteval {
-                return round(internal::abi<T>, val);
+            if constexpr (basic_simd_type<T>) {
+                if not consteval {
+                    return round(internal::abi<T>, val);
+                } else {
+                    return fallback(val);
+                }
             } else {
-                return fallback(val);
+                return round(internal::abi<T>, val);
             }
-        } else {
+        } else if constexpr (basic_simd_type<T>) {
             return fallback(val);
+        } else {
+            return operator()(dx::to_basic_type(val));
         }
     }
 
-    template <floating_point_simd T>
-    requires (!basic_simd_type<T>) && unqualified_cmath_round<T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T val) noexcept
-        -> equivalent_simd_as<T> auto {
-        return round(internal::abi<T>, val);
-    }
-
-    template <floating_point_simd T>
-    requires (!basic_simd_type<T> && !unqualified_cmath_round<T>)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T val) noexcept {
-        return operator()(dx::to_basic_type(val));
-    }
-
-    template <basic_simd_type T, rounding_flags R>
-    requires floating_point_simd<T>
+    template <floating_point_simd T, rounding_flags R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(T val, rounding_t<R> flags) noexcept {
         if constexpr (unqualified_round<T, R>) {
-            if not consteval {
-                return round(internal::abi<T>, val, flags);
+            if constexpr (basic_simd_type<T>) {
+                if not consteval {
+                    return round(internal::abi<T>, val, flags);
+                } else {
+                    return fallback(val, flags);
+                }
             } else {
-                return fallback(val, flags);
+                return round(internal::abi<T>, val, flags);
             }
-        } else {
+
+        } else if constexpr (basic_simd_type<T>) {
             return fallback(val, flags);
+        } else {
+            return operator()(dx::to_basic_type(val), flags);
         }
-    }
-
-    template <floating_point_simd T, rounding_flags R>
-    requires (!basic_simd_type<T>) && unqualified_round<T, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T val, rounding_t<R> flags) noexcept
-        -> equivalent_simd_as<T> auto {
-        return round(internal::abi<T>, val, flags);
-    }
-
-    template <floating_point_simd T, rounding_flags R>
-    requires (!basic_simd_type<T> && !unqualified_round<T, R>)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T val, rounding_t<R> flags) noexcept {
-        return operator()(dx::to_basic_type(val), flags);
     }
 };
 } // namespace datapar::internal

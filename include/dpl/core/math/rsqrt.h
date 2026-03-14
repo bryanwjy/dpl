@@ -47,27 +47,25 @@ private:
     }
 
 public:
-    template <basic_simd_type T>
-    requires floating_point_simd<T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(T val) noexcept {
-        if constexpr (requires { rsqrt(internal::abi<T>, val); }) {
-            if not consteval {
-                return rsqrt(internal::abi<T>, val);
-            } else {
-                return fallback(val);
-            }
-        } else {
-            return fallback(val);
-        }
-    }
-
     template <floating_point_simd T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T val) noexcept
-        -> equivalent_simd_as<T> auto {
-        if constexpr (requires(T val) { rsqrt(internal::abi<T>, val); }) {
-            return rsqrt(internal::abi<T>, val);
+    static constexpr T operator()(T val) noexcept {
+        if constexpr (requires {
+                          {
+                              rsqrt(internal::abi<T>, val)
+                          } -> equivalent_simd_as<T>;
+                      }) {
+            if constexpr (basic_simd_type<T>) {
+                if not consteval {
+                    return rsqrt(internal::abi<T>, val);
+                } else {
+                    return fallback(val);
+                }
+            } else {
+                return rsqrt(internal::abi<T>, val);
+            }
+        } else if constexpr (basic_simd_type<T>) {
+            return fallback(val);
         } else {
             return operator()(dx::to_basic_type(val));
         }

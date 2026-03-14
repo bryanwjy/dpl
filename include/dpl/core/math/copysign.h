@@ -3,6 +3,8 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/math/internal/floating_point_simd_with_abi.h"
+
 #if !DPL_MODULES
 #  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/simd_abi.h"
@@ -16,9 +18,10 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void copysign(...) noexcept = delete;
 
-template <typename A, typename L, typename R>
-concept unqualified_copysign =
-    requires(L lhs, R rhs) { copysign(internal::abi<A>, lhs, rhs); };
+template <typename L, typename R, typename A = common_abi_t<L, R>>
+concept unqualified_copysign = requires(L lhs, R rhs) {
+    { copysign(internal::abi<A>, lhs, rhs) } -> floating_point_simd_with_abi<A>;
+};
 
 struct copysign_t {
 private:
@@ -30,60 +33,45 @@ private:
     }
 
 public:
-    template <basic_simd_type T>
-    requires floating_point_simd<T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T magnitude, T sign) noexcept {
-        if constexpr (unqualified_copysign<T, T, T>) {
-            if not consteval {
-                return copysign(internal::abi<T>, magnitude, sign);
-            } else {
-                return fallback(magnitude, sign);
-            }
-        }
-
-        return fallback(magnitude, sign);
-    }
-
-    template <floating_point_simd L, common_arithmetic_simd_with<L> R>
-    requires only_unqualified<L, R> &&
-        unqualified_copysign<common_abi_t<L, R>, L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L magnitude, R sign) noexcept
-        -> equivalent_simd_as<common_arithmetic_simd_t<L, R>> auto {
-        return copysign(internal::abi<common_abi_t<L, R>>, magnitude, sign);
-    }
-
-    template <floating_point_simd L, common_arithmetic_simd_with<L> R>
-    requires (!basic_simd_type<L> || !basic_simd_type<R> ||
-                 !same_abi_simd_as<L, R>) &&
-        (!unqualified_copysign<common_abi_t<L, R>, L, R>)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L magnitude, R sign) noexcept
-        -> equivalent_simd_as<common_arithmetic_simd_t<L, R>> auto {
-        return operator()(
-            dx::to_basic_type(magnitude), dx::to_basic_type(sign));
-    }
-
-    template <basic_simd_type R, broadcastable_to<R> L>
-    requires floating_point_simd<R> && unqualified_copysign<R, L, R>
+    template <floating_point_simd L, common_float_simd_with<L> R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L magnitude, R sign) noexcept {
-        if consteval {
-            return operator()(dx::broadcast<R>(magnitude), sign);
+        using A = typename L::abi_type;
+        if constexpr (unqualified_copysign<L, R, A>) {
+            if constexpr (basic_simd_type<L>) {
+                if not consteval {
+                    return copysign(internal::abi<A>, magnitude, sign);
+                } else {
+                    return fallback(magnitude, sign);
+                }
+            } else {
+                return copysign(internal::abi<A>, magnitude, sign);
+            }
+        } else if constexpr (basic_simd_type<L>) {
+            return fallback(magnitude, sign);
         } else {
-            return copysign(internal::abi<R>, magnitude, sign);
+            return operator()(
+                dx::to_basic_type(magnitude), dx::to_basic_type(sign));
         }
     }
 
     template <floating_point_simd R, broadcastable_to<R> L>
-    requires unqualified_copysign<R, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L magnitude, R sign) noexcept {
-        if consteval {
-            return operator()(magnitude, dx::to_basic_type(sign));
+        if constexpr (unqualified_copysign<L, R, typename R::abi_type>) {
+            if constexpr (basic_simd_type<R>) {
+                if consteval {
+                    return operator()(dx::broadcast<R>(magnitude), sign);
+                } else {
+                    return copysign(internal::abi<R>, magnitude, sign);
+                }
+            } else {
+                return copysign(internal::abi<R>, magnitude, sign);
+            }
+        } else if constexpr (basic_simd_type<R>) {
+            return operator()(dx::broadcast<R>(magnitude), sign);
         } else {
-            return copysign(internal::abi<R>, magnitude, sign);
+            return operator()(magnitude, dx::to_basic_type(sign));
         }
     }
 };

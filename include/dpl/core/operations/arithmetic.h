@@ -14,57 +14,67 @@
 #  include "dpl/core/concepts/common_arithmetic_with.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_equivalence.h"
-#  include "dpl/core/constants/msb.h"
 #  include "dpl/core/constants/zero.h"
 #  include "dpl/core/type_traits/common_arithmetic_type.h"
 #  include "dpl/std/concepts/enumeration.h"
 #  include "dpl/std/concepts/floating_point.h"
-#  include "dpl/std/concepts/integral.h"
 #  include "dpl/std/type_traits/enable_if.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void add(...) noexcept = delete;
-void sub(...) noexcept = delete;
-void mul(...) noexcept = delete;
-void div(...) noexcept = delete;
+void subtract(...) noexcept = delete;
+void multiply(...) noexcept = delete;
+void divide(...) noexcept = delete;
 void negate(...) noexcept = delete;
 
-template <typename A, typename L, typename R>
-concept unqualified_add =
-    requires(L lhs, R rhs) { add(internal::abi<A>, lhs, rhs); };
+template <typename T, typename L, typename R>
+concept arithmetic_result =
+    common_arithmetic_simd_with<T, common_arithmetic_simd_t<L, R>> &&
+    same_abi_as<common_abi_t<L, R>, typename T::abi_type>;
 
-template <typename A, typename L, typename R>
-concept unqualified_sub =
-    requires(L lhs, R rhs) { sub(internal::abi<A>, lhs, rhs); };
+template <typename L, typename R, typename A = common_abi_t<L, R>>
+concept unqualified_add = requires(L lhs, R rhs) {
+    { add(internal::abi<A>, lhs, rhs) } -> arithmetic_result<L, R>;
+};
 
-template <typename A, typename L, typename R>
-concept unqualified_mul =
-    requires(L lhs, R rhs) { mul(internal::abi<A>, lhs, rhs); };
+template <typename L, typename R, typename A = common_abi_t<L, R>>
+concept unqualified_subtract = requires(L lhs, R rhs) {
+    { subtract(internal::abi<A>, lhs, rhs) } -> arithmetic_result<L, R>;
+};
 
-template <typename A, typename L, typename R>
-concept unqualified_div =
-    requires(L lhs, R rhs) { div(internal::abi<A>, lhs, rhs); };
+template <typename L, typename R, typename A = common_abi_t<L, R>>
+concept unqualified_multiply = requires(L lhs, R rhs) {
+    { multiply(internal::abi<A>, lhs, rhs) } -> arithmetic_result<L, R>;
+};
+
+template <typename L, typename R, typename A = common_abi_t<L, R>>
+concept unqualified_divide = requires(L lhs, R rhs) {
+    { divide(internal::abi<A>, lhs, rhs) } -> arithmetic_result<L, R>;
+};
 
 struct add_t : binary_operation_base<add_t> {
 private:
     friend binary_operation_base<add_t>;
 
     template <simd_abi A, typename L, typename R>
-    requires unqualified_add<A, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto native(A abi, L left, R right) noexcept {
-        return add(internal::abi<A>, left, right);
+    static constexpr auto native(A abi, L lhs, R rhs) noexcept
+    requires requires {
+        { add(internal::abi<A>, lhs, rhs) } -> simd_with_abi<A>;
+    }
+    {
+        return add(internal::abi<A>, lhs, rhs);
     }
 
     template <arithmetic_type L, arithmetic_type R, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
-        fallback(basic_simd<L, A> left, basic_simd<R, A> right) noexcept {
+        fallback(basic_simd<L, A> lhs, basic_simd<R, A> rhs) noexcept {
         using T = common_arithmetic_type_t<L, R>;
-        return internal::transform<basic_simd<T, A>>(left, right,
-            [](auto lhs, auto rhs) { return static_cast<T>(lhs + rhs); });
+        return internal::transform<basic_simd<T, A>>(
+            [](L lhs, R rhs) { return static_cast<T>(lhs + rhs); }, lhs, rhs);
     }
 
     template <simd_type L, simd_type R>
@@ -72,61 +82,67 @@ private:
         common_arithmetic_simd_t<basic_type_t<L>, basic_type_t<R>>;
 
 public:
-    template <basic_simd_type L, common_arithmetic_simd_with<L> R>
-    requires basic_simd_type<R> && same_abi_simd_as<L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept {
-        using T = common_arithmetic_simd_t<L, R>;
-        if constexpr (requires { add(internal::abi<T>, left, right); }) {
-            if consteval {
-                return fallback(left, right);
+    template <simd_type L, common_arithmetic_simd_with<L> R>
+    requires same_abi_simd_as<L, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(L lhs, R rhs) noexcept {
+        using A = typename L::abi_type; // Same ABI, just pick one
+        if constexpr (unqualified_add<L, R, A>) {
+            if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
+                if consteval {
+                    return fallback(lhs, rhs);
+                } else {
+                    return add(internal::abi<A>, lhs, rhs);
+                }
             } else {
-                return add(internal::abi<T>, left, right);
+                return add(internal::abi<A>, lhs, rhs);
             }
+        } else if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
+            return fallback(lhs, rhs);
         } else {
-            return fallback(left, right);
+            return operator()(dx::to_basic_type(lhs), dx::to_basic_type(rhs));
         }
     }
 
     template <simd_type L, common_arithmetic_simd_with<L> R>
-    requires only_unqualified<L, R> && unqualified_add<common_abi_t<L, R>, L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
-        -> equivalent_simd_as<result_for<L, R>> auto {
+    requires (!same_abi_simd_as<L, R>) &&
+        (unqualified_add<L, R> ||
+            unqualified_add<basic_type_t<L>, basic_type_t<R>>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(L lhs, R rhs) noexcept {
         using A = common_abi_t<L, R>;
-        return add(internal::abi<A>, left, right);
-    }
-
-    template <simd_type L, common_arithmetic_simd_with<L> R>
-    requires (!basic_simd_type<L> || !basic_simd_type<R>) &&
-        (!unqualified_add<common_abi_t<L, R>, L, R>)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
-        -> equivalent_simd_as<result_for<L, R>> auto {
-        return operator()(dx::to_basic_type(left), dx::to_basic_type(right));
+        if constexpr (unqualified_add<L, R>) {
+            return add(internal::abi<A>, lhs, rhs);
+        } else {
+            return add(internal::abi<A>, dx::to_basic_type(lhs),
+                dx::to_basic_type(rhs));
+        }
     }
 
     using binary_operation_base<add_t>::operator();
 };
 
-struct sub_t : binary_operation_base<sub_t> {
+struct subtract_t : binary_operation_base<subtract_t> {
 private:
-    friend binary_operation_base<sub_t>;
+    friend binary_operation_base<subtract_t>;
 
     template <simd_abi A, typename L, typename R>
-    requires requires(L lhs, R rhs) { sub(internal::abi<A>, lhs, rhs); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto native(A abi, L left, R right) noexcept {
-        return sub(internal::abi<A>, left, right);
+    static constexpr auto native(A abi, L lhs, R rhs) noexcept
+    requires requires {
+        { subtract(internal::abi<A>, lhs, rhs) } -> simd_with_abi<A>;
+    }
+    {
+        return subtract(internal::abi<A>, lhs, rhs);
     }
 
     template <arithmetic_type L, arithmetic_type R, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
-        fallback(basic_simd<L, A> left, basic_simd<R, A> right) noexcept {
+        fallback(basic_simd<L, A> lhs, basic_simd<R, A> rhs) noexcept {
         using T = common_arithmetic_type_t<L, R>;
-        return internal::transform<basic_simd<T, A>>(left, right,
-            [](auto lhs, auto rhs) { return static_cast<T>(lhs - rhs); });
+        return internal::transform<basic_simd<T, A>>(
+            [](L lhs, R rhs) { return static_cast<T>(lhs - rhs); }, lhs, rhs);
     }
 
     template <simd_type L, simd_type R>
@@ -134,61 +150,67 @@ private:
         common_arithmetic_simd_t<basic_type_t<L>, basic_type_t<R>>;
 
 public:
-    template <basic_simd_type L, common_arithmetic_simd_with<L> R>
-    requires basic_simd_type<R> && same_abi_simd_as<L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept {
-        using T = common_arithmetic_simd_t<L, R>;
-        if constexpr (requires { sub(internal::abi<T>, left, right); }) {
-            if consteval {
-                return fallback(left, right);
+    template <simd_type L, common_arithmetic_simd_with<L> R>
+    requires same_abi_simd_as<L, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(L lhs, R rhs) noexcept {
+        using A = typename L::abi_type; // Same ABI, just pick one
+        if constexpr (unqualified_subtract<L, R, A>) {
+            if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
+                if consteval {
+                    return fallback(lhs, rhs);
+                } else {
+                    return subtract(internal::abi<A>, lhs, rhs);
+                }
             } else {
-                return sub(internal::abi<T>, left, right);
+                return subtract(internal::abi<A>, lhs, rhs);
             }
+        } else if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
+            return fallback(lhs, rhs);
         } else {
-            return fallback(left, right);
+            return operator()(dx::to_basic_type(lhs), dx::to_basic_type(rhs));
         }
     }
 
     template <simd_type L, common_arithmetic_simd_with<L> R>
-    requires only_unqualified<L, R> && unqualified_sub<common_abi_t<L, R>, L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
-        -> equivalent_simd_as<result_for<L, R>> auto {
+    requires (!same_abi_simd_as<L, R>) &&
+        (unqualified_subtract<L, R> ||
+            unqualified_subtract<basic_type_t<L>, basic_type_t<R>>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(L lhs, R rhs) noexcept {
         using A = common_abi_t<L, R>;
-        return sub(internal::abi<A>, left, right);
+        if constexpr (unqualified_subtract<L, R>) {
+            return subtract(internal::abi<A>, lhs, rhs);
+        } else {
+            return subtract(internal::abi<A>, dx::to_basic_type(lhs),
+                dx::to_basic_type(rhs));
+        }
     }
 
-    template <simd_type L, common_arithmetic_simd_with<L> R>
-    requires (!basic_simd_type<L> || !basic_simd_type<R>) &&
-        (!unqualified_sub<common_abi_t<L, R>, L, R>)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
-        -> equivalent_simd_as<result_for<L, R>> auto {
-        return operator()(dx::to_basic_type(left), dx::to_basic_type(right));
-    }
-
-    using binary_operation_base<sub_t>::operator();
+    using binary_operation_base<subtract_t>::operator();
 };
 
-struct mul_t : binary_operation_base<mul_t> {
+struct multiply_t : binary_operation_base<multiply_t> {
 private:
-    friend binary_operation_base<mul_t>;
+    friend binary_operation_base<multiply_t>;
 
     template <simd_abi A, typename L, typename R>
-    requires requires(L lhs, R rhs) { mul(internal::abi<A>, lhs, rhs); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto native(A abi, L left, R right) noexcept {
-        return mul(internal::abi<A>, left, right);
+    static constexpr auto native(A abi, L lhs, R rhs) noexcept
+    requires requires {
+        { multiply(internal::abi<A>, lhs, rhs) } -> simd_with_abi<A>;
+    }
+    {
+        return multiply(internal::abi<A>, lhs, rhs);
     }
 
     template <arithmetic_type L, arithmetic_type R, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
-        fallback(basic_simd<L, A> left, basic_simd<R, A> right) noexcept {
+        fallback(basic_simd<L, A> lhs, basic_simd<R, A> rhs) noexcept {
         using T = common_arithmetic_type_t<L, R>;
-        return internal::transform<basic_simd<T, A>>(left, right,
-            [](auto lhs, auto rhs) { return static_cast<T>(lhs * rhs); });
+        return internal::transform<basic_simd<T, A>>(
+            [](L lhs, R rhs) { return static_cast<T>(lhs - rhs); }, lhs, rhs);
     }
 
     template <simd_type L, simd_type R>
@@ -196,62 +218,68 @@ private:
         common_arithmetic_simd_t<basic_type_t<L>, basic_type_t<R>>;
 
 public:
-    template <basic_simd_type L, common_arithmetic_simd_with<L> R>
-    requires basic_simd_type<R> && same_abi_simd_as<L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept {
-        using T = common_arithmetic_simd_t<L, R>;
-        if constexpr (requires { mul(internal::abi<T>, left, right); }) {
-            if consteval {
-                return fallback(left, right);
+    template <simd_type L, common_arithmetic_simd_with<L> R>
+    requires same_abi_simd_as<L, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(L lhs, R rhs) noexcept {
+        using A = typename L::abi_type; // Same ABI, just pick one
+        if constexpr (unqualified_multiply<L, R, A>) {
+            if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
+                if consteval {
+                    return fallback(lhs, rhs);
+                } else {
+                    return multiply(internal::abi<A>, lhs, rhs);
+                }
             } else {
-                return mul(internal::abi<T>, left, right);
+                return multiply(internal::abi<A>, lhs, rhs);
             }
+        } else if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
+            return fallback(lhs, rhs);
         } else {
-            return fallback(left, right);
+            return operator()(dx::to_basic_type(lhs), dx::to_basic_type(rhs));
         }
     }
 
     template <simd_type L, common_arithmetic_simd_with<L> R>
-    requires only_unqualified<L, R> && unqualified_mul<common_abi_t<L, R>, L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
-        -> equivalent_simd_as<result_for<L, R>> auto {
+    requires (!same_abi_simd_as<L, R>) &&
+        (unqualified_multiply<L, R> ||
+            unqualified_multiply<basic_type_t<L>, basic_type_t<R>>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(L lhs, R rhs) noexcept {
         using A = common_abi_t<L, R>;
-        return mul(internal::abi<A>, left, right);
+        if constexpr (unqualified_multiply<L, R>) {
+            return multiply(internal::abi<A>, lhs, rhs);
+        } else {
+            return multiply(internal::abi<A>, dx::to_basic_type(lhs),
+                dx::to_basic_type(rhs));
+        }
     }
 
-    template <simd_type L, common_arithmetic_simd_with<L> R>
-    requires (!basic_simd_type<L> || !basic_simd_type<R>) &&
-        (!unqualified_mul<common_abi_t<L, R>, L, R>)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
-        -> equivalent_simd_as<result_for<L, R>> auto {
-        return operator()(dx::to_basic_type(left), dx::to_basic_type(right));
-    }
-
-    using binary_operation_base<mul_t>::operator();
+    using binary_operation_base<multiply_t>::operator();
 };
 
 /**
  * Divisions are only supported for floating point elements
  */
-struct div_t : binary_operation_base<div_t> {
+struct divide_t : binary_operation_base<divide_t> {
 private:
-    friend binary_operation_base<div_t>;
+    friend binary_operation_base<divide_t>;
 
     template <simd_abi A, typename L, typename R>
-    requires requires(L lhs, R rhs) { div(internal::abi<A>, lhs, rhs); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto native(A abi, L left, R right) noexcept {
-        return div(internal::abi<A>, left, right);
+    static constexpr auto native(A abi, L lhs, R rhs) noexcept
+    requires requires {
+        { divide(internal::abi<A>, lhs, rhs) } -> simd_with_abi<A>;
+    }
+    {
+        return divide(internal::abi<A>, lhs, rhs);
     }
 
     template <floating_point E, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr basic_simd<E, A> DPL_VECTORCALL
-        fallback(basic_simd<E, A> left, basic_simd<E, A> right) noexcept {
-        return dx::internal::transform<basic_simd<E, A>>(left, right,
+        fallback(basic_simd<E, A> lhs, basic_simd<E, A> rhs) noexcept {
+        return dx::internal::transform<basic_simd<E, A>>(lhs, rhs,
             [](auto lhs, auto rhs) { return static_cast<E>(lhs / rhs); });
     }
 
@@ -260,44 +288,44 @@ private:
         common_arithmetic_simd_t<basic_type_t<L>, basic_type_t<R>>;
 
 public:
-    template <basic_simd_type L, common_arithmetic_simd_with<L> R>
-    requires basic_simd_type<R> && floating_point_simd<L> &&
-        floating_point_simd<R> && same_abi_simd_as<L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept {
-        using T = common_arithmetic_simd_t<L, R>;
-        if constexpr (requires { div(internal::abi<T>, left, right); }) {
-            if consteval {
-                return fallback(left, right);
+    template <simd_type L, common_float_simd_with<L> R>
+    requires same_abi_simd_as<L, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(L lhs, R rhs) noexcept {
+        using A = typename L::abi_type; // Same ABI, just pick one
+        if constexpr (unqualified_divide<L, R, A>) {
+            if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
+                if consteval {
+                    return fallback(lhs, rhs);
+                } else {
+                    return divide(internal::abi<A>, lhs, rhs);
+                }
             } else {
-                return div(internal::abi<T>, left, right);
+                return divide(internal::abi<A>, lhs, rhs);
             }
+        } else if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
+            return fallback(lhs, rhs);
         } else {
-            return fallback(left, right);
+            return operator()(dx::to_basic_type(lhs), dx::to_basic_type(rhs));
         }
     }
 
-    template <simd_type L, common_arithmetic_simd_with<L> R>
-    requires floating_point_simd<L> && floating_point_simd<R> &&
-        only_unqualified<L, R> && unqualified_div<common_abi_t<L, R>, L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
-        -> equivalent_simd_as<result_for<L, R>> auto {
+    template <simd_type L, common_float_simd_with<L> R>
+    requires (!same_abi_simd_as<L, R>) &&
+        (unqualified_divide<L, R> ||
+            unqualified_divide<basic_type_t<L>, basic_type_t<R>>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(L lhs, R rhs) noexcept {
         using A = common_abi_t<L, R>;
-        return div(internal::abi<A>, left, right);
+        if constexpr (unqualified_divide<L, R>) {
+            return divide(internal::abi<A>, lhs, rhs);
+        } else {
+            return divide(internal::abi<A>, dx::to_basic_type(lhs),
+                dx::to_basic_type(rhs));
+        }
     }
 
-    template <simd_type L, common_arithmetic_simd_with<L> R>
-    requires floating_point_simd<L> && floating_point_simd<R> &&
-        (!basic_simd_type<L> || !basic_simd_type<R>) &&
-        (!unqualified_div<common_abi_t<L, R>, L, R>)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept
-        -> equivalent_simd_as<result_for<L, R>> auto {
-        return operator()(dx::to_basic_type(left), dx::to_basic_type(right));
-    }
-
-    using binary_operation_base<div_t>::operator();
+    using binary_operation_base<divide_t>::operator();
 };
 
 struct simple_negate_t {
@@ -317,16 +345,20 @@ private:
             return dx::reinterpret<result<E>>(val);
         } else {
             // do not assume ieee for floats
-            return dx::reinterpret<E>(sub_t::operator()(dx::zero, val));
+            return dx::reinterpret<E>(subtract_t::operator()(dx::zero, val));
         }
     }
 
 public:
     template <arithmetic_type E, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(
-        basic_simd<E, A> val) noexcept -> simd_with<result<E>, A> auto {
-        if constexpr (requires { negate(internal::abi<A>, val); }) {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(basic_simd<E, A> val) noexcept
+        -> simd_with<result<E>, A> auto {
+        if constexpr (requires {
+                          {
+                              negate(internal::abi<A>, val)
+                          } -> simd_with<result<E>, A>;
+                      }) {
             if consteval {
                 return fallback(val);
             } else {
@@ -339,10 +371,13 @@ public:
 
     template <arithmetic_simd T>
     requires (!basic_simd_type<T>)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(T val) noexcept
-        -> equivalent_simd_as<result_simd<T>> auto {
-        if constexpr (requires { negate(internal::abi<T>, val); }) {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T val) noexcept {
+        if constexpr (requires {
+                          {
+                              negate(internal::abi<T>, val)
+                          } -> equivalent_simd_as<result_simd<T>>;
+                      }) {
             return negate(internal::abi<T>, val);
         } else {
             return operator()(dx::to_basic_type(val));
@@ -389,16 +424,16 @@ struct mullo_t : binary_operation_base<mullo_t> {};
  * integral element. The ABI of the resulting vector will differ
  * from the inputs. Supported only on extendable ABIs.
  */
-struct wmul_t : binary_operation_base<wmul_t> {};
+struct wmultiply_t : binary_operation_base<wmultiply_t> {};
 
 } // namespace datapar::internal
 
 namespace datapar {
 inline namespace cpo {
 DPL_EXPORT inline constexpr internal::add_t add{};
-DPL_EXPORT inline constexpr internal::sub_t sub{};
-DPL_EXPORT inline constexpr internal::mul_t mul{};
-DPL_EXPORT inline constexpr internal::div_t div{};
+DPL_EXPORT inline constexpr internal::subtract_t subtract{};
+DPL_EXPORT inline constexpr internal::multiply_t multiply{};
+DPL_EXPORT inline constexpr internal::divide_t divide{};
 } // namespace cpo
 
 DPL_EXPORT template <typename D>
@@ -415,33 +450,33 @@ public:
     }
 
     template <typename R>
-    requires regular_invocable<internal::sub_t, D, R>
+    requires regular_invocable<internal::subtract_t, D, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    constexpr invoke_result_t<internal::sub_t, D, R> operator-(
+    constexpr invoke_result_t<internal::subtract_t, D, R> operator-(
         this D lhs, R rhs) noexcept
     requires simd_type<D>
     {
-        return datapar::sub(lhs, rhs);
+        return datapar::subtract(lhs, rhs);
     }
 
     template <typename R>
-    requires regular_invocable<internal::mul_t, D, R>
+    requires regular_invocable<internal::multiply_t, D, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    constexpr invoke_result_t<internal::mul_t, D, R> operator*(
+    constexpr invoke_result_t<internal::multiply_t, D, R> operator*(
         this D lhs, R rhs) noexcept
     requires simd_type<D>
     {
-        return datapar::mul(lhs, rhs);
+        return datapar::multiply(lhs, rhs);
     }
 
     template <typename R>
-    requires regular_invocable<internal::div_t, D, R>
+    requires regular_invocable<internal::divide_t, D, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    constexpr invoke_result_t<internal::div_t, D, R> operator/(
+    constexpr invoke_result_t<internal::divide_t, D, R> operator/(
         this D lhs, R rhs) noexcept
     requires simd_type<D>
     {
-        return datapar::div(lhs, rhs);
+        return datapar::divide(lhs, rhs);
     }
 
     template <typename R>
@@ -456,36 +491,36 @@ public:
     }
 
     template <typename R>
-    requires regular_invocable<internal::sub_t, D, R> &&
+    requires regular_invocable<internal::subtract_t, D, R> &&
         regular_invocable<internal::reinterpret_t<D>,
-            invoke_result_t<internal::sub_t, D, R>>
+            invoke_result_t<internal::subtract_t, D, R>>
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
         constexpr D& operator-=(this D& lhs, R rhs) noexcept
     requires simd_type<D>
     {
-        return lhs = datapar::reinterpret<D>(datapar::sub(lhs, rhs));
+        return lhs = datapar::reinterpret<D>(datapar::subtract(lhs, rhs));
     }
 
     template <typename R>
-    requires regular_invocable<internal::mul_t, D, R> &&
+    requires regular_invocable<internal::multiply_t, D, R> &&
         regular_invocable<internal::reinterpret_t<D>,
-            invoke_result_t<internal::mul_t, D, R>>
+            invoke_result_t<internal::multiply_t, D, R>>
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
         constexpr D& operator*=(this D& lhs, R rhs) noexcept
     requires simd_type<D>
     {
-        return lhs = datapar::reinterpret<D>(datapar::mul(lhs, rhs));
+        return lhs = datapar::reinterpret<D>(datapar::multiply(lhs, rhs));
     }
 
     template <typename R>
-    requires regular_invocable<internal::div_t, D, R> &&
+    requires regular_invocable<internal::divide_t, D, R> &&
         regular_invocable<internal::reinterpret_t<D>,
-            invoke_result_t<internal::div_t, D, R>>
+            invoke_result_t<internal::divide_t, D, R>>
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
         constexpr D& operator/=(this D& lhs, R rhs) noexcept
     requires simd_type<D>
     {
-        return lhs = datapar::reinterpret<D>(datapar::div(lhs, rhs));
+        return lhs = datapar::reinterpret<D>(datapar::divide(lhs, rhs));
     }
 
     template <typename L>
@@ -499,29 +534,29 @@ public:
 
     template <typename L>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    friend constexpr invoke_result_t<internal::sub_t, L, D> operator-(
+    friend constexpr invoke_result_t<internal::subtract_t, L, D> operator-(
         L lhs, D rhs) noexcept
     requires simd_type<D>
     {
-        return datapar::sub(lhs, rhs);
+        return datapar::subtract(lhs, rhs);
     }
 
     template <typename L>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    friend constexpr invoke_result_t<internal::mul_t, L, D> operator*(
+    friend constexpr invoke_result_t<internal::multiply_t, L, D> operator*(
         L lhs, D rhs) noexcept
     requires simd_type<D>
     {
-        return datapar::mul(lhs, rhs);
+        return datapar::multiply(lhs, rhs);
     }
 
     template <typename L>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    friend constexpr invoke_result_t<internal::div_t, L, D> operator/(
+    friend constexpr invoke_result_t<internal::divide_t, L, D> operator/(
         L lhs, D rhs) noexcept
     requires simd_type<D>
     {
-        return datapar::div(lhs, rhs);
+        return datapar::divide(lhs, rhs);
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -536,63 +571,63 @@ public:
 /**
  * The following are not exported by design
  */
-template <typename L, typename R>
+DPL_EXPORT template <typename L, typename R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr invoke_result_t<internal::add_t, L, R> operator+(
     L lhs, R rhs) noexcept {
     return datapar::add(lhs, rhs);
 }
 
-template <typename L, typename R>
+DPL_EXPORT template <typename L, typename R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-constexpr invoke_result_t<internal::sub_t, L, R> operator-(
+constexpr invoke_result_t<internal::subtract_t, L, R> operator-(
     L lhs, R rhs) noexcept {
-    return datapar::sub(lhs, rhs);
+    return datapar::subtract(lhs, rhs);
 }
 
-template <typename L, typename R>
+DPL_EXPORT template <typename L, typename R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-constexpr invoke_result_t<internal::mul_t, L, R> operator*(
+constexpr invoke_result_t<internal::multiply_t, L, R> operator*(
     L lhs, R rhs) noexcept {
-    return datapar::mul(lhs, rhs);
+    return datapar::multiply(lhs, rhs);
 }
 
-template <typename L, typename R>
+DPL_EXPORT template <typename L, typename R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-constexpr invoke_result_t<internal::div_t, L, R> operator/(
+constexpr invoke_result_t<internal::divide_t, L, R> operator/(
     L lhs, R rhs) noexcept {
-    return datapar::div(lhs, rhs);
+    return datapar::divide(lhs, rhs);
 }
 
-template <typename L, typename R>
+DPL_EXPORT template <typename L, typename R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
 constexpr auto operator+=(L& lhs, R rhs) noexcept
     -> enable_if_t<equivalent_simd_as<L, decltype(lhs + rhs)>, L&> {
     return lhs = datapar::reinterpret<L>(lhs + rhs);
 }
 
-template <typename L, typename R>
+DPL_EXPORT template <typename L, typename R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
 constexpr auto operator-=(L& lhs, R rhs) noexcept
     -> enable_if_t<equivalent_simd_as<L, decltype(lhs - rhs)>, L&> {
     return lhs = datapar::reinterpret<L>(lhs - rhs);
 }
 
-template <typename L, typename R>
+DPL_EXPORT template <typename L, typename R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
 constexpr auto operator*=(L& lhs, R rhs) noexcept
     -> enable_if_t<equivalent_simd_as<L, decltype(lhs * rhs)>, L&> {
     return lhs = datapar::reinterpret<L>(lhs * rhs);
 }
 
-template <typename L, typename R>
+DPL_EXPORT template <typename L, typename R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
 constexpr auto operator/=(L& lhs, R rhs) noexcept
     -> enable_if_t<equivalent_simd_as<L, decltype(lhs / rhs)>, L&> {
     return lhs = datapar::reinterpret<L>(lhs / rhs);
 }
 
-template <typename T>
+DPL_EXPORT template <typename T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr auto operator-(T val) noexcept
     -> invoke_result_t<internal::simple_negate_t, T> {

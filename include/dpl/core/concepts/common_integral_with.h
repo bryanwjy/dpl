@@ -16,15 +16,19 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
-DPL_EXPORT template <typename T, typename U>
-concept common_integral_with =
-    common_size_with<T, U> && integral<T> && integral<U> &&
-    ((signed_integral<T> && signed_integral<U>) ||
-        (unsigned_integral<T> && unsigned_integral<U>)) &&
-    internal::common_basic_element_with<T, U>;
+namespace atom {
+template <typename A, typename B>
+concept common_integral_with = integral<A> && integral<B> &&
+    ((signed_integral<A> && signed_integral<B>) ||
+        (unsigned_integral<A> && unsigned_integral<B>));
+}
 
 DPL_EXPORT template <typename A, typename B>
-concept common_integral_simd_with = common_size_simd_with<A, B> &&
+concept common_integral_with = common_size_with<A, B> &&
+    atom::common_integral_with<A, B> && atom::common_basic_element_with<A, B>;
+
+DPL_EXPORT template <typename A, typename B>
+concept common_integral_simd_with = common_class_with<A, B> &&
     common_integral_with<simd_element_type_t<A>, simd_element_type_t<B>>;
 
 } // namespace datapar

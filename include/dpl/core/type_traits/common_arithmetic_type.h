@@ -29,6 +29,11 @@ DPL_EXPORT template <simd_class T>
 struct common_arithmetic_type<T, T> : simd_element_type<T> {};
 DPL_EXPORT template <simd_element T>
 struct common_arithmetic_type<T, T> : simd_element_type<T> {};
+DPL_EXPORT template <simd_element T>
+requires enumeration<T>
+struct common_arithmetic_type<T, T> :
+    common_arithmetic_type<T, underlying_type_t<T>> {};
+
 DPL_EXPORT template <simd_class A, simd_element B>
 struct common_arithmetic_type<A, B> :
     common_arithmetic_type<simd_element_type_t<A>, B> {};

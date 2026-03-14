@@ -31,6 +31,7 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::xmm {
 DPL_EXPORT template <basic_simd_element E, core_convertible_to<E>... Args>
+requires (... && !same_as<Args, bool>)
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr simd<E> initialize(abi_tag tag, Args&&... args) noexcept {
     static_assert(!is_const_v<E> && !is_volatile_v<E>);
@@ -136,10 +137,9 @@ constexpr simd<E> initialize(abi_tag tag, Args&&... args) noexcept {
     }
 }
 
-DPL_EXPORT template <simd_element E>
+DPL_EXPORT template <simd_element E, same_as<bool>... Args>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr mask<E> initialize(
-    abi_tag tag, same_as<bool> auto... scalars) noexcept {
+constexpr mask<E> initialize(abi_tag tag, Args... scalars) noexcept {
     static_assert(!is_const_v<E> && !is_volatile_v<E>);
     return +dx::xmm::initialize<E>(
         tag, (scalars ? dx::all_bits_v<E> : dx::zero_v<E>)...);

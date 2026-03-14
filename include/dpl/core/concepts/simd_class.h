@@ -10,8 +10,8 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar {
 DPL_EXPORT template <typename T>
-concept simd_class = simd_mask_type<T> || simd_type<T>;
-
+concept simd_class =
+    atom::simd_basics<T> && (atom::simd_mask_type<T> || atom::simd_type<T>);
 } // namespace datapar
 
 DPL_DEFAULT_NAMESPACE_END

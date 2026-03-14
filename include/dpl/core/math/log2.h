@@ -89,27 +89,25 @@ private:
     }
 
 public:
-    template <basic_simd_type T>
-    requires floating_point_simd<T>
+    template <floating_point_simd T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(T val) noexcept {
-        if constexpr (unqualified_log2<T>) {
-            if consteval {
-                return fallback(val);
+        if constexpr (requires {
+                          {
+                              log2(internal::abi<T>, val)
+                          } -> equivalent_simd_as<T>;
+                      }) {
+            if constexpr (basic_simd_type<T>) {
+                if not consteval {
+                    return log2(internal::abi<T>, val);
+                } else {
+                    return fallback(val);
+                }
             } else {
                 return log2(internal::abi<T>, val);
             }
-        } else {
+        } else if constexpr (basic_simd_type<T>) {
             return fallback(val);
-        }
-    }
-
-    template <floating_point_simd T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T val) noexcept
-        -> equivalent_simd_as<T> auto {
-        if constexpr (unqualified_log2<T>) {
-            return log2(internal::abi<T>, val);
         } else {
             return operator()(dx::to_basic_type(val));
         }

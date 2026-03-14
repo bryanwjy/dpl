@@ -25,7 +25,7 @@ private:
         E const* ptr, basic_simd<I, A> idx) noexcept {
         return []<size_t... Is>(
                    E const* ptr, basic_simd<I, A> idx, index_sequence<Is...>) {
-            return dx::initialize<A>(ptr[idx[imm<Is>]]...);
+            return dx::initialize<E>(internal::abi<A>, ptr[idx[imm<Is>]]...);
         }(ptr, idx, iota_sequence<E, A>);
     }
 
@@ -36,7 +36,11 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
     static constexpr rebind_simd_t<I, E> DPL_VECTORCALL operator()(
         E const* ptr, I idx) noexcept {
-        if constexpr (requires { gather(internal::abi<I>, ptr, idx); }) {
+        if constexpr (requires {
+                          {
+                              gather(internal::abi<I>, ptr, idx)
+                          } -> simd_with<E, typename I::abi_type>;
+                      }) {
             if consteval {
                 return fallback(ptr, idx);
             } else {
@@ -53,7 +57,11 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr DPL_VECTORCALL auto operator()(E const* ptr,
         I idx) noexcept -> equivalent_simd_as<rebind_simd_t<I, E>> auto {
-        if constexpr (requires { gather(internal::abi<I>, ptr, idx); }) {
+        if constexpr (requires {
+                          {
+                              gather(internal::abi<I>, ptr, idx)
+                          } -> simd_with<E, typename I::abi_type>;
+                      }) {
             return gather(internal::abi<I>, ptr, idx);
         } else {
             return operator()(ptr, dx::to_basic_type(idx));

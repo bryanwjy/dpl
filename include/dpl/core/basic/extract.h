@@ -18,21 +18,19 @@ namespace datapar::internal {
 template <typename T>
 concept extraction_index = integral_constant_like<T> || integral<T>;
 
-void extract(
-    simd_abi auto, simd_class auto, extraction_index auto) noexcept = delete;
+void extract(...) noexcept = delete;
 
 struct extract_t {
     /**
      * Prevent basic_simd_class overload from falling back to simd_class
      * overload
      */
-    template <basic_simd_class T>
-    static constexpr void operator()(T, auto) noexcept = delete;
+    template <basic_simd_class T, typename I>
+    static constexpr void operator()(T, I) noexcept = delete;
 
-    template <basic_simd_class T>
+    template <basic_simd_class T, extraction_index I>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr typename T::value_type operator()(
-        T src, extraction_index auto idx) noexcept
+    static constexpr typename T::value_type operator()(T src, I idx) noexcept
     requires requires { extract(internal::abi<T>, src, idx); }
     {
         return extract(internal::abi<T>, src, idx);

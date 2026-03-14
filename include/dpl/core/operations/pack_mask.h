@@ -20,9 +20,9 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::internal {
-void pack(...) noexcept = delete;
+void pack_mask(...) noexcept = delete;
 
-struct pack_t {
+struct pack_mask_t {
 private:
     template <simd_element E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
@@ -46,11 +46,11 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr bit_type_t<element_count<T>> DPL_VECTORCALL operator()(
         T arg) noexcept {
-        if constexpr (requires { pack(internal::abi<T>, arg); }) {
+        if constexpr (requires { pack_mask(internal::abi<T>, arg); }) {
             if consteval {
                 return fallback(arg);
             } else {
-                return pack(internal::abi<T>, arg);
+                return pack_mask(internal::abi<T>, arg);
             }
         } else {
             return fallback(arg);
@@ -60,8 +60,8 @@ public:
     template <simd_mask_type T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr bit_type_t<element_count<T>> operator()(T arg) noexcept {
-        if constexpr (requires { pack(internal::abi<T>, arg); }) {
-            return pack(internal::abi<T>, arg);
+        if constexpr (requires { pack_mask(internal::abi<T>, arg); }) {
+            return pack_mask(internal::abi<T>, arg);
         } else {
             return operator()(dx::to_basic_type(arg));
         }
@@ -72,7 +72,7 @@ public:
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::pack_t pack{};
+DPL_EXPORT inline constexpr internal::pack_mask_t pack_mask{};
 } // namespace cpo
 } // namespace datapar
 DPL_DEFAULT_NAMESPACE_END

@@ -20,61 +20,50 @@ void permute(...) noexcept = delete;
 template <auto>
 void broadcast_element(...) noexcept = delete;
 
+template <typename T, size_t... Is>
+concept unqualified_permute = requires(T val) {
+    { permute<Is...>(internal::abi<T>, val) } -> equivalent_class_as<T>;
+};
+
+template <size_t I, typename T>
+concept unqualified_broadcast_element = requires(T val) {
+    { broadcast_element<I>(internal::abi<T>, val) } -> equivalent_class_as<T>;
+};
+
 template <size_t... Is>
 struct permute_t {
 private:
-    static constexpr bool is_iota =
-        same_as<index_sequence<Is...>, make_index_sequence<sizeof...(Is)>>;
-
-    template <basic_simd_class T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T fallback(T arg) noexcept
-    requires (sizeof...(Is) == element_count<T>)
-    {
+    template <typename T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr T DPL_VECTORCALL fallback(T arg) noexcept {
         return dx::initialize<T>(arg[imm<Is>]...);
     }
 
 public:
-    template <basic_simd_class T>
+    template <simd_class T>
     requires (sizeof...(Is) <= element_count<T>)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr T DPL_VECTORCALL operator()(T arg) noexcept {
-        if constexpr (is_iota) {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(T arg) noexcept {
+        if constexpr (same_as<index_sequence<Is...>,
+                          make_index_sequence<sizeof...(Is)>>) {
             return arg;
         } else if constexpr (sizeof...(Is) < element_count<T>) {
             return []<size_t... Js>(T arg, index_sequence<Js...>) {
                 return permute_t<Is..., (sizeof...(Is) + Js)...>::operator()(
                     arg);
             }(arg, iota_sequence<T>);
-        } else if constexpr (requires {
-                                 permute<Is...>(internal::abi<T>, arg);
-                             }) {
-            if consteval {
-                return fallback(arg);
+        } else if constexpr (unqualified_permute<T, Is...>) {
+            if constexpr (basic_simd_class<T>) {
+                if consteval {
+                    return fallback(arg);
+                } else {
+                    return permute<Is...>(internal::abi<T>, arg);
+                }
             } else {
                 return permute<Is...>(internal::abi<T>, arg);
             }
-        } else {
+        } else if constexpr (basic_simd_class<T>) {
             return fallback(arg);
-        }
-    }
-
-    template <simd_class T>
-    requires (sizeof...(Is) <= element_count<T>)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(T arg) noexcept
-        -> equivalent_class_as<T> auto {
-        if constexpr (is_iota) {
-            return arg;
-        } else if constexpr (sizeof...(Is) < element_count<T>) {
-            return []<size_t... Js>(T arg, index_sequence<Js...>) {
-                return permute_t<Is..., (sizeof...(Is) + Js)...>::operator()(
-                    arg);
-            }(arg, iota_sequence<T>);
-        } else if constexpr (requires {
-                                 permute<Is...>(internal::abi<T>, arg);
-                             }) {
-            return permute<Is...>(internal::abi<T>, arg);
         } else {
             return operator()(dx::to_basic_type(arg));
         }
@@ -84,41 +73,31 @@ public:
 template <size_t I>
 struct broadcast_element_t {
 private:
-    template <basic_simd_class T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T fallback(T arg) noexcept {
+    template <typename T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr T DPL_VECTORCALL fallback(T arg) noexcept {
         return []<size_t... Is>(T arg, index_sequence<Is...>) {
             return permute_t<((Is / Is) * I)...>::operator()(arg);
         }(arg, iota_sequence<T>);
     }
 
 public:
-    template <basic_simd_class T>
+    template <simd_class T>
     requires (I < element_count<T>)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr T DPL_VECTORCALL operator()(T arg) noexcept {
-        if constexpr (requires {
-                          broadcast_element<I>(internal::abi<T>, arg);
-                      }) {
-            if consteval {
-                return fallback(arg);
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(T arg) noexcept {
+        if constexpr (unqualified_broadcast_element<I, T>) {
+            if constexpr (basic_simd_class<T>) {
+                if consteval {
+                    return fallback(arg);
+                } else {
+                    return broadcast_element<I>(internal::abi<T>, arg);
+                }
             } else {
                 return broadcast_element<I>(internal::abi<T>, arg);
             }
-        } else {
+        } else if constexpr (basic_simd_class<T>) {
             return fallback(arg);
-        }
-    }
-
-    template <simd_class T>
-    requires (I < element_count<T>)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(T arg) noexcept
-        -> equivalent_class_as<T> auto {
-        if constexpr (requires {
-                          broadcast_element<I>(internal::abi<T>, arg);
-                      }) {
-            return broadcast_element<I>(internal::abi<T>, arg);
         } else {
             return operator()(dx::to_basic_type(arg));
         }

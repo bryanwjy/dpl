@@ -19,12 +19,14 @@ namespace datapar::internal {
 void addsub(...) noexcept = delete;
 void subadd(...) noexcept = delete;
 
-template <typename A, typename L, typename R>
-concept unqualified_addsub =
-    requires(L lhs, R rhs) { addsub(internal::abi<A>, lhs, rhs); };
-template <typename A, typename L, typename R>
-concept unqualified_subadd =
-    requires(L lhs, R rhs) { subadd(internal::abi<A>, lhs, rhs); };
+template <typename L, typename R, typename A = common_abi_t<L, R>>
+concept unqualified_addsub = requires(L lhs, R rhs) {
+    { addsub(internal::abi<A>, lhs, rhs) } -> arithmetic_result<L, R>;
+};
+template <typename L, typename R, typename A = common_abi_t<L, R>>
+concept unqualified_subadd = requires(L lhs, R rhs) {
+    { subadd(internal::abi<A>, lhs, rhs) } -> arithmetic_result<L, R>;
+};
 
 struct addsub_t : binary_operation_base<addsub_t> {
 private:
@@ -44,44 +46,42 @@ private:
         return dx::add(left, dx::negatei<0b0101>(right));
     }
 
-    template <simd_type L, simd_type R>
-    using result_for DPL_NODEBUG =
-        common_arithmetic_simd_t<basic_type_t<L>, basic_type_t<R>>;
-
 public:
-    template <basic_simd_type T>
-    requires floating_point_simd<T>
+    template <floating_point_simd L, common_float_simd_with<L> R>
+    requires same_abi_simd_as<L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T left, T right) noexcept {
-        if constexpr (unqualified_addsub<T, T, T>) {
-            if consteval {
-                return fallback(left, right);
+    static constexpr auto operator()(L lhs, R rhs) noexcept {
+        using A = typename L::abi_type; // Same ABI, just pick one
+        if constexpr (unqualified_addsub<L, R, A>) {
+            if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
+                if consteval {
+                    return fallback(lhs, rhs);
+                } else {
+                    return addsub(internal::abi<A>, lhs, rhs);
+                }
             } else {
-                return addsub(internal::abi<T>, left, right);
+                return addsub(internal::abi<A>, lhs, rhs);
             }
+        } else if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
+            return fallback(lhs, rhs);
         } else {
-            return fallback(left, right);
+            return operator()(dx::to_basic_type(lhs), dx::to_basic_type(rhs));
         }
     }
 
-    template <simd_type L, common_arithmetic_simd_with<L> R>
-    requires floating_point_simd<L> && floating_point_simd<R> &&
-        only_unqualified<L, R> && unqualified_addsub<common_abi_t<L, R>, L, R>
+    template <floating_point_simd L, common_float_simd_with<L> R>
+    requires (!same_abi_simd_as<L, R>) &&
+        (unqualified_addsub<L, R> ||
+            unqualified_addsub<basic_type_t<L>, basic_type_t<R>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L left, R right) noexcept
-        -> equivalent_simd_as<result_for<L, R>> auto {
+    static constexpr auto operator()(L lhs, R rhs) noexcept {
         using A = common_abi_t<L, R>;
-        return addsub(internal::abi<A>, left, right);
-    }
-
-    template <simd_type L, common_arithmetic_simd_with<L> R>
-    requires floating_point_simd<L> && floating_point_simd<R> &&
-        (!basic_simd_type<L> || !basic_simd_type<R>) &&
-        (!unqualified_addsub<common_abi_t<L, R>, L, R>)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L left, R right) noexcept
-        -> equivalent_simd_as<result_for<L, R>> auto {
-        return operator()(dx::to_basic_type(left), dx::to_basic_type(right));
+        if constexpr (unqualified_addsub<L, R>) {
+            return addsub(internal::abi<A>, lhs, rhs);
+        } else {
+            return addsub(internal::abi<A>, dx::to_basic_type(lhs),
+                dx::to_basic_type(rhs));
+        }
     }
 
     using binary_operation_base<addsub_t>::operator();
@@ -110,39 +110,41 @@ private:
         common_arithmetic_simd_t<basic_type_t<L>, basic_type_t<R>>;
 
 public:
-    template <basic_simd_type T>
-    requires floating_point_simd<T>
+    template <floating_point_simd L, common_float_simd_with<L> R>
+    requires same_abi_simd_as<L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T left, T right) noexcept {
-        if constexpr (unqualified_subadd<T, T, T>) {
-            if consteval {
-                return fallback(left, right);
+    static constexpr auto operator()(L lhs, R rhs) noexcept {
+        using A = typename L::abi_type; // Same ABI, just pick one
+        if constexpr (unqualified_subadd<L, R, A>) {
+            if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
+                if consteval {
+                    return fallback(lhs, rhs);
+                } else {
+                    return subadd(internal::abi<A>, lhs, rhs);
+                }
             } else {
-                return subadd(internal::abi<T>, left, right);
+                return subadd(internal::abi<A>, lhs, rhs);
             }
+        } else if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
+            return fallback(lhs, rhs);
         } else {
-            return fallback(left, right);
+            return operator()(dx::to_basic_type(lhs), dx::to_basic_type(rhs));
         }
     }
 
-    template <simd_type L, common_arithmetic_simd_with<L> R>
-    requires floating_point_simd<L> && floating_point_simd<R> &&
-        only_unqualified<L, R> && unqualified_subadd<common_abi_t<L, R>, L, R>
+    template <floating_point_simd L, common_float_simd_with<L> R>
+    requires (!same_abi_simd_as<L, R>) &&
+        (unqualified_subadd<L, R> ||
+            unqualified_subadd<basic_type_t<L>, basic_type_t<R>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L left, R right) noexcept
-        -> equivalent_simd_as<result_for<L, R>> auto {
+    static constexpr auto operator()(L lhs, R rhs) noexcept {
         using A = common_abi_t<L, R>;
-        return subadd(internal::abi<A>, left, right);
-    }
-
-    template <simd_type L, common_arithmetic_simd_with<L> R>
-    requires floating_point_simd<L> && floating_point_simd<R> &&
-        (!basic_simd_type<L> || !basic_simd_type<R>) &&
-        (!unqualified_subadd<common_abi_t<L, R>, L, R>)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L left, R right) noexcept
-        -> equivalent_simd_as<result_for<L, R>> auto {
-        return operator()(dx::to_basic_type(left), dx::to_basic_type(right));
+        if constexpr (unqualified_subadd<L, R>) {
+            return subadd(internal::abi<A>, lhs, rhs);
+        } else {
+            return subadd(internal::abi<A>, dx::to_basic_type(lhs),
+                dx::to_basic_type(rhs));
+        }
     }
 
     using binary_operation_base<subadd_t>::operator();

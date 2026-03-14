@@ -157,30 +157,25 @@ void sinhcosh(...) noexcept = delete;
 
 struct sinh_t : private internal::sinhcosh_base {
 
-    template <basic_simd_type T>
-    requires floating_point_simd<T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_type_t<T> DPL_VECTORCALL operator()(T val) noexcept {
+    template <floating_point_simd T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(T val) noexcept {
         if constexpr (requires {
                           {
                               sinh(internal::abi<T>, val)
-                          } -> equivalent_simd_as<basic_type_t<T>>;
+                          } -> equivalent_simd_as<T>;
                       }) {
-            if not consteval {
-                return sinh(internal::abi<T>, val);
+            if constexpr (basic_simd_type<T>) {
+                if not consteval {
+                    return sinh(internal::abi<T>, val);
+                } else {
+                    return internal::sinhcosh_base::fallback<0>(val);
+                }
             } else {
-                return internal::sinhcosh_base::fallback<0>(val);
+                return sinh(internal::abi<T>, val);
             }
-        } else {
+        } else if constexpr (basic_simd_type<T>) {
             return internal::sinhcosh_base::fallback<0>(val);
-        }
-    }
-
-    template <floating_point_simd T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(T val) noexcept {
-        if constexpr (requires(T val) { sinh(internal::abi<T>, val); }) {
-            return sinh(internal::abi<T>, val);
         } else {
             return operator()(dx::to_basic_type(val));
         }
@@ -189,27 +184,25 @@ struct sinh_t : private internal::sinhcosh_base {
 
 struct cosh_t : private internal::sinhcosh_base {
 
-    template <basic_simd_type T>
-    requires floating_point_simd<T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_type_t<T> DPL_VECTORCALL operator()(T val) noexcept {
-        if constexpr (requires { cosh(internal::abi<T>, val); }) {
-            if not consteval {
-                return cosh(internal::abi<T>, val);
-            } else {
-                return internal::sinhcosh_base::fallback<-1>(val);
-            }
-        } else {
-            return internal::sinhcosh_base::fallback<-1>(val);
-        }
-    }
-
     template <floating_point_simd T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(T val) noexcept
-        -> equivalent_simd_as<T> auto {
-        if constexpr (requires { cosh(internal::abi<T>, val); }) {
-            return cosh(internal::abi<T>, val);
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(T val) noexcept {
+        if constexpr (requires {
+                          {
+                              cosh(internal::abi<T>, val)
+                          } -> equivalent_simd_as<T>;
+                      }) {
+            if constexpr (basic_simd_type<T>) {
+                if not consteval {
+                    return cosh(internal::abi<T>, val);
+                } else {
+                    return internal::sinhcosh_base::fallback<-1>(val);
+                }
+            } else {
+                return cosh(internal::abi<T>, val);
+            }
+        } else if constexpr (basic_simd_type<T>) {
+            return internal::sinhcosh_base::fallback<-1>(val);
         } else {
             return operator()(dx::to_basic_type(val));
         }
@@ -218,27 +211,25 @@ struct cosh_t : private internal::sinhcosh_base {
 
 template <integral auto V>
 struct sinhcoshi_t : private internal::sinhcosh_base {
-    template <basic_simd_type T>
-    requires floating_point_simd<T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_type_t<T> DPL_VECTORCALL operator()(T val) noexcept {
-        if constexpr (requires { sinhcosh<V>(internal::abi<T>, val); }) {
-            if not consteval {
-                return sinhcosh<V>(internal::abi<T>, val);
-            } else {
-                return internal::sinhcosh_base::fallback<V>(val);
-            }
-        } else {
-            return internal::sinhcosh_base::fallback<V>(val);
-        }
-    }
-
     template <floating_point_simd T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(T val) noexcept
-        -> equivalent_simd_as<T> auto {
-        if constexpr (requires { sinhcosh<V>(internal::abi<T>, val); }) {
-            return sinhcosh<V>(internal::abi<T>, val);
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(T val) noexcept {
+        if constexpr (requires {
+                          {
+                              sinhcosh<V>(internal::abi<T>, val)
+                          } -> equivalent_simd_as<T>;
+                      }) {
+            if constexpr (basic_simd_type<T>) {
+                if not consteval {
+                    return sinhcosh<V>(internal::abi<T>, val);
+                } else {
+                    return internal::sinhcosh_base::fallback<V>(val);
+                }
+            } else {
+                return sinhcosh<V>(internal::abi<T>, val);
+            }
+        } else if constexpr (basic_simd_type<T>) {
+            return internal::sinhcosh_base::fallback<V>(val);
         } else {
             return operator()(dx::to_basic_type(val));
         }

@@ -35,25 +35,21 @@ private:
     }
 
 public:
-    template <basic_simd_mask_type T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr bool DPL_VECTORCALL operator()(T mask) noexcept {
-        if constexpr (unqualified_all_of<T>) {
-            if consteval {
-                return fallback(mask);
-            } else {
-                return all_of(internal::abi<T>, mask);
-            }
-        } else {
-            return fallback(mask);
-        }
-    }
-
     template <simd_mask_type T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr bool DPL_VECTORCALL operator()(T mask) noexcept {
         if constexpr (unqualified_all_of<T>) {
-            return all_of(internal::abi<T>, mask);
+            if constexpr (basic_simd_mask_type<T>) {
+                if consteval {
+                    return fallback(mask);
+                } else {
+                    return all_of(internal::abi<T>, mask);
+                }
+            } else {
+                return all_of(internal::abi<T>, mask);
+            }
+        } else if constexpr (basic_simd_mask_type<T>) {
+            return fallback(mask);
         } else {
             return operator()(dx::to_basic_type(mask));
         }
@@ -83,25 +79,21 @@ private:
     }
 
 public:
-    template <basic_simd_mask_type T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr bool DPL_VECTORCALL operator()(T mask) noexcept {
-        if constexpr (unqualified_any_of<T>) {
-            if consteval {
-                return fallback(mask);
-            } else {
-                return any_of(internal::abi<T>, mask);
-            }
-        } else {
-            return fallback(mask);
-        }
-    }
-
     template <simd_mask_type T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr bool DPL_VECTORCALL operator()(T mask) noexcept {
         if constexpr (unqualified_any_of<T>) {
-            return any_of(internal::abi<T>, mask);
+            if constexpr (basic_simd_mask_type<T>) {
+                if consteval {
+                    return fallback(mask);
+                } else {
+                    return any_of(internal::abi<T>, mask);
+                }
+            } else {
+                return any_of(internal::abi<T>, mask);
+            }
+        } else if constexpr (basic_simd_mask_type<T>) {
+            return fallback(mask);
         } else {
             return operator()(dx::to_basic_type(mask));
         }
@@ -129,25 +121,21 @@ private:
     }
 
 public:
-    template <basic_simd_mask_type T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr bool DPL_VECTORCALL operator()(T mask) noexcept {
-        if constexpr (unqualified_none_of<T>) {
-            if consteval {
-                return fallback(mask);
-            } else {
-                return none_of(internal::abi<T>, mask);
-            }
-        } else {
-            return fallback(mask);
-        }
-    }
-
     template <simd_mask_type T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr bool DPL_VECTORCALL operator()(T mask) noexcept {
         if constexpr (unqualified_none_of<T>) {
-            return none_of(internal::abi<T>, mask);
+            if constexpr (basic_simd_mask_type<T>) {
+                if consteval {
+                    return fallback(mask);
+                } else {
+                    return none_of(internal::abi<T>, mask);
+                }
+            } else {
+                return none_of(internal::abi<T>, mask);
+            }
+        } else if constexpr (basic_simd_mask_type<T>) {
+            return fallback(mask);
         } else {
             return operator()(dx::to_basic_type(mask));
         }
@@ -175,25 +163,21 @@ private:
     }
 
 public:
-    template <basic_simd_mask_type T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr bool DPL_VECTORCALL operator()(T mask) noexcept {
-        if constexpr (unqualified_some_of<T>) {
-            if consteval {
-                return fallback(mask);
-            } else {
-                return some_of(internal::abi<T>, mask);
-            }
-        } else {
-            return fallback(mask);
-        }
-    }
-
     template <simd_mask_type T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr bool DPL_VECTORCALL operator()(T mask) noexcept {
         if constexpr (unqualified_some_of<T>) {
-            return some_of(internal::abi<T>, mask);
+            if constexpr (basic_simd_mask_type<T>) {
+                if consteval {
+                    return fallback(mask);
+                } else {
+                    return some_of(internal::abi<T>, mask);
+                }
+            } else {
+                return some_of(internal::abi<T>, mask);
+            }
+        } else if constexpr (basic_simd_mask_type<T>) {
+            return fallback(mask);
         } else {
             return operator()(dx::to_basic_type(mask));
         }

@@ -59,7 +59,8 @@ public:
         : basic_simd_mask(datapar::to_simd_mask(
               tag, datapar::reinterpret<simd_type>(simd))) {}
 
-    template <common_bits_simd_with<simd_type> T>
+    template <different_from<basic_simd_mask> T>
+    requires common_bits_simd_with<T, simd_type>
     __DPL_HIDE_FROM_ABI explicit constexpr basic_simd_mask(T simd) noexcept
         : basic_simd_mask(
               datapar::to_simd_mask(datapar::reinterpret<simd_type>(simd))) {}
@@ -72,7 +73,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     constexpr bool operator[](this basic_simd_mask self,
         internal::extraction_index auto idx) noexcept {
-        assert(idx < element_count<basic_simd_mask>);
+        // assert(idx < element_count<basic_simd_mask>);
         return datapar::extract(self, idx);
     }
 

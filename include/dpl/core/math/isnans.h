@@ -34,27 +34,25 @@ private:
     }
 
 public:
-    template <basic_simd_type T>
-    requires floating_point_simd<T>
+    template <floating_point_simd T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr make_simd_mask_type_t<T> operator()(T arg) noexcept {
-        if constexpr (requires { isnans(internal::abi<T>, arg); }) {
-            if consteval {
-                return fallback(arg);
+        if constexpr (requires {
+                          {
+                              isnans(internal::abi<T>, arg)
+                          } -> compatible_mask_for<T>;
+                      }) {
+            if constexpr (basic_simd_type<T>) {
+                if consteval {
+                    return fallback(arg);
+                } else {
+                    return isnans(internal::abi<T>, arg);
+                }
             } else {
                 return isnans(internal::abi<T>, arg);
             }
-        } else {
+        } else if constexpr (basic_simd_type<T>) {
             return fallback(arg);
-        }
-    }
-
-    template <floating_point_simd T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T arg) noexcept
-        -> compatible_mask_for<T> auto {
-        if constexpr (requires { isnans(internal::abi<T>, arg); }) {
-            return isnans(internal::abi<T>, arg);
         } else {
             return operator()(dx::to_basic_type(arg));
         }

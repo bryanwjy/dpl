@@ -55,66 +55,47 @@ private:
     }
 
 public:
-    template <basic_simd_type T>
-    requires floating_point_simd<T>
+    template <floating_point_simd T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(T val) noexcept {
         if constexpr (unqualified_trunc<T>) {
-            if not consteval {
-                return round(internal::abi<T>, val, rounding::to_zero);
+            if constexpr (basic_simd_type<T>) {
+                if not consteval {
+                    return round(internal::abi<T>, val, rounding::to_zero);
+                } else {
+                    return fallback(val);
+                }
             } else {
-                return fallback(val);
+                return round(internal::abi<T>, val, rounding::to_zero);
             }
-        } else {
+        } else if constexpr (basic_simd_type<T>) {
             return fallback(val);
+        } else {
+            return operator()(dx::to_basic_type(val));
         }
     }
 
     template <floating_point_simd T>
-    requires (!basic_simd_type<T>) && unqualified_trunc<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T val) noexcept
-        -> equivalent_simd_as<T> auto {
-        return round(internal::abi<T>, val, rounding::to_zero);
-    }
-
-    template <floating_point_simd T>
-    requires (!basic_simd_type<T> && !unqualified_trunc<T>)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T val) noexcept {
-        return operator()(dx::to_basic_type(val));
-    }
-
-    template <basic_simd_type T>
-    requires floating_point_simd<T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(T val, rounding::no_exc_t) noexcept {
+    static constexpr T operator()(
+        T val, rounding::no_exc_t tag [[maybe_unused]]) noexcept {
         if constexpr (unqualified_trunc_noexc<T>) {
-            if not consteval {
+            if constexpr (basic_simd_type<T>) {
+                if not consteval {
+                    return round(internal::abi<T>, val,
+                        rounding::to_zero | rounding::no_exc);
+                } else {
+                    return fallback(val);
+                }
+            } else {
                 return round(internal::abi<T>, val,
                     rounding::to_zero | rounding::no_exc);
-            } else {
-                return fallback(val);
             }
-        } else {
+        } else if constexpr (basic_simd_type<T>) {
             return fallback(val);
+        } else {
+            return operator()(dx::to_basic_type(val), tag);
         }
-    }
-
-    template <floating_point_simd T>
-    requires (!basic_simd_type<T>) && unqualified_trunc_noexc<T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T val, rounding::no_exc_t) noexcept
-        -> equivalent_simd_as<T> auto {
-        return round(
-            internal::abi<T>, val, rounding::to_zero | rounding::no_exc);
-    }
-
-    template <floating_point_simd T>
-    requires (!basic_simd_type<T> && !unqualified_trunc_noexc<T>)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T val, rounding::no_exc_t tag) noexcept {
-        return operator()(dx::to_basic_type(val), tag);
     }
 };
 } // namespace datapar::internal

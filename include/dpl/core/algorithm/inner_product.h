@@ -34,7 +34,7 @@ concept basic_inner_product =
     simd_type<L> && (... && immediate_mask_for<Args, L>) &&
     (... && immediate_mask_for<Args, R>) &&
     requires(basic_type_t<L> lhs, basic_type_t<L> rhs, Args... mask) {
-        dx::reduce(mask..., dx::mul(lhs, rhs), dx::add);
+        dx::reduce(mask..., dx::multiply(lhs, rhs), dx::add);
     };
 
 struct inner_product_t {
@@ -44,13 +44,13 @@ struct inner_product_t {
     static constexpr auto DPL_VECTORCALL operator()(T lhs, T rhs) noexcept {
         if constexpr (unqualified_inner_product<T, T, T>) {
             if consteval {
-                return static_cast<T>(dx::hsum(dx::mul(lhs, rhs)));
+                return static_cast<T>(dx::hsum(dx::multiply(lhs, rhs)));
             } else {
                 return static_cast<T>(
                     inner_product(internal::abi<T>, lhs, rhs));
             }
         } else {
-            return dx::hsum(dx::mul(lhs, rhs));
+            return dx::hsum(dx::multiply(lhs, rhs));
         }
     }
 
@@ -81,14 +81,14 @@ struct inner_product_t {
         M mask, T lhs, T rhs) noexcept {
         if constexpr (unqualified_inner_producti<M, T, T, T>) {
             if consteval {
-                return static_cast<T>(dx::hsum(mask, dx::mul(lhs, rhs)));
+                return static_cast<T>(dx::hsum(mask, dx::multiply(lhs, rhs)));
             } else {
                 constexpr auto V = dx::immediate_mask_v<T, M>;
                 return static_cast<T>(
                     inner_product<V>(internal::abi<T>, lhs, rhs));
             }
         } else {
-            return dx::hsum(mask, dx::mul(lhs, rhs));
+            return dx::hsum(mask, dx::multiply(lhs, rhs));
         }
     }
 

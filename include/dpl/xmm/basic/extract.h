@@ -31,7 +31,7 @@ namespace datapar::xmm {
 
 DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr E extract(abi_tag, basic_simd<E, abi_tag> src, size_t idx) noexcept {
+constexpr E extract(abi_tag, simd<E> src, size_t idx) noexcept {
 #if !DPL_COMPILER_MSVC
     struct alignas(abi_tag::alignment) buffer {
         E data[abi_tag::size / sizeof(E)];
@@ -67,6 +67,19 @@ constexpr E extract(abi_tag, basic_simd<E, abi_tag> src, size_t idx) noexcept {
 #endif
 }
 
+namespace internal {
+template <typename T>
+consteval auto int_type() noexcept {
+    if constexpr (enumeration<T>) {
+        return underlying_type_t<T>{};
+    } else {
+        return T{};
+    }
+}
+template <typename T>
+using int_type_t DPL_NODEBUG = decltype(int_type<T>());
+} // namespace internal
+
 DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr E extract(
@@ -94,7 +107,7 @@ constexpr E extract(
                 _mm_extract_epi16(__DPL bit_cast<__m128i>(+src), imm8));
 #endif
         } else {
-            using T = conditional_t<enumeration<E>, underlying_type_t<E>, E>;
+            using T = internal::int_type_t<E>;
             if constexpr (common_order_with<T, int32>) {
                 return __DPL bit_cast<E>(_mm_extract_epi32(+src, imm8));
             } else if constexpr (common_order_with<T, int16>) {

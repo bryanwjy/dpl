@@ -78,7 +78,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     constexpr auto operator[](
         this basic_simd self, internal::extraction_index auto idx) noexcept {
-        assert(idx < element_count<basic_simd>);
+        // assert(idx < element_count<basic_simd>);
         return datapar::extract(self, idx);
     }
 

@@ -19,6 +19,10 @@ DPL_EXPORT template <typename T>
 struct common_type<T> {
     using type = T;
 };
+DPL_EXPORT template <typename T>
+struct common_type<T, T> {
+    using type = T;
+};
 
 DPL_EXPORT template <typename... Ts>
 using common_type_t DPL_NODEBUG = typename common_type<Ts...>::type;

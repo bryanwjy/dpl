@@ -36,9 +36,10 @@ private:
 
 public:
     template <core_convertible_to<E>... Args>
-    requires array_initializable<array_type, Args...>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr basic_simd<E, A> operator()(Args&&... args) noexcept
+    requires array_initializable<array_type, Args...> &&
+        (... && !same_as<bool, Args>)
+        DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+        static constexpr basic_simd<E, A> operator()(Args&&... args) noexcept
     requires requires {
         initialize<E>(internal::abi<A>, __DPL forward<Args>(args)...);
     }
@@ -50,9 +51,11 @@ public:
     requires array_initializable<barray_type, Bs...>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr basic_simd_mask<E, A> operator()(Bs... args) noexcept
-    requires requires { initialize<E>(internal::abi<A>, args...); }
+    requires requires {
+        initialize<E>(internal::abi<A>, static_cast<bool>(args)...);
+    }
     {
-        return initialize<E>(internal::abi<A>, args...);
+        return initialize<E>(internal::abi<A>, static_cast<bool>(args)...);
     }
 };
 
@@ -80,9 +83,10 @@ public:
     requires array_initializable<Array, Bs...>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr T operator()(Bs... args) noexcept
-    requires simd_mask_type<T> && regular_invocable<initialize_t<A, E>, Bs...>
+    requires simd_mask_type<T> &&
+        regular_invocable<initialize_t<A, simd_element_type_t<T>>, Bs...>
     {
-        return initialize_t<A, E>::operator()(args...);
+        return initialize_t<A, simd_element_type_t<T>>::operator()(args...);
     }
 };
 
@@ -115,8 +119,8 @@ public:
     requires requires { typename deduced_mask<Bs...>; } &&
         regular_invocable<initialize_t<deduced_mask<Bs...>>, Bs...>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr deduced_simd<Bs...> operator()(Bs... args) noexcept {
-        return initialize_t<deduced_simd<Bs...>>::operator()(args...);
+    static constexpr deduced_mask<Bs...> operator()(Bs... args) noexcept {
+        return initialize_t<deduced_mask<Bs...>>::operator()(args...);
     }
 };
 

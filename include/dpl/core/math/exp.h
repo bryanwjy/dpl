@@ -51,7 +51,7 @@ private:
             0.00833336077630519866943359f, //
             0.00139304355252534151077271f>
             polynomial;
-        auto u = dx::fmadd(dx::mul(s, s), polynomial(s), s) + dx::one;
+        auto u = dx::fmadd(dx::multiply(s, s), polynomial(s), s) + dx::one;
         u = fmath::ldexp(fmath::compliance::speed, u, q);
         if constexpr (brain_float<E>) {
             u = dx::select(val > 100.0, dx::infinity, u);
@@ -87,7 +87,7 @@ private:
             0.000198527617612853646278381f>
             polynomial;
         // x2 * f + x + 1
-        auto u = dx::fmadd(dx::mul(s, s), polynomial(s), s) + dx::one;
+        auto u = dx::fmadd(dx::multiply(s, s), polynomial(s), s) + dx::one;
         u = fmath::ldexp(fmath::compliance::speed, u, q);
         u = dx::select(val > 100.0f, dx::infinity, u);
         // underflow
@@ -112,7 +112,7 @@ private:
             0.2755762628169491192e-6, 0.2511210703042288022e-7,
             0.2081276378237164457e-8>
             polynomial;
-        auto u = dx::fmadd(dx::mul(s, s), polynomial(s), s) + dx::one;
+        auto u = dx::fmadd(dx::multiply(s, s), polynomial(s), s) + dx::one;
         u = fmath::ldexp(fmath::compliance::speed, u, q);
         static constexpr auto max_log = 0x1.62e42fefa39efp+9;
         u = dx::select(val > max_log, dx::infinity, u);
@@ -121,27 +121,25 @@ private:
     }
 
 public:
-    template <basic_simd_type T>
-    requires floating_point_simd<T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(T val) noexcept {
-        if constexpr (unqualified_exp<T>) {
-            if not consteval {
-                return exp(internal::abi<T>, val);
-            } else {
-                return fallback(val);
-            }
-        } else {
-            return fallback(val);
-        }
-    }
-
     template <floating_point_simd T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T val) noexcept
-        -> equivalent_simd_as<T> auto {
-        if constexpr (unqualified_exp<T>) {
-            return exp(internal::abi<T>, val);
+    static constexpr T operator()(T val) noexcept {
+        if constexpr (requires {
+                          {
+                              exp(internal::abi<T>, val)
+                          } -> equivalent_simd_as<T>;
+                      }) {
+            if constexpr (basic_simd_type<T>) {
+                if not consteval {
+                    return exp(internal::abi<T>, val);
+                } else {
+                    return fallback(val);
+                }
+            } else {
+                return exp(internal::abi<T>, val);
+            }
+        } else if constexpr (basic_simd_type<T>) {
+            return fallback(val);
         } else {
             return operator()(dx::to_basic_type(val));
         }

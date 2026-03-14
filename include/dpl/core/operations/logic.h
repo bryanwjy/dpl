@@ -109,24 +109,21 @@ public:
     }
 };
 
-/**
- * The following are not exported by design
- */
-template <simd_mask_type L, simd_mask_type R>
+DPL_EXPORT template <simd_mask_type L, simd_mask_type R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr invoke_result_t<internal::bwor_t, L, R> operator||(
     L lhs, R rhs) noexcept {
     return datapar::logical_or(lhs, rhs);
 }
 
-template <simd_mask_type L, simd_mask_type R>
+DPL_EXPORT template <simd_mask_type L, simd_mask_type R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr invoke_result_t<internal::bwand_t, L, R> operator&&(
     L lhs, R rhs) noexcept {
     return datapar::logical_and(lhs, rhs);
 }
 
-template <simd_mask_type T>
+DPL_EXPORT template <simd_mask_type T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr auto operator!(T val) noexcept
     -> invoke_result_t<internal::logical_not_t, T> {

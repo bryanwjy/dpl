@@ -63,7 +63,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
     constexpr void initialize() noexcept {
         vpowers<I, E, A>::data = optional<E, A>{
-            .val = dx::mul(
+            .val = dx::multiply(
                 vpowers<I - 1, E, A>::data.val, vpowers<I - 1, E, A>::data.val),
         };
     }

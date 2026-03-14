@@ -77,7 +77,8 @@ inline simd<To> DPL_VECTORCALL
     auto const nonfinite =
         xmm::bwandnot(tag, xmm::bwor(tag, inf64, parg), isfinite);
     constexpr auto shift = xmm::broadcast<To>(tag, 0x1p1008);
-    auto const shifted = xmm::mul(tag, xmm::reinterpret<To>(tag, parg), shift);
+    auto const shifted =
+        xmm::multiply(tag, xmm::reinterpret<To>(tag, parg), shift);
     auto const abs_f64 =
         xmm::reinterpret<To>(tag, xmm::bwor(tag, nonfinite, shifted));
     return xmm::bwor(tag, abs_f64, signs);
@@ -173,7 +174,8 @@ inline simd<To> DPL_VECTORCALL
     auto const nonfinite =
         xmm::bwand(tag, isnotfinite, xmm::bwor(tag, inf32, parg));
     constexpr auto shift = xmm::broadcast<To>(tag, 0x1p112f);
-    auto const shifted = xmm::mul(tag, xmm::reinterpret<To>(tag, parg), shift);
+    auto const shifted =
+        xmm::multiply(tag, xmm::reinterpret<To>(tag, parg), shift);
 
     auto const abs_f32 =
         xmm::reinterpret<To>(tag, xmm::bwor(tag, nonfinite, shifted));
@@ -318,7 +320,8 @@ inline simd<To> DPL_VECTORCALL
     auto const sign16 = xmm::bwshift_right<16>(
         tag, xmm::reinterpret<uint>(xmm::bwand(tag, msb32, i32)));
     auto const abs = xmm::reinterpret<E>(tag, xmm::bwandnot(tag, i32, msb32));
-    auto const shifted = xmm::mul(tag, abs, xmm::broadcast<E>(tag, 0x1p-112f));
+    auto const shifted =
+        xmm::multiply(tag, abs, xmm::broadcast<E>(tag, 0x1p-112f));
 
     auto const rounded = xmm::bwshift_right<13>(tag,
         xmm::add(tag,
@@ -354,7 +357,8 @@ inline simd<To> DPL_VECTORCALL
     auto const sign16 = xmm::bwshift_right<48>(
         tag, xmm::reinterpret<uint>(xmm::bwand(tag, msb64, i64)));
     auto const abs = xmm::reinterpret<E>(tag, xmm::bwandnot(tag, i64, msb64));
-    auto const shifted = xmm::mul(tag, abs, xmm::broadcast<E>(tag, 0x1p-1008));
+    auto const shifted =
+        xmm::multiply(tag, abs, xmm::broadcast<E>(tag, 0x1p-1008));
     auto const rounded = xmm::bwshift_right<42>(tag,
         xmm::add(tag,
             xmm::bwand(tag, xmm::bwshift_right<42>(tag, shifted),

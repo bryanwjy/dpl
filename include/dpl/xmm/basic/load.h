@@ -33,7 +33,7 @@ constexpr simd<E> load(abi_tag tag, E const* data) noexcept {
     if consteval {
         return []<size_t... Is>(
                    index_sequence<Is...>, abi_tag tag, E const* data) {
-            return dx::xmm::initialize(tag, data[Is]...);
+            return dx::xmm::initialize<E>(tag, data[Is]...);
         }(iota_sequence<E, abi_tag>, tag, data);
     } else {
         if constexpr (common_float_with<float, E>) {
@@ -59,7 +59,7 @@ constexpr simd<E> aligned_load(abi_tag tag, E const* data) noexcept {
     if consteval {
         return []<size_t... Is>(
                    index_sequence<Is...>, abi_tag tag, E const* data) {
-            return dx::xmm::initialize(tag, data[Is]...);
+            return dx::xmm::initialize<E>(tag, data[Is]...);
         }(iota_sequence<E, abi_tag>, tag, data);
     } else {
         if constexpr (common_float_with<float, E>) {

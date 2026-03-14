@@ -8,6 +8,7 @@
 #  include "dpl/core/concepts/simd_class.h"
 #  include "dpl/std/concepts/convertible_to.h"
 #  include "dpl/std/concepts/derived_from.h"
+#  include "dpl/std/concepts/different_from.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -19,7 +20,7 @@ protected:
     __DPL_HIDE_FROM_ABI constexpr ~broadcastable_base() noexcept = default;
 
 public:
-    template <typename S, simd_class T>
+    template <simd_class T, different_from<T> S>
     requires convertible_to<S, typename T::value_type>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     constexpr operator T(this S self) noexcept {

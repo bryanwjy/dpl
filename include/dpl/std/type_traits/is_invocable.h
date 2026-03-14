@@ -204,7 +204,7 @@ DPL_EXPORT template <typename F, typename... Args>
 __DPL_HIDE_FROM_ABI constexpr invoke_result_t<F, Args...> invoke(
     F&& func, Args&&... args) noexcept(is_nothrow_invocable_v<F, Args...>) {
     return __DPL_BUILTIN_invoke(
-        static_cast<F&&>(func)(static_cast<Args&&>(args)...));
+        static_cast<F&&>(func), static_cast<Args&&>(args)...);
 }
 
 DPL_EXPORT template <typename R, typename F, typename... Args>
@@ -213,10 +213,10 @@ __DPL_HIDE_FROM_ABI constexpr R invoke_r(F&& func, Args&&... args) noexcept(
     is_nothrow_invocable_r_v<R, F, Args...>) {
     if constexpr (is_void_v<R>) {
         __DPL_BUILTIN_invoke(
-            static_cast<F&&>(func)(static_cast<Args&&>(args)...));
+            static_cast<F&&>(func), static_cast<Args&&>(args)...);
     } else {
         return __DPL_BUILTIN_invoke(
-            static_cast<F&&>(func)(static_cast<Args&&>(args)...));
+            static_cast<F&&>(func), static_cast<Args&&>(args)...);
     }
 }
 

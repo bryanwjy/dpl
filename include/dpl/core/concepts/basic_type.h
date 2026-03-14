@@ -47,19 +47,21 @@ concept basic_simd_element = simd_element<T> && requires {
     requires same_as<basic_element_t<T>, T>;
 };
 
-DPL_EXPORT template <typename T>
-concept basic_simd_class = simd_class<T> &&
-    (internal::basic_simd_specialization<T> ||
-        internal::simd_mask_specialization<T>) &&
+namespace atom {
+template <typename T>
+concept basic_simd_class = (internal::basic_simd_specialization<T> ||
+                               internal::simd_mask_specialization<T>) &&
     basic_simd_element<simd_element_type_t<T>>;
+}
 
 DPL_EXPORT template <typename T>
-concept basic_simd_type =
-    basic_simd_class<T> && internal::basic_simd_specialization<T>;
+concept basic_simd_class = simd_class<T> && atom::basic_simd_class<T>;
 
 DPL_EXPORT template <typename T>
-concept basic_simd_mask_type =
-    basic_simd_class<T> && internal::simd_mask_specialization<T>;
+concept basic_simd_type = basic_simd_class<T> && atom::simd_type<T>;
+
+DPL_EXPORT template <typename T>
+concept basic_simd_mask_type = basic_simd_class<T> && atom::simd_mask_type<T>;
 
 DPL_EXPORT template <enumeration T>
 struct basic_element<T> {

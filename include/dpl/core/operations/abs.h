@@ -22,6 +22,29 @@ void abs(...) noexcept = delete;
 template <auto>
 void abs(...) noexcept = delete;
 
+template <typename T>
+concept unqualified_abs = requires(T val) {
+    {
+        abs(internal::abi<T>, val)
+    } -> equivalent_simd_as<common_arithmetic_simd_t<T, T>>;
+};
+
+template <typename C, typename T, typename A = common_abi_t<T>>
+concept unqualified_mabs = requires(C mask, T val) {
+    {
+        abs(internal::abi<A>, mask, val)
+    } -> simd_with<common_arithmetic_type_t<typename T::value_type,
+                       typename T::value_type>,
+        A>;
+};
+
+template <auto V, typename T>
+concept unqualified_absi = requires(T val) {
+    {
+        abs<V>(internal::abi<T>, val)
+    } -> equivalent_simd_as<common_arithmetic_simd_t<T, T>>;
+};
+
 struct abs_t {
 private:
     template <typename T>
@@ -34,8 +57,23 @@ private:
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<E, A> val) noexcept {
         using T = negated_type<E>;
-        return internal::transform<basic_simd<T, A>>(
-            val, [](auto val) { return static_cast<T>(val < 0 ? -val : val); });
+        if constexpr (enumeration<E>) {
+            return operator()(dx::reinterpret<underlying_type_t<E>>(val));
+        } else if constexpr (unsigned_integral_simd<E>) {
+            return val;
+        } else {
+            return internal::transform<basic_simd<T, A>>(
+                [](auto val) { return static_cast<T>(val < 0 ? -val : val); },
+                val);
+        }
+    }
+
+    template <simd_element C, arithmetic_type E, simd_abi A>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL
+        fallback(basic_simd_mask<E, A> mask, basic_simd<E, A> val) noexcept {
+        using T = negated_type<E>;
+        return dx::select(mask, fallback(val), dx::reinterpret<T>(val));
     }
 
     template <integral auto V, arithmetic_type E, simd_abi A>
@@ -51,9 +89,10 @@ private:
         } else {
             using T = negated_type<E>;
             return internal::itransform<basic_simd<T, A>>(
-                val, [](size_t idx, auto val) {
+                [](size_t idx, auto val) {
                     return static_cast<T>(mask[idx] && val < 0 ? -val : val);
-                });
+                },
+                val);
         }
     }
 
@@ -85,104 +124,81 @@ private:
             return dx::reinterpret<E>(dx::bwandnot(val, masked_msb));
         }
     }
-
 #endif
 
 public:
-    template <basic_simd_type T>
-    requires arithmetic_simd<T>
+    template <arithmetic_simd T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr negated_simd<T> operator()(T val) noexcept {
-        if constexpr (unsigned_integral_simd<T>) {
-            return val;
-        } else if constexpr (requires { abs(internal::abi<T>, val); }) {
-            if consteval {
-                return fallback(val);
+        if constexpr (unqualified_abs<T>) {
+            if constexpr (basic_simd_type<T>) {
+                if consteval {
+                    return fallback(val);
+                } else {
+                    return abs(internal::abi<T>, val);
+                }
             } else {
                 return abs(internal::abi<T>, val);
             }
-        } else {
+        } else if constexpr (basic_simd_type<T>) {
             return fallback(val);
-        }
-    }
-
-    template <arithmetic_simd T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T val) noexcept
-        -> equivalent_simd_as<negated_simd<T>> auto {
-        if constexpr (requires { abs(internal::abi<T>, val); }) {
-            return abs(internal::abi<T>, val);
         } else {
             return operator()(dx::to_basic_type(val));
         }
     }
 
-    template <basic_simd_mask_type M, basic_simd_type T>
-    requires arithmetic_simd<T> && compatible_mask_for<M, T> &&
-        same_abi_simd_as<T, M>
+    template <arithmetic_simd T, compatible_mask_for<T> M>
+    requires same_abi_simd_as<T, M>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr negated_simd<T> operator()(M mask, T val) noexcept {
-        if constexpr (unsigned_integral_simd<T>) {
-            return val;
-        } else if constexpr (requires { abs(internal::abi<T>, mask, val); }) {
-            if consteval {
-                return dx::select(
-                    mask, fallback(val), dx::reinterpret<negated_type<T>>(val));
+        using A = typename T::abi_type;
+        if constexpr (unqualified_mabs<M, T, A>) {
+            if constexpr (basic_simd_type<T> && basic_simd_mask_type<M>) {
+                if consteval {
+                    return fallback(mask, val);
+                } else {
+                    return abs(internal::abi<A>, mask, val);
+                }
             } else {
-                return abs(internal::abi<T>, mask, val);
+                return abs(internal::abi<A>, mask, val);
             }
-        } else {
-            return dx::select(
-                mask, fallback(val), dx::reinterpret<negated_type<T>>(val));
-        }
-    }
-
-    template <basic_simd_mask_type M, basic_simd_type T>
-    requires arithmetic_simd<T> && compatible_mask_for<M, T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(M mask, T val) noexcept
-        -> equivalent_simd_as<negated_simd<T>> auto {
-        using A = common_abi_t<M, T>;
-        return abs(internal::abi<A>, mask, val);
-    }
-
-    template <simd_type T, compatible_mask_for<T> M>
-    requires arithmetic_simd<T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(M mask, T val) noexcept
-        -> equivalent_simd_as<negated_simd<T>> auto {
-        if constexpr (requires { abs(internal::abi<T>, mask, val); }) {
-            return abs(internal::abi<T>, mask, val);
+        } else if constexpr (basic_simd_type<T> && basic_simd_mask_type<M>) {
+            return fallback(mask, val);
         } else {
             return operator()(dx::to_basic_type(mask), dx::to_basic_type(val));
         }
     }
 
-    template <basic_simd_type T, immediate_mask_for<T> M>
-    requires arithmetic_simd<T>
+    template <arithmetic_simd T, compatible_mask_for<T> M>
+    requires (!same_abi_simd_as<T, M> &&
+        (unqualified_mabs<M, T> ||
+            unqualified_mabs<basic_type_t<M>, basic_type_t<T>>))
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr negated_simd<T> operator()(M mask, T val) noexcept {
-        constexpr auto V = decltype(dx::to_immediate_mask<T>(mask))::value;
-        if constexpr (unsigned_integral_simd<T>) {
-            return val;
-        } else if constexpr (requires { abs<V>(internal::abi<T>, val); }) {
-            if consteval {
-                return fallbacki<V>(val);
-            } else {
-                return abs<V>(internal::abi<T>, val);
-            }
+        using A = common_abi_t<M, T>;
+        if constexpr (unqualified_mabs<M, T>) {
+            return abs(internal::abi<A>, mask, val);
         } else {
-            return fallbacki<V>(val);
+            return operator()(dx::to_basic_type(mask), dx::to_basic_type(val));
         }
     }
 
     template <arithmetic_simd T, immediate_mask_for<T> M>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(M mask, T val) noexcept
-        -> equivalent_simd_as<negated_simd<T>> auto {
+    static constexpr negated_simd<T> operator()(M mask, T val) noexcept {
         constexpr auto V = decltype(dx::to_immediate_mask<T>(mask))::value;
-        if constexpr (requires { abs<V>(internal::abi<T>, val); }) {
-            return abs<V>(internal::abi<T>, val);
+        if constexpr (unqualified_abs<T>) {
+            if constexpr (basic_simd_type<T>) {
+                if consteval {
+                    return fallbacki<V>(val);
+                } else {
+                    return abs<V>(internal::abi<T>, val);
+                }
+            } else {
+                return abs<V>(internal::abi<T>, val);
+            }
+        } else if constexpr (basic_simd_type<T>) {
+            return fallbacki<V>(val);
         } else {
             return operator()(mask, dx::to_basic_type(val));
         }

@@ -26,33 +26,35 @@ concept implements_native = requires(Args... args) {
 
 template <typename T>
 struct binary_operation_base {
-    template <basic_simd_class L, broadcastable_to<L> R>
-    requires implements_native<T, L, L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L lhs, R rhs) noexcept {
-        if consteval {
-            return T::operator()(lhs, dx::broadcast<L>(rhs));
-        } else {
-            return T::native(internal::abi<L>, lhs, rhs);
-        }
-    }
-
-    template <basic_simd_class R, broadcastable_to<R> L>
-    requires implements_native<T, R, L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L lhs, R rhs) noexcept {
-        if consteval {
-            return T::operator()(dx::broadcast<R>(lhs), rhs);
-        } else {
-            return T::native(internal::abi<R>, lhs, rhs);
-        }
-    }
 
     template <simd_class L, broadcastable_to<L> R>
     requires implements_native<T, L, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs) noexcept {
-        return T::native(internal::abi<L>, lhs, rhs);
+        if constexpr (basic_simd_class<L>) {
+            if consteval {
+                return T::operator()(lhs, dx::broadcast<L>(rhs));
+            } else {
+                return T::native(internal::abi<L>, lhs, rhs);
+            }
+        } else {
+            return T::native(internal::abi<L>, lhs, rhs);
+        }
+    }
+
+    template <simd_class R, broadcastable_to<R> L>
+    requires implements_native<T, R, L, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(L lhs, R rhs) noexcept {
+        if constexpr (basic_simd_class<R>) {
+            if consteval {
+                return T::operator()(dx::broadcast<R>(lhs), rhs);
+            } else {
+                return T::native(internal::abi<R>, lhs, rhs);
+            }
+        } else {
+            return T::native(internal::abi<R>, lhs, rhs);
+        }
     }
 
     template <simd_class L, broadcastable_to<L> R>
@@ -63,13 +65,6 @@ struct binary_operation_base {
         } else {
             return operator()(dx::to_basic_type(lhs), rhs);
         }
-    }
-
-    template <simd_class R, broadcastable_to<R> L>
-    requires implements_native<T, R, L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L lhs, R rhs) noexcept {
-        return T::native(internal::abi<R>, lhs, rhs);
     }
 
     template <simd_class R, broadcastable_to<R> L>
