@@ -8,7 +8,6 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/common_arithmetic_with.h"
-#  include "dpl/core/concepts/simd_equivalence.h"
 #  include "dpl/core/operations/arithmetic.h"
 #endif
 
@@ -19,14 +18,17 @@ void inner_product(...) noexcept = delete;
 template <auto>
 void inner_product(...) noexcept = delete;
 
-template <typename A, typename L, typename R>
-concept unqualified_inner_product =
-    requires(L lhs, R rhs) { inner_product(internal::abi<A>, lhs, rhs); };
+template <typename L, typename R, typename A = common_abi_t<L, R>>
+concept unqualified_inner_product = requires(L lhs, R rhs) {
+    { inner_product(internal::abi<A>, lhs, rhs) } -> arithmetic_result<L, R>;
+};
 
-template <typename M, typename A, typename L, typename R>
+template <typename M, typename L, typename R, typename A = common_abi_t<L, R>>
 concept unqualified_inner_producti = immediate_mask_for<M, L> &&
     immediate_mask_for<M, R> && requires(L lhs, R rhs) {
-        inner_product<immediate_mask_v<M, L>>(internal::abi<A>, lhs, rhs);
+        {
+            inner_product<immediate_mask_v<M, L>>(internal::abi<A>, lhs, rhs)
+        } -> arithmetic_result<L, R>;
     };
 
 template <typename L, typename R, typename... Args>
@@ -38,83 +40,99 @@ concept basic_inner_product =
     };
 
 struct inner_product_t {
-    template <basic_simd_type T>
-    requires basic_inner_product<T, T>
+private:
+    template <simd_element L, simd_element R, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(T lhs, T rhs) noexcept {
-        if constexpr (unqualified_inner_product<T, T, T>) {
-            if consteval {
-                return static_cast<T>(dx::hsum(dx::multiply(lhs, rhs)));
+    static constexpr auto DPL_VECTORCALL
+        fallback(basic_simd<L, A> lhs, basic_simd<L, A> rhs) noexcept {
+        return dx::hsum(dx::multiply(lhs, rhs));
+    }
+
+    template <auto V, simd_element L, simd_element R, simd_abi A>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL
+        fallbacki(basic_simd<L, A> lhs, basic_simd<L, A> rhs) noexcept {
+        return dx::hsumi<V>(dx::multiply(lhs, rhs));
+    }
+
+public:
+    template <simd_type L, common_arithmetic_simd_with<L> R>
+    requires same_abi_simd_as<L, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(L lhs, R rhs) noexcept {
+        using A = typename L::abi_type;
+        if constexpr (unqualified_inner_product<L, R, A>) {
+            if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
+                if consteval {
+                    return fallback(lhs, rhs);
+                } else {
+                    return inner_product(internal::abi<A>, lhs, rhs);
+                }
             } else {
-                return static_cast<T>(
-                    inner_product(internal::abi<T>, lhs, rhs));
+                return inner_product(internal::abi<A>, lhs, rhs);
             }
+        } else if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
+            return fallback(lhs, rhs);
         } else {
-            return dx::hsum(dx::multiply(lhs, rhs));
+            return operator()(dx::to_basic_type(lhs), dx::to_basic_type(rhs));
         }
     }
 
     template <simd_type L, common_arithmetic_simd_with<L> R>
-    requires only_unqualified<L, R> &&
-        unqualified_inner_product<common_abi_t<L, R>, L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(L lhs, R rhs) noexcept
-        -> equivalent_simd_as<common_arithmetic_simd_t<L, R>> auto {
+    requires (!same_abi_simd_as<L, R>) &&
+        (unqualified_inner_product<L, R> ||
+            unqualified_inner_product<basic_type_t<L>, basic_type_t<R>>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(L lhs, R rhs) noexcept {
         using A = common_abi_t<L, R>;
-        return inner_product(internal::abi<A>, lhs, rhs);
-    }
-
-    template <simd_type L, common_arithmetic_simd_with<L> R>
-    requires (!basic_simd_type<L> || !basic_simd_type<R>) &&
-        (!unqualified_inner_product<common_abi_t<L, R>, L, R>) &&
-        basic_inner_product<L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto operator()(L lhs, R rhs) noexcept
-        -> equivalent_simd_as<common_arithmetic_simd_t<L, R>> auto {
-        return operator()(dx::to_basic_type(lhs), dx::to_basic_type(rhs));
-    }
-
-    template <basic_simd_type T, immediate_mask_for<T> M>
-    requires basic_inner_product<T, T, M>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(
-        M mask, T lhs, T rhs) noexcept {
-        if constexpr (unqualified_inner_producti<M, T, T, T>) {
-            if consteval {
-                return static_cast<T>(dx::hsum(mask, dx::multiply(lhs, rhs)));
-            } else {
-                constexpr auto V = dx::immediate_mask_v<T, M>;
-                return static_cast<T>(
-                    inner_product<V>(internal::abi<T>, lhs, rhs));
-            }
+        if constexpr (unqualified_inner_product<L, R>) {
+            return inner_product(internal::abi<A>, lhs, rhs);
         } else {
-            return dx::hsum(mask, dx::multiply(lhs, rhs));
+            return inner_product(internal::abi<A>, dx::to_basic_type(lhs),
+                dx::to_basic_type(rhs));
         }
     }
 
     template <simd_type L, common_arithmetic_simd_with<L> R,
         immediate_mask_for<L> M>
-    requires immediate_mask_for<R, M> && only_unqualified<L, R> &&
-        unqualified_inner_producti<M, common_abi_t<L, R>, L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(
-        M mask, L lhs, R rhs) noexcept
-        -> equivalent_simd_as<common_arithmetic_simd_t<L, R>> auto {
-        using A = common_abi_t<L, R>;
-        constexpr auto V = dx::immediate_mask_v<L, M>;
-        return inner_product<V>(internal::abi<A>, lhs, rhs);
+    requires same_abi_simd_as<L, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(M mask, L lhs, R rhs) noexcept {
+        using A = typename L::abi_type;
+        constexpr auto V = immediate_mask_v<L, M>;
+        if constexpr (unqualified_inner_producti<M, L, R, A>) {
+            if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
+                if consteval {
+                    return fallbacki<V>(lhs, rhs);
+                } else {
+                    return inner_product<V>(internal::abi<A>, lhs, rhs);
+                }
+            } else {
+                return inner_product<V>(internal::abi<A>, lhs, rhs);
+            }
+        } else if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
+            return fallbacki<V>(lhs, rhs);
+        } else {
+            return operator()(
+                mask, dx::to_basic_type(lhs), dx::to_basic_type(rhs));
+        }
     }
 
     template <simd_type L, common_arithmetic_simd_with<L> R,
         immediate_mask_for<L> M>
-    requires immediate_mask_for<R, M> &&
-        (!basic_simd_type<L> || !basic_simd_type<R>) &&
-        (!unqualified_inner_producti<M, common_abi_t<L, R>, L, R>) &&
-        basic_inner_product<L, R, M>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto operator()(M mask, L lhs, R rhs) noexcept
-        -> equivalent_simd_as<common_arithmetic_simd_t<L, R>> auto {
-        return operator()(mask, dx::to_basic_type(lhs), dx::to_basic_type(rhs));
+    requires (!same_abi_simd_as<L, R>) &&
+        (unqualified_inner_producti<M, L, R> ||
+            unqualified_inner_producti<M, basic_type_t<L>, basic_type_t<R>>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(L lhs, R rhs) noexcept {
+        using A = common_abi_t<L, R>;
+        constexpr auto V = immediate_mask_v<L, M>;
+        if constexpr (unqualified_inner_producti<M, L, R>) {
+            return inner_product<V>(internal::abi<A>, lhs, rhs);
+        } else {
+            return inner_product<V>(internal::abi<A>, dx::to_basic_type(lhs),
+                dx::to_basic_type(rhs));
+        }
     }
 };
 

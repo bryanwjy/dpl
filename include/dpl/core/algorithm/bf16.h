@@ -14,7 +14,7 @@ namespace datapar::internal {
 
 void dot_product(...) noexcept = delete;
 
-template <typename A, typename F32, typename BF16>
+template <typename F32, typename BF16, typename A = common_abi_t<F32, BF16>>
 concept unqualified_dot_product = requires(
     F32 f32, BF16 bf16) { dot_product(internal::abi<A>, f32, bf16, bf16); };
 
@@ -29,45 +29,45 @@ private:
     }
 
 public:
-    template <basic_simd_type F32, basic_simd_type BF16>
-    requires floating_point_simd<F32> && floating_point_simd<BF16> &&
-        same_abi_simd_as<F32, BF16> &&
-        common_float_with<typename F32::value_type, float> &&
-        brain_float<typename BF16::value_type>
+    template <floating_point_simd F32, floating_point_simd BF16>
+    requires common_float_with<typename F32::value_type, float> &&
+        brain_float<typename BF16::value_type> && same_abi_simd_as<F32, BF16>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr F32 operator()(F32 acc, BF16 left, BF16 right) noexcept {
-        if constexpr (unqualified_dot_product<F32, F32, BF16>) {
-            if consteval {
-                return fallback(acc, left, right);
+        using A = typename F32::abi_type;
+        if constexpr (unqualified_dot_product<F32, BF16, A>) {
+            if constexpr (basic_simd_type<F32> && basic_simd_type<BF16>) {
+                if consteval {
+                    return fallback(acc, left, right);
+                } else {
+                    return dot_product(internal::abi<F32>, acc, left, right);
+                }
             } else {
                 return dot_product(internal::abi<F32>, acc, left, right);
             }
-        } else {
+        } else if constexpr (basic_simd_type<F32> && basic_simd_type<BF16>) {
             return fallback(acc, left, right);
+        } else {
+            return fallback(dx::to_basic_type(acc), dx::to_basic_type(left),
+                dx::to_basic_type(right));
         }
     }
 
     template <floating_point_simd F32, floating_point_simd BF16>
-    requires common_abi_simd_with<F32, BF16> &&
-        common_float_with<typename F32::value_type, float> &&
+    requires common_float_with<typename F32::value_type, float> &&
         brain_float<typename BF16::value_type> &&
-        unqualified_dot_product<F32, F32, BF16>
+        (!same_abi_simd_as<F32, BF16>) &&
+        (unqualified_dot_product<F32, BF16> ||
+            unqualified_dot_product<basic_type_t<F32>, basic_type_t<BF16>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr F32 operator()(F32 acc, BF16 left, BF16 right) noexcept {
         using A = common_abi_t<F32, BF16>;
-        return dot_product(internal::abi<A>, acc, left, right);
-    }
-
-    template <floating_point_simd F32, floating_point_simd BF16>
-    requires common_abi_simd_with<F32, BF16> &&
-        common_float_with<typename F32::value_type, float> &&
-        brain_float<typename BF16::value_type> &&
-        (!(basic_simd_type<F32> && basic_simd_type<BF16>) &&
-            !unqualified_dot_product<F32, F32, BF16>)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr F32 operator()(F32 acc, BF16 left, BF16 right) noexcept {
-        return operator()(dx::to_basic_type(acc), dx::to_basic_type(left),
-            dx::to_basic_type(right));
+        if constexpr (unqualified_dot_product<F32, BF16>) {
+            return dot_product(internal::abi<A>, acc, left, right);
+        } else {
+            return dot_product(internal::abi<A>, dx::to_basic_type(acc),
+                dx::to_basic_type(left), dx::to_basic_type(right));
+        }
     }
 };
 

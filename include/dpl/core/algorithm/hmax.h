@@ -16,91 +16,79 @@ void hmax(...) noexcept = delete;
 template <auto>
 void hmax(...) noexcept = delete;
 
-template <typename A, typename T>
-concept unqualified_hmax = requires(T val) { hmax(internal::abi<A>, val); };
-
-template <typename M, typename A, typename T>
-concept unqualified_hmaxi = immediate_mask_for<M, T> &&
-    requires(T val) { hmax<immediate_mask_v<T, M>>(internal::abi<A>, val); };
-
 template <typename T>
-concept has_fallback_hmax =
-    simd_type<T> && requires(basic_type_t<T> val) { dx::reduce(val, dx::min); };
+concept unqualified_hmax = requires(T val) {
+    { hmax(internal::abi<T>, val) } -> equivalent_simd_as<T>;
+};
 
 template <typename M, typename T>
-concept has_fallback_hmaxi = simd_type<T> && immediate_mask_for<M, T> &&
-    requires(basic_type_t<T> val, M mask) { dx::reduce(mask, val, dx::min); };
+concept unqualified_hmaxi = immediate_mask_for<M, T> && requires(T val) {
+    {
+        hmax<immediate_mask_v<T, M>>(internal::abi<T>, val)
+    } -> equivalent_simd_as<T>;
+};
 
 struct hmax_t {
-    template <basic_simd_type T>
-    requires arithmetic_simd<T> && has_fallback_hmax<T>
+private:
+    template <simd_element E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr T DPL_VECTORCALL operator()(T arg) noexcept {
-        if constexpr (unqualified_hmax<T, T>) {
-            if consteval {
-                return static_cast<T>(dx::reduce(arg, dx::max));
+    static constexpr auto DPL_VECTORCALL
+        fallback(basic_simd<E, A> val) noexcept {
+        return dx::reduce(val, dx::max);
+    }
+
+    template <auto V, simd_element E, simd_abi A>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL
+        fallbacki(basic_simd<E, A> val) noexcept {
+        return dx::reducei<V>(val, dx::max);
+    }
+
+public:
+    template <ordered_simd T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T arg) noexcept {
+        if constexpr (unqualified_hmax<T>) {
+            if constexpr (basic_simd_type<T>) {
+                if consteval {
+                    return fallback(arg);
+                } else {
+                    return hmax(internal::abi<T>, arg);
+                }
             } else {
-                return static_cast<T>(hmax(internal::abi<T>, arg));
+                return hmax(internal::abi<T>, arg);
             }
+        } else if constexpr (basic_simd_type<T>) {
+            return fallback(arg);
         } else {
-            return dx::reduce(arg, dx::max);
+            return operator()(dx::to_basic_type(arg));
         }
     }
 
-    template <arithmetic_simd T>
-    requires (!basic_simd_type<T>) && unqualified_hmax<T, T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(T arg) noexcept
-        -> equivalent_simd_as<T> auto {
-        return hmax(internal::abi<T>, arg);
-    }
-
-    template <arithmetic_simd T>
-    requires (!basic_simd_type<T> && !unqualified_hmax<T, T>) &&
-        has_fallback_hmax<T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto operator()(T arg) noexcept
-        -> equivalent_simd_as<T> auto {
-        return operator()(dx::to_basic_type(arg));
-    }
-
-    template <basic_simd_type T, immediate_mask_for<T> M>
-    requires arithmetic_simd<T> && has_fallback_hmaxi<M, T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept {
-        if constexpr (unqualified_hmaxi<M, T, T>) {
-            if consteval {
-                return static_cast<T>(dx::reduce(mask, arg, dx::max));
-            } else {
-                constexpr auto V = immediate_mask_v<T, M>;
-                return static_cast<T>(hmax<V>(internal::abi<T>, arg));
-            }
-        } else {
-            return dx::reduce(mask, arg, dx::max);
-        }
-    }
-
-    template <arithmetic_simd T, immediate_mask_for<T> M>
-    requires (!basic_simd_type<T>) && unqualified_hmaxi<M, T, T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(M mask, T arg) noexcept
-        -> equivalent_simd_as<T> auto {
+    template <ordered_simd T, immediate_mask_for<T> M>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(M mask, T arg) noexcept {
         constexpr auto V = immediate_mask_v<T, M>;
-        return hmax<V>(internal::abi<T>, arg);
-    }
-
-    template <arithmetic_simd T, immediate_mask_for<T> M>
-    requires (!basic_simd_type<T> && !unqualified_hmaxi<M, T, T>) &&
-        has_fallback_hmaxi<M, T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto operator()(M mask, T arg) noexcept
-        -> equivalent_simd_as<T> auto {
-        return operator()(mask, dx::to_basic_type(arg));
+        if constexpr (unqualified_hmaxi<M, T>) {
+            if constexpr (basic_simd_type<T>) {
+                if consteval {
+                    return fallbacki<V>(arg);
+                } else {
+                    return hmax<V>(internal::abi<T>, arg);
+                }
+            } else {
+                return hmax<V>(internal::abi<T>, arg);
+            }
+        } else if constexpr (basic_simd_type<T>) {
+            return fallbacki<V>(arg);
+        } else {
+            return operator()(mask, dx::to_basic_type(arg));
+        }
     }
 };
 
 template <auto V>
-struct hmaxi_t;
+struct hmaxi_t {};
 
 template <integral auto V>
 struct hmaxi_t<V> {

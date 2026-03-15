@@ -1,3 +1,4 @@
+// Copyright 2025-2026 Bryan Wong
 #include <cassert>
 
 import dpl.xmm;

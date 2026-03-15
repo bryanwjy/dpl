@@ -3,7 +3,6 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/concepts/arithmetic_type.h"
 #include "dpl/core/concepts/common_basic_element_with.h"
 #include "dpl/core/concepts/common_class_with.h"
 #include "dpl/core/concepts/common_float_with.h"
@@ -25,16 +24,15 @@ namespace atom {
  * and there are no comparison operations found via ADL
  */
 template <typename T>
-concept naturally_ordered_enum =
-    enumeration<T> && totally_ordered<T> && requires(T val) {
-        requires !requires { operator<(val, val); };
-        requires !requires { operator>(val, val); };
-        requires !requires { operator<=(val, val); };
-        requires !requires { operator>=(val, val); };
-        requires !requires { operator!=(val, val); };
-        requires !requires { operator==(val, val); };
-        requires !requires { operator<=>(val, val); };
-    };
+concept naturally_ordered_enum = requires(T val) {
+    requires !requires { operator<(val, val); };
+    requires !requires { operator>(val, val); };
+    requires !requires { operator<=(val, val); };
+    requires !requires { operator>=(val, val); };
+    requires !requires { operator!=(val, val); };
+    requires !requires { operator==(val, val); };
+    requires !requires { operator<=>(val, val); };
+};
 
 /**
  * Enum type, T, is comparable to an integral type, U, iff
@@ -43,7 +41,9 @@ concept naturally_ordered_enum =
  * operations found via ADL
  */
 template <typename T, typename U>
-concept enum_comparable = (same_as<T, U> && naturally_ordered_enum<T>) ||
+concept enum_comparable =
+    (same_as<T, U> && enumeration<T> && totally_ordered<T> &&
+        naturally_ordered_enum<T>) ||
     (enumeration<T> && common_integral_with<U, underlying_type_t<T>> &&
         totally_ordered_with<T, U> && requires(T lhs, U rhs) {
             requires !requires { operator<(lhs, rhs); };
@@ -77,6 +77,13 @@ concept common_order_with =
 DPL_EXPORT template <typename A, typename B>
 concept common_order_simd_with = common_class_with<A, B> &&
     common_order_with<simd_element_type_t<A>, simd_element_type_t<B>>;
+
+DPL_EXPORT template <typename T>
+concept ordered_type = atom::common_order_with<T, T>;
+
+DPL_EXPORT template <typename T>
+concept ordered_simd = simd_type<T> &&
+    atom::common_order_with<simd_element_type_t<T>, simd_element_type_t<T>>;
 
 } // namespace datapar
 DPL_DEFAULT_NAMESPACE_END
