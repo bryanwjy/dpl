@@ -87,8 +87,7 @@ struct fma_base {
         } else if constexpr (basic_simd_type<TA>) {
             return T::operator()(a, dx::broadcast<TA>(b), dx::broadcast<TA>(c));
         } else {
-            return T::operator()(dx::to_basic_type(a), dx::broadcast<TA>(b),
-                dx::broadcast<TA>(c));
+            return T::operator()(dx::to_basic_type(a), b, c);
         }
     }
 
@@ -111,8 +110,7 @@ struct fma_base {
         } else if constexpr (basic_simd_type<TB>) {
             return T::operator()(dx::broadcast<TB>(a), b, dx::broadcast<TB>(c));
         } else {
-            return T::operator()(dx::broadcast<TB>(a), dx::to_basic_type(b),
-                dx::broadcast<TB>(c));
+            return T::operator()(a, dx::to_basic_type(b), c);
         }
     }
 
@@ -135,8 +133,7 @@ struct fma_base {
         } else if constexpr (basic_simd_type<TC>) {
             return T::operator()(dx::broadcast<TC>(a), dx::broadcast<TC>(b), c);
         } else {
-            return T::operator()(dx::broadcast<TC>(a), dx::broadcast<TC>(b),
-                dx::to_basic_type(c));
+            return T::operator()(a, b, dx::to_basic_type(c));
         }
     }
 
@@ -161,8 +158,7 @@ struct fma_base {
             return T::operator()(
                 a, b, dx::broadcast<common_arithmetic_simd_t<TA, TB>>(c));
         } else {
-            return T::operator()(dx::to_basic_type(a), dx::to_basic_type(b),
-                dx::broadcast<common_arithmetic_simd_t<TA, TB>>(c));
+            return T::operator()(dx::to_basic_type(a), dx::to_basic_type(b), c);
         }
     }
 
@@ -187,9 +183,7 @@ struct fma_base {
             return T::operator()(
                 a, dx::broadcast<common_arithmetic_simd_t<TA, TC>>(b), c);
         } else {
-            return T::operator()(dx::to_basic_type(a),
-                dx::broadcast<common_arithmetic_simd_t<TA, TC>>(b),
-                dx::to_basic_type(c));
+            return T::operator()(dx::to_basic_type(a), b, dx::to_basic_type(c));
         }
     }
 
@@ -215,9 +209,7 @@ struct fma_base {
             return T::operator()(
                 dx::broadcast<common_arithmetic_simd_t<TB, TC>>(a), b, c);
         } else {
-            return T::operator()(
-                dx::broadcast<common_arithmetic_simd_t<TB, TC>>(a),
-                dx::to_basic_type(b), dx::to_basic_type(c));
+            return T::operator()(a, dx::to_basic_type(b), dx::to_basic_type(c));
         }
     }
 };

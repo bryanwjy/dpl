@@ -63,12 +63,6 @@ struct impl2<T, U> {
 template <typename T, typename U>
 struct impl : impl0<T, U> {};
 
-template <typename T, typename U>
-requires requires { typename __DPL common_type_t<T, U>; }
-struct impl<T, U> {
-    using type DPL_NODEBUG = __DPL common_type_t<T, U>;
-};
-
 } // namespace details::common_type
 
 DPL_EXPORT template <typename T, typename U>

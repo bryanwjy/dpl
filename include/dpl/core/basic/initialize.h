@@ -96,9 +96,10 @@ private:
     template <typename... Es>
     requires requires {
         typename common_type_t<Es...>;
-        requires simd_element<common_type_t<Es...>>;
+        requires simd_element<decay_t<common_type_t<Es...>>>;
     }
-    using deduced_simd DPL_NODEBUG = basic_simd<common_type_t<Es...>, A>;
+    using deduced_simd DPL_NODEBUG =
+        basic_simd<decay_t<common_type_t<Es...>>, A>;
 
     template <same_as<bool>... Bs>
     requires (has_single_bit(sizeof...(Bs)) && A::size >= sizeof...(Bs))
@@ -106,7 +107,7 @@ private:
         basic_simd_mask<bit_type_t<(A::size / sizeof...(Bs)) * char_bit_v>, A>;
 
 public:
-    template <simd_element... Args>
+    template <typename... Args>
     requires requires { typename deduced_simd<Args...>; } &&
         regular_invocable<initialize_t<deduced_simd<Args...>>, Args...>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)

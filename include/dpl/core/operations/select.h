@@ -30,7 +30,8 @@ void select(...) noexcept = delete;
 
 template <typename L, typename R>
 using ternary_result_t DPL_NODEBUG =
-    decltype(false ? __DPL declval<L>() : __DPL declval<R>());
+    __DPL decay_t<decltype(false ? __DPL declval<L>()
+                                   : __DPL declval<R>())>;
 
 template <typename L, typename R>
 struct ternary_type {};
@@ -80,7 +81,7 @@ concept selectable_with = common_size_simd_with<R, L> &&
 template <typename R, typename L>
 concept selectablei_with = common_size_simd_with<R, L> && requires {
     typename ternary_simd_t<L, R>;
-    requires common_size_with<ternary_simd_t<L, R>, common_size_type_t<R, L>>;
+    requires common_size_with<ternary_type_t<L, R>, common_size_type_t<R, L>>;
 };
 
 template <typename R, typename L, typename C = make_simd_mask_type_t<L>>
@@ -431,8 +432,8 @@ public:
         typename mask_type<T>;
         requires regular_invocable<select_t, mask_type<T>, T, F>;
     }
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(T tval, F fval) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T tval, F fval) noexcept {
         constexpr mask_type<T> mask{};
         return select_t::operator()(mask, tval, fval);
     }

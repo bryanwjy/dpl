@@ -28,39 +28,19 @@ template <typename T>
 struct binary_operation_base {
 
     template <simd_class L, broadcastable_to<L> R>
-    requires implements_native<T, L, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs) noexcept {
-        if constexpr (basic_simd_class<L>) {
-            if consteval {
-                return T::operator()(lhs, dx::broadcast<L>(rhs));
+        if constexpr (implements_native<T, L, L, R>) {
+            if constexpr (basic_simd_class<L>) {
+                if consteval {
+                    return T::operator()(lhs, dx::broadcast<L>(rhs));
+                } else {
+                    return T::native(internal::abi<L>, lhs, rhs);
+                }
             } else {
                 return T::native(internal::abi<L>, lhs, rhs);
             }
-        } else {
-            return T::native(internal::abi<L>, lhs, rhs);
-        }
-    }
-
-    template <simd_class R, broadcastable_to<R> L>
-    requires implements_native<T, R, L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L lhs, R rhs) noexcept {
-        if constexpr (basic_simd_class<R>) {
-            if consteval {
-                return T::operator()(dx::broadcast<R>(lhs), rhs);
-            } else {
-                return T::native(internal::abi<R>, lhs, rhs);
-            }
-        } else {
-            return T::native(internal::abi<R>, lhs, rhs);
-        }
-    }
-
-    template <simd_class L, broadcastable_to<L> R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L lhs, R rhs) noexcept {
-        if constexpr (basic_simd_class<L>) {
+        } else if constexpr (basic_simd_class<L>) {
             return T::operator()(lhs, dx::broadcast<L>(rhs));
         } else {
             return operator()(dx::to_basic_type(lhs), rhs);
@@ -70,7 +50,17 @@ struct binary_operation_base {
     template <simd_class R, broadcastable_to<R> L>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs) noexcept {
-        if constexpr (basic_simd_class<R>) {
+        if constexpr (implements_native<T, R, L, R>) {
+            if constexpr (basic_simd_class<R>) {
+                if consteval {
+                    return T::operator()(dx::broadcast<R>(lhs), rhs);
+                } else {
+                    return T::native(internal::abi<R>, lhs, rhs);
+                }
+            } else {
+                return T::native(internal::abi<R>, lhs, rhs);
+            }
+        } else if constexpr (basic_simd_class<R>) {
             return T::operator()(dx::broadcast<R>(lhs), rhs);
         } else {
             return operator()(lhs, dx::to_basic_type(rhs));

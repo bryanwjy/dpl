@@ -59,7 +59,8 @@ struct cload_t<A> {
 
     template <simd_element E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto operator()(E const* src, E const* alt) noexcept {
+    static constexpr auto operator()(
+        E const* src, E const* alt DPL_ATTRIBUTE(NONNULL)) noexcept {
         return cload_t<basic_simd<E, A>>::operator()(src, alt);
     }
 
