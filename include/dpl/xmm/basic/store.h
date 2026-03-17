@@ -15,7 +15,6 @@
 #  include "dpl/core/basic/immediate.h"
 #  include "dpl/core/concepts/common_float_with.h"
 #  include "dpl/core/concepts/simd_element.h"
-#  include "dpl/core/type_traits/iota_sequence.h"
 #  include "dpl/std/bit/bit_cast.h"
 
 #  include <immintrin.h>
@@ -36,7 +35,7 @@ __DPL_HIDE_FROM_ABI constexpr void store(
                 dst[I] = dx::xmm::extract(tag, src, idx);
                 self(tag, src, dst, dx::imm<I + 1>);
             }
-        }(iota_sequence<E, abi_tag>, tag, src, dst);
+        }(tag, src, dst);
     } else {
         if constexpr (common_float_with<float, E>) {
             _mm_storeu_ps(reinterpret_cast<float*>(dst), +src);

@@ -41,19 +41,19 @@ concept integral_cast_target_like = integral<U> &&
     (common_integral_with<T, signed_representation_t<U>> ||
         common_integral_with<T, unsigned_representation_t<U>>);
 
-template <common_float_with<double> To, common_float_with<double> E>
+DPL_EXPORT template <common_float_with<double> To, common_float_with<double> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<To> DPL_VECTORCALL cast(abi_tag, simd<E> src) noexcept {
     return +src;
 }
 
-template <common_float_with<double> To, common_float_with<float> E>
+DPL_EXPORT template <common_float_with<double> To, common_float_with<float> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<To> DPL_VECTORCALL cast(abi_tag, simd<E> src) noexcept {
     return _mm_cvtps_pd(+src);
 }
 
-template <common_float_with<double> To, fp16_like E>
+DPL_EXPORT template <common_float_with<double> To, fp16_like E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<To> DPL_VECTORCALL
     cast(abi_tag tag [[maybe_unused]], simd<E> src) noexcept {
@@ -85,48 +85,19 @@ inline simd<To> DPL_VECTORCALL
 #endif
 }
 
-template <common_float_with<double> To, common_arithmetic_with<int64> E>
-DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<To> DPL_VECTORCALL cast(abi_tag, simd<E> src) noexcept {
+// Without AVX512, it is simply not worth it
 #if DPL_SIMD_X86_AVX512DQ & DPL_SIMD_X86_AVX512VL
+DPL_EXPORT template <common_float_with<double> To,
+    common_arithmetic_with<int64> E>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+inline simd<To> DPL_VECTORCALL
+    cast(abi_tag tag [[maybe_unused]], simd<E> src) noexcept {
     return _mm_cvtepi64_pd(+src);
-#else
-    if constexpr (unsigned_integral<E>) {
-        auto const hilo = _mm_shuffle_epi32(+src, _MM_SHUFFLE(3, 1, 2, 0));
-        auto const ilo = _mm_unpacklo_epi64(hilo, _mm_setzero_si128());
-        auto const ihi = _mm_unpackhi_epi64(hilo, _mm_setzero_si128());
-        auto const islolarge = _mm_cmplt_epi32(ilo, _mm_setzero_si128());
-        auto const ishilarge = _mm_cmplt_epi32(ihi, _mm_setzero_si128());
-        auto const correction = _mm_set1_pd(0x1p32);
-        auto const locorrection = _mm_and_pd(
-            _mm_castsi128_pd(_mm_unpacklo_epi64(islolarge, islolarge)),
-            correction);
-        auto const hicorrection = _mm_and_pd(
-            _mm_castsi128_pd(_mm_unpacklo_epi64(ishilarge, islolarge)),
-            correction);
-        auto const lo = _mm_add_pd(_mm_cvtepi32_pd(ilo), locorrection);
-        auto const hi = _mm_castsi128_pd(_mm_add_epi64(
-            _mm_castpd_si128(_mm_add_pd(_mm_cvtepi32_pd(ihi), hicorrection)),
-            _mm_set1_epi64x(32ll << 52)));
-        return _mm_add_pd(lo, hi);
-    } else {
-        auto const hilo = _mm_shuffle_epi32(+src, _MM_SHUFFLE(3, 1, 2, 0));
-        auto const ilo = _mm_unpacklo_epi64(hilo, _mm_setzero_si128());
-        auto const ihi = _mm_unpackhi_epi64(hilo, _mm_setzero_si128());
-        auto const islolarge = _mm_cmplt_epi32(ilo, _mm_setzero_si128());
-        auto const correction = _mm_and_pd(
-            _mm_castsi128_pd(_mm_unpacklo_epi64(islolarge, islolarge)),
-            _mm_set1_pd(0x1p32));
-        auto const lo = _mm_add_pd(_mm_cvtepi32_pd(ilo), correction);
-        auto const hi = _mm_castsi128_pd(
-            _mm_add_epi64(_mm_castpd_si128(_mm_cvtepi32_pd(ihi)),
-                _mm_set1_epi64x(32ll << 52)));
-        return _mm_add_pd(lo, hi);
-    }
-#endif
 }
+#endif
 
-template <common_float_with<double> To, common_arithmetic_with<int32> E>
+DPL_EXPORT template <common_float_with<double> To,
+    common_arithmetic_with<int32> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<To> DPL_VECTORCALL cast(abi_tag, simd<E> src) noexcept {
     if constexpr (signed_integral<E>) {
@@ -140,19 +111,45 @@ inline simd<To> DPL_VECTORCALL cast(abi_tag, simd<E> src) noexcept {
     }
 }
 
-template <common_float_with<float> To, common_float_with<double> E>
+DPL_EXPORT template <common_float_with<double> To,
+    common_arithmetic_with<int16> E>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+inline simd<To> DPL_VECTORCALL cast(abi_tag, simd<E> src) noexcept {
+    if constexpr (unsigned_integral<E>) {
+        return _mm_cvtepi32_pd(_mm_cvtepu16_epi32(+src));
+    } else {
+        return _mm_cvtepi32_pd(_mm_cvtepi16_epi32(+src));
+    }
+}
+
+DPL_EXPORT template <common_float_with<double> To,
+    common_arithmetic_with<int8> E>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+inline simd<To> DPL_VECTORCALL cast(abi_tag, simd<E> src) noexcept {
+    if constexpr (unsigned_integral<E>) {
+        auto const lo =
+            _mm_cvtepu16_epi32(_mm_unpacklo_epi8(+src, _mm_setzero_si128()));
+        return _mm_cvtepi32_pd(lo);
+    } else {
+        auto const lo = _mm_cvtepi16_epi32(
+            _mm_srai_epi16(_mm_unpacklo_epi8(_mm_setzero_si128(), +src), 8));
+        return _mm_cvtepi32_pd(lo);
+    }
+}
+
+DPL_EXPORT template <common_float_with<float> To, common_float_with<double> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<To> DPL_VECTORCALL cast(abi_tag, simd<E> src) noexcept {
     return _mm_cvtpd_ps(+src);
 }
 
-template <common_float_with<float> To, common_float_with<float> E>
+DPL_EXPORT template <common_float_with<float> To, common_float_with<float> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<To> DPL_VECTORCALL cast(abi_tag, simd<E> src) noexcept {
     return +src;
 }
 
-template <common_float_with<float> To, fp16_like E>
+DPL_EXPORT template <common_float_with<float> To, fp16_like E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<To> DPL_VECTORCALL
     cast(abi_tag tag [[maybe_unused]], simd<E> src) noexcept {
@@ -183,7 +180,7 @@ inline simd<To> DPL_VECTORCALL
 #endif
 }
 
-template <common_float_with<float> TE, brain_float FE>
+DPL_EXPORT template <common_float_with<float> TE, brain_float FE>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<TE> DPL_VECTORCALL cast(abi_tag, simd<FE> from) noexcept {
 #if DPL_SIMD_X86_AVX512BF16 & DPL_SIMD_X86_AVX512VL
@@ -194,7 +191,8 @@ inline simd<TE> DPL_VECTORCALL cast(abi_tag, simd<FE> from) noexcept {
 #endif
 }
 
-template <common_float_with<float> To, common_arithmetic_with<int64> E>
+DPL_EXPORT template <common_float_with<float> To,
+    common_arithmetic_with<int64> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<To> DPL_VECTORCALL
     cast(abi_tag tag [[maybe_unused]], simd<E> src) noexcept {
@@ -207,39 +205,45 @@ inline simd<To> DPL_VECTORCALL
 #else
     auto const zero = _mm_setzero_si128();
     if constexpr (signed_integral<E>) {
-        auto const lomask = _mm_set1_epi64x(0xffffffffll);
-        auto const lo = _mm_and_si128(+src, lomask);
-        auto const islolarge =
-            _mm_castsi128_ps(_mm_cmplt_epi32(lo, _mm_setzero_si128()));
-        auto const correction = _mm_and_ps(islolarge, _mm_set1_ps(0x1p32f));
-        auto const hilohilo = _mm_add_ps(
-            _mm_castsi128_ps(
-                _mm_add_epi64(_mm_castps_si128(_mm_cvtepi32_ps(+src)),
-                    _mm_set1_epi64x(32ll << 55))),
-            correction);
-        auto const hihilolo =
-            _mm_shuffle_ps(hilohilo, hilohilo, _MM_SHUFFLE(3, 1, 2, 0));
-        return _mm_add_ps(_mm_unpacklo_ps(hihilolo, _mm_setzero_ps()),
-            _mm_unpackhi_ps(hihilolo, _mm_setzero_ps()));
-    } else {
-        auto const islarge =
-            _mm_castsi128_ps(_mm_cmplt_epi32(+src, _mm_setzero_si128()));
-        auto const correction = _mm_and_ps(islarge, _mm_set1_ps(0x1p32f));
+        auto const hisign = _mm_and_si128(_mm_set1_epi64x(1ll << 63), +src);
+        auto const losign =
+            _mm_castsi128_ps(_mm_srli_epi64(_mm_castps_si128(hisign), 32));
 
+        src = xmm::abs(tag, src);
+        auto const ishizero = _mm_cmpeq_epi32(+src, zero);
+        auto const hicorrection = _mm_andnot_si128(
+            ishizero, _mm_or_si128(_mm_set1_epi64x(32ll << 55), hisign));
+        auto const islarge = _mm_castsi128_ps(_mm_cmplt_epi32(+src, zero));
+        auto const locorrection = _mm_and_ps(islarge, _mm_set1_ps(0x1p32f));
+        auto hilohilo = _mm_add_ps(
+            _mm_castsi128_ps(_mm_add_epi64(
+                _mm_castps_si128(_mm_cvtepi32_ps(+src)), hicorrection)),
+            locorrection);
+        hilohilo = _mm_xor_ps(hilohilo, losign);
+        auto const hihilolo = _mm_castps_si128(
+            _mm_shuffle_ps(hilohilo, hilohilo, _MM_SHUFFLE(3, 1, 2, 0)));
+        return _mm_add_ps(_mm_castsi128_ps(_mm_unpacklo_epi64(hihilolo, zero)),
+            _mm_castsi128_ps(_mm_unpackhi_epi64(hihilolo, zero)));
+    } else {
+        auto const islarge = _mm_castsi128_ps(_mm_cmplt_epi32(+src, zero));
+        auto const correction = _mm_and_ps(islarge, _mm_set1_ps(0x1p32f));
+        auto const ishizero = _mm_cmpeq_epi32(+src, zero);
         auto const hilohilo = _mm_add_ps(
             _mm_castsi128_ps(
                 _mm_add_epi64(_mm_castps_si128(_mm_cvtepi32_ps(+src)),
-                    _mm_set1_epi64x(32ll << 55))),
+                    _mm_andnot_si128(ishizero, _mm_set1_epi64x(32ll << 55)))),
             correction);
-        auto const hihilolo =
-            _mm_shuffle_ps(hilohilo, hilohilo, _MM_SHUFFLE(3, 1, 2, 0));
-        return _mm_add_ps(_mm_unpacklo_ps(hihilolo, _mm_setzero_ps()),
-            _mm_unpackhi_ps(hihilolo, _mm_setzero_ps()));
+        auto const hihilolo = _mm_castps_si128(
+            _mm_shuffle_ps(hilohilo, hilohilo, _MM_SHUFFLE(3, 1, 2, 0)));
+
+        return _mm_add_ps(_mm_castsi128_ps(_mm_unpacklo_epi64(hihilolo, zero)),
+            _mm_castsi128_ps(_mm_unpackhi_epi64(hihilolo, zero)));
     }
 #endif
 }
 
-template <common_float_with<float> To, common_arithmetic_with<int32> E>
+DPL_EXPORT template <common_float_with<float> To,
+    common_arithmetic_with<int32> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<To> DPL_VECTORCALL cast(abi_tag, simd<E> src) noexcept {
     if constexpr (signed_integral<E>) {
@@ -252,10 +256,10 @@ inline simd<To> DPL_VECTORCALL cast(abi_tag, simd<E> src) noexcept {
     }
 }
 
-template <common_float_with<float> To, common_arithmetic_with<int16> E>
+DPL_EXPORT template <common_float_with<float> To,
+    common_arithmetic_with<int16> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<To> DPL_VECTORCALL cast(abi_tag tag, simd<E> src) noexcept {
-    auto const zero = _mm_setzero_si128();
     if constexpr (unsigned_integral<E>) {
         return _mm_cvtepi32_ps(_mm_cvtepu16_epi32(+src));
     } else {
@@ -263,18 +267,22 @@ inline simd<To> DPL_VECTORCALL cast(abi_tag tag, simd<E> src) noexcept {
     }
 }
 
-template <common_float_with<float> To, common_arithmetic_with<int8> E>
+DPL_EXPORT template <common_float_with<float> To,
+    common_arithmetic_with<int8> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<To> DPL_VECTORCALL cast(abi_tag, simd<E> src) noexcept {
     if constexpr (unsigned_integral<E>) {
         auto const lo =
-            _mm_unpacklo_epi16(_mm_unpacklo_epi8(+src, _mm_setzero_si128()));
+            _mm_cvtepu16_epi32(_mm_unpacklo_epi8(+src, _mm_setzero_si128()));
         return _mm_cvtepi32_ps(lo);
     } else {
+        auto const lo = _mm_cvtepi16_epi32(
+            _mm_srai_epi16(_mm_unpacklo_epi8(_mm_setzero_si128(), +src), 8));
+        return _mm_cvtepi32_ps(lo);
     }
 }
 
-template <brain_float TE, common_float_with<float> FE>
+DPL_EXPORT template <brain_float TE, common_float_with<float> FE>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<TE> DPL_VECTORCALL cast(abi_tag, simd<FE> from) noexcept {
 #if DPL_SIMD_X86_AVX512BF16 & DPL_SIMD_X86_AVX512VL
@@ -289,7 +297,7 @@ inline simd<TE> DPL_VECTORCALL cast(abi_tag, simd<FE> from) noexcept {
 #endif
 }
 
-template <brain_float To, arithmetic_type E>
+DPL_EXPORT template <brain_float To, arithmetic_type E>
 requires (!common_float_with<E, float>) &&
     requires(abi_tag tag, simd<E> src) { xmm::cast<float>(tag, src); }
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
@@ -297,7 +305,7 @@ inline simd<To> DPL_VECTORCALL cast(abi_tag tag, simd<E> src) noexcept {
     return xmm::cast<To>(tag, xmm::cast<float>(tag, src));
 }
 
-template <arithmetic_type To, brain_float E>
+DPL_EXPORT template <arithmetic_type To, brain_float E>
 requires (!common_float_with<To, float>) &&
     requires(abi_tag tag, simd<float> src) { xmm::cast<To>(tag, src); }
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
@@ -305,7 +313,7 @@ inline simd<To> DPL_VECTORCALL cast(abi_tag tag, simd<E> src) noexcept {
     return xmm::cast<To>(tag, xmm::cast<float>(tag, src));
 }
 
-template <fp16_like To, common_float_with<float> E>
+DPL_EXPORT template <fp16_like To, common_float_with<float> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<To> DPL_VECTORCALL
     cast(abi_tag tag [[maybe_unused]], simd<E> src) noexcept {
@@ -343,7 +351,7 @@ inline simd<To> DPL_VECTORCALL
 #endif
 }
 
-template <fp16_like To, common_float_with<double> E>
+DPL_EXPORT template <fp16_like To, common_float_with<double> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<To> DPL_VECTORCALL
     cast(abi_tag tag [[maybe_unused]], simd<E> src) noexcept {
@@ -383,7 +391,7 @@ inline simd<To> DPL_VECTORCALL
 namespace details {
 
 template <fp16_like To, common_float_with<float> E>
-inline simd<To> to_postive_inthalf(simd<E> f32) noexcept {
+constexpr simd<To> to_postive_inthalf(simd<E> f32) noexcept {
     using u32 = unsigned_representation_t<E>;
     auto const bits = xmm::reinterpret<u32>(xmm::abi, f32);
     auto const mantissa =
@@ -398,7 +406,7 @@ inline simd<To> to_postive_inthalf(simd<E> f32) noexcept {
 }
 } // namespace details
 
-template <fp16_like To, common_arithmetic_with<int64> E>
+DPL_EXPORT template <fp16_like To, common_arithmetic_with<int64> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<To> DPL_VECTORCALL
     cast(abi_tag tag [[maybe_unused]], simd<E> src) noexcept {
@@ -437,7 +445,7 @@ inline simd<To> DPL_VECTORCALL
 #endif
 }
 
-template <fp16_like To, common_arithmetic_with<int32> E>
+DPL_EXPORT template <fp16_like To, common_arithmetic_with<int32> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<To> DPL_VECTORCALL
     cast(abi_tag tag [[maybe_unused]], simd<E> src) noexcept {
@@ -471,7 +479,7 @@ inline simd<To> DPL_VECTORCALL
 #endif
 }
 
-template <fp16_like To, common_arithmetic_with<int16> E>
+DPL_EXPORT template <fp16_like To, common_arithmetic_with<int16> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<To> DPL_VECTORCALL
     cast(abi_tag tag [[maybe_unused]], simd<E> src) noexcept {
@@ -508,7 +516,7 @@ inline simd<To> DPL_VECTORCALL
 #endif
 }
 
-template <fp16_like To, common_arithmetic_with<int8> E>
+DPL_EXPORT template <fp16_like To, common_arithmetic_with<int8> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<To> DPL_VECTORCALL
     cast(abi_tag tag [[maybe_unused]], simd<E> src) noexcept {
@@ -524,7 +532,8 @@ inline simd<To> DPL_VECTORCALL
 #endif
 }
 
-template <integral_cast_target_like<int64> To, common_float_with<double> E>
+DPL_EXPORT template <integral_cast_target_like<int64> To,
+    common_float_with<double> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<To> DPL_VECTORCALL cast(abi_tag, simd<E> src) noexcept {
 #if DPL_SIMD_X86_AVX512DQ & DPL_SIMD_X86_AVX512VL
@@ -539,7 +548,7 @@ inline simd<To> DPL_VECTORCALL cast(abi_tag, simd<E> src) noexcept {
 #endif
 }
 
-template <integral_cast_target_like<int64> To, fp16_like E>
+DPL_EXPORT template <integral_cast_target_like<int64> To, fp16_like E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<To> DPL_VECTORCALL
     cast(abi_tag tag [[maybe_unused]], simd<E> src) noexcept {
@@ -554,7 +563,8 @@ inline simd<To> DPL_VECTORCALL
 #endif
 }
 
-template <integral_cast_target_like<int64> To, common_float_with<float> E>
+DPL_EXPORT template <integral_cast_target_like<int64> To,
+    common_float_with<float> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<To> DPL_VECTORCALL cast(abi_tag tag, simd<E> src) noexcept {
 #if DPL_SIMD_X86_AVX512DQ & DPL_SIMD_X86_AVX512VL
@@ -570,13 +580,15 @@ inline simd<To> DPL_VECTORCALL cast(abi_tag tag, simd<E> src) noexcept {
 #endif
 }
 
-template <integral_cast_target_like<int64> To, common_arithmetic_with<int64> E>
+DPL_EXPORT template <integral_cast_target_like<int64> To,
+    common_arithmetic_with<int64> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<To> DPL_VECTORCALL cast(abi_tag, simd<E> src) noexcept {
     return +src;
 }
 
-template <integral_cast_target_like<int64> To, common_arithmetic_with<int32> E>
+DPL_EXPORT template <integral_cast_target_like<int64> To,
+    common_arithmetic_with<int32> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<To> DPL_VECTORCALL cast(abi_tag, simd<E> src) noexcept {
     if constexpr (unsigned_integral<E>) {
@@ -586,7 +598,8 @@ inline simd<To> DPL_VECTORCALL cast(abi_tag, simd<E> src) noexcept {
     }
 }
 
-template <integral_cast_target_like<int64> To, common_arithmetic_with<int16> E>
+DPL_EXPORT template <integral_cast_target_like<int64> To,
+    common_arithmetic_with<int16> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<To> DPL_VECTORCALL cast(abi_tag, simd<E> src) noexcept {
     if constexpr (unsigned_integral<E>) {
@@ -596,7 +609,8 @@ inline simd<To> DPL_VECTORCALL cast(abi_tag, simd<E> src) noexcept {
     }
 }
 
-template <integral_cast_target_like<int64> To, common_arithmetic_with<int8> E>
+DPL_EXPORT template <integral_cast_target_like<int64> To,
+    common_arithmetic_with<int8> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<To> DPL_VECTORCALL cast(abi_tag, simd<E> src) noexcept {
     if constexpr (unsigned_integral<E>) {
@@ -606,7 +620,8 @@ inline simd<To> DPL_VECTORCALL cast(abi_tag, simd<E> src) noexcept {
     }
 }
 
-template <integral_cast_target_like<int32> To, common_float_with<float> E>
+DPL_EXPORT template <integral_cast_target_like<int32> To,
+    common_float_with<float> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<To> DPL_VECTORCALL cast(abi_tag tag, simd<E> src) noexcept {
     if constexpr (unsigned_integral<To>) {
@@ -628,7 +643,8 @@ inline simd<To> DPL_VECTORCALL cast(abi_tag tag, simd<E> src) noexcept {
     }
 }
 
-template <integral_cast_target_like<int32> To, common_float_with<double> E>
+DPL_EXPORT template <integral_cast_target_like<int32> To,
+    common_float_with<double> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<To> DPL_VECTORCALL cast(abi_tag tag, simd<E> src) noexcept {
     if constexpr (unsigned_integral<To>) {
@@ -643,7 +659,7 @@ inline simd<To> DPL_VECTORCALL cast(abi_tag tag, simd<E> src) noexcept {
     }
 }
 
-template <integral_cast_target_like<int32> To, fp16_like E>
+DPL_EXPORT template <integral_cast_target_like<int32> To, fp16_like E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<To> DPL_VECTORCALL
     cast(abi_tag tag [[maybe_unused]], simd<E> src) noexcept {
@@ -673,7 +689,8 @@ inline simd<To> DPL_VECTORCALL
 #endif
 }
 
-template <integral_cast_target_like<int32> To, common_arithmetic_with<int64> E>
+DPL_EXPORT template <integral_cast_target_like<int32> To,
+    common_arithmetic_with<int64> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<To> DPL_VECTORCALL cast(abi_tag, simd<E> src) noexcept {
 #if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
@@ -684,13 +701,15 @@ inline simd<To> DPL_VECTORCALL cast(abi_tag, simd<E> src) noexcept {
 #endif
 }
 
-template <integral_cast_target_like<int32> To, common_arithmetic_with<int32> E>
+DPL_EXPORT template <integral_cast_target_like<int32> To,
+    common_arithmetic_with<int32> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<To> DPL_VECTORCALL cast(abi_tag, simd<E> src) noexcept {
     return +src;
 }
 
-template <integral_cast_target_like<int32> To, common_arithmetic_with<int16> E>
+DPL_EXPORT template <integral_cast_target_like<int32> To,
+    common_arithmetic_with<int16> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<To> DPL_VECTORCALL cast(abi_tag, simd<E> src) noexcept {
     if constexpr (unsigned_integral<E>) {
@@ -700,7 +719,8 @@ inline simd<To> DPL_VECTORCALL cast(abi_tag, simd<E> src) noexcept {
     }
 }
 
-template <integral_cast_target_like<int32> To, common_arithmetic_with<int8> E>
+DPL_EXPORT template <integral_cast_target_like<int32> To,
+    common_arithmetic_with<int8> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<To> DPL_VECTORCALL cast(abi_tag, simd<E> src) noexcept {
     if constexpr (unsigned_integral<E>) {
@@ -710,13 +730,13 @@ inline simd<To> DPL_VECTORCALL cast(abi_tag, simd<E> src) noexcept {
     }
 }
 
-template <integral_cast_target_like<int16> To, floating_point E>
+DPL_EXPORT template <integral_cast_target_like<int16> To, floating_point E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<To> DPL_VECTORCALL cast(abi_tag tag, simd<E> src) noexcept {
     return xmm::cast<To>(tag, xmm::cast<int32>(tag, src));
 }
 
-template <integral_cast_target_like<int16> To, fp16_like E>
+DPL_EXPORT template <integral_cast_target_like<int16> To, fp16_like E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<To> DPL_VECTORCALL
     cast(abi_tag tag [[maybe_unused]], simd<E> src) noexcept {
@@ -733,7 +753,8 @@ inline simd<To> DPL_VECTORCALL
 #endif
 }
 
-template <integral_cast_target_like<int16> To, common_arithmetic_with<int64> E>
+DPL_EXPORT template <integral_cast_target_like<int16> To,
+    common_arithmetic_with<int64> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<To> DPL_VECTORCALL cast(abi_tag, simd<E> src) noexcept {
 #if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
@@ -748,7 +769,8 @@ inline simd<To> DPL_VECTORCALL cast(abi_tag, simd<E> src) noexcept {
 #endif
 }
 
-template <integral_cast_target_like<int16> To, common_arithmetic_with<int32> E>
+DPL_EXPORT template <integral_cast_target_like<int16> To,
+    common_arithmetic_with<int32> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<To> DPL_VECTORCALL cast(abi_tag, simd<E> src) noexcept {
 #if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
@@ -759,13 +781,15 @@ inline simd<To> DPL_VECTORCALL cast(abi_tag, simd<E> src) noexcept {
 #endif
 }
 
-template <integral_cast_target_like<int16> To, common_arithmetic_with<int16> E>
+DPL_EXPORT template <integral_cast_target_like<int16> To,
+    common_arithmetic_with<int16> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<To> DPL_VECTORCALL cast(abi_tag, simd<E> src) noexcept {
     return +src;
 }
 
-template <integral_cast_target_like<int16> To, common_arithmetic_with<int8> E>
+DPL_EXPORT template <integral_cast_target_like<int16> To,
+    common_arithmetic_with<int8> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<To> DPL_VECTORCALL cast(abi_tag, simd<E> src) noexcept {
     if constexpr (unsigned_integral<E>) {
@@ -775,7 +799,7 @@ inline simd<To> DPL_VECTORCALL cast(abi_tag, simd<E> src) noexcept {
     }
 }
 
-template <integral_cast_target_like<int8> To, floating_point E>
+DPL_EXPORT template <integral_cast_target_like<int8> To, floating_point E>
 requires (!brain_float<E>) && requires(abi_tag tag, simd<E> src) {
     xmm::cast<signed_representation_t<E>>(tag, src);
 }
@@ -785,13 +809,15 @@ inline simd<To> DPL_VECTORCALL cast(abi_tag tag, simd<E> src) noexcept {
     return xmm::cast<int8>(xmm::cast<signed_representation_t<E>>(tag, src));
 }
 
-template <integral_cast_target_like<int8> To, common_arithmetic_with<int8> E>
+DPL_EXPORT template <integral_cast_target_like<int8> To,
+    common_arithmetic_with<int8> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<To> DPL_VECTORCALL cast(abi_tag, simd<E> src) noexcept {
     return +src;
 }
 
-template <integral_cast_target_like<int8> To, common_arithmetic_with<int16> E>
+DPL_EXPORT template <integral_cast_target_like<int8> To,
+    common_arithmetic_with<int16> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<To> DPL_VECTORCALL cast(abi_tag, simd<E> src) noexcept {
 #if DPL_SIMD_X86_AVX512BW & DPL_SIMD_X86_AVX512VL
@@ -804,7 +830,8 @@ inline simd<To> DPL_VECTORCALL cast(abi_tag, simd<E> src) noexcept {
 #endif
 }
 
-template <integral_cast_target_like<int8> To, common_arithmetic_with<int32> E>
+DPL_EXPORT template <integral_cast_target_like<int8> To,
+    common_arithmetic_with<int32> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<To> DPL_VECTORCALL cast(abi_tag, simd<E> src) noexcept {
 #if DPL_SIMD_X86_AVX512BW & DPL_SIMD_X86_AVX512VL
@@ -819,7 +846,8 @@ inline simd<To> DPL_VECTORCALL cast(abi_tag, simd<E> src) noexcept {
 #endif
 }
 
-template <integral_cast_target_like<int8> To, common_arithmetic_with<int64> E>
+DPL_EXPORT template <integral_cast_target_like<int8> To,
+    common_arithmetic_with<int64> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<To> DPL_VECTORCALL cast(abi_tag, simd<E> src) noexcept {
 #if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL

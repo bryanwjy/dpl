@@ -9,15 +9,13 @@
 #endif
 
 #include "dpl/xmm/basic/abi.h"
-#include "dpl/xmm/basic/extract.h"
-#include "dpl/xmm/basic/initialize.h"
+#include "dpl/xmm/basic/load.h"
+#include "dpl/xmm/basic/store.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/common_float_with.h"
 #  include "dpl/core/concepts/simd_element.h"
-#  include "dpl/core/type_traits/iota_sequence.h"
 #  include "dpl/std/bit/bit_cast.h"
-#  include "dpl/std/utility/sequence.h"
 
 #  include <immintrin.h>
 #endif
@@ -30,11 +28,15 @@ DPL_EXPORT template <simd_element E, simd_element F>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr simd<E> reinterpret(abi_tag tag, simd<F> src) noexcept {
     if consteval {
-        return []<size_t... Is>(
-                   abi_tag tag, simd<F> src, index_sequence<Is...>) {
-            return dx::xmm::initialize<E>(tag,
-                __DPL bit_cast<E>(dx::xmm::extract(tag, src, imm<Is>))...);
-        }(tag, src, iota_sequence<E, abi_tag>);
+        // Need to work around unions (no consteval bitcast) in MSVC
+        struct alignas(16) {
+            F data[element_count<F, xmm::abi_tag>];
+        } tmp{};
+        xmm::store(tag, src, tmp.data);
+        struct alignas(16) dst_t {
+            E data[element_count<E, xmm::abi_tag>];
+        } dst = __DPL bit_cast<dst_t>(tmp);
+        return xmm::load<E>(tag, dst.data);
     } else {
         if constexpr (common_float_with<E, float>) {
             if constexpr (same_as<__m128i, native_vector_t<F>>) {

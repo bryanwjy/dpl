@@ -27,7 +27,8 @@ namespace datapar::xmm {
 
 template <typename L, typename R>
 using ternary_result_t DPL_NODEBUG =
-    decltype(false ? __DPL declval<L>() : __DPL declval<R>());
+    __DPL decay_t<decltype(false ? __DPL declval<L>()
+                                   : __DPL declval<R>())>;
 
 template <typename L, typename R>
 struct ternary_type {};

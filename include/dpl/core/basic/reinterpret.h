@@ -137,7 +137,7 @@ public:
 
 namespace datapar {
 inline namespace cpo {
-template <typename To>
+DPL_EXPORT template <typename To>
 inline constexpr internal::reinterpret_t<To> reinterpret{};
 } // namespace cpo
 } // namespace datapar

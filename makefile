@@ -89,8 +89,7 @@ $(OUTPUT_DIR)/env.stamp: FORCE
 	  "CPPFLAGS=$(CPPFLAGS)" \
 	  "CXXFLAGS=$(CXXFLAGS)" \
 	  "LDFLAGS=$(LDFLAGS)" \
-	  "LDLIBS=$(LDLIBS)" \
-	| sha256sum)
+	  "LDLIBS=$(LDLIBS)")
 
 $(OUTPUT_DIR)/compile.command: makefile $(OUTPUT_DIR)/env.stamp
 	@echo "$(CXX) $(CPPFLAGS) $(CXXFLAGS)" > $@
@@ -128,13 +127,13 @@ $(PRE_TARGETS):%.pre: %.jdep $(OUTPUT_DIR)/jmap.json $(TOOLS_DIR)/jdep-to-d.jq
 
 -include $(PRE_TARGETS)
 
-$(OUTPUT_DIR)/src/%.cppm.o: $(SRC_DIR)/%.cppm $(OUTPUT_DIR)/src/%.cppm.args | $(OUTPUT_DIR)/src/%.cppm.pre
+$(OUTPUT_DIR)/src/%.cppm.o: $(SRC_DIR)/%.cppm $(OUTPUT_DIR)/src/%.cppm.args $(OUTPUT_DIR)/compile.command | $(OUTPUT_DIR)/src/%.cppm.pre
 	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) -MMD -MP -MF '$(@:.o=.d)' -MT '$@' -fmodule-output=$(@:.o=.pcm) -fmodules-reduced-bmi -c $< -o '$@' @$(@:.o=.args)
 
 $(OUTPUT_DIR)/src/%.cppm.pcm: $(OUTPUT_DIR)/src/%.cppm.o
 	@
 
-$(OUTPUT_DIR)/modules/%.cppm.pcm: $(MODULES_DIR)/%.cppm $(OUTPUT_DIR)/modules/%.cppm.args | $(OUTPUT_DIR)/modules/%.cppm.pre
+$(OUTPUT_DIR)/modules/%.cppm.pcm: $(MODULES_DIR)/%.cppm $(OUTPUT_DIR)/modules/%.cppm.args $(OUTPUT_DIR)/compile.command | $(OUTPUT_DIR)/modules/%.cppm.pre
 	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) -MMD -MP -MF '$(@:.pcm=.d)' -MT '$@' -fmodule-output=$@ -fmodules-reduced-bmi -c $< -o '$(@:.pcm=.o)' @$(@:.pcm=.args)
 
 $(OUTPUT_DIR)/%.cppm.jcmd: $(OUTPUT_DIR)/%.cppm.args $(OUTPUT_DIR)/compile.command $(TOOLS_DIR)/generate-jcmd.jq
@@ -159,7 +158,7 @@ $(OUTPUT_DIR)/%.cppm.jdep: $(ROOT_DIR)/%.cppm
 $(OUTPUT_DIR)/%.cpp.jdep: $(ROOT_DIR)/%.cpp
 	$(call replace_if_different, clang-scan-deps-21 -format=p1689 -- $(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $(@:.jdep=.o))
 
-$(OUTPUT_DIR)/%.cpp.o: $(ROOT_DIR)/%.cpp $(OUTPUT_DIR)/%.cpp.args | $(OUTPUT_DIR)/%.cpp.pre
+$(OUTPUT_DIR)/%.cpp.o: $(ROOT_DIR)/%.cpp $(OUTPUT_DIR)/%.cpp.args $(OUTPUT_DIR)/compile.command | $(OUTPUT_DIR)/%.cpp.pre
 	@mkdir -p '$(@D)'
 	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) -MMD -MP -MF '$(@:.o=.d)' -MT '$@' -c $< -o '$@' @$(@:.o=.args)
 
