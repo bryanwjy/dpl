@@ -26,6 +26,7 @@
 #  include "dpl/core/constants/max_value.h"
 #  include "dpl/core/constants/msb.h"
 #  include "dpl/std/bit/bit_cast.h"
+#  include "dpl/std/utility/to_unsigned.h"
 #  include "dpl/xmm/basic/abi.h"
 #  include "dpl/xmm/basic/broadcast.h"
 #  include "dpl/xmm/basic/reinterpret.h"
@@ -85,16 +86,25 @@ inline simd<To> DPL_VECTORCALL
 #endif
 }
 
-// Without AVX512, it is simply not worth it
-#if DPL_SIMD_X86_AVX512DQ & DPL_SIMD_X86_AVX512VL
 DPL_EXPORT template <common_float_with<double> To,
     common_arithmetic_with<int64> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<To> DPL_VECTORCALL
     cast(abi_tag tag [[maybe_unused]], simd<E> src) noexcept {
+#if DPL_SIMD_X86_AVX512DQ & DPL_SIMD_X86_AVX512VL
     return _mm_cvtepi64_pd(+src);
-}
+#else
+    // Without AVX512, it is simply not worth it to vectorize
+    if constexpr (signed_integral<E>) {
+        return _mm_setr_pd(static_cast<double>(_mm_extract_epi64(src, 0)),
+            static_cast<double>(_mm_extract_epi64(src, 1)));
+    } else {
+        return _mm_setr_pd(
+            static_cast<double>( __DPL to_unsigned(_mm_extract_epi64(src, 0))),
+            static_cast<double>(__DPL to_unsigned(_mm_extract_epi64(src, 1))));
+    }
 #endif
+}
 
 DPL_EXPORT template <common_float_with<double> To,
     common_arithmetic_with<int32> E>

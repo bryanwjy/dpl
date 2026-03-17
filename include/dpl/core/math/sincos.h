@@ -205,7 +205,7 @@ protected:
     }
 
     template <floating_point E, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr rempi_pair<E, A> rempi(basic_simd<E, A> arg) noexcept {
         using sint = signed_rep_t<E>;
         using simdi = basic_simd<sint, A>;
@@ -272,7 +272,7 @@ protected:
     }
 
     template <integral auto V, floating_point E, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr basic_simd<E, A> fallback(
         basic_simd<E, A> const arg) noexcept {
         using simdf = basic_simd<E, A>;
@@ -382,7 +382,7 @@ protected:
     template <integral auto V, floating_point E, simd_abi A>
     requires (dx::digits_v<E><dx::digits_v<float> || dx::digits_v<E>>
                      dx::digits_v<double>)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr basic_simd<E, A> fallback(basic_simd<E, A>) = delete;
 };
 
