@@ -46,10 +46,11 @@ private:
         if consteval {
             // Do we need this?
             if constexpr (floating_point<From> && integral<To>) {
-                auto const lt = val < min_value_v<To>;
-                auto const gt = val > max_value_v<To>;
-                if (lt || gt ||
-                    !(val <= max_value_v<To> && val >= min_value_v<To>)) {
+                auto const min = static_cast<From>(min_value_v<To>);
+                auto const max = static_cast<From>(max_value_v<To>);
+                auto const lt = val < min;
+                auto const gt = val > max;
+                if (lt || gt || !(val <= max && val >= min)) {
                     return dx::msb;
                 }
             }
@@ -77,21 +78,21 @@ private:
 public:
     template <simd_type From>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(From mask) noexcept {
+    static constexpr auto DPL_VECTORCALL operator()(From val) noexcept {
         if constexpr (unqualified_element_castable_to<From, To>) {
             if constexpr (basic_simd_type<From>) {
                 if consteval {
-                    return fallback(mask);
+                    return fallback(val);
                 } else {
-                    return cast<To>(internal::abi<From>, mask);
+                    return cast<To>(internal::abi<From>, val);
                 }
             } else {
-                return cast<To>(internal::abi<From>, mask);
+                return cast<To>(internal::abi<From>, val);
             }
         } else if constexpr (basic_simd_type<From>) {
-            return fallback(mask);
+            return fallback(val);
         } else {
-            return operator()(dx::to_basic_type(mask));
+            return operator()(dx::to_basic_type(val));
         }
     }
 };

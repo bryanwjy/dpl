@@ -150,6 +150,43 @@ constexpr bool parallel_int_to_fp() noexcept {
     return true;
 }
 
+template <dpl::floating_point F, dpl::integral I>
+constexpr void general_fp_to_int() noexcept {
+    auto const inputs = [](auto... vals) {
+        constexpr I zero = 0;
+        if constexpr (dpl::unsigned_integral<I>) {
+            return array{vals...};
+        } else {
+            return array{vals..., -vals...};
+        }
+    }(F(0.0), F(1.9), F(0.99999994), dpp::min_value_v<F>);
+    auto const make_expected = [](F val) {
+        constexpr auto to_keep = sizeof(I) > sizeof(F)
+            ? dpp::element_count<I, xmm::abi_tag>
+            : dpp::element_count<F, xmm::abi_tag>;
+        constexpr auto mask = dpp::imm<(1 << to_keep) - 1>;
+        auto const result =
+            dpp::broadcast<I, xmm::abi_tag>(static_cast<I>(val));
+        return dpp::bit_keep(mask, result);
+    };
+
+    for (auto const val : inputs) {
+        auto const in = dpp::broadcast<F, xmm::abi_tag>(val);
+        auto const expected = make_expected(val);
+        auto const actual = dpp::cast<I>(in);
+        assert(dpp::all_of(expected == actual));
+    }
+}
+
+constexpr bool general_fp_to_int() noexcept {
+    general_fp_to_int<float, dpl::int64>();
+    general_fp_to_int<float, dpl::int32>();
+    general_fp_to_int<float, dpl::int16>();
+    general_fp_to_int<float, dpl::int8>();
+
+    return true;
+}
+
 template <typename T>
 constexpr auto make_array(dpl::convertible_to<T> auto... args) noexcept {
     return array<T, sizeof...(args)>{static_cast<T>(args)...};
@@ -228,5 +265,7 @@ int main() {
     assert(parallel_int_to_fp());
     static_assert(large_int_to_sp());
     assert(large_int_to_sp());
+    static_assert(general_fp_to_int());
+    assert(general_fp_to_int());
     return 0;
 }

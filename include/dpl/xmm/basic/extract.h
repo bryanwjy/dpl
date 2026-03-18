@@ -96,32 +96,36 @@ constexpr E extract(
         } else if constexpr (floating_point<E> && sizeof(E) == 2) {
 #if DPL_SIMD_X86_AVX512FP16
             if constexpr (!brain_float<E>) {
-                return __DPL bit_cast<E>(
-                    _mm_extract_epi16(_mm_castph_si128(+src), imm8));
+                return __DPL bit_cast<E>(static_cast<E>(
+                    _mm_extract_epi16(_mm_castph_si128(+src), imm8)));
             } else {
-                return __DPL bit_cast<E>(
-                    _mm_extract_epi16(__DPL bit_cast<__m128i>(+src), imm8));
+                return __DPL bit_cast<E>(static_cast<E>(
+                    _mm_extract_epi16(__DPL bit_cast<__m128i>(+src), imm8)));
             }
 #else
-            return __DPL bit_cast<E>(
-                _mm_extract_epi16(__DPL bit_cast<__m128i>(+src), imm8));
+            return __DPL bit_cast<E>(static_cast<E>(
+                _mm_extract_epi16(__DPL bit_cast<__m128i>(+src), imm8)));
 #endif
         } else {
             using T = internal::int_type_t<E>;
             if constexpr (common_order_with<T, int32>) {
                 return __DPL bit_cast<E>(_mm_extract_epi32(+src, imm8));
             } else if constexpr (common_order_with<T, int16>) {
-                return __DPL bit_cast<E>(_mm_extract_epi16(+src, imm8));
+                return __DPL bit_cast<E>(
+                    static_cast<E>(_mm_extract_epi16(+src, imm8)));
             } else if constexpr (common_order_with<T, int8>) {
-                return __DPL bit_cast<E>(_mm_extract_epi8(+src, imm8));
+                return __DPL bit_cast<E>(
+                    static_cast<E>(_mm_extract_epi8(+src, imm8)));
             } else if constexpr (common_order_with<T, int64>) {
                 return __DPL bit_cast<E>(_mm_extract_epi64(+src, imm8));
             } else if constexpr (common_order_with<T, uint32>) {
                 return __DPL bit_cast<E>(_mm_extract_epi32(+src, imm8));
             } else if constexpr (common_order_with<T, uint16>) {
-                return __DPL bit_cast<E>(_mm_extract_epi16(+src, imm8));
+                return __DPL bit_cast<E>(
+                    static_cast<E>(_mm_extract_epi16(+src, imm8)));
             } else if constexpr (common_order_with<T, uint8>) {
-                return __DPL bit_cast<E>(_mm_extract_epi8(+src, imm8));
+                return __DPL bit_cast<E>(
+                    static_cast<E>(_mm_extract_epi8(+src, imm8)));
             } else {
                 return __DPL bit_cast<E>(_mm_extract_epi64(+src, imm8));
             }
