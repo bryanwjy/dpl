@@ -69,13 +69,9 @@ constexpr void parallel_int_to_fp() noexcept {
     auto const inputs = [](auto... vals) {
         constexpr I zero = 0;
         if constexpr (dpl::unsigned_integral<I>) {
-            return array{
-                (vals > dpp::max_value_v<I> ? zero : static_cast<I>(vals))...};
+            return array{static_cast<I>(vals)...};
         } else {
-            return array{
-                (vals > dpp::max_value_v<I> ? zero : static_cast<I>(vals))...,
-                (-vals < dpp::min_value_v<I> ? zero
-                                             : static_cast<I>(-vals))...};
+            return array{static_cast<I>(vals)..., static_cast<I>(-vals)...};
         }
     }(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
     auto const make_expected = [](I const* ptr) {
@@ -153,7 +149,6 @@ constexpr bool parallel_int_to_fp() noexcept {
 template <dpl::floating_point F, dpl::integral I>
 constexpr void general_fp_to_int() noexcept {
     auto const inputs = [](auto... vals) {
-        constexpr I zero = 0;
         if constexpr (dpl::unsigned_integral<I>) {
             return array{vals...};
         } else {
@@ -178,11 +173,150 @@ constexpr void general_fp_to_int() noexcept {
     }
 }
 
+template <dpl::floating_point F, dpl::integral I>
+constexpr void large_sp_to_int() noexcept {
+    static_assert(sizeof(I) == sizeof(float));
+    auto const inputs = [](auto... vals) {
+        if constexpr (dpl::unsigned_integral<I>) {
+            return array{vals...};
+        } else {
+            return array{vals..., -vals..., F(-2147483648.0)};
+        }
+    }(F(16777216.0), F(16777217.0), F(2147483520.0));
+    auto const make_expected = [](F val) {
+        constexpr auto to_keep = sizeof(I) > sizeof(F)
+            ? dpp::element_count<I, xmm::abi_tag>
+            : dpp::element_count<F, xmm::abi_tag>;
+        constexpr auto mask = dpp::imm<(1 << to_keep) - 1>;
+        auto const result =
+            dpp::broadcast<I, xmm::abi_tag>(static_cast<I>(val));
+        return dpp::bit_keep(mask, result);
+    };
+
+    for (auto const val : inputs) {
+        auto const in = dpp::broadcast<F, xmm::abi_tag>(val);
+        auto const expected = make_expected(val);
+        auto const actual = dpp::cast<I>(in);
+        assert(dpp::all_of(expected == actual));
+    }
+}
+
+template <dpl::floating_point F, dpl::integral I>
+constexpr void large_sp_to_long() noexcept {
+    static_assert(sizeof(I) == sizeof(double));
+    auto const inputs = []() {
+        if constexpr (dpp::common_float_with<F, float>) {
+            return [](auto... vals) {
+                if constexpr (dpl::unsigned_integral<I>) {
+                    return array{vals...};
+                } else {
+                    return array{vals..., -vals...};
+                }
+            }(0x1.p24f, 0x1.p24f + 1.0f, 0x1.p40f, 0x1.p40f + 1.0f, 0x1.p56f);
+        } else {
+            static_assert(dpp::common_float_with<F, double>);
+            return [](auto... vals) {
+                if constexpr (dpl::unsigned_integral<I>) {
+                    return array{vals...};
+                } else {
+                    return array{vals..., -vals..., -9223372036854775808.0};
+                }
+            }(0x1.p53, 0x1.p53 + 1.0, 0x1.p60, 0x1.p60 + 1.0, 0x1.p60 + 128.0,
+                       0x1.p60 + 255.0, 9223372036854773760.0);
+        }
+    }();
+    auto const make_expected = [](F val) {
+        return dpp::broadcast<I, xmm::abi_tag>(static_cast<I>(val));
+    };
+
+    for (auto const val : inputs) {
+        auto const in = dpp::broadcast<F, xmm::abi_tag>(val);
+        auto const expected = make_expected(val);
+        auto const actual = dpp::cast<I>(in);
+        assert(dpp::all_of(expected == actual));
+    }
+}
+
+template <dpl::floating_point F, dpl::integral I>
+constexpr void parallel_fp_to_int() noexcept {
+    auto const inputs =
+        [](auto... vals) {
+            constexpr I zero = 0;
+            if constexpr (dpl::unsigned_integral<I>) {
+                return array{vals...};
+            } else {
+                return array{vals..., -vals...};
+            }
+        }(F(0), F(1), F(2), F(3), F(4), F(5), F(6), F(7), F(8), F(9), F(10),
+            F(11), F(12), F(13), F(14), F(15));
+    auto const make_expected = [](F const* ptr) {
+        return [&]<dpl::size_t... Is>(dpl::index_sequence<Is...>) {
+            constexpr auto to_keep = sizeof(F) < sizeof(I)
+                ? dpp::element_count<I, xmm::abi_tag>
+                : dpp::element_count<F, xmm::abi_tag>;
+
+            constexpr F zero = 0;
+            return dpp::initialize<I, xmm::abi_tag>(
+                static_cast<I>(Is < to_keep ? ptr[Is] : zero)...);
+        }(dpp::iota_sequence<I, xmm::abi_tag>);
+    };
+
+    assert((inputs.size() % dpp::element_count<F, xmm::abi_tag>) == 0);
+    for (auto i = 0; i < inputs.size();
+        i += dpp::element_count<F, xmm::abi_tag>) {
+        auto const* ptr = inputs.data + i;
+        auto const in = dpp::load<xmm::abi_tag>(ptr);
+        auto const expected = make_expected(ptr);
+        auto const actual = dpp::cast<I>(in);
+        assert(dpp::all_of(expected == actual));
+    }
+}
+
 constexpr bool general_fp_to_int() noexcept {
     general_fp_to_int<float, dpl::int64>();
     general_fp_to_int<float, dpl::int32>();
     general_fp_to_int<float, dpl::int16>();
     general_fp_to_int<float, dpl::int8>();
+    general_fp_to_int<float, dpl::uint64>();
+    general_fp_to_int<float, dpl::uint32>();
+    general_fp_to_int<float, dpl::uint16>();
+    general_fp_to_int<float, dpl::uint8>();
+
+    general_fp_to_int<double, dpl::int64>();
+    general_fp_to_int<double, dpl::int32>();
+    general_fp_to_int<double, dpl::int16>();
+    general_fp_to_int<double, dpl::int8>();
+    general_fp_to_int<double, dpl::uint64>();
+    general_fp_to_int<double, dpl::uint32>();
+    general_fp_to_int<double, dpl::uint16>();
+    general_fp_to_int<double, dpl::uint8>();
+
+    large_sp_to_int<float, dpl::int32>();
+    large_sp_to_int<float, dpl::uint32>();
+    large_sp_to_int<double, dpl::int32>();
+    large_sp_to_int<double, dpl::uint32>();
+    large_sp_to_long<float, dpl::int64>();
+    large_sp_to_long<float, dpl::uint64>();
+    large_sp_to_long<double, dpl::int64>();
+    large_sp_to_long<double, dpl::uint64>();
+
+    parallel_fp_to_int<float, dpl::int64>();
+    parallel_fp_to_int<float, dpl::int32>();
+    parallel_fp_to_int<float, dpl::int16>();
+    parallel_fp_to_int<float, dpl::int8>();
+    parallel_fp_to_int<float, dpl::uint64>();
+    parallel_fp_to_int<float, dpl::uint32>();
+    parallel_fp_to_int<float, dpl::uint16>();
+    parallel_fp_to_int<float, dpl::uint8>();
+
+    parallel_fp_to_int<double, dpl::int64>();
+    parallel_fp_to_int<double, dpl::int32>();
+    parallel_fp_to_int<double, dpl::int16>();
+    parallel_fp_to_int<double, dpl::int8>();
+    parallel_fp_to_int<double, dpl::uint64>();
+    parallel_fp_to_int<double, dpl::uint32>();
+    parallel_fp_to_int<double, dpl::uint16>();
+    parallel_fp_to_int<double, dpl::uint8>();
 
     return true;
 }

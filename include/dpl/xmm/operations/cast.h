@@ -747,8 +747,6 @@ inline simd<To> DPL_VECTORCALL cast(abi_tag, simd<E> src) noexcept {
 #if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
     return _mm_cvtepi64_epi16(+src);
 #else
-    // Extract low 32 bits of each 64-bit lane
-    auto const dwords = _mm_shuffle_epi32(+src, _MM_SHUFFLE(2, 0, 2, 0));
     // Keep only low 16 bits
     if constexpr (unsigned_integral<E> || unsigned_integral<To>) {
         auto const masked = _mm_and_si128(+src, _mm_set1_epi32(0xffff));
@@ -877,9 +875,11 @@ inline simd<To> DPL_VECTORCALL cast(abi_tag, simd<E> src) noexcept {
         // 16 → 8
         return _mm_packs_epi16(words, _mm_setzero_si128());
     } else {
-        auto const dwords = _mm_shuffle_epi32(+src, _MM_SHUFFLE(3, 1, 2, 0));
-        auto const words = _mm_packs_epi32(dwords, _mm_setzero_si128());
-        return _mm_packs_epi16(words, _mm_setzero_si128());
+        auto const zero = _mm_setzero_ps();
+        auto const dwords = _mm_castsi128_ps(_mm_shuffle_ps(
+            _mm_castsi128_ps(+src), zero, _MM_SHUFFLE(3, 1, 2, 0)));
+        auto const words = _mm_packs_epi32(dwords, _mm_castps_si128(zero));
+        return _mm_packs_epi16(words, _mm_castps_si128(zero));
     }
 #endif
 }
@@ -891,8 +891,7 @@ requires (!brain_float<E>) && requires(abi_tag tag, simd<E> src) {
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<To> DPL_VECTORCALL cast(abi_tag tag, simd<E> src) noexcept {
     static_assert(sizeof(E) > sizeof(To));
-    return xmm::cast<int8>(
-        tag, xmm::cast<signed_representation_t<E>>(tag, src));
+    return xmm::cast<To>(tag, xmm::cast<signed_representation_t<E>>(tag, src));
 }
 } // namespace datapar::xmm
 
