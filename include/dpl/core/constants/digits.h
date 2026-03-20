@@ -26,7 +26,7 @@ consteval int digits_of() noexcept {
     } else {
         static_assert(floating_point<T>);
         using bit_type = bit_type_t<char_bit_v * sizeof(T)>;
-        return __DPL countr_zero( __DPL bit_cast<bit_type>(one_v<T>));
+        return __DPL countr_zero( __DPL bit_cast<bit_type>(one_v<T>)) + 1;
     }
 }
 

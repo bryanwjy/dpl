@@ -8,6 +8,10 @@ namespace dpp = dpl::datapar;
 
 namespace {
 
+constexpr auto min(auto lhs, auto rhs) noexcept {
+    return lhs < rhs ? lhs : rhs;
+}
+
 template <typename T, dpl::size_t N>
 struct array {
     T data[N];
@@ -46,11 +50,9 @@ constexpr void general_int_to_fp() noexcept {
         }
     }(0, 1, 2, 3, 7, 15, 255, 1023, 65535, 1048575, 1234567, 7654321, 10000000);
     auto const make_expected = [](I val) {
-        constexpr auto to_keep = sizeof(I) > sizeof(F)
-            ? dpp::element_count<F, xmm::abi_tag> -
-                sizeof(I) / sizeof(F) // NOLINT(bugprone-sizeof-expression)
-            : dpp::element_count<F, xmm::abi_tag>;
-        constexpr auto mask = dpp::imm<(1 << to_keep) - 1>;
+        constexpr auto keep = min(dpp::element_count<F, xmm::abi_tag>,
+            dpp::element_count<I, xmm::abi_tag>);
+        constexpr auto mask = dpp::imm<(1 << keep) - 1>;
         auto const result =
             dpp::broadcast<F, xmm::abi_tag>(static_cast<F>(val));
         return dpp::bit_keep(mask, result);
@@ -76,14 +78,11 @@ constexpr void parallel_int_to_fp() noexcept {
     }(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
     auto const make_expected = [](I const* ptr) {
         return [&]<dpl::size_t... Is>(dpl::index_sequence<Is...>) {
-            constexpr auto to_keep = sizeof(I) > sizeof(F)
-                ? dpp::element_count<F, xmm::abi_tag> -
-                    sizeof(I) / sizeof(F) // NOLINT(bugprone-sizeof-expression)
-                : dpp::element_count<F, xmm::abi_tag>;
-
+            constexpr auto keep = min(dpp::element_count<F, xmm::abi_tag>,
+                dpp::element_count<I, xmm::abi_tag>);
             constexpr I zero = 0;
             return dpp::initialize<F, xmm::abi_tag>(
-                static_cast<F>(Is < to_keep ? ptr[Is] : zero)...);
+                static_cast<F>(Is < keep ? ptr[Is] : zero)...);
         }(dpp::iota_sequence<F, xmm::abi_tag>);
     };
 
@@ -98,7 +97,77 @@ constexpr void parallel_int_to_fp() noexcept {
     }
 }
 
-constexpr bool general_int_to_fp() noexcept {
+template <typename T>
+constexpr auto make_array(dpl::convertible_to<T> auto... args) noexcept {
+    return array<T, sizeof...(args)>{static_cast<T>(args)...};
+}
+
+constexpr bool large_int_to_sp() noexcept {
+    constexpr auto make_expected = []<typename I>(I val) {
+        constexpr auto to_keep = sizeof(I) > sizeof(float)
+            ? dpp::element_count<float, xmm::abi_tag> -
+                sizeof(I) / sizeof(float) // NOLINT(bugprone-sizeof-expression)
+            : dpp::element_count<float, xmm::abi_tag>;
+        constexpr auto mask = dpp::imm<(1 << to_keep) - 1>;
+        auto const result =
+            dpp::broadcast<float, xmm::abi_tag>(static_cast<float>(val));
+        return dpp::bit_keep(mask, result);
+    };
+
+    constexpr auto test1 = [=]<dpl::integral T>(dpl::type_identity<T>) {
+        // Tests for rounding issues from sligtly below and above 0x1.p24f
+        // (16777216.0f)
+        auto const src =
+            make_array<T>(16777214, 16777215, 16777216, 16777217, 16777218,
+                16777219, 16777220, 33554431, 33554432, 33554433, 1073741824);
+        for (auto const val : src) {
+            auto const input = dpp::broadcast<T, xmm::abi_tag>(val);
+            auto const expected = make_expected(val);
+            assert(bit_equality(dpp::cast<float>(input), expected));
+        }
+
+        if constexpr (dpl::signed_integral<T>) {
+            for (auto const pval : src) {
+                auto const val = -pval;
+                auto const input = dpp::broadcast<T, xmm::abi_tag>(val);
+                auto const expected = make_expected(val);
+                assert(bit_equality(dpp::cast<float>(input), expected));
+            }
+        }
+    };
+
+    test1(dpl::type_identity<dpl::int32>{});
+    test1(dpl::type_identity<dpl::int64>{});
+    test1(dpl::type_identity<dpl::uint32>{});
+    test1(dpl::type_identity<dpl::uint64>{});
+
+    constexpr auto extra_large = [=]<dpl::integral T>(dpl::type_identity<T>) {
+        // Extreme rounding
+        array const src{1099511627776, 1125899906842624, 1152921504606846976,
+            1152921504606846977, 1234567890123, 9223372036854775807};
+        for (auto const val : src) {
+            auto const input = dpp::broadcast<T, xmm::abi_tag>(val);
+            auto const expected = make_expected(val);
+            assert(bit_equality(dpp::cast<float>(input), expected));
+        }
+
+        if constexpr (dpl::signed_integral<T>) {
+            for (auto const pval : src) {
+                auto const val = -pval;
+                auto const input = dpp::broadcast<T, xmm::abi_tag>(val);
+                auto const expected = make_expected(val);
+                assert(bit_equality(dpp::cast<float>(input), expected));
+            }
+        }
+    };
+
+    extra_large(dpl::type_identity<dpl::int64>{});
+    extra_large(dpl::type_identity<dpl::uint64>{});
+
+    return true;
+}
+
+constexpr bool test_int_to_fp() noexcept {
     general_int_to_fp<dpl::int64, float>();
     general_int_to_fp<dpl::int32, float>();
     general_int_to_fp<dpl::int16, float>();
@@ -119,10 +188,6 @@ constexpr bool general_int_to_fp() noexcept {
     general_int_to_fp<dpl::uint16, double>();
     general_int_to_fp<dpl::uint8, double>();
 
-    return true;
-}
-
-constexpr bool parallel_int_to_fp() noexcept {
     parallel_int_to_fp<dpl::int64, float>();
     parallel_int_to_fp<dpl::int32, float>();
     parallel_int_to_fp<dpl::int16, float>();
@@ -143,6 +208,7 @@ constexpr bool parallel_int_to_fp() noexcept {
     parallel_int_to_fp<dpl::uint16, double>();
     parallel_int_to_fp<dpl::uint8, double>();
 
+    large_int_to_sp();
     return true;
 }
 
@@ -272,7 +338,7 @@ constexpr void parallel_fp_to_int() noexcept {
     }
 }
 
-constexpr bool general_fp_to_int() noexcept {
+constexpr bool test_fp_to_int() noexcept {
     general_fp_to_int<float, dpl::int64>();
     general_fp_to_int<float, dpl::int32>();
     general_fp_to_int<float, dpl::int16>();
@@ -321,85 +387,12 @@ constexpr bool general_fp_to_int() noexcept {
     return true;
 }
 
-template <typename T>
-constexpr auto make_array(dpl::convertible_to<T> auto... args) noexcept {
-    return array<T, sizeof...(args)>{static_cast<T>(args)...};
-}
-
-constexpr bool large_int_to_sp() noexcept {
-    constexpr auto make_expected = []<typename I>(I val) {
-        constexpr auto to_keep = sizeof(I) > sizeof(float)
-            ? dpp::element_count<float, xmm::abi_tag> -
-                sizeof(I) / sizeof(float) // NOLINT(bugprone-sizeof-expression)
-            : dpp::element_count<float, xmm::abi_tag>;
-        constexpr auto mask = dpp::imm<(1 << to_keep) - 1>;
-        auto const result =
-            dpp::broadcast<float, xmm::abi_tag>(static_cast<float>(val));
-        return dpp::bit_keep(mask, result);
-    };
-
-    constexpr auto test1 = [=]<dpl::integral T>(dpl::type_identity<T>) {
-        // Tests for rounding issues from sligtly below and above 0x1.p24f
-        // (16777216.0f)
-        auto const src =
-            make_array<T>(16777214, 16777215, 16777216, 16777217, 16777218,
-                16777219, 16777220, 33554431, 33554432, 33554433, 1073741824);
-        for (auto const val : src) {
-            auto const input = dpp::broadcast<T, xmm::abi_tag>(val);
-            auto const expected = make_expected(val);
-            assert(bit_equality(dpp::cast<float>(input), expected));
-        }
-
-        if constexpr (dpl::signed_integral<T>) {
-            for (auto const pval : src) {
-                auto const val = -pval;
-                auto const input = dpp::broadcast<T, xmm::abi_tag>(val);
-                auto const expected = make_expected(val);
-                assert(bit_equality(dpp::cast<float>(input), expected));
-            }
-        }
-    };
-
-    test1(dpl::type_identity<dpl::int32>{});
-    test1(dpl::type_identity<dpl::int64>{});
-    test1(dpl::type_identity<dpl::uint32>{});
-    test1(dpl::type_identity<dpl::uint64>{});
-
-    constexpr auto extra_large = [=]<dpl::integral T>(dpl::type_identity<T>) {
-        // Extreme rounding
-        array const src{1099511627776, 1125899906842624, 1152921504606846976,
-            1152921504606846977, 1234567890123, 9223372036854775807};
-        for (auto const val : src) {
-            auto const input = dpp::broadcast<T, xmm::abi_tag>(val);
-            auto const expected = make_expected(val);
-            assert(bit_equality(dpp::cast<float>(input), expected));
-        }
-
-        if constexpr (dpl::signed_integral<T>) {
-            for (auto const pval : src) {
-                auto const val = -pval;
-                auto const input = dpp::broadcast<T, xmm::abi_tag>(val);
-                auto const expected = make_expected(val);
-                assert(bit_equality(dpp::cast<float>(input), expected));
-            }
-        }
-    };
-
-    extra_large(dpl::type_identity<dpl::int64>{});
-    extra_large(dpl::type_identity<dpl::uint64>{});
-
-    return true;
-}
 } // namespace
 
 int main() {
-    static_assert(general_int_to_fp());
-    assert(general_int_to_fp());
-    static_assert(parallel_int_to_fp());
-    assert(parallel_int_to_fp());
-    static_assert(large_int_to_sp());
-    assert(large_int_to_sp());
-    static_assert(general_fp_to_int());
-    assert(general_fp_to_int());
+    static_assert(test_int_to_fp());
+    assert(test_int_to_fp());
+    static_assert(test_fp_to_int());
+    assert(test_fp_to_int());
     return 0;
 }

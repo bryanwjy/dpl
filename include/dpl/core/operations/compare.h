@@ -12,6 +12,7 @@
 #  include "dpl/core/concepts/common_order_with.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/type_traits/common_order_type.h"
+#  include "dpl/core/type_traits/common_size_type.h"
 #  include "dpl/core/type_traits/make_simd_mask_type.h"
 #  include "dpl/std/type_traits/is_invocable.h"
 #endif
@@ -73,6 +74,15 @@ private:
             [](auto lhs, auto rhs) -> bool { return lhs == rhs; }, lhs, rhs);
     }
 
+    template <simd_element L, common_size_with<L> R, simd_abi A>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL fallback(
+        basic_simd_mask<L, A> lhs, basic_simd_mask<R, A> rhs) noexcept {
+        using T = common_size_type_t<L, R>;
+        return internal::transform<basic_simd_mask<T, A>>(
+            [](auto lhs, auto rhs) -> bool { return lhs == rhs; }, lhs, rhs);
+    }
+
 public:
     template <simd_type L, common_order_simd_with<L> R>
     requires same_abi_simd_as<L, R>
@@ -97,6 +107,45 @@ public:
     }
 
     template <simd_type L, common_order_simd_with<L> R>
+    requires (!same_abi_simd_as<L, R>) &&
+        (unqualified_cmpeq<L, R> ||
+            unqualified_cmpeq<basic_type_t<L>, basic_type_t<R>>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(L lhs, R rhs) noexcept
+        -> common_order_simd_with<compare_result<L, R>> auto {
+        using A = common_abi_t<L, R>;
+        if constexpr (unqualified_cmpeq<L, R>) {
+            return cmpeq(internal::abi<A>, lhs, rhs);
+        } else {
+            return cmpeq(internal::abi<A>, dx::to_basic_type(lhs),
+                dx::to_basic_type(rhs));
+        }
+    }
+
+    template <simd_mask_type L, common_size_simd_with<L> R>
+    requires same_abi_simd_as<L, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(L lhs, R rhs) noexcept {
+        using A = typename L::abi_type;
+        if constexpr (unqualified_cmpeq<L, R, A>) {
+            if constexpr (basic_simd_mask_type<L> && basic_simd_mask_type<R>) {
+                if consteval {
+                    return fallback(lhs, rhs);
+                } else {
+                    return cmpeq(internal::abi<L>, lhs, rhs);
+                }
+            } else {
+                return cmpeq(internal::abi<L>, lhs, rhs);
+            }
+        } else if constexpr (basic_simd_mask_type<L> &&
+            basic_simd_mask_type<R>) {
+            return fallback(lhs, rhs);
+        } else {
+            return operator()(dx::to_basic_type(lhs), dx::to_basic_type(rhs));
+        }
+    }
+
+    template <simd_mask_type L, common_size_simd_with<L> R>
     requires (!same_abi_simd_as<L, R>) &&
         (unqualified_cmpeq<L, R> ||
             unqualified_cmpeq<basic_type_t<L>, basic_type_t<R>>)

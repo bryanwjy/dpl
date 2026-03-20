@@ -3,12 +3,13 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/basic/broadcast.h"
+#include "dpl/core/basic/immediate.h"
+
 #if !DPL_MODULES
-#  include "dpl/core/concepts/simd_class.h"
 #  include "dpl/std/concepts/convertible_to.h"
 #  include "dpl/std/concepts/derived_from.h"
-#  include "dpl/std/concepts/different_from.h"
+#  include "dpl/std/concepts/semiregular.h"
+#  include "dpl/std/type_traits/is_empty.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -18,14 +19,6 @@ DPL_EXPORT
 struct broadcastable_base {
 protected:
     __DPL_HIDE_FROM_ABI constexpr ~broadcastable_base() noexcept = default;
-
-public:
-    template <simd_class T, different_from<T> S>
-    requires convertible_to<S, typename T::value_type>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    constexpr operator T(this S self) noexcept {
-        return datapar::broadcast<T>(static_cast<typename T::value_type>(self));
-    }
 };
 
 DPL_EXPORT template <typename T, typename ValueType>

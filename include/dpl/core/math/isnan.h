@@ -29,7 +29,9 @@ private:
         using uint = unsigned_rep_t<E>;
         constexpr auto inf_bits =
             dx::reinterpret<uint>(dx::infinity_v<basic_simd<E, A>>);
-        auto const abs_val = dx::reinterpret<uint>(dx::bwand(arg, value_bits));
+        constexpr auto abs_bits =
+            dx::reinterpret<uint>(dx::value_bits_v<basic_simd<E, A>>);
+        auto const abs_val = dx::reinterpret<uint>(dx::bwand(arg, abs_bits));
         return dx::cmpgt(abs_val, inf_bits);
     }
 

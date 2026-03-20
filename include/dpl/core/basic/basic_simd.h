@@ -58,9 +58,9 @@ public:
         : basic_simd(datapar::reinterpret<basic_simd>(other)) {}
 
     template <different_from<basic_simd> B>
-    requires broadcastable_to<B, A> && broadcastable_constant<B, value_type>
+    requires broadcastable_constant<B, value_type>
     __DPL_HIDE_FROM_ABI constexpr basic_simd(B scalar) noexcept
-        : basic_simd(datapar::broadcast<A>(scalar)) {}
+        : basic_simd(datapar::broadcast<E, A>(static_cast<E>(scalar))) {}
 
     template <core_convertible_to<E>... Args>
     __DPL_HIDE_FROM_ABI explicit(
