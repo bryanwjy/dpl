@@ -1,4 +1,6 @@
 // Copyright 2025-2026 Bryan Wong
+#include "dpl/config.h"
+
 #include <cassert>
 
 import dpl.xmm;
@@ -31,13 +33,13 @@ constexpr bool round_trip(From val, Pred pred = dpp::cmpeq) noexcept {
 constexpr auto nextafter(auto val) noexcept {
     using type = decltype(val);
     using rep = dpp::signed_representation_t<type>;
-    return dpl::bit_cast<type>(dpl::bit_cast<rep>(val) + 1);
+    return dpl::bit_cast<type>(static_cast<rep>(dpl::bit_cast<rep>(val) + 1));
 }
 
 constexpr auto nextbefore(auto val) noexcept {
     using type = decltype(val);
     using rep = dpp::signed_representation_t<type>;
-    return dpl::bit_cast<type>(dpl::bit_cast<rep>(val) - 1);
+    return dpl::bit_cast<type>(static_cast<rep>(dpl::bit_cast<rep>(val) - 1));
 }
 
 inline constexpr struct nancmp_t {
@@ -84,6 +86,23 @@ constexpr bool test() {
     assert(round_trip<double>(dpp::max_value_v<float>));
     assert(round_trip<double>(dpp::infinity_v<float>));
     assert(round_trip<double>(-dpp::infinity_v<float>));
+
+#if DPL_SUPPORTS_FLOAT16
+    assert(round_trip<float>(0.0f16));
+    assert(round_trip<float>(-0.0f16, bitcmp));
+    assert(round_trip<float>(1.0f16));
+    assert(round_trip<float>(nextafter(1.0f16)));
+    assert(round_trip<float>(nextbefore(1.0f16)));
+    assert(round_trip<float>(0x1.p12f16));
+    assert(round_trip<float>(
+        dpl::bit_cast<dpl::float16>(static_cast<short>(1 << 11))));
+    assert(
+        round_trip<float>(dpl::bit_cast<dpl::float16>(static_cast<short>(1))));
+    assert(round_trip<float>(1e-6f16));
+    assert(round_trip<float>(dpp::max_value_v<dpl::float16>));
+    assert(round_trip<float>(dpp::infinity_v<dpl::float16>));
+    assert(round_trip<float>(-dpp::infinity_v<dpl::float16>));
+#endif
 
     // snan
     assert(round_trip<double>(dpl::bit_cast<float>(0x7fc00000), nancmp));

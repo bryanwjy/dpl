@@ -27,7 +27,11 @@ DPL_EXPORT using float64 = decltype(0.0f64);
 DPL_EXPORT using float128 = decltype(0.0f128);
 #endif
 #if DPL_SUPPORTS_BFLOAT16
+#  if DPL_SUPPORTS_EXT_BFLOAT16 & DPL_IS_RESERVED_IDENTIFIER(__bf16)
+DPL_EXPORT using bfloat16 = __bf16;
+#  else
 DPL_EXPORT using bfloat16 = decltype(0.0bf16);
+#  endif
 #endif
 
 #if DPL_SUPPORTS_INT128

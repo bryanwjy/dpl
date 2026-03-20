@@ -9,10 +9,12 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/broadcastable_base.h"
+#  include "dpl/core/type_traits/representation.h"
 #  include "dpl/std/bit/bit_cast.h"
 #  include "dpl/std/bit/bit_type.h"
 #  include "dpl/std/concepts/convertible_to.h"
 #  include "dpl/std/concepts/floating_point.h"
+#  include "dpl/std/utility/to_unsigned.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -27,8 +29,9 @@ struct nexponent_bits_t : broadcastable_base {
     constexpr operator T(this nexponent_bits_t) noexcept {
         using bit_type = bit_type_t<char_bit_v * sizeof(T)>;
         auto const ninf = all_bits_v<bit_type> << mantissa_width_v<T>;
-        auto const mask = ninf & ~msb_v<bit_type>;
-        return __DPL bit_cast<T>(~mask);
+        auto const mask = dpl::to_unsigned(ninf & ~msb_v<bit_type>);
+        return __DPL bit_cast<T>(
+            static_cast<unsigned_representation_t<T>>(~mask));
     }
 };
 
@@ -40,8 +43,9 @@ inline constexpr struct exponent_bits_t : broadcastable_base {
     constexpr operator T(this exponent_bits_t) noexcept {
         using bit_type = bit_type_t<char_bit_v * sizeof(T)>;
         auto const ninf = all_bits_v<bit_type> << mantissa_width_v<T>;
-        auto const mask = ninf & ~msb_v<bit_type>;
-        return __DPL bit_cast<T>(mask);
+        auto const mask = dpl::to_unsigned(ninf & ~msb_v<bit_type>);
+        return __DPL bit_cast<T>(
+            static_cast<unsigned_representation_t<T>>(mask));
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)

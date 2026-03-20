@@ -34,7 +34,7 @@ struct max_value_t : broadcastable_base {
         using bit_type = bit_type_t<sizeof(T) * char_bit_v>;
         auto const mantissa = __DPL bit_cast<bit_type>(mantissa_bits_v<T>);
         auto const exponent = __DPL bit_cast<bit_type>(exponent_bits_v<T>) - 1;
-        return __DPL bit_cast<T>(mantissa | exponent);
+        return __DPL bit_cast<T>(static_cast<bit_type>(mantissa | exponent));
     }
 };
 

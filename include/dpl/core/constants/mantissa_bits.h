@@ -25,7 +25,8 @@ struct mantissa_bits_t : broadcastable_base {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     constexpr operator T(this mantissa_bits_t) noexcept {
         using bit_type = bit_type_t<sizeof(T) * char_bit_v>;
-        auto const rep = __DPL bit_cast<bit_type>(min_value_v<T>) - 1;
+        auto const rep = static_cast<bit_type>(
+            __DPL bit_cast<bit_type>(min_value_v<T>) - 1);
         return __DPL bit_cast<T>(rep);
     }
 };

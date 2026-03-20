@@ -22,6 +22,7 @@
 #  include "dpl/std/type_traits/is_const.h"
 #  include "dpl/std/type_traits/is_volatile.h"
 #  include "dpl/std/type_traits/type_identity.h" // IWYU pragma: keep
+#  include "dpl/std/utility/forward.h"           // IWYU pragma: keep
 #  include "dpl/std/utility/to_underlying.h"     // IWYU pragma: keep
 
 #  include <immintrin.h>

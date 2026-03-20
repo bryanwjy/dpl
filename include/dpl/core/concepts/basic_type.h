@@ -72,7 +72,7 @@ DPL_EXPORT template <floating_point T>
 requires (sizeof(T) == sizeof(int16))
 struct basic_element<T> {
 #if DPL_SUPPORTS_FLOAT16
-    using type = decltype(0.0f16);
+    using type = __DPL float16;
 #endif
 };
 
@@ -80,7 +80,7 @@ DPL_EXPORT template <brain_float T>
 requires (sizeof(T) == sizeof(int16))
 struct basic_element<T> {
 #if DPL_SUPPORTS_BFLOAT16
-    using type = decltype(0.0bf16);
+    using type = __DPL bfloat16;
 #endif
 };
 

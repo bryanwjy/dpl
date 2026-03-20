@@ -66,14 +66,9 @@ struct native_vector<T> {
 template <typename T>
 concept native_vector_type = same_as<T, decltype(_mm_setzero_ps())> //
     || same_as<T, decltype(_mm_setzero_pd())>                       //
-    || same_as<T, decltype(_mm_setzero_si128())>
-#if DPL_SIMD_X86_AVX2
-    || same_as<T, decltype(_mm_cvtneps_avx_pbh(_mm_setzero_ps()))>
-#endif
-#if DPL_SIMD_X86_AVX512F16
-    || same_as<T, decltype(_mm_setzero_ph())>
-#endif
-    ;
+    || same_as<T, decltype(_mm_setzero_si128())>                    //
+    || same_as<T, __m128bh>                                         //
+    || same_as<T, __m128h>;
 
 inline constexpr struct template_barrier_t {
     __DPL_HIDE_FROM_ABI explicit constexpr template_barrier_t() noexcept =
