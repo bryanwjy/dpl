@@ -11,6 +11,7 @@
 #if !DPL_MODULES
 #  include "dpl/core/concepts/common_order_with.h"
 #  include "dpl/core/concepts/simd_abi.h"
+#  include "dpl/core/concepts/simd_equivalence.h"
 #  include "dpl/core/type_traits/common_order_type.h"
 #  include "dpl/core/type_traits/common_size_type.h"
 #  include "dpl/core/type_traits/make_simd_mask_type.h"
@@ -26,42 +27,65 @@ void cmple(...) noexcept = delete;
 void cmpgt(...) noexcept = delete;
 void cmpge(...) noexcept = delete;
 
-template <typename L, typename R>
-using compare_result DPL_NODEBUG =
-    make_simd_mask_type_t<common_order_simd_t<L, R>>;
+template <typename T, typename L, typename R>
+concept compare_result =
+    common_order_simd_with<T, make_simd_mask_type_t<common_order_simd_t<L, R>>>;
 
 template <typename L, typename R, typename A = common_abi_t<L, R>>
-concept unqualified_cmpeq =
-    requires(L lhs, R rhs) { cmpeq(internal::abi<A>, lhs, rhs); };
+concept unqualified_cmpeq = requires(L lhs, R rhs) {
+    { cmpeq(internal::abi<A>, lhs, rhs) } -> compare_result<L, R>;
+};
 
 template <typename L, typename R, typename A = common_abi_t<L, R>>
-concept unqualified_cmpneq =
-    requires(L lhs, R rhs) { cmpneq(internal::abi<A>, lhs, rhs); };
+concept unqualified_cmpneq = requires(L lhs, R rhs) {
+    { cmpneq(internal::abi<A>, lhs, rhs) } -> compare_result<L, R>;
+};
 
 template <typename L, typename R, typename A = common_abi_t<L, R>>
-concept unqualified_cmplt =
-    requires(L lhs, R rhs) { cmplt(internal::abi<A>, lhs, rhs); };
+concept unqualified_cmplt = requires(L lhs, R rhs) {
+    { cmplt(internal::abi<A>, lhs, rhs) } -> compare_result<L, R>;
+};
 
 template <typename L, typename R, typename A = common_abi_t<L, R>>
-concept unqualified_cmple =
-    requires(L lhs, R rhs) { cmple(internal::abi<A>, lhs, rhs); };
+concept unqualified_cmple = requires(L lhs, R rhs) {
+    { cmple(internal::abi<A>, lhs, rhs) } -> compare_result<L, R>;
+};
 
 template <typename L, typename R, typename A = common_abi_t<L, R>>
-concept unqualified_cmpgt =
-    requires(L lhs, R rhs) { cmpgt(internal::abi<A>, lhs, rhs); };
+concept unqualified_cmpgt = requires(L lhs, R rhs) {
+    { cmpgt(internal::abi<A>, lhs, rhs) } -> compare_result<L, R>;
+};
 
 template <typename L, typename R, typename A = common_abi_t<L, R>>
-concept unqualified_cmpge =
-    requires(L lhs, R rhs) { cmpge(internal::abi<A>, lhs, rhs); };
+concept unqualified_cmpge = requires(L lhs, R rhs) {
+    { cmpge(internal::abi<A>, lhs, rhs) } -> compare_result<L, R>;
+};
+
+template <typename T, typename L, typename R>
+concept compare_mask_result =
+    common_size_simd_with<T, common_size_simd_t<L, R>>;
+
+template <typename L, typename R, typename A = common_abi_t<L, R>>
+concept unqualified_mcmpeq = requires(L lhs, R rhs) {
+    { cmpeq(internal::abi<A>, lhs, rhs) } -> compare_mask_result<L, R>;
+};
+
+template <typename L, typename R, typename A = common_abi_t<L, R>>
+concept unqualified_mcmpneq = requires(L lhs, R rhs) {
+    { cmpneq(internal::abi<A>, lhs, rhs) } -> compare_mask_result<L, R>;
+};
 
 struct cmpeq_t : binary_operation_base<cmpeq_t> {
 private:
     friend binary_operation_base<cmpeq_t>;
 
     template <simd_abi A, typename L, typename R>
-    requires unqualified_cmpeq<L, R, A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto native(A abi, L left, R right) noexcept {
+    static constexpr auto native(A abi, L left, R right) noexcept
+    requires requires {
+        { cmpeq(internal::abi<A>, left, right) } -> simd_with_abi<A>;
+    }
+    {
         return cmpeq(internal::abi<A>, left, right);
     }
 
@@ -111,8 +135,7 @@ public:
         (unqualified_cmpeq<L, R> ||
             unqualified_cmpeq<basic_type_t<L>, basic_type_t<R>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L lhs, R rhs) noexcept
-        -> common_order_simd_with<compare_result<L, R>> auto {
+    static constexpr auto operator()(L lhs, R rhs) noexcept {
         using A = common_abi_t<L, R>;
         if constexpr (unqualified_cmpeq<L, R>) {
             return cmpeq(internal::abi<A>, lhs, rhs);
@@ -127,7 +150,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs) noexcept {
         using A = typename L::abi_type;
-        if constexpr (unqualified_cmpeq<L, R, A>) {
+        if constexpr (unqualified_mcmpeq<L, R, A>) {
             if constexpr (basic_simd_mask_type<L> && basic_simd_mask_type<R>) {
                 if consteval {
                     return fallback(lhs, rhs);
@@ -147,13 +170,12 @@ public:
 
     template <simd_mask_type L, common_size_simd_with<L> R>
     requires (!same_abi_simd_as<L, R>) &&
-        (unqualified_cmpeq<L, R> ||
-            unqualified_cmpeq<basic_type_t<L>, basic_type_t<R>>)
+        (unqualified_mcmpeq<L, R> ||
+            unqualified_mcmpeq<basic_type_t<L>, basic_type_t<R>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L lhs, R rhs) noexcept
-        -> common_order_simd_with<compare_result<L, R>> auto {
+    static constexpr auto operator()(L lhs, R rhs) noexcept {
         using A = common_abi_t<L, R>;
-        if constexpr (unqualified_cmpeq<L, R>) {
+        if constexpr (unqualified_mcmpeq<L, R>) {
             return cmpeq(internal::abi<A>, lhs, rhs);
         } else {
             return cmpeq(internal::abi<A>, dx::to_basic_type(lhs),
@@ -212,10 +234,47 @@ public:
         (unqualified_cmpneq<L, R> ||
             unqualified_cmpneq<basic_type_t<L>, basic_type_t<R>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L lhs, R rhs) noexcept
-        -> common_order_simd_with<compare_result<L, R>> auto {
+    static constexpr auto operator()(L lhs, R rhs) noexcept {
         using A = common_abi_t<L, R>;
         if constexpr (unqualified_cmpneq<L, R>) {
+            return cmpneq(internal::abi<A>, lhs, rhs);
+        } else {
+            return cmpneq(internal::abi<A>, dx::to_basic_type(lhs),
+                dx::to_basic_type(rhs));
+        }
+    }
+
+    template <simd_mask_type L, common_size_simd_with<L> R>
+    requires same_abi_simd_as<L, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(L lhs, R rhs) noexcept {
+        using A = typename L::abi_type;
+        if constexpr (unqualified_mcmpneq<L, R, A>) {
+            if constexpr (basic_simd_mask_type<L> && basic_simd_mask_type<R>) {
+                if consteval {
+                    return fallback(lhs, rhs);
+                } else {
+                    return cmpneq(internal::abi<L>, lhs, rhs);
+                }
+            } else {
+                return cmpneq(internal::abi<L>, lhs, rhs);
+            }
+        } else if constexpr (basic_simd_mask_type<L> &&
+            basic_simd_mask_type<R>) {
+            return fallback(lhs, rhs);
+        } else {
+            return operator()(dx::to_basic_type(lhs), dx::to_basic_type(rhs));
+        }
+    }
+
+    template <simd_mask_type L, common_size_simd_with<L> R>
+    requires (!same_abi_simd_as<L, R>) &&
+        (unqualified_mcmpneq<L, R> ||
+            unqualified_mcmpneq<basic_type_t<L>, basic_type_t<R>>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(L lhs, R rhs) noexcept {
+        using A = common_abi_t<L, R>;
+        if constexpr (unqualified_mcmpneq<L, R>) {
             return cmpneq(internal::abi<A>, lhs, rhs);
         } else {
             return cmpneq(internal::abi<A>, dx::to_basic_type(lhs),
