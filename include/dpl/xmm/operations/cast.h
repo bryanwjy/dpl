@@ -501,12 +501,18 @@ inline simd<TE> DPL_VECTORCALL cast(abi_tag, simd<FE> from) noexcept {
     return _mm_cvtneps_pbh(+from);
 #else
     // deal with nan & inf
-    auto const ival = __DPL bit_cast<__m128i>(+from);
+    auto const fval = +from;
+    auto const ival = __DPL bit_cast<__m128i>(fval);
+    auto const zero = _mm_setzero_si128();
+    auto const isnan =
+        _mm_unpacklo_epi16(_mm_castps_si128(_mm_cmpunord_ps(fval, fval)), zero);
     // round to nearest even
     auto const lsb = _mm_and_si128(_mm_srli_epi32(ival, 16), _mm_set1_epi32(1));
-    auto const bias = _mm_add_epi32(_mm_set1_epi32(0x7fff), lsb);
-    return __DPL bit_cast<__m128bh>(
-        _mm_srli_epi32(_mm_add_epi32(ival, bias), 16));
+    auto const low = _mm_set1_epi32(0x7fff);
+    auto const bias = _mm_add_epi32(low, lsb);
+    auto const result =
+        _mm_or_si128(_mm_srli_epi32(_mm_add_epi32(ival, bias), 16), isnan);
+    return __DPL bit_cast<__m128bh>(_mm_packus_epi32(result, zero));
 #endif
 }
 

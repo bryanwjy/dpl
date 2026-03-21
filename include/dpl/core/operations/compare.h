@@ -333,8 +333,7 @@ public:
         (unqualified_cmplt<L, R> ||
             unqualified_cmplt<basic_type_t<L>, basic_type_t<R>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L lhs, R rhs) noexcept
-        -> common_order_simd_with<compare_result<L, R>> auto {
+    static constexpr auto operator()(L lhs, R rhs) noexcept {
         using A = common_abi_t<L, R>;
         if constexpr (unqualified_cmplt<L, R>) {
             return cmplt(internal::abi<A>, lhs, rhs);
@@ -395,8 +394,7 @@ public:
         (unqualified_cmple<L, R> ||
             unqualified_cmple<basic_type_t<L>, basic_type_t<R>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L lhs, R rhs) noexcept
-        -> common_order_simd_with<compare_result<L, R>> auto {
+    static constexpr auto operator()(L lhs, R rhs) noexcept {
         using A = common_abi_t<L, R>;
         if constexpr (unqualified_cmple<L, R>) {
             return cmple(internal::abi<A>, lhs, rhs);
@@ -452,8 +450,7 @@ public:
         (unqualified_cmpgt<L, R> ||
             unqualified_cmpgt<basic_type_t<L>, basic_type_t<R>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L lhs, R rhs) noexcept
-        -> common_order_simd_with<compare_result<L, R>> auto {
+    static constexpr auto operator()(L lhs, R rhs) noexcept {
         using A = common_abi_t<L, R>;
         if constexpr (unqualified_cmpgt<L, R>) {
             return cmpgt(internal::abi<A>, lhs, rhs);
@@ -509,8 +506,7 @@ public:
         (unqualified_cmpge<L, R> ||
             unqualified_cmpge<basic_type_t<L>, basic_type_t<R>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L lhs, R rhs) noexcept
-        -> common_order_simd_with<compare_result<L, R>> auto {
+    static constexpr auto operator()(L lhs, R rhs) noexcept {
         using A = common_abi_t<L, R>;
         if constexpr (unqualified_cmpge<L, R>) {
             return cmpge(internal::abi<A>, lhs, rhs);

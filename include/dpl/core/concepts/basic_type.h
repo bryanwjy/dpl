@@ -69,7 +69,7 @@ struct basic_element<T> {
 };
 
 DPL_EXPORT template <floating_point T>
-requires (sizeof(T) == sizeof(int16))
+requires (sizeof(T) == sizeof(int16)) && (!brain_float<T>)
 struct basic_element<T> {
 #if DPL_SUPPORTS_FLOAT16
     using type = __DPL float16;

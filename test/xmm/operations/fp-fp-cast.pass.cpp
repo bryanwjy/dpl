@@ -22,6 +22,8 @@ constexpr bool round_trip(From val, Pred pred = dpp::cmpeq) noexcept {
         min(dpp::element_count<From, abi>, dpp::element_count<To, abi>);
     constexpr auto keep_mask = dpp::imm<(1 << count) - 1>;
     auto const src = dpp::bit_keep(keep_mask, dpp::broadcast<From, abi>(val));
+    static_assert(dpl::same_as<From,
+        typename dpl::remove_const_t<decltype(src)>::value_type>);
     auto const dst =
         dpp::bit_keep(keep_mask, dpp::broadcast<To, abi>(static_cast<To>(val)));
     auto const actual_dst = dpp::cast<To>(src);
@@ -70,7 +72,9 @@ constexpr bool precision_loss(From val, Pred pred = dpp::cmpeq) noexcept {
         dpp::bit_keep(keep_mask, dpp::broadcast<To, abi>(static_cast<To>(val)));
     auto const actual_dst = dpp::cast<To>(src);
     auto const dstequal = pred(actual_dst, dst);
-    return dpp::all_of(dstequal);
+    auto const actual_castback = dpp::cast<From>(actual_dst);
+    auto const isequal = pred(actual_castback, src);
+    return dpp::all_of(dstequal) && dpp::none_of(isequal);
 }
 
 constexpr bool test() {
@@ -113,13 +117,17 @@ constexpr bool test() {
     assert(precision_loss<float>(0x1.p10 + 0x1.p-14));
     assert(precision_loss<float>(1.0 + 0x1.p-24));
 
+    return true;
+}
+
+constexpr bool test_fp16() noexcept {
 #if DPL_SUPPORTS_FLOAT16
     assert(round_trip<float>(0.0f16));
     assert(round_trip<float>(-0.0f16, bitcmp));
     assert(round_trip<float>(1.0f16));
     assert(round_trip<float>(nextafter(1.0f16)));
     assert(round_trip<float>(nextbefore(1.0f16)));
-    assert(round_trip<float>(0x1.p12f16));
+    assert(round_trip<float>(0x1.p11f16));
     assert(round_trip<float>(
         dpl::bit_cast<dpl::float16>(static_cast<short>(1 << 11))));
     assert(
@@ -148,9 +156,9 @@ constexpr bool test() {
     assert(round_trip<double>(1.0f16));
     assert(round_trip<double>(nextafter(1.0f16)));
     assert(round_trip<double>(nextbefore(1.0f16)));
-    assert(round_trip<double>(0x1.p12f16));
+    assert(round_trip<double>(0x1.p11f16));
     assert(round_trip<double>(
-        dpl::bit_cast<dpl::float16>(static_cast<short>(1 << 11))));
+        dpl::bit_cast<dpl::float16>(static_cast<short>(1 << 10))));
     assert(
         round_trip<double>(dpl::bit_cast<dpl::float16>(static_cast<short>(1))));
     assert(round_trip<double>(1e-6f16));
@@ -175,10 +183,95 @@ constexpr bool test() {
 
     return true;
 }
+
+#if DPL_SUPPORTS_EXT_BFLOAT16 & !defined(__BFLT16_MAX__)
+DPL_DISABLE_WARNING("-Wuser-defined-literals")
+consteval dpl::bfloat16 operator""_bf16(long double val) noexcept {
+    return static_cast<dpl::bfloat16>(val);
+}
+#  define BF16(X) X##_bf16
+#elif defined(__BFLT16_MAX__)
+#  define BF16(X) X##bf16
+#endif
+
+constexpr bool test_bf16() noexcept {
+#if DPL_SUPPORTS_BFLOAT16
+    // static_assert(dpl::brain_float<dpl::bfloat16>);
+    assert(round_trip<float>(BF16(0.0)));
+    assert(round_trip<float>(BF16(-0.0), bitcmp));
+    assert(round_trip<float>(BF16(1.0)));
+    assert(round_trip<float>(nextafter(BF16(1.0))));
+    assert(round_trip<float>(nextbefore(BF16(1.0))));
+    assert(round_trip<float>(BF16(0x1.p8)));
+    assert(round_trip<float>(BF16(1e-40)));
+    assert(round_trip<float>(dpp::max_value_v<dpl::bfloat16>));
+    assert(round_trip<float>(dpp::infinity_v<dpl::bfloat16>));
+    assert(round_trip<float>(-dpp::infinity_v<dpl::bfloat16>));
+    assert([]() {
+        // possible compiler bug corrupts at runtime, the result of
+        // dpl::bit_cast<dpl::bfloat16>(static_cast<unsigned short>(1 << 7));
+        // Unable to repro in compiler explorer, unsure why
+        auto const low = static_cast<unsigned short>(1 << 7);
+        auto const bf16 = dpl::bit_cast<dpl::bfloat16>(low);
+        return round_trip<float>(bf16);
+    }());
+    assert([]() {
+        auto const low = static_cast<unsigned short>(1);
+        auto const bf16 = dpl::bit_cast<dpl::bfloat16>(low);
+        round_trip<float>(bf16);
+    });
+    assert(precision_loss<dpl::bfloat16>(nextafter(1.0f)));
+    assert(precision_loss<dpl::bfloat16>(nextbefore(1.0f)));
+    assert(precision_loss<dpl::bfloat16>(dpl::bit_cast<float>(1)));
+    assert(precision_loss<dpl::bfloat16>(0x1.p8f + 1.0f));
+    assert(precision_loss<dpl::bfloat16>(0x1.p4f + 0x1.p-4f));
+    assert(precision_loss<dpl::bfloat16>(1.0f + 0x1.p-8f));
+
+    assert(round_trip<double>(BF16(0.0)));
+    assert(round_trip<double>(BF16(-0.0), bitcmp));
+    assert(round_trip<double>(BF16(1.0)));
+    assert(round_trip<double>(nextafter(BF16(1.0))));
+    assert(round_trip<double>(nextbefore(BF16(1.0))));
+    assert(round_trip<double>(BF16(0x1.p8)));
+    assert(round_trip<double>(BF16(1e-40)));
+    assert(round_trip<double>(dpp::max_value_v<dpl::bfloat16>));
+    assert(round_trip<double>(dpp::infinity_v<dpl::bfloat16>));
+    assert(round_trip<double>(-dpp::infinity_v<dpl::bfloat16>));
+    assert([]() {
+        // possible compiler bug corrupts at runtime, the result of
+        // dpl::bit_cast<dpl::bfloat16>(static_cast<unsigned short>(1 << 7));
+        // Unable to repro in compiler explorer, unsure why
+        auto const low = static_cast<unsigned short>(1 << 7);
+        auto const bf16 = dpl::bit_cast<dpl::bfloat16>(low);
+        return round_trip<double>(bf16);
+    }());
+    assert([]() {
+        auto const low = static_cast<unsigned short>(1);
+        auto const bf16 = dpl::bit_cast<dpl::bfloat16>(low);
+        round_trip<double>(bf16);
+    });
+    assert(precision_loss<dpl::bfloat16>(nextafter(1.0)));
+    assert(precision_loss<dpl::bfloat16>(nextbefore(1.0)));
+    assert(precision_loss<dpl::bfloat16>(dpl::bit_cast<double>(1ll << 52)));
+    assert(precision_loss<dpl::bfloat16>(dpl::bit_cast<double>(1ll)));
+    assert(precision_loss<dpl::bfloat16>(0x1.p8 + 1.0));
+    assert(precision_loss<dpl::bfloat16>(0x1.p4 + 0x1.p-4));
+    assert(precision_loss<dpl::bfloat16>(1.0 + 0x1.p-8));
+#endif
+
+    return true;
+}
+
 } // namespace
 
 int main() {
     static_assert(test());
     assert(test());
+
+    static_assert(test_fp16());
+    assert(test_fp16());
+
+    static_assert(test_bf16());
+    assert(test_bf16());
     return 0;
 }

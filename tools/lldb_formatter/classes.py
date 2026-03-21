@@ -5,8 +5,30 @@ import struct
 class bf16:
     @staticmethod
     def to_float(val):
-        bits = val << 16
-        return struct.unpack("f", struct.pack("I", bits))[0]
+        sign = (val >> 15) & 0x1
+        exp  = (val >> 7) & 0xFF
+        mant = val & 0x7F
+        if exp == 0xFF & mant > 0:
+            return float('nan')
+
+        f32_bits = (sign << 31) | (exp << 23) | (mant << 16)
+        return struct.unpack(">f", f32_bits.to_bytes(4, 'big'))[0]
+
+    @staticmethod
+    def summarize(valobj, _):
+        data = valobj.GetData()
+        if not data.IsValid():
+            return "<error>" 
+
+        error = lldb.SBError()
+        buffer = data.ReadRawData(error, 0, 2)
+        if error.Fail():
+            raise RuntimeError(error.GetCString())
+        rep = struct.unpack("<H", buffer)[0]
+        val = bf16.to_float(rep)
+        return f"{val:.6g}"
+
+
 
 TYPE_MAP = {
     "char":  (lldb.eBasicTypeSignedChar, 1),
@@ -117,7 +139,6 @@ class BasicSimd:
             if not data.IsValid():
                 return None
 
-            buffer = self.buffer
             error = self.error
             buffer = data.ReadRawData(error, offset, self.element_size)
             if error.Fail():

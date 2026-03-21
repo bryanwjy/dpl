@@ -61,26 +61,45 @@ inline constexpr bool is_floating_point_v<double> = true;
 DPL_EXPORT template <>
 inline constexpr bool is_floating_point_v<long double> = true;
 
-#  if DPL_SUPPORTS_FLOAT16
+#  if DPL_SUPPORTS_EXT_FLOAT16
 DPL_EXPORT template <>
-inline constexpr bool is_floating_point_v<decltype(0.0f16)> = true;
-#  endif // if DPL_SUPPORTS_FLOAT16
+inline constexpr bool is_floating_point_v<float16> = true;
+#    if DPL_IS_RESERVED_IDENTIFIER(__fp16) & \
+        DPL_IS_RESERVED_IDENTIFIER(_Float16)
+DPL_EXPORT template <>
+inline constexpr bool is_floating_point_v<__fp16> = true;
+DPL_EXPORT template <>
+inline constexpr bool is_floating_point_v<__fp16 const> = true;
+DPL_EXPORT template <>
+inline constexpr bool is_floating_point_v<__fp16 const volatile> = true;
+DPL_EXPORT template <>
+inline constexpr bool is_floating_point_v<__fp16 volatile> = true;
+#    endif
+#  elif DPL_SUPPORTS_FLOAT16
+DPL_EXPORT template <>
+inline constexpr bool is_floating_point_v<float16> = true;
+#  endif
+
 #  if DPL_SUPPORTS_FLOAT32
 DPL_EXPORT template <>
 inline constexpr bool is_floating_point_v<decltype(0.0f32)> = true;
 #  endif // if DPL_SUPPORTS_FLOAT32
+
 #  if DPL_SUPPORTS_FLOAT64
 DPL_EXPORT template <>
 inline constexpr bool is_floating_point_v<decltype(0.0f64)> = true;
 #  endif // if DPL_SUPPORTS_FLOAT64
+
 #  if DPL_SUPPORTS_FLOAT128
 DPL_EXPORT template <>
 inline constexpr bool is_floating_point_v<decltype(0.0f128)> = true;
 #  endif // if DPL_SUPPORTS_FLOAT128
+
 #  if DPL_SUPPORTS_BFLOAT16
 DPL_EXPORT template <>
-inline constexpr bool is_floating_point_v<decltype(0.0bf16)> = true;
-#  endif // if DPL_SUPPORTS_BFLOAT16
+inline constexpr bool is_floating_point_v<bfloat16> = true;
+#  endif
+
 DPL_EXPORT template <typename T>
 struct is_floating_point : bool_constant<is_floating_point_v<T>> {};
 #endif
