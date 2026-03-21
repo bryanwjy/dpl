@@ -1,4 +1,3 @@
 script import sys
 script sys.path.append("./tools")
 command script import lldb_formatter
-settings set target.load-cwd-lldbinit true
