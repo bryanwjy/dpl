@@ -164,8 +164,9 @@ private:
         return internal::transform<basic_simd<T, A>>(
             [](auto lhs, auto rhs) {
                 using bit_type = bit_type_t<sizeof(T) * char_bit_v>;
-                return __DPL bit_cast<T>(__DPL bit_cast<bit_type>(lhs) |
-                    __DPL bit_cast<bit_type>(rhs));
+                auto const promoted = __DPL bit_cast<bit_type>(lhs) |
+                    __DPL bit_cast<bit_type>(rhs);
+                return __DPL bit_cast<T>(static_cast<bit_type>(promoted));
             },
             lhs, rhs);
     }
@@ -280,8 +281,9 @@ private:
         return internal::transform<basic_simd<T, A>>(
             [](auto lhs, auto rhs) {
                 using bit_type = bit_type_t<sizeof(T) * char_bit_v>;
-                return __DPL bit_cast<T>(__DPL bit_cast<bit_type>(lhs) &
-                    __DPL bit_cast<bit_type>(rhs));
+                auto const promoted = __DPL bit_cast<bit_type>(lhs) &
+                    __DPL bit_cast<bit_type>(rhs);
+                return __DPL bit_cast<T>(static_cast<bit_type>(promoted));
             },
             left, right);
     }
@@ -396,8 +398,9 @@ private:
         return internal::transform<basic_simd<T, A>>(
             [](auto lhs, auto rhs) {
                 using bit_type = bit_type_t<sizeof(T) * char_bit_v>;
-                return __DPL bit_cast<T>(__DPL bit_cast<bit_type>(lhs) ^
-                    __DPL bit_cast<bit_type>(rhs));
+                auto const promoted = __DPL bit_cast<bit_type>(lhs) ^
+                    __DPL bit_cast<bit_type>(rhs);
+                return __DPL bit_cast<T>(static_cast<bit_type>(promoted));
             },
             left, right);
     }
@@ -507,8 +510,9 @@ private:
         return internal::transform<basic_simd<T, A>>(
             [](auto lhs, auto rhs) {
                 using bit_type = bit_type_t<sizeof(T) * char_bit_v>;
-                return __DPL bit_cast<T>(__DPL bit_cast<bit_type>(lhs) &
-                    ~__DPL bit_cast<bit_type>(rhs));
+                auto const promoted = __DPL bit_cast<bit_type>(lhs) &
+                    ~__DPL bit_cast<bit_type>(rhs);
+                return __DPL bit_cast<T>(static_cast<bit_type>(promoted));
             },
             left, right);
     }
@@ -618,8 +622,9 @@ private:
         return internal::transform<basic_simd<T, A>>(
             [](auto lhs, auto rhs) {
                 using bit_type = bit_type_t<sizeof(T) * char_bit_v>;
-                return __DPL bit_cast<T>(__DPL bit_cast<bit_type>(lhs) |
-                    ~__DPL bit_cast<bit_type>(rhs));
+                auto const promoted = __DPL bit_cast<bit_type>(lhs) |
+                    ~__DPL bit_cast<bit_type>(rhs);
+                return __DPL bit_cast<T>(static_cast<bit_type>(promoted));
             },
             left, right);
     }
@@ -721,7 +726,8 @@ private:
             using bit_type = bit_type_t<sizeof(E) * char_bit_v>;
             return internal::transform<basic_simd<E, A>>(
                 [](auto arg) {
-                    return __DPL bit_cast<E>(~__DPL bit_cast<bit_type>(arg));
+                    auto const promoted = ~__DPL bit_cast<bit_type>(arg);
+                    return __DPL bit_cast<E>(static_cast<bit_type>(promoted));
                 },
                 arg);
         }

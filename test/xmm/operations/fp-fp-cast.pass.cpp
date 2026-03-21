@@ -88,6 +88,31 @@ constexpr bool test() {
     assert(round_trip<double>(dpp::infinity_v<float>));
     assert(round_trip<double>(-dpp::infinity_v<float>));
 
+    // qnan
+    assert(round_trip<double>(dpl::bit_cast<float>(0x7fc00000), nancmp));
+    // snan
+    assert(round_trip<double>(dpl::bit_cast<float>(0x7fa00000), nancmp));
+
+    assert(round_trip<float>(0.0));
+    assert(round_trip<float>(-0.0, bitcmp));
+    assert(round_trip<float>(1.0));
+    assert(round_trip<float>(0x1.p24));
+    assert(round_trip<float>(dpp::infinity_v<double>));
+    assert(round_trip<float>(-dpp::infinity_v<double>));
+    // qnan
+    assert(round_trip<float>(dpl::bit_cast<double>(0x7ff8ll << 48), nancmp));
+    // snan
+    assert(round_trip<float>(dpl::bit_cast<double>(0x7ff4ll << 48), nancmp));
+
+    assert(precision_loss<float>(nextafter(1.0)));
+    assert(precision_loss<float>(nextbefore(1.0)));
+    assert(precision_loss<float>(dpl::bit_cast<double>(1ll << 52)));
+    assert(precision_loss<float>(dpl::bit_cast<double>(1ll)));
+
+    assert(precision_loss<float>(0x1.p24 + 1.0));
+    assert(precision_loss<float>(0x1.p10 + 0x1.p-14));
+    assert(precision_loss<float>(1.0 + 0x1.p-24));
+
 #if DPL_SUPPORTS_FLOAT16
     assert(round_trip<float>(0.0f16));
     assert(round_trip<float>(-0.0f16, bitcmp));
@@ -103,32 +128,50 @@ constexpr bool test() {
     assert(round_trip<float>(dpp::max_value_v<dpl::float16>));
     assert(round_trip<float>(dpp::infinity_v<dpl::float16>));
     assert(round_trip<float>(-dpp::infinity_v<dpl::float16>));
+    assert(precision_loss<dpl::float16>(nextafter(1.0f)));
+    assert(precision_loss<dpl::float16>(nextbefore(1.0f)));
+    assert(precision_loss<dpl::float16>(dpl::bit_cast<float>(1 << 23)));
+    assert(precision_loss<dpl::float16>(dpl::bit_cast<float>(1)));
+    assert(precision_loss<dpl::float16>(0x1.p11f + 1.0f));
+    assert(precision_loss<dpl::float16>(0x1.p5f + 0x1.p-6f));
+    assert(precision_loss<dpl::float16>(1.0f + 0x1.p-11f));
+
+    // qnan
+    assert(round_trip<float>(
+        dpl::bit_cast<dpl::float16>(static_cast<short>(0x7e00)), nancmp));
+    // snan
+    assert(round_trip<float>(
+        dpl::bit_cast<dpl::float16>(static_cast<short>(0x7c01)), nancmp));
+
+    assert(round_trip<double>(0.0f16));
+    assert(round_trip<double>(-0.0f16, bitcmp));
+    assert(round_trip<double>(1.0f16));
+    assert(round_trip<double>(nextafter(1.0f16)));
+    assert(round_trip<double>(nextbefore(1.0f16)));
+    assert(round_trip<double>(0x1.p12f16));
+    assert(round_trip<double>(
+        dpl::bit_cast<dpl::float16>(static_cast<short>(1 << 11))));
+    assert(
+        round_trip<double>(dpl::bit_cast<dpl::float16>(static_cast<short>(1))));
+    assert(round_trip<double>(1e-6f16));
+    assert(round_trip<double>(dpp::max_value_v<dpl::float16>));
+    assert(round_trip<double>(dpp::infinity_v<dpl::float16>));
+    assert(round_trip<double>(-dpp::infinity_v<dpl::float16>));
+    // qnan
+    assert(round_trip<double>(
+        dpl::bit_cast<dpl::float16>(static_cast<short>(0x7e00)), nancmp));
+    // snan
+    assert(round_trip<double>(
+        dpl::bit_cast<dpl::float16>(static_cast<short>(0x7c01)), nancmp));
+
+    assert(precision_loss<dpl::float16>(nextafter(1.0)));
+    assert(precision_loss<dpl::float16>(nextbefore(1.0)));
+    assert(precision_loss<dpl::float16>(dpl::bit_cast<double>(1ll << 52)));
+    assert(precision_loss<dpl::float16>(dpl::bit_cast<double>(1ll)));
+    assert(precision_loss<dpl::float16>(0x1.p11 + 1.0));
+    assert(precision_loss<dpl::float16>(0x1.p5 + 0x1.p-6));
+    assert(precision_loss<dpl::float16>(1.0 + 0x1.p-11));
 #endif
-
-    // snan
-    assert(round_trip<double>(dpl::bit_cast<float>(0x7fc00000), nancmp));
-    // qnan
-    assert(round_trip<double>(dpl::bit_cast<float>(0x7fa00000), nancmp));
-
-    assert(round_trip<float>(0.0));
-    assert(round_trip<float>(-0.0, bitcmp));
-    assert(round_trip<float>(1.0));
-    assert(round_trip<float>(0x1.p24));
-    assert(round_trip<float>(dpp::infinity_v<double>));
-    assert(round_trip<float>(-dpp::infinity_v<double>));
-    // snan
-    assert(round_trip<float>(dpl::bit_cast<double>(0x7ff8ll << 48), nancmp));
-    // qnan
-    assert(round_trip<float>(dpl::bit_cast<double>(0x7ff4ll << 48), nancmp));
-
-    assert(precision_loss<float>(nextafter(1.0)));
-    assert(precision_loss<float>(nextbefore(1.0)));
-    assert(precision_loss<float>(dpl::bit_cast<double>(1ll << 52)));
-    assert(precision_loss<float>(dpl::bit_cast<double>(1ll)));
-
-    assert(precision_loss<float>(0x1.p24 + 1.0));
-    assert(precision_loss<float>(0x1.p10 + 0x1.p-14));
-    assert(precision_loss<float>(1.0 + 0x1.p-24));
 
     return true;
 }

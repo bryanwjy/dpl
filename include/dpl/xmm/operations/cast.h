@@ -273,7 +273,7 @@ inline simd<To> DPL_VECTORCALL
 
     constexpr auto exp_mask =
         xmm::broadcast<uint>(tag, static_cast<uint>(0x1f) << 52);
-    auto const isfinite = simd<uint>(_mm_cmpgt_epi64(+exp_mask, parg));
+    auto const isfinite = simd<uint>(_mm_cmpgt_epi64(+exp_mask, +parg));
 
     constexpr auto inf64 = xmm::broadcast<uint>(
         tag, __DPL bit_cast<uint>(dx::infinity_v<double>));
@@ -548,11 +548,12 @@ inline simd<To> DPL_VECTORCALL
         xmm::add(tag,
             xmm::bwand(tag, xmm::bwshift_right<13>(tag, shifted),
                 xmm::broadcast<uint>(tag, dx::one)),
-            xmm::add(tag, shifted, xmm::broadcast<uint>(tag, 0x1000u))));
+            xmm::add(tag, shifted, xmm::broadcast<uint>(tag, 0xfffu))));
 
     auto const limit = xmm::broadcast<E>(tag, 0x1p16f);
     auto const isinf = simd<E>(_mm_cmpge_ps(+abs, +limit));
-    auto const isnan = simd<E>(_mm_cmpunord_ps(+src, +src));
+    auto const isnan =
+        xmm::bwandnot(tag, simd<E>(_mm_cmpunord_ps(+src, +src)), msb32);
 
     using sint16 = signed_representation_t<To>;
     constexpr auto infval =
@@ -580,28 +581,40 @@ inline simd<To> DPL_VECTORCALL
     auto const i64 = xmm::reinterpret<sint>(tag, src);
     auto const msb64 = xmm::broadcast<sint>(tag, dx::msb);
     auto const sign16 = xmm::bwshift_right<48>(
-        tag, xmm::reinterpret<uint>(xmm::bwand(tag, msb64, i64)));
+        tag, xmm::reinterpret<uint>(tag, xmm::bwand(tag, msb64, i64)));
     auto const abs = xmm::reinterpret<E>(tag, xmm::bwandnot(tag, i64, msb64));
-    auto const shifted =
-        xmm::multiply(tag, abs, xmm::broadcast<E>(tag, 0x1p-1008));
+    auto const shifted = xmm::reinterpret<uint>(
+        tag, xmm::multiply(tag, abs, xmm::broadcast<E>(tag, 0x1p-1008)));
+    constexpr auto round_mask = (0x1ull << 41) - 1ull;
     auto const rounded = xmm::bwshift_right<42>(tag,
         xmm::add(tag,
             xmm::bwand(tag, xmm::bwshift_right<42>(tag, shifted),
                 xmm::broadcast<uint>(tag, dx::one)),
-            xmm::add(tag, xmm::reinterpret<uint>(tag, shifted),
-                xmm::broadcast<uint>(tag, 0x1ull << 41))));
+            xmm::add(tag, shifted, xmm::broadcast<uint>(tag, round_mask))));
     auto const limit = xmm::broadcast<E>(tag, 0x1p16);
     auto const isinf = simd<E>(_mm_cmpge_pd(+abs, +limit));
-    auto const isnan = _mm_cmpunord_pd(+src, +src);
+    auto const isnan = xmm::bwand(tag, simd<E>(_mm_cmpunord_pd(+src, +src)),
+        xmm::broadcast<sint>(tag, 0x7fff));
 
-    auto const inf16 = xmm::broadcast<To>(tag, dx::infinity);
-    auto const f16 = xmm::select(
-        isinf, xmm::reinterpret<E>(inf16), xmm::reinterpret<E>(rounded));
-    auto const result = xmm::reinterpret<uint>(tag, xmm::bwor(tag, isnan, f16));
+    using sint16 = signed_representation_t<To>;
+    constexpr auto infval =
+        static_cast<sint>(__DPL bit_cast<sint16>(dx::infinity_v<To>));
+    auto const inf16 =
+        xmm::reinterpret<To>(tag, xmm::broadcast<sint>(tag, infval));
+    auto const f16 = xmm::select(tag, isinf, xmm::reinterpret<E>(tag, inf16),
+        xmm::reinterpret<E>(tag, rounded));
+    auto const result = xmm::bwor(
+        tag, sign16, xmm::reinterpret<uint>(tag, xmm::bwor(tag, isnan, f16)));
 
     using u16 = signed_representation_t<To>;
+
+    auto const zero = _mm_setzero_si128();
     // The cast here is just to ditribute the bits into place
-    return xmm::reinterpret<To>(tag, xmm::cast<u16>(tag, result));
+    return xmm::reinterpret<To>(tag,
+        simd<To>(_mm_packus_epi32(
+            _mm_shuffle_ps(_mm_castsi128_ps(+result), _mm_castsi128_ps(zero),
+                _MM_SHUFFLE(2, 0, 2, 0)),
+            zero)));
 #endif
 }
 
