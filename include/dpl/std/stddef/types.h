@@ -15,7 +15,11 @@ DPL_EXPORT using ptrdiff_t = decltype((char*)0 - (char*)0);
 DPL_EXPORT using size_t = decltype(sizeof(0));
 
 #if DPL_SUPPORTS_FLOAT16
+#  if DPL_SUPPORTS_EXT_FLOAT16 & DPL_IS_RESERVED_IDENTIFIER(_Float16)
 DPL_EXPORT using float16 = decltype(0.0f16);
+#  elif DPL_SUPPORTS_EXT_FLOAT16 & DPL_IS_RESERVED_IDENTIFIER(__fp16)
+DPL_EXPORT using float16 = __fp16;
+#  endif
 #endif
 #if DPL_SUPPORTS_FLOAT32
 DPL_EXPORT using float32 = decltype(0.0f32);

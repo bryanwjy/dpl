@@ -17,6 +17,11 @@
 #    define DPL_SUPPORTS_FLOAT16 1
 #    define DPL_SUPPORTS_EXT_FLOAT16 1
 #  endif
+#elif DPL_IS_RESERVED_IDENTIFIER(__f16)
+#  if !DPL_DISABLE_F16_SUPPORT
+#    define DPL_SUPPORTS_FLOAT16 1
+#    define DPL_SUPPORTS_EXT_FLOAT16 1
+#  endif
 #endif
 #ifdef __STDCPP_FLOAT32_T__
 #  define DPL_SUPPORTS_FLOAT32 1

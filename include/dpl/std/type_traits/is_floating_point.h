@@ -20,6 +20,17 @@ DPL_EXPORT template <>
 inline constexpr bool is_floating_point_v<float16 const volatile> = true;
 DPL_EXPORT template <>
 inline constexpr bool is_floating_point_v<float16 volatile> = true;
+#    if DPL_IS_RESERVED_IDENTIFIER(__fp16) & \
+        DPL_IS_RESERVED_IDENTIFIER(_Float16)
+DPL_EXPORT template <>
+inline constexpr bool is_floating_point_v<__fp16> = true;
+DPL_EXPORT template <>
+inline constexpr bool is_floating_point_v<__fp16 const> = true;
+DPL_EXPORT template <>
+inline constexpr bool is_floating_point_v<__fp16 const volatile> = true;
+DPL_EXPORT template <>
+inline constexpr bool is_floating_point_v<__fp16 volatile> = true;
+#    endif
 #  endif
 #  if DPL_SUPPORTS_EXT_BFLOAT16
 DPL_EXPORT template <>
