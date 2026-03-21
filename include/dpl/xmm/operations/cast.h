@@ -500,7 +500,8 @@ inline simd<TE> DPL_VECTORCALL cast(abi_tag, simd<FE> from) noexcept {
 #if DPL_SIMD_X86_AVX512BF16 & DPL_SIMD_X86_AVX512VL
     return _mm_cvtneps_pbh(+from);
 #else
-    auto const ival = _mm_castps_si128(+from);
+    // deal with nan & inf
+    auto const ival = __DPL bit_cast<__m128i>(+from);
     // round to nearest even
     auto const lsb = _mm_and_si128(_mm_srli_epi32(ival, 16), _mm_set1_epi32(1));
     auto const bias = _mm_add_epi32(_mm_set1_epi32(0x7fff), lsb);
@@ -553,10 +554,15 @@ inline simd<To> DPL_VECTORCALL
     auto const isinf = simd<E>(_mm_cmpge_ps(+abs, +limit));
     auto const isnan = simd<E>(_mm_cmpunord_ps(+src, +src));
 
-    auto const inf16 = xmm::broadcast<To>(tag, dx::infinity);
+    using sint16 = signed_representation_t<To>;
+    constexpr auto infval =
+        static_cast<sint>(__DPL bit_cast<sint16>(dx::infinity_v<To>));
+    auto const inf16 =
+        xmm::reinterpret<To>(tag, xmm::broadcast<sint>(tag, infval));
     auto const f16 = xmm::select(tag, isinf, xmm::reinterpret<E>(tag, inf16),
         xmm::reinterpret<E>(tag, rounded));
-    auto const result = xmm::reinterpret<uint>(tag, xmm::bwor(tag, isnan, f16));
+    auto const result = xmm::bwor(
+        tag, sign16, xmm::reinterpret<uint>(tag, xmm::bwor(tag, isnan, f16)));
     return xmm::reinterpret<To>(
         tag, simd<uint>(_mm_packus_epi32(+result, _mm_setzero_si128())));
 #endif

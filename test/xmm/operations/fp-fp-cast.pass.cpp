@@ -26,7 +26,8 @@ constexpr bool round_trip(From val, Pred pred = dpp::cmpeq) noexcept {
         dpp::bit_keep(keep_mask, dpp::broadcast<To, abi>(static_cast<To>(val)));
     auto const actual_dst = dpp::cast<To>(src);
     auto const dstequal = pred(actual_dst, dst);
-    auto const isequal = pred(dpp::cast<From>(actual_dst), src);
+    auto const actual_castback = dpp::cast<From>(actual_dst);
+    auto const isequal = pred(actual_castback, src);
     return dpp::all_of(isequal) && dpp::all_of(dstequal);
 }
 

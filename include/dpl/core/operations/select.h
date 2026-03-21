@@ -158,7 +158,7 @@ private:
         static constexpr immediate_mask<element_count<ET, A>, V> mask{};
         using ER = ternary_type_t<ET, EF>;
         return internal::itransform<basic_simd<ER, A>>(
-            [](size_t idx, ET tval, EF fval) -> ER {
+            [](auto idx, ET tval, EF fval) -> ER {
                 return mask[idx] ? tval : fval;
             },
             tval, fval);
@@ -171,7 +171,7 @@ private:
         static constexpr immediate_mask<element_count<ET, A>, V> mask{};
         using ER = common_size_type_t<ET, EF>;
         return internal::itransform<basic_simd_mask<ER, A>>(
-            [](size_t idx, ET tval, EF fval) -> ER {
+            [](auto idx, ET tval, EF fval) -> ER {
                 return mask[idx] ? tval : fval;
             },
             tval, fval);

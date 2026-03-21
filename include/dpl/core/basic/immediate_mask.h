@@ -8,6 +8,9 @@
 #include "dpl/core/basic/zero.h"
 
 #if !DPL_MODULES
+#  include "dpl/core/concepts/simd_abi.h"
+#  include "dpl/core/type_traits/element_count.h"
+#  include "dpl/core/type_traits/iota_sequence.h"
 #  include "dpl/std/bit/bit_type.h"
 #  include "dpl/std/bit/char_bit.h"
 #  include "dpl/std/bit/countr.h"

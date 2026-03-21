@@ -103,7 +103,7 @@ constexpr E extract(
                     _mm_extract_epi16(__DPL bit_cast<__m128i>(+src), imm8)));
             }
 #else
-            return __DPL bit_cast<E>(static_cast<E>(
+            return __DPL bit_cast<E>(static_cast<signed_representation_t<E>>(
                 _mm_extract_epi16(__DPL bit_cast<__m128i>(+src), imm8)));
 #endif
         } else {
