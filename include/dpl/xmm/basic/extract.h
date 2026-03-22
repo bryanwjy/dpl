@@ -95,7 +95,7 @@ constexpr E extract(
                 _mm_extract_epi64(_mm_castpd_si128(+src), idx));
         } else if constexpr (floating_point<E> && sizeof(E) == 2) {
 #if DPL_SIMD_X86_AVX512FP16
-            if constexpr (!brain_float<E>) {
+            if constexpr (!bfloat16_like<E>) {
                 return __DPL bit_cast<E>(static_cast<E>(
                     _mm_extract_epi16(_mm_castph_si128(+src), imm8)));
             } else {

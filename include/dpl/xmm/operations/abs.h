@@ -67,7 +67,7 @@ inline simd<negated_type<E>> DPL_VECTORCALL
         return _mm_andnot_ps(_mm_set1_ps(-0.0f), +val);
     } else if constexpr (common_float_with<E, double>) {
         return _mm_andnot_pd(_mm_set1_pd(-0.0), +val);
-    } else if constexpr (brain_float<E>) {
+    } else if constexpr (bfloat16_like<E>) {
         using sbit = signed_representation_t<E>;
         auto const vval = +xmm::reinterpret<sbit>(tag, val);
         simd<sbit> const result =

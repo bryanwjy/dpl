@@ -45,7 +45,7 @@ constexpr simd<E> reinterpret(abi_tag tag, simd<F> src) noexcept {
                 return _mm_castpd_ps(+src);
             } else if constexpr (same_as<__m128, native_vector_t<F>>) {
                 return +src;
-            } else if constexpr (brain_float<F>) {
+            } else if constexpr (bfloat16_like<F>) {
                 static_assert(same_as<__m128bh, native_vector_t<F>>);
                 return __DPL bit_cast<native_vector_t<E>>(+src);
             } else {
@@ -63,7 +63,7 @@ constexpr simd<E> reinterpret(abi_tag tag, simd<F> src) noexcept {
                 return _mm_castsi128_pd(+src);
             } else if constexpr (same_as<__m128d, native_vector_t<F>>) {
                 return +src;
-            } else if constexpr (brain_float<F>) {
+            } else if constexpr (bfloat16_like<F>) {
                 static_assert(same_as<__m128bh, native_vector_t<F>>);
                 return __DPL bit_cast<native_vector_t<E>>(+src);
             } else {
@@ -81,7 +81,7 @@ constexpr simd<E> reinterpret(abi_tag tag, simd<F> src) noexcept {
                 return _mm_castps_si128(+src);
             } else if constexpr (same_as<__m128i, native_vector_t<F>>) {
                 return +src;
-            } else if constexpr (brain_float<F>) {
+            } else if constexpr (bfloat16_like<F>) {
                 static_assert(same_as<__m128bh, native_vector_t<F>>);
                 return __DPL bit_cast<native_vector_t<E>>(+src);
             } else {
@@ -92,7 +92,7 @@ constexpr simd<E> reinterpret(abi_tag tag, simd<F> src) noexcept {
                 return __DPL bit_cast<native_vector_t<E>>(+src);
 #endif
             }
-        } else if constexpr (brain_float<E>) {
+        } else if constexpr (bfloat16_like<E>) {
             static_assert(same_as<__m128bh, native_vector_t<E>>);
             return __DPL bit_cast<native_vector_t<E>>(+src);
         } else {
@@ -104,7 +104,7 @@ constexpr simd<E> reinterpret(abi_tag tag, simd<F> src) noexcept {
                 return _mm_castpd_ph(+src);
             } else if constexpr (common_float_with<float, F>) {
                 return _mm_castps_ph(+src);
-            } else if constexpr (brain_float<F>) {
+            } else if constexpr (bfloat16_like<F>) {
                 static_assert(same_as<__m128bh, native_vector_t<F>>);
                 return __DPL bit_cast<native_vector_t<E>>(+src);
             } else {

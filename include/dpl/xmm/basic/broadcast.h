@@ -45,7 +45,7 @@ constexpr simd<E> broadcast(abi_tag tag, type_identity_t<E> scalar) noexcept {
             return _mm_set1_ps(scalar);
         } else if constexpr (common_float_with<double, E>) {
             return _mm_set1_pd(scalar);
-        } else if constexpr (brain_float<E> || fp16_like<E>) {
+        } else if constexpr (bfloat16_like<E> || float16_like<E>) {
             return __DPL bit_cast<native_vector_t<E>>(
                 _mm_set1_epi16(__DPL bit_cast<int16>(scalar)));
         } else if constexpr (common_bits_with<E, int32>) {

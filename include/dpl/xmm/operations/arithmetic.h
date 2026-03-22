@@ -178,27 +178,27 @@ inline simd<E> DPL_VECTORCALL
 }
 
 #if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
-DPL_EXPORT template <fp16_like E>
+DPL_EXPORT template <float16_like E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<E> DPL_VECTORCALL add(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
     return _mm_add_ph(+lhs, +rhs);
 }
 
-DPL_EXPORT template <fp16_like E>
+DPL_EXPORT template <float16_like E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<E> DPL_VECTORCALL
     subtract(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
     return _mm_sub_ph(+lhs, +rhs);
 }
 
-DPL_EXPORT template <fp16_like E>
+DPL_EXPORT template <float16_like E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<E> DPL_VECTORCALL
     multiply(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
     return _mm_mul_ph(+lhs, +rhs);
 }
 
-DPL_EXPORT template <fp16_like E>
+DPL_EXPORT template <float16_like E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<E> DPL_VECTORCALL
     divide(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
@@ -206,7 +206,7 @@ inline simd<E> DPL_VECTORCALL
 }
 #endif
 
-DPL_EXPORT template <brain_float E>
+DPL_EXPORT template <bfloat16_like E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<E> DPL_VECTORCALL
     add(abi_tag tag, simd<E> lhs, simd<E> rhs) noexcept {
@@ -229,7 +229,7 @@ inline simd<E> DPL_VECTORCALL
 #endif
 }
 
-DPL_EXPORT template <brain_float E>
+DPL_EXPORT template <bfloat16_like E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<E> DPL_VECTORCALL
     subtract(abi_tag tag, simd<E> lhs, simd<E> rhs) noexcept {
@@ -252,7 +252,7 @@ inline simd<E> DPL_VECTORCALL
 #endif
 }
 
-DPL_EXPORT template <brain_float E>
+DPL_EXPORT template <bfloat16_like E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<E> DPL_VECTORCALL
     multiply(abi_tag tag, simd<E> lhs, simd<E> rhs) noexcept {
@@ -275,7 +275,7 @@ inline simd<E> DPL_VECTORCALL
 #endif
 }
 
-DPL_EXPORT template <brain_float E>
+DPL_EXPORT template <bfloat16_like E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<E> DPL_VECTORCALL
     divide(abi_tag tag, simd<E> lhs, simd<E> rhs) noexcept {

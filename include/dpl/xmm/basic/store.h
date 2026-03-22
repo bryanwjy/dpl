@@ -44,7 +44,7 @@ __DPL_HIDE_FROM_ABI constexpr void store(
         } else if constexpr (integral<E>) {
             static_assert(integral<E>);
             _mm_storeu_si128(reinterpret_cast<__m128i*>(dst), +src);
-        } else if constexpr (brain_float<E>) {
+        } else if constexpr (bfloat16_like<E>) {
             _mm_storeu_si128(reinterpret_cast<__m128i*>(dst),
                 __DPL bit_cast<__m128i>(+src));
         } else {
@@ -72,7 +72,7 @@ __DPL_HIDE_FROM_ABI constexpr void aligned_store(
         } else if constexpr (integral<E>) {
             static_assert(integral<E>);
             _mm_store_si128(reinterpret_cast<__m128i*>(dst), +src);
-        } else if constexpr (brain_float<E>) {
+        } else if constexpr (bfloat16_like<E>) {
             _mm_store_si128(reinterpret_cast<__m128i*>(dst),
                 __DPL bit_cast<__m128i>(+src));
         } else {

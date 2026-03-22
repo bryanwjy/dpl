@@ -64,10 +64,10 @@ struct native_vector<T> {
 };
 
 template <typename T>
-concept native_vector_type = same_as<T, decltype(_mm_setzero_ps())> //
-    || same_as<T, decltype(_mm_setzero_pd())>                       //
-    || same_as<T, decltype(_mm_setzero_si128())>                    //
-    || same_as<T, __m128bh>                                         //
+concept native_vector_type = same_as<T, __m128> //
+    || same_as<T, __m128d>                      //
+    || same_as<T, __m128i>                      //
+    || same_as<T, __m128bh>                     //
     || same_as<T, __m128h>;
 
 inline constexpr struct template_barrier_t {
@@ -99,8 +99,11 @@ DPL_EXPORT template <simd_element E>
 using mask DPL_NODEBUG = dx::basic_simd_mask<E, abi_tag>;
 
 template <typename T>
-concept fp16_like =
+concept float16_like =
     floating_point<T> && !brain_float<T> && sizeof(T) == sizeof(int16);
+
+template <typename T>
+concept bfloat16_like = floating_point<T> && brain_float<T>;
 
 } // namespace datapar::xmm
 

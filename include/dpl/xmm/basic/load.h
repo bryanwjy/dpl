@@ -40,7 +40,7 @@ constexpr simd<E> load(abi_tag tag, E const* data) noexcept {
             return _mm_loadu_ps(reinterpret_cast<float const*>(data));
         } else if constexpr (common_float_with<double, E>) {
             return _mm_loadu_pd(reinterpret_cast<double const*>(data));
-        } else if constexpr (brain_float<E>) {
+        } else if constexpr (bfloat16_like<E>) {
             return __DPL bit_cast<native_vector_t<E>>(
                 _mm_loadu_si128(reinterpret_cast<__m128i const*>(data)));
         } else if constexpr (floating_point<E> && sizeof(E) == 2) {
@@ -66,7 +66,7 @@ constexpr simd<E> aligned_load(abi_tag tag, E const* data) noexcept {
             return _mm_load_ps(reinterpret_cast<float const*>(data));
         } else if constexpr (common_float_with<double, E>) {
             return _mm_load_pd(reinterpret_cast<double const*>(data));
-        } else if constexpr (brain_float<E>) {
+        } else if constexpr (bfloat16_like<E>) {
             return __DPL bit_cast<native_vector_t<E>>(
                 _mm_load_si128(reinterpret_cast<__m128i const*>(data)));
         } else if constexpr (floating_point<E> && sizeof(E) == 2) {
