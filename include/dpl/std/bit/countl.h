@@ -14,7 +14,10 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 namespace details::bit {
 #if DPL_HAS_BUILTIN(__builtin_clzg)
 
-#  define __DPL_clz(...) __builtin_clzg(__VA_ARGS__)
+#  define __DPL_clz(...)                                             \
+      [](auto arg) {                                                 \
+        return arg ? __builtin_clzg(arg) : sizeof(arg) * char_bit_v; \
+      }(__VA_ARGS__)
 
 #elif DPL_HAS_BUILTIN(__builtin_clz) & DPL_HAS_BUILTIN(__builtin_clzl) &
 DPL_HAS_BUILTIN(__builtin_clzll)

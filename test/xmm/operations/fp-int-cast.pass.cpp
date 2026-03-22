@@ -1,4 +1,7 @@
 // Copyright 2025-2026 Bryan Wong
+#include "dpl/config.h"
+
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=2000000
 #include <cassert>
 
 import dpl.xmm;
@@ -7,6 +10,16 @@ namespace xmm = dpl::datapar::xmm;
 namespace dpp = dpl::datapar;
 
 namespace {
+
+#if DPL_SUPPORTS_EXT_BFLOAT16 & !defined(__BFLT16_MAX__)
+DPL_DISABLE_WARNING("-Wuser-defined-literals")
+consteval dpl::bfloat16 operator""_bf16(long double val) noexcept {
+    return static_cast<dpl::bfloat16>(val);
+}
+#  define BF16(X) X##_bf16
+#elif defined(__BFLT16_MAX__)
+#  define BF16(X) X##bf16
+#endif
 
 constexpr auto min(auto lhs, auto rhs) noexcept {
     return lhs < rhs ? lhs : rhs;
@@ -173,35 +186,57 @@ constexpr bool test_int_to_fp() noexcept {
     general_int_to_fp<dpl::int16, float>();
     general_int_to_fp<dpl::int8, float>();
 
-    general_int_to_fp<dpl::int64, double>();
-    general_int_to_fp<dpl::int32, double>();
-    general_int_to_fp<dpl::int16, double>();
-    general_int_to_fp<dpl::int8, double>();
-
     general_int_to_fp<dpl::uint64, float>();
     general_int_to_fp<dpl::uint32, float>();
     general_int_to_fp<dpl::uint16, float>();
     general_int_to_fp<dpl::uint8, float>();
-
-    general_int_to_fp<dpl::uint64, double>();
-    general_int_to_fp<dpl::uint32, double>();
-    general_int_to_fp<dpl::uint16, double>();
-    general_int_to_fp<dpl::uint8, double>();
 
     parallel_int_to_fp<dpl::int64, float>();
     parallel_int_to_fp<dpl::int32, float>();
     parallel_int_to_fp<dpl::int16, float>();
     parallel_int_to_fp<dpl::int8, float>();
 
-    parallel_int_to_fp<dpl::int64, double>();
-    parallel_int_to_fp<dpl::int32, double>();
-    parallel_int_to_fp<dpl::int16, double>();
-    parallel_int_to_fp<dpl::int8, double>();
-
     parallel_int_to_fp<dpl::uint64, float>();
     parallel_int_to_fp<dpl::uint32, float>();
     parallel_int_to_fp<dpl::uint16, float>();
     parallel_int_to_fp<dpl::uint8, float>();
+
+#if DPL_SUPPORTS_BFLOAT16
+    general_int_to_fp<dpl::int64, dpl::bfloat16>();
+    general_int_to_fp<dpl::int32, dpl::bfloat16>();
+    general_int_to_fp<dpl::int16, dpl::bfloat16>();
+    general_int_to_fp<dpl::int8, dpl::bfloat16>();
+
+    general_int_to_fp<dpl::uint64, dpl::bfloat16>();
+    general_int_to_fp<dpl::uint32, dpl::bfloat16>();
+    general_int_to_fp<dpl::uint16, dpl::bfloat16>();
+    general_int_to_fp<dpl::uint8, dpl::bfloat16>();
+
+    parallel_int_to_fp<dpl::int64, dpl::bfloat16>();
+    parallel_int_to_fp<dpl::int32, dpl::bfloat16>();
+    parallel_int_to_fp<dpl::int16, dpl::bfloat16>();
+    parallel_int_to_fp<dpl::int8, dpl::bfloat16>();
+
+    parallel_int_to_fp<dpl::uint64, dpl::bfloat16>();
+    parallel_int_to_fp<dpl::uint32, dpl::bfloat16>();
+    parallel_int_to_fp<dpl::uint16, dpl::bfloat16>();
+    parallel_int_to_fp<dpl::uint8, dpl::bfloat16>();
+#endif
+
+    general_int_to_fp<dpl::int64, double>();
+    general_int_to_fp<dpl::int32, double>();
+    general_int_to_fp<dpl::int16, double>();
+    general_int_to_fp<dpl::int8, double>();
+
+    general_int_to_fp<dpl::uint64, double>();
+    general_int_to_fp<dpl::uint32, double>();
+    general_int_to_fp<dpl::uint16, double>();
+    general_int_to_fp<dpl::uint8, double>();
+
+    parallel_int_to_fp<dpl::int64, double>();
+    parallel_int_to_fp<dpl::int32, double>();
+    parallel_int_to_fp<dpl::int16, double>();
+    parallel_int_to_fp<dpl::int8, double>();
 
     parallel_int_to_fp<dpl::uint64, double>();
     parallel_int_to_fp<dpl::uint32, double>();
@@ -212,6 +247,12 @@ constexpr bool test_int_to_fp() noexcept {
     return true;
 }
 
+constexpr auto nextbefore(auto val) noexcept {
+    using type = decltype(val);
+    using rep = dpp::signed_representation_t<type>;
+    return dpl::bit_cast<type>(static_cast<rep>(dpl::bit_cast<rep>(val) - 1));
+}
+
 template <dpl::floating_point F, dpl::integral I>
 constexpr void general_fp_to_int() noexcept {
     auto const inputs = [](auto... vals) {
@@ -220,12 +261,11 @@ constexpr void general_fp_to_int() noexcept {
         } else {
             return array{vals..., -vals...};
         }
-    }(F(0.0), F(1.9), F(0.99999994), dpp::min_value_v<F>);
+    }(F(0.0), F(1.9), nextbefore(F(1)), dpp::min_value_v<F>);
     auto const make_expected = [](F val) {
-        constexpr auto to_keep = sizeof(I) > sizeof(F)
-            ? dpp::element_count<I, xmm::abi_tag>
-            : dpp::element_count<F, xmm::abi_tag>;
-        constexpr auto mask = dpp::imm<(1 << to_keep) - 1>;
+        constexpr auto keep = min(dpp::element_count<F, xmm::abi_tag>,
+            dpp::element_count<I, xmm::abi_tag>);
+        constexpr auto mask = dpp::imm<(1 << keep) - 1>;
         auto const result =
             dpp::broadcast<I, xmm::abi_tag>(static_cast<I>(val));
         return dpp::bit_keep(mask, result);
@@ -242,18 +282,28 @@ constexpr void general_fp_to_int() noexcept {
 template <dpl::floating_point F, dpl::integral I>
 constexpr void large_sp_to_int() noexcept {
     static_assert(sizeof(I) == sizeof(float));
+    using rep_t = dpp::signed_representation_t<F>;
+    constexpr auto max = []() {
+        auto const rep = rep_t(-1)
+            << (sizeof(F) * dpl::char_bit_v - dpp::digits_v<F> - 1);
+        auto const val = rep & dpp::max_value_v<rep_t>;
+        if (val > dpp::max_value_v<I>) {
+            return static_cast<F>(dpp::max_value_v<I>);
+        } else {
+            return static_cast<F>(val);
+        }
+    }();
     auto const inputs = [](auto... vals) {
         if constexpr (dpl::unsigned_integral<I>) {
             return array{vals...};
         } else {
-            return array{vals..., -vals..., F(-2147483648.0)};
+            return array{vals..., -vals..., F(dpp::min_value_v<I>)};
         }
-    }(F(16777216.0), F(16777217.0), F(2147483520.0));
+    }(F(16777216.0), F(16777217.0), max);
     auto const make_expected = [](F val) {
-        constexpr auto to_keep = sizeof(I) > sizeof(F)
-            ? dpp::element_count<I, xmm::abi_tag>
-            : dpp::element_count<F, xmm::abi_tag>;
-        constexpr auto mask = dpp::imm<(1 << to_keep) - 1>;
+        constexpr auto keep = min(dpp::element_count<F, xmm::abi_tag>,
+            dpp::element_count<I, xmm::abi_tag>);
+        constexpr auto mask = dpp::imm<(1 << keep) - 1>;
         auto const result =
             dpp::broadcast<I, xmm::abi_tag>(static_cast<I>(val));
         return dpp::bit_keep(mask, result);
@@ -268,7 +318,7 @@ constexpr void large_sp_to_int() noexcept {
 }
 
 template <dpl::floating_point F, dpl::integral I>
-constexpr void large_sp_to_long() noexcept {
+constexpr void large_fp_to_long() noexcept {
     static_assert(sizeof(I) == sizeof(double));
     auto const inputs = []() {
         if constexpr (dpp::common_float_with<F, float>) {
@@ -279,6 +329,15 @@ constexpr void large_sp_to_long() noexcept {
                     return array{vals..., -vals...};
                 }
             }(0x1.p24f, 0x1.p24f + 1.0f, 0x1.p40f, 0x1.p40f + 1.0f, 0x1.p56f);
+        } else if constexpr (dpl::brain_float<F>) {
+            return [](auto... vals) {
+                if constexpr (dpl::unsigned_integral<I>) {
+                    return array{vals...};
+                } else {
+                    return array{vals..., -vals...};
+                }
+            }(BF16(0x1.p24), BF16(0x1.p24) + BF16(1.0), BF16(0x1.p40),
+                       BF16(0x1.p40) + BF16(1.0), BF16(0x1.p56));
         } else {
             static_assert(dpp::common_float_with<F, double>);
             return [](auto... vals) {
@@ -317,13 +376,12 @@ constexpr void parallel_fp_to_int() noexcept {
             F(11), F(12), F(13), F(14), F(15));
     auto const make_expected = [](F const* ptr) {
         return [&]<dpl::size_t... Is>(dpl::index_sequence<Is...>) {
-            constexpr auto to_keep = sizeof(F) < sizeof(I)
-                ? dpp::element_count<I, xmm::abi_tag>
-                : dpp::element_count<F, xmm::abi_tag>;
+            constexpr auto keep = min(dpp::element_count<F, xmm::abi_tag>,
+                dpp::element_count<I, xmm::abi_tag>);
 
             constexpr F zero = 0;
             return dpp::initialize<I, xmm::abi_tag>(
-                static_cast<I>(Is < to_keep ? ptr[Is] : zero)...);
+                static_cast<I>(Is < keep ? ptr[Is] : zero)...);
         }(dpp::iota_sequence<I, xmm::abi_tag>);
     };
 
@@ -348,6 +406,17 @@ constexpr bool test_fp_to_int() noexcept {
     general_fp_to_int<float, dpl::uint16>();
     general_fp_to_int<float, dpl::uint8>();
 
+#if DPL_SUPPORTS_BFLOAT16
+    general_fp_to_int<dpl::bfloat16, dpl::int64>();
+    general_fp_to_int<dpl::bfloat16, dpl::int32>();
+    general_fp_to_int<dpl::bfloat16, dpl::int16>();
+    general_fp_to_int<dpl::bfloat16, dpl::int8>();
+    general_fp_to_int<dpl::bfloat16, dpl::uint64>();
+    general_fp_to_int<dpl::bfloat16, dpl::uint32>();
+    general_fp_to_int<dpl::bfloat16, dpl::uint16>();
+    general_fp_to_int<dpl::bfloat16, dpl::uint8>();
+#endif
+
     general_fp_to_int<double, dpl::int64>();
     general_fp_to_int<double, dpl::int32>();
     general_fp_to_int<double, dpl::int16>();
@@ -359,12 +428,19 @@ constexpr bool test_fp_to_int() noexcept {
 
     large_sp_to_int<float, dpl::int32>();
     large_sp_to_int<float, dpl::uint32>();
+    large_fp_to_long<float, dpl::int64>();
+    large_fp_to_long<float, dpl::uint64>();
     large_sp_to_int<double, dpl::int32>();
     large_sp_to_int<double, dpl::uint32>();
-    large_sp_to_long<float, dpl::int64>();
-    large_sp_to_long<float, dpl::uint64>();
-    large_sp_to_long<double, dpl::int64>();
-    large_sp_to_long<double, dpl::uint64>();
+    large_fp_to_long<double, dpl::int64>();
+    large_fp_to_long<double, dpl::uint64>();
+
+#if DPL_SUPPORTS_BFLOAT16
+    large_sp_to_int<dpl::bfloat16, dpl::int32>();
+    large_sp_to_int<dpl::bfloat16, dpl::uint32>();
+    large_fp_to_long<dpl::bfloat16, dpl::int64>();
+    large_fp_to_long<dpl::bfloat16, dpl::uint64>();
+#endif
 
     parallel_fp_to_int<float, dpl::int64>();
     parallel_fp_to_int<float, dpl::int32>();
@@ -374,6 +450,17 @@ constexpr bool test_fp_to_int() noexcept {
     parallel_fp_to_int<float, dpl::uint32>();
     parallel_fp_to_int<float, dpl::uint16>();
     parallel_fp_to_int<float, dpl::uint8>();
+
+#if DPL_SUPPORTS_BFLOAT16
+    parallel_fp_to_int<dpl::bfloat16, dpl::int64>();
+    parallel_fp_to_int<dpl::bfloat16, dpl::int32>();
+    parallel_fp_to_int<dpl::bfloat16, dpl::int16>();
+    parallel_fp_to_int<dpl::bfloat16, dpl::int8>();
+    parallel_fp_to_int<dpl::bfloat16, dpl::uint64>();
+    parallel_fp_to_int<dpl::bfloat16, dpl::uint32>();
+    parallel_fp_to_int<dpl::bfloat16, dpl::uint16>();
+    parallel_fp_to_int<dpl::bfloat16, dpl::uint8>();
+#endif
 
     parallel_fp_to_int<double, dpl::int64>();
     parallel_fp_to_int<double, dpl::int32>();

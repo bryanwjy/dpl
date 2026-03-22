@@ -142,8 +142,8 @@ struct convert_t<To> {
 #if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
             return _mm_cvtepi64_epi32(+src);
 #else
-            return _mm_insert_epi64(
-                _mm_shuffle_epi32(+src, _MM_SHUFFLE(2, 0, 2, 0)), 0, 1);
+            return _mm_castps_si128(_mm_shuffle_ps(_mm_castsi128_ps(+src),
+                _mm_setzero_ps(), _MM_SHUFFLE(2, 0, 2, 0)));
 #endif
         } else if constexpr (dx::common_arithmetic_with<To, E>) {
             return +src;
@@ -210,22 +210,23 @@ struct convert_t<To> {
             return _mm_cvttph_epu32(+src);
         }
 #else
+        constexpr convert_t<front_t<float, E>> to_fp32{};
         if constexpr (signed_integral<To>) {
             // Cheaper to convert to float first
-            return _mm_cvttps_epi32(+xmm::cast<float>(src));
+            return _mm_cvttps_epi32(+to_fp32(src));
         } else {
             constexpr auto mantissa_width = 23u;
             constexpr auto hidden_bit = 1u << mantissa_width;
             constexpr auto bias = 127;
             // There's likely a faster way, but this is just easier :p
-            auto const f32 = +xmm::cast<float>(src);
+            auto const f32 = +to_fp32(src);
             auto const u32 = _mm_castps_si128(f32);
-            auto const invalid =
-                _mm_or_ps(_mm_cmplt_epi32(u32, _mm_setzero_ps()),
-                    _mm_cmpge_epi32(u32, _mm_set1_epi32(0x7f800000)));
+            auto const valid =
+                _mm_andnot_si128(_mm_cmplt_epi32(u32, _mm_setzero_si128()),
+                    _mm_cmplt_epi32(u32, _mm_set1_epi32(0x7f800000)));
             auto const result = _mm_cvttps_epi32(f32);
-            return _mm_castps_si128(
-                _mm_blendv_ps(result, _mm_set1_ps(-0.0f), invalid));
+            return _mm_castps_si128(_mm_blendv_ps(
+                _mm_set1_ps(-0.0f), result, _mm_castsi128_ps(valid)));
         }
 #endif
     }
@@ -248,24 +249,18 @@ struct convert_t<To> {
 #if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
             return _mm_cvtepi64_epi16(+src);
 #else
-            // Keep only low 16 bits
-            if constexpr (unsigned_integral<E> || unsigned_integral<To>) {
-                auto const masked = _mm_and_si128(+src, _mm_set1_epi32(0xffff));
-                return _mm_packs_epi32(masked, _mm_setzero_si128());
-            } else {
-                return _mm_packs_epi32(+src, _mm_setzero_si128());
-            }
+            auto const qwords = _mm_and_si128(+src, _mm_set1_epi64x(0xffff));
+            // Extract low 32 bits of each 64-bit lane
+            auto const dwords =
+                _mm_shuffle_epi32(qwords, _MM_SHUFFLE(3, 1, 2, 0));
+            return _mm_packus_epi32(dwords, _mm_setzero_si128());
 #endif
         } else if constexpr (dx::common_arithmetic_with<int32, E>) {
 #if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
             return _mm_cvtepi32_epi16(+src);
 #else
-            if constexpr (unsigned_integral<E> || unsigned_integral<To>) {
-                auto const masked = _mm_and_si128(+src, _mm_set1_epi32(0xffff));
-                return _mm_packs_epi32(masked, _mm_setzero_si128());
-            } else {
-                return _mm_packs_epi32(+src, _mm_setzero_si128());
-            }
+            auto const dwords = _mm_and_si128(+src, _mm_set1_epi32(0xffff));
+            return _mm_packus_epi32(dwords, _mm_setzero_si128());
 #endif
         } else if constexpr (dx::common_arithmetic_with<To, E>) {
             return +src;
@@ -301,16 +296,20 @@ struct convert_t<To> {
             return _mm_cvttph_epi16(+src);
         }
 #else
-        constexpr convert_t<int32> to_int;
+        constexpr convert_t<int32> to_int32;
         auto const hi = simd<E>(__DPL bit_cast<__m128h>(_mm_unpackhi_epi64(
             __DPL bit_cast<__m128i>(+src), _mm_setzero_si128())));
+        auto const lo_mask = _mm_set1_epi32(0xffff);
+        auto const left = operator()(+to_int32(src));
+        auto const right = operator()(+to_int32(hi));
+        auto result = _mm_unpacklo_epi64(+left, +right);
         if constexpr (unsigned_integral<To>) {
-            auto const lo_mask = _mm_set1_epi32(0xffff);
-            auto const left = _mm_and_si128(+to_int(src), lo_mask);
-            auto const right = _mm_and_si128(+to_int(hi), lo_mask);
-            return _mm_packs_epi32(left, right);
+            auto const error = _mm_set1_epi16(static_cast<int16>(0x8000));
+            return _mm_blendv_epi8(result, error,
+                _mm_cmplt_epi16(
+                    __DPL bit_cast<__m128i>(+src), _mm_setzero_si128()));
         } else {
-            return _mm_packs_epi32(+to_int(src), +to_int(hi));
+            return result;
         }
 #endif
     }
@@ -321,13 +320,17 @@ struct convert_t<To> {
         constexpr convert_t<int32> to_int32;
         auto const hi = simd<E>(__DPL bit_cast<__m128bh>(_mm_unpackhi_epi64(
             __DPL bit_cast<__m128i>(+src), _mm_setzero_si128())));
+        auto const lo_mask = _mm_set1_epi32(0xffff);
+        auto const left = operator()(+to_int32(src));
+        auto const right = operator()(+to_int32(hi));
+        auto result = _mm_unpacklo_epi64(+left, +right);
         if constexpr (unsigned_integral<To>) {
-            auto const lo_mask = _mm_set1_epi32(0xffff);
-            auto const left = _mm_and_si128(+to_int32(src), lo_mask);
-            auto const right = _mm_and_si128(+to_int32(hi), lo_mask);
-            return _mm_packs_epi32(left, right);
+            auto const error = _mm_set1_epi16(static_cast<int16>(0x8000));
+            return _mm_blendv_epi8(result, error,
+                _mm_cmplt_epi16(
+                    __DPL bit_cast<__m128i>(+src), _mm_setzero_si128()));
         } else {
-            return _mm_packs_epi32(+to_int32(src), +to_int32(hi));
+            return result;
         }
     }
 };
@@ -342,50 +345,27 @@ struct convert_t<To> {
 #if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
             return _mm_cvtepi64_epi8(+src);
 #else
-            if constexpr (unsigned_integral<E> || unsigned_integral<To>) {
-                auto const qwords = _mm_and_si128(+src, _mm_set1_epi64x(0xff));
-                // Extract low 32 bits of each 64-bit lane
-                auto const dwords =
-                    _mm_shuffle_epi32(qwords, _MM_SHUFFLE(3, 1, 2, 0));
-                // 32 → 16
-                auto const words = _mm_packs_epi32(dwords, _mm_setzero_si128());
-                // 16 → 8
-                return _mm_packs_epi16(words, _mm_setzero_si128());
-            } else {
-                auto const zero = _mm_setzero_ps();
-                auto const dwords = _mm_castsi128_ps(_mm_shuffle_ps(
-                    _mm_castsi128_ps(+src), zero, _MM_SHUFFLE(3, 1, 2, 0)));
-                auto const words =
-                    _mm_packs_epi32(dwords, _mm_castps_si128(zero));
-                return _mm_packs_epi16(words, _mm_castps_si128(zero));
-            }
+            auto const qwords = _mm_and_si128(+src, _mm_set1_epi64x(0xff));
+            // Extract low 32 bits of each 64-bit lane
+            auto const dwords =
+                _mm_shuffle_epi32(qwords, _MM_SHUFFLE(3, 1, 2, 0));
+            auto const zero = _mm_setzero_si128();
+            return _mm_packus_epi16(_mm_packus_epi32(dwords, zero), zero);
 #endif
         } else if constexpr (dx::common_arithmetic_with<int32, E>) {
 #if DPL_SIMD_X86_AVX512BW & DPL_SIMD_X86_AVX512VL
             return _mm_cvtepi32_epi8(+src);
 #else
-            if constexpr (unsigned_integral<E> || unsigned_integral<To>) {
-                using word_t = simd<front_t<uint16, E>>;
-                return operator()(
-                    word_t(_mm_packs_epi32(+src, _mm_setzero_si128())));
-            } else {
-                using word_t = simd<front_t<int16, E>>;
-                return operator()(
-                    word_t(_mm_packs_epi32(+src, _mm_setzero_si128())));
-            }
+            auto const masked = _mm_and_si128(+src, _mm_set1_epi32(0xff));
+            auto const zero = _mm_setzero_si128();
+            return _mm_packus_epi16(_mm_packus_epi32(masked, zero), zero);
 #endif
         } else if constexpr (dx::common_arithmetic_with<int16, E>) {
 #if DPL_SIMD_X86_AVX512BW & DPL_SIMD_X86_AVX512VL
             return _mm_cvtepi16_epi8(+src);
 #else
-            // Keep only low 8 bits of each 16-bit element
-            if constexpr (unsigned_integral<E> || unsigned_integral<To>) {
-                auto const masked = _mm_and_si128(+src, _mm_set1_epi16(0xff));
-                // Pack 16-bit → 8-bit (safe now, no saturation possible)
-                return _mm_packs_epi16(masked, _mm_setzero_si128());
-            } else {
-                return _mm_packs_epi16(+src, _mm_setzero_si128());
-            }
+            auto const masked = _mm_and_si128(+src, _mm_set1_epi16(0xff));
+            return _mm_packus_epi16(masked, _mm_setzero_si128());
 #endif
         } else {
             static_assert(dx::common_arithmetic_with<To, E>);
@@ -394,6 +374,7 @@ struct convert_t<To> {
     }
 
     template <floating_point E>
+    requires (sizeof(E) > sizeof(int16))
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static inline simd<To> DPL_VECTORCALL operator()(simd<E> src) noexcept
     requires requires(convert_t<int32> cvtepi32) { cvtepi32(src); }
@@ -927,7 +908,7 @@ struct convert_t<To> {
             return operator()(to_fp32(src));
         } else if constexpr (dx::common_arithmetic_with<int32, E>) {
             return operator()(to_fp32(src));
-        } else if constexpr (dx::common_arithmetic_with<To, E>) {
+        } else if constexpr (dx::common_arithmetic_with<int16, E>) {
             auto const hi =
                 simd<E>(_mm_unpackhi_epi64(+src, _mm_setzero_si128()));
             auto const left = operator()(to_fp32(src));

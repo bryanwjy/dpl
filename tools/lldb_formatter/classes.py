@@ -25,7 +25,7 @@ class bf16:
             result.PutCString("invalid expression")
             return
 
-        type_obj = val.GetType().GetCanonicalType()
+        type_obj = val.GetType().GetCanonicalType().GetUnqualifiedType()
         type_name = type_obj.GetName()
         data = val.GetData()
         error = lldb.SBError()
@@ -56,7 +56,7 @@ class bf16:
 
 
 TYPE_MAP = {
-    "char":  (lldb.eBasicTypeSignedChar, 1),
+    "signed char":  (lldb.eBasicTypeSignedChar, 1),
     "unsigned char": (lldb.eBasicTypeUnsignedChar, 1),
     "short": (lldb.eBasicTypeShort, 2),
     "unsigned short":(lldb.eBasicTypeUnsignedShort, 2),
