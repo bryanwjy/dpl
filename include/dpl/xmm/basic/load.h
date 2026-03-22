@@ -44,8 +44,13 @@ constexpr simd<E> load(abi_tag tag, E const* data) noexcept {
             return __DPL bit_cast<native_vector_t<E>>(
                 _mm_loadu_si128(reinterpret_cast<__m128i const*>(data)));
         } else if constexpr (floating_point<E> && sizeof(E) == 2) {
+#if DPL_SIMD_X86_AVX512FP16
             return _mm_castsi128_ph(
                 _mm_loadu_si128(reinterpret_cast<__m128i const*>(data)));
+#else
+            return __DPL bit_cast<native_vector_t<E>>(
+                _mm_loadu_si128(reinterpret_cast<__m128i const*>(data)));
+#endif
         } else {
             return _mm_loadu_si128(reinterpret_cast<__m128i const*>(data));
         }

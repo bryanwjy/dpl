@@ -417,6 +417,17 @@ constexpr bool test_fp_to_int() noexcept {
     general_fp_to_int<dpl::bfloat16, dpl::uint8>();
 #endif
 
+#if DPL_SUPPORTS_FLOAT16
+    general_fp_to_int<dpl::float16, dpl::int64>();
+    general_fp_to_int<dpl::float16, dpl::int32>();
+    general_fp_to_int<dpl::float16, dpl::int16>();
+    general_fp_to_int<dpl::float16, dpl::int8>();
+    general_fp_to_int<dpl::float16, dpl::uint64>();
+    general_fp_to_int<dpl::float16, dpl::uint32>();
+    general_fp_to_int<dpl::float16, dpl::uint16>();
+    general_fp_to_int<dpl::float16, dpl::uint8>();
+#endif
+
     general_fp_to_int<double, dpl::int64>();
     general_fp_to_int<double, dpl::int32>();
     general_fp_to_int<double, dpl::int16>();
@@ -460,6 +471,17 @@ constexpr bool test_fp_to_int() noexcept {
     parallel_fp_to_int<dpl::bfloat16, dpl::uint32>();
     parallel_fp_to_int<dpl::bfloat16, dpl::uint16>();
     parallel_fp_to_int<dpl::bfloat16, dpl::uint8>();
+#endif
+
+#if DPL_SUPPORTS_FLOAT16
+    parallel_fp_to_int<dpl::float16, dpl::int64>();
+    parallel_fp_to_int<dpl::float16, dpl::int32>();
+    parallel_fp_to_int<dpl::float16, dpl::int16>();
+    parallel_fp_to_int<dpl::float16, dpl::int8>();
+    parallel_fp_to_int<dpl::float16, dpl::uint64>();
+    parallel_fp_to_int<dpl::float16, dpl::uint32>();
+    parallel_fp_to_int<dpl::float16, dpl::uint16>();
+    parallel_fp_to_int<dpl::float16, dpl::uint8>();
 #endif
 
     parallel_fp_to_int<double, dpl::int64>();

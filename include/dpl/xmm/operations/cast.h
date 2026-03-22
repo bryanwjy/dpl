@@ -46,8 +46,10 @@ namespace details {
 template <typename>
 struct convert_t;
 
+// Used to defer template instantiation
 template <typename T0, typename... Ts>
-using front_t = dpl::conditional_t<(... && !same_as<Ts, T0>), T0, T0>;
+using front_t DPL_NODEBUG =
+    dpl::conditional_t<(... && !is_same_v<Ts, T0>), T0, T0>;
 
 template <integral_cast_target_like<int64> To>
 struct convert_t<To> {
