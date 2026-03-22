@@ -11,7 +11,6 @@ namespace dpp = dpl::datapar;
 using abi = xmm::abi_tag;
 
 #if DPL_SUPPORTS_EXT_BFLOAT16 & !defined(__BFLT16_MAX__)
-DPL_DISABLE_WARNING("-Wuser-defined-literals")
 consteval dpl::bfloat16 operator""_bf16(long double val) noexcept {
     return static_cast<dpl::bfloat16>(val);
 }
