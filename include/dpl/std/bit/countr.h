@@ -4,6 +4,8 @@
 
 #include "dpl/config.h"
 
+#include "dpl/std/bit/char_bit.h"
+
 #if !DPL_MODULES
 #  include "dpl/std/concepts/integral.h"
 #  include "dpl/std/concepts/same_as.h"
@@ -14,7 +16,10 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 namespace details::bit {
 #if DPL_HAS_BUILTIN(__builtin_ctzg)
 
-#  define __DPL_ctz(...) __builtin_ctzg(__VA_ARGS__)
+#  define __DPL_ctz(...)                                             \
+      [](auto arg) {                                                 \
+        return arg ? __builtin_ctzg(arg) : sizeof(arg) * char_bit_v; \
+      }(__VA_ARGS__)
 
 #elif DPL_HAS_BUILTIN(__builtin_ctz) & DPL_HAS_BUILTIN(__builtin_ctzl) &
 DPL_HAS_BUILTIN(__builtin_ctzll)

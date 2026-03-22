@@ -56,7 +56,13 @@ private:
             }
         }
 
-        return static_cast<To>(val);
+        if constexpr (convertible_to<From, To>) {
+            return static_cast<To>(val);
+        } else {
+            static_assert(floating_point<To> && floating_point<From>);
+            static_assert(dx::digits_v<float> >= dx::digits_v<From>);
+            return static_cast<To>(static_cast<float>(val));
+        }
     }
 
     template <basic_simd_element From, simd_abi A>

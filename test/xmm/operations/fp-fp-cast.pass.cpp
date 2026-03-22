@@ -10,8 +10,27 @@ namespace xmm = dpl::datapar::xmm;
 namespace dpp = dpl::datapar;
 using abi = xmm::abi_tag;
 
+#if DPL_SUPPORTS_EXT_BFLOAT16 & !defined(__BFLT16_MAX__)
+DPL_DISABLE_WARNING("-Wuser-defined-literals")
+consteval dpl::bfloat16 operator""_bf16(long double val) noexcept {
+    return static_cast<dpl::bfloat16>(val);
+}
+#  define BF16(X) X##_bf16
+#elif defined(__BFLT16_MAX__)
+#  define BF16(X) X##bf16
+#endif
+
 constexpr auto min(auto lhs, auto rhs) noexcept {
     return lhs < rhs ? lhs : rhs;
+}
+
+template <dpl::floating_point To, dpl::floating_point From>
+constexpr To float_cast(From val) noexcept {
+    if constexpr (dpl::convertible_to<From, To>) {
+        return static_cast<To>(val);
+    } else {
+        return static_cast<To>(static_cast<float>(val));
+    }
 }
 
 template <dpl::floating_point To, dpl::floating_point From,
@@ -25,7 +44,7 @@ constexpr bool round_trip(From val, Pred pred = dpp::cmpeq) noexcept {
     static_assert(dpl::same_as<From,
         typename dpl::remove_const_t<decltype(src)>::value_type>);
     auto const dst =
-        dpp::bit_keep(keep_mask, dpp::broadcast<To, abi>(static_cast<To>(val)));
+        dpp::bit_keep(keep_mask, dpp::broadcast<To, abi>(float_cast<To>(val)));
     auto const actual_dst = dpp::cast<To>(src);
     auto const dstequal = pred(actual_dst, dst);
     auto const actual_castback = dpp::cast<From>(actual_dst);
@@ -62,14 +81,14 @@ inline constexpr struct bitcmp_t {
 
 template <dpl::floating_point To, dpl::floating_point From,
     typename Pred = decltype(dpp::cmpeq)>
-requires (dpp::digits_v<To> < dpp::digits_v<From>)
-constexpr bool precision_loss(From val, Pred pred = dpp::cmpeq) noexcept {
+requires (dpp::digits_v<To> != dpp::digits_v<From>)
+constexpr bool one_way(From val, Pred pred = dpp::cmpeq) noexcept {
     constexpr auto count =
         min(dpp::element_count<From, abi>, dpp::element_count<To, abi>);
     constexpr auto keep_mask = dpp::imm<(1 << count) - 1>;
     auto const src = dpp::bit_keep(keep_mask, dpp::broadcast<From, abi>(val));
     auto const dst =
-        dpp::bit_keep(keep_mask, dpp::broadcast<To, abi>(static_cast<To>(val)));
+        dpp::bit_keep(keep_mask, dpp::broadcast<To, abi>(float_cast<To>(val)));
     auto const actual_dst = dpp::cast<To>(src);
     auto const dstequal = pred(actual_dst, dst);
     auto const actual_castback = dpp::cast<From>(actual_dst);
@@ -108,14 +127,14 @@ constexpr bool test() {
     // snan
     assert(round_trip<float>(dpl::bit_cast<double>(0x7ff4ll << 48), nancmp));
 
-    assert(precision_loss<float>(nextafter(1.0)));
-    assert(precision_loss<float>(nextbefore(1.0)));
-    assert(precision_loss<float>(dpl::bit_cast<double>(1ll << 52)));
-    assert(precision_loss<float>(dpl::bit_cast<double>(1ll)));
+    assert(one_way<float>(nextafter(1.0)));
+    assert(one_way<float>(nextbefore(1.0)));
+    assert(one_way<float>(dpl::bit_cast<double>(1ll << 52)));
+    assert(one_way<float>(dpl::bit_cast<double>(1ll)));
 
-    assert(precision_loss<float>(0x1.p24 + 1.0));
-    assert(precision_loss<float>(0x1.p10 + 0x1.p-14));
-    assert(precision_loss<float>(1.0 + 0x1.p-24));
+    assert(one_way<float>(0x1.p24 + 1.0));
+    assert(one_way<float>(0x1.p10 + 0x1.p-14));
+    assert(one_way<float>(1.0 + 0x1.p-24));
 
     return true;
 }
@@ -136,13 +155,13 @@ constexpr bool test_fp16() noexcept {
     assert(round_trip<float>(dpp::max_value_v<dpl::float16>));
     assert(round_trip<float>(dpp::infinity_v<dpl::float16>));
     assert(round_trip<float>(-dpp::infinity_v<dpl::float16>));
-    assert(precision_loss<dpl::float16>(nextafter(1.0f)));
-    assert(precision_loss<dpl::float16>(nextbefore(1.0f)));
-    assert(precision_loss<dpl::float16>(dpl::bit_cast<float>(1 << 23)));
-    assert(precision_loss<dpl::float16>(dpl::bit_cast<float>(1)));
-    assert(precision_loss<dpl::float16>(0x1.p11f + 1.0f));
-    assert(precision_loss<dpl::float16>(0x1.p5f + 0x1.p-6f));
-    assert(precision_loss<dpl::float16>(1.0f + 0x1.p-11f));
+    assert(one_way<dpl::float16>(nextafter(1.0f)));
+    assert(one_way<dpl::float16>(nextbefore(1.0f)));
+    assert(one_way<dpl::float16>(dpl::bit_cast<float>(1 << 23)));
+    assert(one_way<dpl::float16>(dpl::bit_cast<float>(1)));
+    assert(one_way<dpl::float16>(0x1.p11f + 1.0f));
+    assert(one_way<dpl::float16>(0x1.p5f + 0x1.p-6f));
+    assert(one_way<dpl::float16>(1.0f + 0x1.p-11f));
 
     // qnan
     assert(round_trip<float>(
@@ -172,31 +191,47 @@ constexpr bool test_fp16() noexcept {
     assert(round_trip<double>(
         dpl::bit_cast<dpl::float16>(static_cast<short>(0x7c01)), nancmp));
 
-    assert(precision_loss<dpl::float16>(nextafter(1.0)));
-    assert(precision_loss<dpl::float16>(nextbefore(1.0)));
-    assert(precision_loss<dpl::float16>(dpl::bit_cast<double>(1ll << 52)));
-    assert(precision_loss<dpl::float16>(dpl::bit_cast<double>(1ll)));
-    assert(precision_loss<dpl::float16>(0x1.p11 + 1.0));
-    assert(precision_loss<dpl::float16>(0x1.p5 + 0x1.p-6));
-    assert(precision_loss<dpl::float16>(1.0 + 0x1.p-11));
+    assert(one_way<dpl::float16>(nextafter(1.0)));
+    assert(one_way<dpl::float16>(nextbefore(1.0)));
+    assert(one_way<dpl::float16>(dpl::bit_cast<double>(1ll << 52)));
+    assert(one_way<dpl::float16>(dpl::bit_cast<double>(1ll)));
+    assert(one_way<dpl::float16>(0x1.p11 + 1.0));
+    assert(one_way<dpl::float16>(0x1.p5 + 0x1.p-6));
+    assert(one_way<dpl::float16>(1.0 + 0x1.p-11));
+
+#  if DPL_SUPPORTS_BFLOAT16
+    assert(round_trip<dpl::bfloat16>(0.0f16));
+    assert(round_trip<dpl::bfloat16>(-0.0f16, bitcmp));
+    assert(round_trip<dpl::bfloat16>(1.0f16));
+    assert(one_way<dpl::bfloat16>(nextafter(1.0f16)));
+    assert(one_way<dpl::bfloat16>(nextbefore(1.0f16)));
+    assert(round_trip<dpl::bfloat16>(0x1.p8f16));
+    assert(round_trip<dpl::bfloat16>(dpp::infinity_v<dpl::float16>));
+    assert(round_trip<dpl::bfloat16>(-dpp::infinity_v<dpl::float16>));
+    assert(round_trip<dpl::bfloat16>(1e-6f16));
+    assert(one_way<dpl::bfloat16>(dpp::max_value_v<dpl::float16>));
+    assert([]() {
+        // possible compiler bug corrupts at runtime, the result of
+        // dpl::bit_cast<dpl::bfloat16>(static_cast<unsigned short>(1 <<
+        // 7)); Unable to repro in compiler explorer, unsure why
+        auto const low = static_cast<unsigned short>(1 << 10);
+        auto const f16 = dpl::bit_cast<dpl::float16>(low);
+        return round_trip<dpl::bfloat16>(f16);
+    }());
+
+    assert([]() {
+        auto const low = static_cast<unsigned short>(1);
+        auto const bf16 = dpl::bit_cast<dpl::float16>(low);
+        return round_trip<dpl::bfloat16>(bf16);
+    });
+#  endif
 #endif
 
     return true;
 }
 
-#if DPL_SUPPORTS_EXT_BFLOAT16 & !defined(__BFLT16_MAX__)
-DPL_DISABLE_WARNING("-Wuser-defined-literals")
-consteval dpl::bfloat16 operator""_bf16(long double val) noexcept {
-    return static_cast<dpl::bfloat16>(val);
-}
-#  define BF16(X) X##_bf16
-#elif defined(__BFLT16_MAX__)
-#  define BF16(X) X##bf16
-#endif
-
 constexpr bool test_bf16() noexcept {
 #if DPL_SUPPORTS_BFLOAT16
-    // static_assert(dpl::brain_float<dpl::bfloat16>);
     assert(round_trip<float>(BF16(0.0)));
     assert(round_trip<float>(BF16(-0.0), bitcmp));
     assert(round_trip<float>(BF16(1.0)));
@@ -220,12 +255,12 @@ constexpr bool test_bf16() noexcept {
         auto const bf16 = dpl::bit_cast<dpl::bfloat16>(low);
         round_trip<float>(bf16);
     });
-    assert(precision_loss<dpl::bfloat16>(nextafter(1.0f)));
-    assert(precision_loss<dpl::bfloat16>(nextbefore(1.0f)));
-    assert(precision_loss<dpl::bfloat16>(dpl::bit_cast<float>(1)));
-    assert(precision_loss<dpl::bfloat16>(0x1.p8f + 1.0f));
-    assert(precision_loss<dpl::bfloat16>(0x1.p4f + 0x1.p-4f));
-    assert(precision_loss<dpl::bfloat16>(1.0f + 0x1.p-8f));
+    assert(one_way<dpl::bfloat16>(nextafter(1.0f)));
+    assert(one_way<dpl::bfloat16>(nextbefore(1.0f)));
+    assert(one_way<dpl::bfloat16>(dpl::bit_cast<float>(1)));
+    assert(one_way<dpl::bfloat16>(0x1.p8f + 1.0f));
+    assert(one_way<dpl::bfloat16>(0x1.p4f + 0x1.p-4f));
+    assert(one_way<dpl::bfloat16>(1.0f + 0x1.p-8f));
 
     assert(round_trip<double>(BF16(0.0)));
     assert(round_trip<double>(BF16(-0.0), bitcmp));
@@ -250,13 +285,40 @@ constexpr bool test_bf16() noexcept {
         auto const bf16 = dpl::bit_cast<dpl::bfloat16>(low);
         round_trip<double>(bf16);
     });
-    assert(precision_loss<dpl::bfloat16>(nextafter(1.0)));
-    assert(precision_loss<dpl::bfloat16>(nextbefore(1.0)));
-    assert(precision_loss<dpl::bfloat16>(dpl::bit_cast<double>(1ll << 52)));
-    assert(precision_loss<dpl::bfloat16>(dpl::bit_cast<double>(1ll)));
-    assert(precision_loss<dpl::bfloat16>(0x1.p8 + 1.0));
-    assert(precision_loss<dpl::bfloat16>(0x1.p4 + 0x1.p-4));
-    assert(precision_loss<dpl::bfloat16>(1.0 + 0x1.p-8));
+    assert(one_way<dpl::bfloat16>(nextafter(1.0)));
+    assert(one_way<dpl::bfloat16>(nextbefore(1.0)));
+    assert(one_way<dpl::bfloat16>(dpl::bit_cast<double>(1ll << 52)));
+    assert(one_way<dpl::bfloat16>(dpl::bit_cast<double>(1ll)));
+    assert(one_way<dpl::bfloat16>(0x1.p8 + 1.0));
+    assert(one_way<dpl::bfloat16>(0x1.p4 + 0x1.p-4));
+    assert(one_way<dpl::bfloat16>(1.0 + 0x1.p-8));
+
+#  if DPL_SUPPORTS_FLOAT16
+    assert(round_trip<dpl::float16>(BF16(0.0)));
+    assert(round_trip<dpl::float16>(BF16(-0.0), bitcmp));
+    assert(round_trip<dpl::float16>(BF16(1.0)));
+    assert(round_trip<dpl::float16>(nextafter(BF16(1.0))));
+    assert(round_trip<dpl::float16>(nextbefore(BF16(1.0))));
+    assert(round_trip<dpl::float16>(BF16(0x1.p8)));
+    assert(round_trip<dpl::float16>(dpp::infinity_v<dpl::bfloat16>));
+    assert(round_trip<dpl::float16>(-dpp::infinity_v<dpl::bfloat16>));
+    assert(one_way<dpl::float16>(BF16(1e-40)));
+    assert(one_way<dpl::float16>(dpp::max_value_v<dpl::bfloat16>));
+    assert([]() {
+        // possible compiler bug corrupts at runtime, the result of
+        // dpl::bit_cast<dpl::bfloat16>(static_cast<unsigned short>(1 <<
+        // 7)); Unable to repro in compiler explorer, unsure why
+        auto const low = static_cast<unsigned short>(1 << 7);
+        auto const bf16 = dpl::bit_cast<dpl::bfloat16>(low);
+        return one_way<dpl::float16>(bf16);
+    }());
+
+    assert([]() {
+        auto const low = static_cast<unsigned short>(1);
+        auto const bf16 = dpl::bit_cast<dpl::bfloat16>(low);
+        return round_trip<dpl::float16>(bf16);
+    });
+#  endif
 #endif
 
     return true;
