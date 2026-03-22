@@ -2,32 +2,57 @@
 import lldb
 import struct
 
+
+_NAMESPACE = "dpl::datapar::"
+
 class bf16:
     @staticmethod
     def to_float(val):
-        sign = (val >> 15) & 0x1
-        exp  = (val >> 7) & 0xFF
-        mant = val & 0x7F
-        if exp == 0xFF & mant > 0:
+        if (val & 0x7FFF) > 0x7f80:
             return float('nan')
 
-        f32_bits = (sign << 31) | (exp << 23) | (mant << 16)
-        return struct.unpack(">f", f32_bits.to_bytes(4, 'big'))[0]
+        bits = val << 16
+        return struct.unpack(">f", bits.to_bytes(4, 'big'))[0]
 
     @staticmethod
-    def summarize(valobj, _):
-        data = valobj.GetData()
-        if not data.IsValid():
-            return "<error>" 
+    def print(debugger, command, result, _):
+        target = debugger.GetSelectedTarget()
+        process = target.GetProcess()
+        frame = target.GetProcess().GetSelectedThread().GetSelectedFrame()
 
+        val = frame.EvaluateExpression(command)
+        if not val.IsValid():
+            result.PutCString("invalid expression")
+            return
+
+        type_obj = val.GetType().GetCanonicalType()
+        type_name = type_obj.GetName()
+        data = val.GetData()
         error = lldb.SBError()
-        buffer = data.ReadRawData(error, 0, 2)
-        if error.Fail():
-            raise RuntimeError(error.GetCString())
-        rep = struct.unpack("<H", buffer)[0]
-        val = bf16.to_float(rep)
-        return f"{val:.6g}"
+        
+        # case 1: scalar (__fp16 pretending to be bf16)
+        if "__fp16" == type_name:
+            buffer = data.ReadRawData(error, 0, 2)
+            if not error.Success():
+                result.PutCString(error.GetCString())
+                return
+            rep = struct.unpack("<H", buffer)[0]
+            result.PutCString(f"(__bf16) {bf16.to_float(rep):.6g}")
+            return
 
+        if type_name.startswith("basic_simd<") or (type_name.startswith(_NAMESPACE) 
+            and type_name[len(_NAMESPACE):].startswith("basic_simd<")):
+            size = type_obj.GetByteSize()
+            buffer = data.ReadRawData(error, 0, size)
+            if not error.Success():
+                result.PutCString(error.GetCString())
+                return
+            lanes = struct.unpack(f"<{size >> 1}H", buffer)
+            vals = [f"{bf16.to_float(x):.6g}" for x in lanes]
+            result.PutCString("{" + ", ".join(vals) + "}")
+            return
+
+        result.PutCString(f"unsupported type: {type_name}")
 
 
 TYPE_MAP = {
@@ -47,8 +72,6 @@ TYPE_MAP = {
     "double":  (lldb.eBasicTypeDouble, 8),
     "__bf16": (bf16, 2),
 }
-
-_NAMESPACE = "dpl::datapar::"
 
 class FormatDispatcher:
     __slots__ =("impl",)

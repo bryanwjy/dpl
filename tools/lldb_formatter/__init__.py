@@ -16,7 +16,7 @@ def __lldb_init_module(debugger, internal_dict):
         'type summary add -w dpl -F lldb_formatter.classes.summarize -x "^dpl::datapar::basic_simd"'
     )
     debugger.HandleCommand(
-        'type summary add -w dpl -F lldb_formatter.classes.bf16.summarize -x "^__bf16$"'
+        'command script add -f lldb_formatter.classes.bf16.print pbf16'
     )
     debugger.HandleCommand(
         'type category enable dpl'
