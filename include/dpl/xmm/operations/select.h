@@ -61,30 +61,30 @@ requires common_size_with<T, F> && common_size_with<T, C> &&
     common_size_with<F, C> &&
     common_size_with<ternary_type_t<T, F>, common_size_type_t<T, F>>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<ternary_type_t<T, F>> select(
-    abi_tag tag, simd<C> condition, simd<T> if_true, simd<F> or_else) noexcept {
+inline simd<ternary_type_t<T, F>> DPL_VECTORCALL
+    select(mask<C> condition, simd<T> if_true, simd<F> or_else) noexcept {
     using V = ternary_type_t<T, F>;
     if constexpr (common_float_with<float, V>) {
         return _mm_blendv_ps(
-            +or_else, +if_true, +xmm::reinterpret<float>(tag, condition));
+            +or_else, +if_true, +xmm::reinterpret<float>(condition));
     } else if constexpr (common_float_with<double, V>) {
         return _mm_blendv_pd(
-            +or_else, +if_true, +xmm::reinterpret<double>(tag, condition));
+            +or_else, +if_true, +xmm::reinterpret<double>(condition));
     } else if constexpr (common_size_with<float, V>) {
-        return xmm::reinterpret<V>(tag,
-            xmm::select(tag, condition, xmm::reinterpret<float>(tag, if_true),
-                xmm::reinterpret<float>(tag, or_else)));
+        return xmm::reinterpret<V>(
+            xmm::select(condition, xmm::reinterpret<float>(if_true),
+                xmm::reinterpret<float>(or_else)));
     } else if constexpr (common_size_with<double, V>) {
-        return xmm::reinterpret<V>(tag,
-            xmm::select(tag, condition, xmm::reinterpret<double>(tag, if_true),
-                xmm::reinterpret<double>(tag, or_else)));
+        return xmm::reinterpret<V>(
+            xmm::select(condition, xmm::reinterpret<double>(if_true),
+                xmm::reinterpret<double>(or_else)));
     } else if constexpr (common_integral_with<V, int16>) {
         return _mm_blendv_epi8(
-            +or_else, +if_true, +xmm::reinterpret<int16>(tag, condition));
+            +or_else, +if_true, +xmm::reinterpret<int16>(condition));
     } else if constexpr (common_size_with<int16, V>) {
-        return xmm::reinterpret<V>(tag,
-            xmm::select(tag, condition, xmm::reinterpret<int16>(tag, if_true),
-                xmm::reinterpret<int16>(tag, or_else)));
+        return xmm::reinterpret<V>(
+            xmm::select(condition, xmm::reinterpret<int16>(if_true),
+                xmm::reinterpret<int16>(or_else)));
     } else {
         static_assert(sizeof(T) == sizeof(int8));
         return _mm_blendv_epi8(+or_else, +if_true, +condition);
@@ -96,11 +96,31 @@ DPL_EXPORT template <template_barrier_t = barrier, simd_element C,
 requires common_size_with<T, F> && common_size_with<T, C> &&
     common_size_with<F, C>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline mask<common_size_type_t<T, F>> select(
-    abi_tag tag, mask<C> condition, mask<T> if_true, mask<F> or_else) noexcept {
+inline mask<common_size_type_t<T, F>> DPL_VECTORCALL
+    select(mask<C> condition, mask<T> if_true, mask<F> or_else) noexcept {
     using V = common_size_type_t<T, F>;
-    return +xmm::select(tag, condition, simd<V>(+xmm::reinterpret<V>(if_true)),
+    return +xmm::select(condition, simd<V>(+xmm::reinterpret<V>(if_true)),
         simd<V>(+xmm::reinterpret<V>(or_else)));
+}
+
+DPL_EXPORT template <template_barrier_t = barrier, simd_element C,
+    simd_element T, simd_element F>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+inline auto select(
+    abi_tag tag, mask<C> condition, simd<T> if_true, simd<F> or_else) noexcept
+requires requires { xmm::select(condition, if_true, or_else); }
+{
+    return xmm::select(condition, if_true, or_else);
+}
+
+DPL_EXPORT template <template_barrier_t = barrier, simd_element C,
+    simd_element T, simd_element F>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+inline auto select(
+    abi_tag tag, mask<C> condition, mask<T> if_true, mask<F> or_else) noexcept
+requires requires { xmm::select(condition, if_true, or_else); }
+{
+    return xmm::select(condition, if_true, or_else);
 }
 
 namespace details {
@@ -115,7 +135,7 @@ requires common_size_with<T, F> &&
     common_size_with<ternary_type_t<T, F>, common_size_type_t<T, F>>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<ternary_type_t<T, F>> select(
-    abi_tag tag, simd<T> if_true, simd<F> or_else) noexcept {
+    simd<T> if_true, simd<F> or_else) noexcept {
     using V = ternary_type_t<T, F>;
     constexpr immediate_mask<element_count<V, abi_tag>, C> mask{};
     constexpr auto imm8 = static_cast<int>(mask);
@@ -124,19 +144,19 @@ inline simd<ternary_type_t<T, F>> select(
     } else if constexpr (common_float_with<double, V>) {
         return _mm_blend_pd(+or_else, +if_true, imm8);
     } else if constexpr (common_size_with<float, V>) {
-        return xmm::reinterpret<V>(tag,
-            xmm::select<C>(tag, xmm::reinterpret<float>(tag, if_true),
-                xmm::reinterpret<float>(tag, or_else)));
+        return xmm::reinterpret<V>(
+            xmm::select<C>(xmm::reinterpret<float>(if_true),
+                xmm::reinterpret<float>(or_else)));
     } else if constexpr (common_size_with<double, V>) {
-        return xmm::reinterpret<V>(tag,
-            xmm::select<C>(tag, xmm::reinterpret<double>(tag, if_true),
-                xmm::reinterpret<double>(tag, or_else)));
+        return xmm::reinterpret<V>(
+            xmm::select<C>(xmm::reinterpret<double>(if_true),
+                xmm::reinterpret<double>(or_else)));
     } else if constexpr (common_integral_with<V, int16>) {
         return _mm_blend_epi16(+or_else, +if_true, imm8);
     } else if constexpr (common_size_with<int16, V>) {
-        return xmm::reinterpret<V>(tag,
-            xmm::select<C>(tag, xmm::reinterpret<int16>(tag, if_true),
-                xmm::reinterpret<int16>(tag, or_else)));
+        return xmm::reinterpret<V>(
+            xmm::select<C>(xmm::reinterpret<int16>(if_true),
+                xmm::reinterpret<int16>(or_else)));
     } else {
         static_assert(sizeof(T) == sizeof(int8));
         return _mm_blendv_epi8(+or_else, +if_true, +details::imm16<mask>);
@@ -147,10 +167,48 @@ DPL_EXPORT template <integral auto C, simd_element T, simd_element F>
 requires common_size_with<T, F>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline mask<common_size_type_t<T, F>> select(
-    abi_tag tag, mask<T> if_true, mask<F> or_else) noexcept {
+    mask<T> if_true, mask<F> or_else) noexcept {
     using V = common_size_type_t<T, F>;
-    return +xmm::select<C>(tag, simd<V>(+xmm::reinterpret<V>(if_true)),
+    return +xmm::select<C>(simd<V>(+xmm::reinterpret<V>(if_true)),
         simd<V>(+xmm::reinterpret<V>(or_else)));
+}
+
+template <simd_class T, immediate_mask_for<T> M>
+inline constexpr auto imm_mask_v =
+    decltype(datapar::to_immediate_mask<T>(M{}))::value;
+
+DPL_EXPORT template <template_barrier_t = barrier, simd_element T,
+    common_size_with<T> F, immediate_mask_for<simd<T>> C>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+inline auto select(C, simd<T> if_true, simd<F> or_else) noexcept
+requires requires { xmm::select<imm_mask_v<T, C>>(if_true, or_else); }
+{
+    return xmm::select<imm_mask_v<T, C>>(if_true, or_else);
+}
+
+DPL_EXPORT template <template_barrier_t = barrier, simd_element T,
+    common_size_with<T> F, immediate_mask_for<mask<T>> C>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+inline auto select(C, mask<T> if_true, mask<F> or_else) noexcept
+requires requires { xmm::select<imm_mask_v<T, C>>(if_true, or_else); }
+{
+    return xmm::select<imm_mask_v<T, C>>(if_true, or_else);
+}
+
+DPL_EXPORT template <integral auto C, simd_element T, simd_element F>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+inline auto select(abi_tag tag, simd<T> if_true, simd<F> or_else) noexcept
+requires requires { xmm::select<C>(if_true, or_else); }
+{
+    return xmm::select<C>(if_true, or_else);
+}
+
+DPL_EXPORT template <integral auto C, simd_element T, simd_element F>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+inline auto select(abi_tag tag, mask<T> if_true, mask<F> or_else) noexcept
+requires requires { xmm::select<C>(if_true, or_else); }
+{
+    return xmm::select<C>(if_true, or_else);
 }
 
 } // namespace datapar::xmm

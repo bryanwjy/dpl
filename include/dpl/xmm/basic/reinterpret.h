@@ -124,6 +124,18 @@ constexpr mask<E> reinterpret(abi_tag tag, mask<F> src) noexcept {
     return +dx::xmm::reinterpret<E>(tag, simd<F>(+src));
 }
 
+DPL_EXPORT template <simd_element E, simd_element F>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+constexpr simd<E> reinterpret(simd<F> src) noexcept {
+    return xmm::reinterpret<E>(xmm::abi, src);
+}
+
+DPL_EXPORT template <simd_element E, simd_element F>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+constexpr mask<E> reinterpret(mask<F> src) noexcept {
+    return xmm::reinterpret<E>(xmm::abi, src);
+}
+
 } // namespace datapar::xmm
 
 DPL_DEFAULT_NAMESPACE_END

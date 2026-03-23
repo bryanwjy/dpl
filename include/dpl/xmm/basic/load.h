@@ -83,6 +83,18 @@ constexpr simd<E> aligned_load(abi_tag tag, E const* data) noexcept {
     }
 }
 
+DPL_EXPORT template <simd_element E>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
+constexpr simd<E> load(E const* data) noexcept {
+    return xmm::load(xmm::abi, data);
+}
+
+DPL_EXPORT template <simd_element E>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
+constexpr simd<E> aligned_load(E const* data) noexcept {
+    return xmm::aligned_load(xmm::abi, data);
+}
+
 } // namespace datapar::xmm
 
 DPL_DEFAULT_NAMESPACE_END

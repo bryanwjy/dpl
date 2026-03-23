@@ -145,6 +145,21 @@ constexpr mask<E> initialize(abi_tag tag, Args... scalars) noexcept {
     return +dx::xmm::initialize<E>(
         tag, (scalars ? dx::all_bits_v<E> : dx::zero_v<E>)...);
 }
+
+DPL_EXPORT template <basic_simd_element E, core_convertible_to<E>... Args>
+requires (... && !same_as<Args, bool>)
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+constexpr simd<E> initialize(Args&&... args) noexcept {
+    return xmm::initialize(xmm::abi, __DPL forward<Args>(args)...);
+}
+
+DPL_EXPORT template <simd_element E, same_as<bool>... Args>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+constexpr mask<E> initialize(Args&&... args) noexcept {
+    return +dx::xmm::initialize<E>(
+        xmm::abi, (args ? dx::all_bits_v<E> : dx::zero_v<E>)...);
+}
+
 } // namespace datapar::xmm
 
 DPL_DEFAULT_NAMESPACE_END

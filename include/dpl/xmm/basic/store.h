@@ -87,6 +87,16 @@ __DPL_HIDE_FROM_ABI constexpr void aligned_store(
     }
 }
 
+DPL_EXPORT template <simd_element E>
+__DPL_HIDE_FROM_ABI constexpr void store(simd<E> src, E* dst) noexcept {
+    xmm::store(xmm::abi, src, dst);
+}
+
+DPL_EXPORT template <simd_element E>
+__DPL_HIDE_FROM_ABI constexpr void aligned_store(simd<E> src, E* dst) noexcept {
+    xmm::aligned_store(xmm::abi, src, dst);
+}
+
 } // namespace datapar::xmm
 
 DPL_DEFAULT_NAMESPACE_END

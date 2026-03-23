@@ -33,7 +33,7 @@ using arithmetic_result DPL_NODEBUG = simd<common_arithmetic_type_t<E, E>>;
 DPL_EXPORT template <arithmetic_type E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline arithmetic_result<E> DPL_VECTORCALL
-    add(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
+    add(simd<E> lhs, simd<E> rhs) noexcept {
     if constexpr (common_arithmetic_with<E, int64>) {
         return _mm_add_epi64(+lhs, +rhs);
     } else if constexpr (common_arithmetic_with<E, int32>) {
@@ -48,20 +48,20 @@ inline arithmetic_result<E> DPL_VECTORCALL
 
 DPL_EXPORT template <common_float_with<float> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<E> DPL_VECTORCALL add(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
+inline simd<E> DPL_VECTORCALL add(simd<E> lhs, simd<E> rhs) noexcept {
     return _mm_add_ps(+lhs, +rhs);
 }
 
 DPL_EXPORT template <common_float_with<double> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<E> DPL_VECTORCALL add(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
+inline simd<E> DPL_VECTORCALL add(simd<E> lhs, simd<E> rhs) noexcept {
     return _mm_add_pd(+lhs, +rhs);
 }
 
 DPL_EXPORT template <arithmetic_type E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline arithmetic_result<E> DPL_VECTORCALL
-    subtract(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
+    subtract(simd<E> lhs, simd<E> rhs) noexcept {
     if constexpr (common_arithmetic_with<E, int64>) {
         return _mm_sub_epi64(+lhs, +rhs);
     } else if constexpr (common_arithmetic_with<E, int32>) {
@@ -76,22 +76,20 @@ inline arithmetic_result<E> DPL_VECTORCALL
 
 DPL_EXPORT template <common_float_with<float> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<E> DPL_VECTORCALL
-    subtract(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
+inline simd<E> DPL_VECTORCALL subtract(simd<E> lhs, simd<E> rhs) noexcept {
     return _mm_sub_ps(+lhs, +rhs);
 }
 
 DPL_EXPORT template <common_float_with<double> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<E> DPL_VECTORCALL
-    subtract(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
+inline simd<E> DPL_VECTORCALL subtract(simd<E> lhs, simd<E> rhs) noexcept {
     return _mm_sub_pd(+lhs, +rhs);
 }
 
 DPL_EXPORT template <arithmetic_type E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline arithmetic_result<E> DPL_VECTORCALL
-    multiply(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
+    multiply(simd<E> lhs, simd<E> rhs) noexcept {
     if constexpr (common_arithmetic_with<E, int64>) {
 #if DPL_SIMD_X86_AVX512DQ & DPL_SIMD_X86_AVX512VL
         return _mm_mullo_epi64(+lhs, +rhs);
@@ -150,152 +148,178 @@ inline arithmetic_result<E> DPL_VECTORCALL
 DPL_EXPORT template <arithmetic_type E>
 requires common_float_with<E, float>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<E> DPL_VECTORCALL
-    multiply(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
+inline simd<E> DPL_VECTORCALL multiply(simd<E> lhs, simd<E> rhs) noexcept {
     return _mm_mul_ps(+lhs, +rhs);
 }
 
 DPL_EXPORT template <arithmetic_type E>
 requires common_float_with<E, double>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<E> DPL_VECTORCALL
-    multiply(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
+inline simd<E> DPL_VECTORCALL multiply(simd<E> lhs, simd<E> rhs) noexcept {
     return _mm_mul_pd(+lhs, +rhs);
 }
 
 DPL_EXPORT template <common_float_with<float> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<E> DPL_VECTORCALL
-    divide(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
+inline simd<E> DPL_VECTORCALL divide(simd<E> lhs, simd<E> rhs) noexcept {
     return _mm_div_ps(+lhs, +rhs);
 }
 
 DPL_EXPORT template <common_float_with<double> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<E> DPL_VECTORCALL
-    divide(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
+inline simd<E> DPL_VECTORCALL divide(simd<E> lhs, simd<E> rhs) noexcept {
     return _mm_div_pd(+lhs, +rhs);
 }
 
 #if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
 DPL_EXPORT template <float16_like E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<E> DPL_VECTORCALL add(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
+inline simd<E> DPL_VECTORCALL add(simd<E> lhs, simd<E> rhs) noexcept {
     return _mm_add_ph(+lhs, +rhs);
 }
 
 DPL_EXPORT template <float16_like E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<E> DPL_VECTORCALL
-    subtract(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
+inline simd<E> DPL_VECTORCALL subtract(simd<E> lhs, simd<E> rhs) noexcept {
     return _mm_sub_ph(+lhs, +rhs);
 }
 
 DPL_EXPORT template <float16_like E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<E> DPL_VECTORCALL
-    multiply(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
+inline simd<E> DPL_VECTORCALL multiply(simd<E> lhs, simd<E> rhs) noexcept {
     return _mm_mul_ph(+lhs, +rhs);
 }
 
 DPL_EXPORT template <float16_like E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<E> DPL_VECTORCALL
-    divide(abi_tag, simd<E> lhs, simd<E> rhs) noexcept {
+inline simd<E> DPL_VECTORCALL divide(simd<E> lhs, simd<E> rhs) noexcept {
     return _mm_div_ph(+lhs, +rhs);
 }
 #endif
 
 DPL_EXPORT template <bfloat16_like E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<E> DPL_VECTORCALL
-    add(abi_tag tag, simd<E> lhs, simd<E> rhs) noexcept {
-    auto const hlhs = simd<E>(_mm_srli_si128(+lhs, 8));
-    auto const hrhs = simd<E>(_mm_srli_si128(+rhs, 8));
-    auto const lo =
-        xmm::add(tag, xmm::cast<float>(tag, lhs), xmm::cast<float>(tag, rhs));
-    auto const hi =
-        xmm::add(tag, xmm::cast<float>(tag, hlhs), xmm::cast<float>(tag, hrhs));
+inline simd<E> DPL_VECTORCALL add(simd<E> lhs, simd<E> rhs) noexcept {
+    using f32 DPL_NODEBUG = details::front_t<float, E>;
+    auto const hlhs = simd<E>(__DPL bit_cast<__m128bh>(
+        _mm_srli_si128(__DPL bit_cast<__m128i>(+lhs), 8)));
+    auto const hrhs = simd<E>(__DPL bit_cast<__m128bh>(
+        _mm_srli_si128(__DPL bit_cast<__m128i>(+rhs), 8)));
+    auto const lo = xmm::add(xmm::cast<f32>(lhs), xmm::cast<f32>(rhs));
+    auto const hi = xmm::add(xmm::cast<f32>(hlhs), xmm::cast<f32>(hrhs));
 
 #if DPL_SIMD_X86_AVX512BF16 & DPL_SIMD_X86_AVX512VL
     return _mm_cvtne2ps_pbh(hi, lo);
 #else
     using sbit = signed_representation_t<E>;
     auto const packed =
-        _mm_packus_epi32(__DPL bit_cast<__m128i>(+xmm::cast<E>(tag, lo)),
-            __DPL bit_cast<__m128i>(+xmm::cast<E>(tag, hi)));
+        _mm_packus_epi32(__DPL bit_cast<__m128i>(+xmm::cast<E>(lo)),
+            __DPL bit_cast<__m128i>(+xmm::cast<E>(hi)));
 
-    return xmm::reinterpret<E>(tag, simd<sbit>(packed));
+    return xmm::reinterpret<E>(simd<sbit>(packed));
 #endif
 }
 
 DPL_EXPORT template <bfloat16_like E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<E> DPL_VECTORCALL
-    subtract(abi_tag tag, simd<E> lhs, simd<E> rhs) noexcept {
-    auto const hlhs = simd<E>(_mm_srli_si128(+lhs, 8));
-    auto const hrhs = simd<E>(_mm_srli_si128(+rhs, 8));
-    auto const lo = xmm::subtract(
-        tag, xmm::cast<float>(tag, lhs), xmm::cast<float>(tag, rhs));
-    auto const hi = xmm::subtract(
-        tag, xmm::cast<float>(tag, hlhs), xmm::cast<float>(tag, hrhs));
+inline simd<E> DPL_VECTORCALL subtract(simd<E> lhs, simd<E> rhs) noexcept {
+    using f32 DPL_NODEBUG = details::front_t<float, E>;
+    auto const hlhs = simd<E>(__DPL bit_cast<__m128bh>(
+        _mm_srli_si128(__DPL bit_cast<__m128i>(+lhs), 8)));
+    auto const hrhs = simd<E>(__DPL bit_cast<__m128bh>(
+        _mm_srli_si128(__DPL bit_cast<__m128i>(+rhs), 8)));
+    auto const lo = xmm::subtract(xmm::cast<f32>(lhs), xmm::cast<f32>(rhs));
+    auto const hi = xmm::subtract(xmm::cast<f32>(hlhs), xmm::cast<f32>(hrhs));
 
 #if DPL_SIMD_X86_AVX512BF16 & DPL_SIMD_X86_AVX512VL
     return _mm_cvtne2ps_pbh(hi, lo);
 #else
     using sbit = signed_representation_t<E>;
     auto const packed =
-        _mm_packus_epi32(__DPL bit_cast<__m128i>(+xmm::cast<E>(tag, lo)),
-            __DPL bit_cast<__m128i>(+xmm::cast<E>(tag, hi)));
+        _mm_packus_epi32(__DPL bit_cast<__m128i>(+xmm::cast<E>(lo)),
+            __DPL bit_cast<__m128i>(+xmm::cast<E>(hi)));
 
-    return xmm::reinterpret<E>(tag, simd<sbit>(packed));
+    return xmm::reinterpret<E>(simd<sbit>(packed));
 #endif
 }
 
 DPL_EXPORT template <bfloat16_like E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<E> DPL_VECTORCALL
-    multiply(abi_tag tag, simd<E> lhs, simd<E> rhs) noexcept {
-    auto const hlhs = simd<E>(_mm_srli_si128(+lhs, 8));
-    auto const hrhs = simd<E>(_mm_srli_si128(+rhs, 8));
-    auto const lo = xmm::multiply(
-        tag, xmm::cast<float>(tag, lhs), xmm::cast<float>(tag, rhs));
-    auto const hi = xmm::multiply(
-        tag, xmm::cast<float>(tag, hlhs), xmm::cast<float>(tag, hrhs));
+inline simd<E> DPL_VECTORCALL multiply(simd<E> lhs, simd<E> rhs) noexcept {
+
+    using f32 DPL_NODEBUG = details::front_t<float, E>;
+    auto const hlhs = simd<E>(__DPL bit_cast<__m128bh>(
+        _mm_srli_si128(__DPL bit_cast<__m128i>(+lhs), 8)));
+    auto const hrhs = simd<E>(__DPL bit_cast<__m128bh>(
+        _mm_srli_si128(__DPL bit_cast<__m128i>(+rhs), 8)));
+    auto const lo = xmm::multiply(xmm::cast<f32>(lhs), xmm::cast<f32>(rhs));
+    auto const hi = xmm::multiply(xmm::cast<f32>(hlhs), xmm::cast<f32>(hrhs));
 
 #if DPL_SIMD_X86_AVX512BF16 & DPL_SIMD_X86_AVX512VL
     return _mm_cvtne2ps_pbh(hi, lo);
 #else
     using sbit = signed_representation_t<E>;
     auto const packed =
-        _mm_packus_epi32(__DPL bit_cast<__m128i>(+xmm::cast<E>(tag, lo)),
-            __DPL bit_cast<__m128i>(+xmm::cast<E>(tag, hi)));
+        _mm_packus_epi32(__DPL bit_cast<__m128i>(+xmm::cast<E>(lo)),
+            __DPL bit_cast<__m128i>(+xmm::cast<E>(hi)));
 
-    return xmm::reinterpret<E>(tag, simd<sbit>(packed));
+    return xmm::reinterpret<E>(simd<sbit>(packed));
 #endif
 }
 
 DPL_EXPORT template <bfloat16_like E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<E> DPL_VECTORCALL
-    divide(abi_tag tag, simd<E> lhs, simd<E> rhs) noexcept {
-    auto const hlhs = simd<E>(_mm_srli_si128(+lhs, 8));
-    auto const hrhs = simd<E>(_mm_srli_si128(+rhs, 8));
-    auto const lo = xmm::divide(
-        tag, xmm::cast<float>(tag, lhs), xmm::cast<float>(tag, rhs));
-    auto const hi = xmm::divide(
-        tag, xmm::cast<float>(tag, hlhs), xmm::cast<float>(tag, hrhs));
+inline simd<E> DPL_VECTORCALL divide(simd<E> lhs, simd<E> rhs) noexcept {
+    using f32 DPL_NODEBUG = details::front_t<float, E>;
+    auto const hlhs = simd<E>(__DPL bit_cast<__m128bh>(
+        _mm_srli_si128(__DPL bit_cast<__m128i>(+lhs), 8)));
+    auto const hrhs = simd<E>(__DPL bit_cast<__m128bh>(
+        _mm_srli_si128(__DPL bit_cast<__m128i>(+rhs), 8)));
+    auto const lo = xmm::divide(xmm::cast<f32>(lhs), xmm::cast<f32>(rhs));
+    auto const hi = xmm::divide(xmm::cast<f32>(hlhs), xmm::cast<f32>(hrhs));
 
 #if DPL_SIMD_X86_AVX512BF16 & DPL_SIMD_X86_AVX512VL
     return _mm_cvtne2ps_pbh(hi, lo);
 #else
     using sbit = signed_representation_t<E>;
     auto const packed =
-        _mm_packus_epi32(__DPL bit_cast<__m128i>(+xmm::cast<E>(tag, lo)),
-            __DPL bit_cast<__m128i>(+xmm::cast<E>(tag, hi)));
+        _mm_packus_epi32(__DPL bit_cast<__m128i>(+xmm::cast<E>(lo)),
+            __DPL bit_cast<__m128i>(+xmm::cast<E>(hi)));
 
-    return xmm::reinterpret<E>(tag, simd<sbit>(packed));
+    return xmm::reinterpret<E>(simd<sbit>(packed));
 #endif
+}
+
+DPL_EXPORT template <arithmetic_type E>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+inline auto DPL_VECTORCALL add(abi_tag, simd<E> lhs, simd<E> rhs) noexcept
+requires requires { xmm::add(lhs, rhs); }
+{
+    return xmm::add(lhs, rhs);
+}
+
+DPL_EXPORT template <arithmetic_type E>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+inline auto DPL_VECTORCALL subtract(abi_tag, simd<E> lhs, simd<E> rhs) noexcept
+requires requires { xmm::subtract(lhs, rhs); }
+{
+    return xmm::subtract(lhs, rhs);
+}
+
+DPL_EXPORT template <arithmetic_type E>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+inline auto DPL_VECTORCALL multiply(abi_tag, simd<E> lhs, simd<E> rhs) noexcept
+requires requires { xmm::multiply(lhs, rhs); }
+{
+    return xmm::multiply(lhs, rhs);
+}
+
+DPL_EXPORT template <arithmetic_type E>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+inline auto DPL_VECTORCALL divide(abi_tag, simd<E> lhs, simd<E> rhs) noexcept
+requires requires { xmm::divide(lhs, rhs); }
+{
+    return xmm::divide(lhs, rhs);
 }
 
 } // namespace datapar::xmm

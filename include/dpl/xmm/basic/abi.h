@@ -14,6 +14,7 @@
 #  include "dpl/core/concepts/simd_element.h"
 #  include "dpl/std/concepts/enumeration.h"
 #  include "dpl/std/concepts/same_as.h"
+#  include "dpl/std/type_traits/conditional.h"
 
 #  include <immintrin.h>
 #endif
@@ -104,6 +105,13 @@ concept float16_like =
 
 template <typename T>
 concept bfloat16_like = floating_point<T> && brain_float<T>;
+
+namespace details {
+// Used to defer template instantiation
+template <typename T0, typename... Ts>
+using front_t DPL_NODEBUG =
+    dpl::conditional_t<(... && !is_same_v<Ts, T0>), T0, T0>;
+} // namespace details
 
 } // namespace datapar::xmm
 

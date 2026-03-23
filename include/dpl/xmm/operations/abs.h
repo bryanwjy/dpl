@@ -61,30 +61,37 @@ inline simd<negated_type<E>> DPL_VECTORCALL
 DPL_EXPORT template <arithmetic_type E>
 requires floating_point<E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<negated_type<E>> DPL_VECTORCALL
-    abs(abi_tag tag, simd<E> val) noexcept {
+inline simd<negated_type<E>> DPL_VECTORCALL abs(abi_tag, simd<E> val) noexcept {
     if constexpr (common_float_with<E, float>) {
         return _mm_andnot_ps(_mm_set1_ps(-0.0f), +val);
     } else if constexpr (common_float_with<E, double>) {
         return _mm_andnot_pd(_mm_set1_pd(-0.0), +val);
     } else if constexpr (bfloat16_like<E>) {
         using sbit = signed_representation_t<E>;
-        auto const vval = +xmm::reinterpret<sbit>(tag, val);
+        auto const vval = +xmm::reinterpret<sbit>(val);
         simd<sbit> const result =
             _mm_and_si128(vval, _mm_set1_epi16(dx::value_bits));
-        return xmm::reinterpret<E>(tag, result);
+        return xmm::reinterpret<E>(result);
     } else {
         static_assert(sizeof(E) == 2);
 #if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
         return _mm_abs_ph(+val);
 #else
         using sbit = signed_representation_t<E>;
-        auto const vval = +xmm::reinterpret<sbit>(tag, val);
+        auto const vval = +xmm::reinterpret<sbit>(val);
         simd<sbit> const result =
             _mm_and_si128(vval, _mm_set1_epi16(dx::value_bits));
-        return xmm::reinterpret<E>(tag, result);
+        return xmm::reinterpret<E>(result);
 #endif
     }
+}
+
+DPL_EXPORT template <arithmetic_type E>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+inline auto DPL_VECTORCALL abs(simd<E> val) noexcept
+requires requires { xmm::abs(xmm::abi, val); }
+{
+    return xmm::abs(xmm::abi, val);
 }
 
 } // namespace datapar::xmm

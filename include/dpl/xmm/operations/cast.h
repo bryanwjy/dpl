@@ -46,11 +46,6 @@ namespace details {
 template <typename>
 struct convert_t;
 
-// Used to defer template instantiation
-template <typename T0, typename... Ts>
-using front_t DPL_NODEBUG =
-    dpl::conditional_t<(... && !is_same_v<Ts, T0>), T0, T0>;
-
 template <integral_cast_target_like<int64> To>
 struct convert_t<To> {
     template <arithmetic_type E>
@@ -469,26 +464,23 @@ struct convert_t<To> {
 #else
         using uint = unsigned_representation_t<To>;
         constexpr convert_t<uint> to_uint;
-        auto const arg = to_uint(xmm::reinterpret<uint16>(xmm::abi, src));
-        auto const msb = xmm::broadcast<uint>(xmm::abi, 0x8000);
-        auto const signs = xmm::reinterpret<To>(xmm::abi,
-            xmm::bwshift_left<48>(xmm::abi, xmm::bwand(xmm::abi, arg, msb)));
-        auto const parg =
-            xmm::bwshift_left<42>(xmm::abi, xmm::bwandnot(xmm::abi, arg, msb));
+        auto const arg = to_uint(xmm::reinterpret<uint16>(src));
+        auto const msb = xmm::broadcast<uint>(0x8000);
+        auto const signs =
+            xmm::reinterpret<To>(xmm::bwshift_left<48>(xmm::bwand(arg, msb)));
+        auto const parg = xmm::bwshift_left<42>(xmm::bwandnot(arg, msb));
 
-        constexpr auto exp_mask = xmm::broadcast<uint>(xmm::abi, 0x1full << 52);
+        constexpr auto exp_mask = xmm::broadcast<uint>(0x1full << 52);
         auto const isfinite = simd<uint>(_mm_cmpgt_epi64(+exp_mask, +parg));
 
         constexpr auto inf64 = xmm::broadcast<uint>(
-            xmm::abi, __DPL bit_cast<uint>(dx::infinity_v<double>));
-        auto const nonfinite =
-            xmm::bwandnot(xmm::abi, xmm::bwor(xmm::abi, inf64, parg), isfinite);
-        constexpr auto shift = xmm::broadcast<To>(xmm::abi, 0x1p1008);
-        auto const shifted = xmm::multiply(
-            xmm::abi, xmm::reinterpret<To>(xmm::abi, parg), shift);
-        auto const abs_f64 = xmm::reinterpret<To>(
-            xmm::abi, xmm::bwor(xmm::abi, nonfinite, shifted));
-        return xmm::bwor(xmm::abi, abs_f64, signs);
+            __DPL bit_cast<uint>(dx::infinity_v<double>));
+        auto const nonfinite = xmm::bwandnot(xmm::bwor(inf64, parg), isfinite);
+        constexpr auto shift = xmm::broadcast<To>(0x1p1008);
+        auto const shifted = xmm::multiply(xmm::reinterpret<To>(parg), shift);
+        auto const abs_f64 =
+            xmm::reinterpret<To>(xmm::bwor(nonfinite, shifted));
+        return xmm::bwor(abs_f64, signs);
 #endif
     }
 
@@ -521,7 +513,7 @@ struct convert_t<To> {
                 auto const losign = _mm_castsi128_ps(
                     _mm_srli_epi64(_mm_castps_si128(hisign), 32));
 
-                src = xmm::abs(xmm::abi, src);
+                src = xmm::abs(src);
                 auto const ishizero = _mm_cmpeq_epi32(+src, zero);
                 auto const hicorrection = _mm_andnot_si128(ishizero,
                     _mm_or_si128(_mm_set1_epi64x(32ll << 55), hisign));
@@ -606,26 +598,23 @@ struct convert_t<To> {
 #else
         using uint = unsigned_representation_t<To>;
         constexpr convert_t<uint> to_uint;
-        auto const arg = to_uint(xmm::reinterpret<uint16>(xmm::abi, src));
-        auto const msb = xmm::broadcast<uint>(xmm::abi, 0x8000);
-        auto const signs = xmm::reinterpret<To>(xmm::abi,
-            xmm::bwshift_left<16>(xmm::abi, xmm::bwand(xmm::abi, arg, msb)));
-        auto const parg =
-            xmm::bwshift_left<13>(xmm::abi, xmm::bwandnot(xmm::abi, arg, msb));
+        auto const arg = to_uint(xmm::reinterpret<uint16>(src));
+        auto const msb = xmm::broadcast<uint>(0x8000);
+        auto const signs =
+            xmm::reinterpret<To>(xmm::bwshift_left<16>(xmm::bwand(arg, msb)));
+        auto const parg = xmm::bwshift_left<13>(xmm::bwandnot(arg, msb));
 
-        constexpr auto exp_mask = xmm::broadcast<uint>(xmm::abi, 0x0f800000);
+        constexpr auto exp_mask = xmm::broadcast<uint>(0x0f800000);
         auto const isfinite = simd<uint>(_mm_cmplt_epi32(+parg, +exp_mask));
 
-        constexpr auto inf32 = xmm::broadcast<uint>(xmm::abi, 0x7f800000);
-        auto const nonfinite =
-            xmm::bwandnot(xmm::abi, xmm::bwor(xmm::abi, inf32, parg), isfinite);
-        constexpr auto shift = xmm::broadcast<To>(xmm::abi, 0x1p112f);
-        auto const shifted = xmm::multiply(
-            xmm::abi, xmm::reinterpret<To>(xmm::abi, parg), shift);
+        constexpr auto inf32 = xmm::broadcast<uint>(0x7f800000);
+        auto const nonfinite = xmm::bwandnot(xmm::bwor(inf32, parg), isfinite);
+        constexpr auto shift = xmm::broadcast<To>(0x1p112f);
+        auto const shifted = xmm::multiply(xmm::reinterpret<To>(parg), shift);
 
-        auto const abs_f32 = xmm::reinterpret<To>(
-            xmm::abi, xmm::bwor(xmm::abi, nonfinite, shifted));
-        return xmm::bwor(xmm::abi, abs_f32, signs);
+        auto const abs_f32 =
+            xmm::reinterpret<To>(xmm::bwor(nonfinite, shifted));
+        return xmm::bwor(abs_f32, signs);
 #endif
     }
 
@@ -649,16 +638,15 @@ private:
     static inline simd<To> DPL_VECTORCALL
         to_postive_inthalf(simd<E> f32) noexcept {
         using u32 = unsigned_representation_t<E>;
-        auto const bits = xmm::reinterpret<u32>(xmm::abi, f32);
-        auto const mantissa =
-            xmm::bwand(xmm::abi, xmm::bwshift_right<13>(xmm::abi, bits),
-                xmm::broadcast<u32>(xmm::abi, 0x3ff));
-        auto const exp = _mm_subs_epu16(
-            +xmm::bwshift_right<23>(xmm::abi, bits), _mm_set1_epi32(112));
+        auto const bits = xmm::reinterpret<u32>(f32);
+        auto const mantissa = xmm::bwand(
+            xmm::bwshift_right<13>(bits), xmm::broadcast<u32>(0x3ff));
+        auto const exp =
+            _mm_subs_epu16(+xmm::bwshift_right<23>(bits), _mm_set1_epi32(112));
         auto const bexp = simd<u32>(_mm_slli_epi32(exp, 10));
-        return xmm::reinterpret<To>(xmm::select(xmm::abi,
-            mask<E>(_mm_cmpge_ps(f32, _mm_set1_ps(0x1p16f))),
-            xmm::broadcast<u32>(0x7c00), xmm::bwor(xmm::abi, bexp, mantissa)));
+        return xmm::reinterpret<To>(
+            xmm::select(mask<E>(_mm_cmpge_ps(f32, _mm_set1_ps(0x1p16f))),
+                xmm::broadcast<u32>(0x7c00), xmm::bwor(bexp, mantissa)));
     }
 
 public:
@@ -687,21 +675,18 @@ public:
                 auto const trunc32 =
                     simd<s32>(_mm_packus_epi32(_mm_and_si128(+src, all), zero));
                 auto const trunc = to_postive_inthalf<To>(to_fp32(trunc32));
-                return xmm::select(xmm::abi, isinf,
-                    xmm::broadcast<To>(xmm::abi, dx::infinity), trunc);
+                return xmm::select(
+                    isinf, xmm::broadcast<To>(dx::infinity), trunc);
             } else {
                 using u64 = make_unsigned_t<E>;
                 using u16 = unsigned_representation_t<To>;
-                auto const abs =
-                    xmm::reinterpret<u64>(xmm::abi, xmm::abs(xmm::abi, src));
+                auto const abs = xmm::reinterpret<u64>(xmm::abs(src));
                 auto const vsign16 = simd<u16>(_mm_and_si128(
                     _mm_packs_epi32(_mm_packs_epi32(+src, zero), zero),
                     _mm_set1_epi16(0x8000)));
 
-                return xmm::reinterpret<To>(xmm::abi,
-                    xmm::bit_fill(xmm::abi,
-                        vsign16,
-                        operator()(xmm::reinterpret<u64>(xmm::abi, abs))));
+                return xmm::reinterpret<To>(xmm::bit_fill(
+                    vsign16, operator()(xmm::reinterpret<u64>(abs))));
             }
 #endif
         } else if constexpr (dx::common_arithmetic_with<int32, E>) {
@@ -791,41 +776,32 @@ public:
 #else
             using sint = signed_representation_t<E>;
             using uint = unsigned_representation_t<E>;
-            auto const i64 = xmm::reinterpret<sint>(xmm::abi, src);
-            auto const msb64 = xmm::broadcast<sint>(xmm::abi, dx::msb);
-            auto const sign16 = xmm::bwshift_right<48>(xmm::abi,
-                xmm::reinterpret<uint>(
-                    xmm::abi, xmm::bwand(xmm::abi, msb64, i64)));
-            auto const abs = xmm::reinterpret<E>(
-                xmm::abi, xmm::bwandnot(xmm::abi, i64, msb64));
-            auto const shifted = xmm::reinterpret<uint>(xmm::abi,
-                xmm::multiply(
-                    xmm::abi, abs, xmm::broadcast<E>(xmm::abi, 0x1p-1008)));
+            auto const i64 = xmm::reinterpret<sint>(src);
+            auto const msb64 = xmm::broadcast<sint>(dx::msb);
+            auto const sign16 = xmm::bwshift_right<48>(
+                xmm::reinterpret<uint>(xmm::bwand(msb64, i64)));
+            auto const abs = xmm::reinterpret<E>(xmm::bwandnot(i64, msb64));
+            auto const shifted = xmm::reinterpret<uint>(
+                xmm::multiply(abs, xmm::broadcast<E>(0x1p-1008)));
             constexpr auto round_mask = (0x1ull << 41) - 1ull;
-            auto const rounded = xmm::bwshift_right<42>(xmm::abi,
-                xmm::add(xmm::abi,
-                    xmm::bwand(xmm::abi,
-                        xmm::bwshift_right<42>(xmm::abi, shifted),
-                        xmm::broadcast<uint>(xmm::abi, dx::one)),
-                    xmm::add(xmm::abi, shifted,
-                        xmm::broadcast<uint>(xmm::abi, round_mask))));
-            auto const limit = xmm::broadcast<E>(xmm::abi, 0x1p16);
-            auto const isinf = simd<E>(_mm_cmpge_pd(+abs, +limit));
-            auto const isnan =
-                xmm::bwand(xmm::abi, simd<E>(_mm_cmpunord_pd(+src, +src)),
-                    xmm::broadcast<sint>(xmm::abi, 0x7fff));
+            auto const rounded = xmm::bwshift_right<42>(
+                xmm::add(xmm::bwand(xmm::bwshift_right<42>(shifted),
+                             xmm::broadcast<uint>(dx::one)),
+                    xmm::add(shifted, xmm::broadcast<uint>(round_mask))));
+            auto const limit = xmm::broadcast<E>(0x1p16);
+            auto const isinf = mask<E>(_mm_cmpge_pd(+abs, +limit));
+            auto const isnan = xmm::bwand(simd<E>(_mm_cmpunord_pd(+src, +src)),
+                xmm::broadcast<sint>(0x7fff));
 
             using sint16 = signed_representation_t<To>;
             constexpr auto infval =
                 static_cast<sint>(__DPL bit_cast<sint16>(dx::infinity_v<To>));
-            auto const inf16 = xmm::reinterpret<To>(
-                xmm::abi, xmm::broadcast<sint>(xmm::abi, infval));
-            auto const f16 = xmm::select(xmm::abi, isinf,
-                xmm::reinterpret<E>(xmm::abi, inf16),
-                xmm::reinterpret<E>(xmm::abi, rounded));
-            auto const result = xmm::bwor(xmm::abi, sign16,
-                xmm::reinterpret<uint>(
-                    xmm::abi, xmm::bwor(xmm::abi, isnan, f16)));
+            auto const inf16 =
+                xmm::reinterpret<To>(xmm::broadcast<sint>(infval));
+            auto const f16 = xmm::select(isinf, xmm::reinterpret<E>(inf16),
+                xmm::reinterpret<E>(rounded));
+            auto const result = xmm::bwor(
+                sign16, xmm::reinterpret<uint>(xmm::bwor(isnan, f16)));
 
             using u16 = signed_representation_t<To>;
 
@@ -844,42 +820,34 @@ public:
 #else
             using sint = signed_representation_t<E>;
             using uint = unsigned_representation_t<E>;
-            auto const i32 = xmm::reinterpret<sint>(xmm::abi, src);
-            auto const msb32 = xmm::broadcast<sint>(xmm::abi, dx::msb);
-            auto const sign16 = xmm::bwshift_right<16>(xmm::abi,
-                xmm::reinterpret<uint>(
-                    xmm::abi, xmm::bwand(xmm::abi, msb32, i32)));
-            auto const abs = xmm::reinterpret<E>(
-                xmm::abi, xmm::bwandnot(xmm::abi, i32, msb32));
-            auto const shifted = xmm::reinterpret<uint>(xmm::abi,
-                xmm::multiply(
-                    xmm::abi, abs, xmm::broadcast<E>(xmm::abi, 0x1p-112f)));
+            auto const i32 = xmm::reinterpret<sint>(src);
+            auto const msb32 = xmm::broadcast<sint>(dx::msb);
+            auto const sign16 = xmm::bwshift_right<16>(
+                xmm::reinterpret<uint>(xmm::bwand(msb32, i32)));
+            auto const abs = xmm::reinterpret<E>(xmm::bwandnot(i32, msb32));
+            auto const shifted = xmm::reinterpret<uint>(
+                xmm::multiply(abs, xmm::broadcast<E>(0x1p-112f)));
 
-            auto const rounded = xmm::bwshift_right<13>(xmm::abi,
-                xmm::add(xmm::abi,
-                    xmm::bwand(xmm::abi,
-                        xmm::bwshift_right<13>(xmm::abi, shifted),
-                        xmm::broadcast<uint>(xmm::abi, dx::one)),
-                    xmm::add(xmm::abi, shifted,
-                        xmm::broadcast<uint>(xmm::abi, 0xfffu))));
+            auto const rounded = xmm::bwshift_right<13>(
+                xmm::add(xmm::bwand(xmm::bwshift_right<13>(shifted),
+                             xmm::broadcast<uint>(dx::one)),
+                    xmm::add(shifted, xmm::broadcast<uint>(0xfffu))));
 
-            auto const limit = xmm::broadcast<E>(xmm::abi, 0x1p16f);
-            auto const isinf = simd<E>(_mm_cmpge_ps(+abs, +limit));
-            auto const isnan = xmm::bwandnot(
-                xmm::abi, simd<E>(_mm_cmpunord_ps(+src, +src)), msb32);
+            auto const limit = xmm::broadcast<E>(0x1p16f);
+            auto const isinf = mask<E>(_mm_cmpge_ps(+abs, +limit));
+            auto const isnan =
+                xmm::bwandnot(simd<E>(_mm_cmpunord_ps(+src, +src)), msb32);
 
             using sint16 = signed_representation_t<To>;
             constexpr auto infval =
                 static_cast<sint>(__DPL bit_cast<sint16>(dx::infinity_v<To>));
-            auto const inf16 = xmm::reinterpret<To>(
-                xmm::abi, xmm::broadcast<sint>(xmm::abi, infval));
-            auto const f16 = xmm::select(xmm::abi, isinf,
-                xmm::reinterpret<E>(xmm::abi, inf16),
-                xmm::reinterpret<E>(xmm::abi, rounded));
-            auto const result = xmm::bwor(xmm::abi, sign16,
-                xmm::reinterpret<uint>(
-                    xmm::abi, xmm::bwor(xmm::abi, isnan, f16)));
-            return xmm::reinterpret<To>(xmm::abi,
+            auto const inf16 =
+                xmm::reinterpret<To>(xmm::broadcast<sint>(infval));
+            auto const f16 = xmm::select(isinf, xmm::reinterpret<E>(inf16),
+                xmm::reinterpret<E>(rounded));
+            auto const result = xmm::bwor(
+                sign16, xmm::reinterpret<uint>(xmm::bwor(isnan, f16)));
+            return xmm::reinterpret<To>(
                 simd<uint>(_mm_packus_epi32(+result, _mm_setzero_si128())));
 #endif
         } else if constexpr (bfloat16_like<E>) {

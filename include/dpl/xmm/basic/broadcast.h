@@ -67,6 +67,19 @@ constexpr mask<E> broadcast(abi_tag tag, same_as<bool> auto scalar) noexcept {
     static_assert(!is_const_v<E> && !is_volatile_v<E>);
     return +xmm::broadcast(tag, scalar ? dx::all_bits_v<E> : dx::zero);
 }
+
+DPL_EXPORT template <simd_element E>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+constexpr simd<E> broadcast(type_identity_t<E> scalar) noexcept {
+    return xmm::broadcast<E>(xmm::abi, scalar);
+}
+
+DPL_EXPORT template <simd_element E>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+constexpr mask<E> broadcast(same_as<bool> auto scalar) noexcept {
+    return xmm::broadcast<E>(xmm::abi, scalar);
+}
+
 } // namespace datapar::xmm
 
 DPL_DEFAULT_NAMESPACE_END
