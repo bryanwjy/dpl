@@ -325,7 +325,8 @@ DPL_EXPORT inline constexpr internal::fpclass<internal::fpc::infinity> infinity{
 DPL_EXPORT inline constexpr internal::fpclass<internal::fpc::nan> nan{};
 DPL_EXPORT inline constexpr internal::fpclass<internal::fpc::finite> finite{};
 // clang-format on
-template <internal::fpc C>
+
+DPL_EXPORT template <internal::fpc C>
 consteval int popcount(internal::fpclass<C>) noexcept {
     return __DPL popcount(__DPL to_underlying(C));
 }

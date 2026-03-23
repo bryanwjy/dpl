@@ -16,6 +16,7 @@
 #  include "dpl/core/concepts/simd_equivalence.h"
 #  include "dpl/core/constants/zero.h"
 #  include "dpl/core/type_traits/common_arithmetic_type.h"
+#  include "dpl/core/type_traits/rebind_simd.h"
 #  include "dpl/std/concepts/enumeration.h"
 #  include "dpl/std/concepts/floating_point.h"
 #  include "dpl/std/type_traits/enable_if.h"

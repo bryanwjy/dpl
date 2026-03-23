@@ -12,7 +12,6 @@
 #  include "dpl/core/concepts/simd_class.h"
 #  include "dpl/core/concepts/simd_equivalence.h"
 #  include "dpl/core/type_traits/element_count.h"
-#  include "dpl/core/type_traits/rebind_simd.h"
 #  include "dpl/std/concepts/invocable.h"
 #endif
 
@@ -25,16 +24,35 @@ void reinterpret(...) noexcept = delete;
 template <typename>
 struct reinterpret_t {};
 
+template <typename From, typename To>
+concept unqualified_ereinterpretable_as = requires(From from) {
+    {
+        reinterpret<To>(internal::abi<From>, from)
+    } -> simd_with<To, typename From::abi_type>;
+};
+
+template <typename From, typename To>
+concept unqualified_emreinterpretable_as = requires(From from) {
+    {
+        reinterpret<To>(internal::abi<From>, from)
+    } -> mask_with<To, typename From::abi_type>;
+};
+
 template <simd_element E>
 struct reinterpret_t<E> {
 public:
-    template <basic_simd_class T>
-    static constexpr void operator()(T) noexcept = delete;
-
-    template <simd_class T>
+    template <simd_type T>
+    requires (!basic_simd_type<T>) &&
+        (unqualified_ereinterpretable_as<T, E> ||
+            unqualified_ereinterpretable_as<basic_type_t<T>, E> ||
+            same_as<E, simd_element_type_t<T>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T arg) noexcept {
-        if constexpr (requires { reinterpret<E>(internal::abi<T>, arg); }) {
+        if constexpr (same_as<E, simd_element_type_t<T>>) {
+            return arg;
+        } else if constexpr (requires {
+                                 reinterpret<E>(internal::abi<T>, arg);
+                             }) {
             return reinterpret<E>(internal::abi<T>, arg);
         } else {
             return operator()(dx::to_basic_type(arg));
@@ -42,64 +60,75 @@ public:
     }
 
     template <basic_simd_type T>
-    requires same_as<E, simd_element_type_t<T>>
+    requires (unqualified_ereinterpretable_as<T, E> ||
+        same_as<E, simd_element_type_t<T>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(T arg) noexcept {
-        return arg;
+    static constexpr auto operator()(T arg) noexcept {
+        if constexpr (same_as<E, simd_element_type_t<T>>) {
+            return arg;
+        } else {
+            return reinterpret<E>(internal::abi<T>, arg);
+        }
     }
 
-    template <basic_simd_type T>
+    template <simd_mask_type T>
+    requires (element_count<E, typename T::abi_type> == element_count<T>) &&
+        (!basic_simd_mask_type<T>) &&
+        (unqualified_emreinterpretable_as<T, E> ||
+            unqualified_emreinterpretable_as<basic_type_t<T>, E> ||
+            same_as<E, simd_element_type_t<T>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr rebind_simd_t<T, E> operator()(T arg) noexcept
-    requires requires {
-        { reinterpret<E>(internal::abi<T>, arg) };
-    }
-    {
-        return reinterpret<E>(internal::abi<T>, arg);
+    static constexpr auto operator()(T arg) noexcept {
+        if constexpr (same_as<E, simd_element_type_t<T>>) {
+            return arg;
+        } else if constexpr (requires {
+                                 reinterpret<E>(internal::abi<T>, arg);
+                             }) {
+            return reinterpret<E>(internal::abi<T>, arg);
+        } else {
+            return operator()(dx::to_basic_type(arg));
+        }
     }
 
     template <basic_simd_mask_type T>
-    requires same_as<E, simd_element_type_t<T>>
+    requires (element_count<E, typename T::abi_type> == element_count<T>) &&
+        (unqualified_emreinterpretable_as<T, E> ||
+            same_as<E, simd_element_type_t<T>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(T arg) noexcept {
-        return arg;
-    }
-
-    template <basic_simd_mask_type T>
-    requires (element_count<E, typename T::abi_type> == element_count<T>)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr rebind_simd_t<T, E> operator()(T arg) noexcept
-    requires requires {
-        { reinterpret<E>(internal::abi<T>, arg) };
-    }
-    {
-        return reinterpret<E>(internal::abi<T>, arg);
+    static constexpr auto operator()(T arg) noexcept {
+        if constexpr (same_as<E, simd_element_type_t<T>>) {
+            return arg;
+        } else {
+            return reinterpret<E>(internal::abi<T>, arg);
+        }
     }
 };
 
 template <typename From, typename To>
-concept reinterpretable_as = requires(From from) {
+concept unqualified_reinterpretable_as = requires(From from) {
     { reinterpret<To>(internal::abi<From>, from) } -> same_as<To>;
 };
 
 template <basic_simd_class To>
 struct reinterpret_t<To> {
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr To operator()(To src) noexcept { return src; }
+private:
+    using base_type DPL_NODEBUG = reinterpret_t<simd_element_type_t<To>>;
 
-    template <simd_class From>
-    requires common_class_with<To, From> && same_abi_simd_as<From, To>
+public:
+    template <common_class_with<To> From>
+    requires (simd_type<From> || element_count<To> == element_count<From>) &&
+        same_abi_simd_as<From, To> &&
+        (same_as<To, From> || unqualified_reinterpretable_as<From, To> ||
+            regular_invocable<base_type, From>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr To DPL_VECTORCALL operator()(From from) noexcept {
-        return reinterpret_t<simd_element_type_t<To>>::operator()(from);
-    }
-
-    template <simd_class From>
-    requires common_class_with<To, From> && same_abi_simd_as<From, To> &&
-        reinterpretable_as<From, To>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr To DPL_VECTORCALL operator()(From from) noexcept {
-        return reinterpret<To>(internal::abi<From>, from);
+        if constexpr (same_as<To, From>) {
+            return from;
+        } else if constexpr (unqualified_reinterpretable_as<From, To>) {
+            return reinterpret<To>(internal::abi<From>, from);
+        } else {
+            return reinterpret_t<simd_element_type_t<To>>::operator()(from);
+        }
     }
 };
 
@@ -109,22 +138,23 @@ private:
     using base_type DPL_NODEBUG = reinterpret_t<simd_element_type_t<To>>;
 
 public:
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr To DPL_VECTORCALL operator()(To arg) noexcept {
-        return arg;
-    }
-
-    template <simd_class From>
-    requires common_class_with<To, From> && same_abi_simd_as<From, To> &&
-        reinterpretable_as<From, To>
+    template <common_class_with<To> From>
+    requires (simd_type<From> || element_count<To> == element_count<From>) &&
+        same_abi_simd_as<From, To> &&
+        (same_as<From, To> || unqualified_reinterpretable_as<From, To>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr To DPL_VECTORCALL operator()(From arg) noexcept {
-        return reinterpret<To>(internal::abi<From>, arg);
+        if constexpr (same_as<To, From>) {
+            return arg;
+        } else {
+            return reinterpret<To>(internal::abi<From>, arg);
+        }
     }
 
-    template <simd_class From>
-    requires common_class_with<To, From> && same_abi_simd_as<From, To> &&
-        (!reinterpretable_as<From, To> && !equivalent_class_as<To, From>) &&
+    template <common_class_with<To> From>
+    requires (simd_type<From> || element_count<To> == element_count<From>) &&
+        same_abi_simd_as<From, To> &&
+        (!unqualified_reinterpretable_as<From, To> && !same_as<From, To>) &&
         regular_invocable<base_type, From> &&
         explicitly_convertible_to<invoke_result_t<base_type, From>, To>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
