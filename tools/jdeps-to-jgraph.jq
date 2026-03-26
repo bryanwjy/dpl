@@ -1,3 +1,5 @@
+
+# No copyright, written by ChatGPT
 reduce .[] as $doc
   ({}; 
    reduce ($doc.rules[]?) as $rule

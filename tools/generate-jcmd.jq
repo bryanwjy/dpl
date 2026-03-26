@@ -1,3 +1,4 @@
+# No copyright, written by ChatGPT
 {
     "directory": $directory,
     "file": $file,

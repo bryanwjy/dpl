@@ -1,3 +1,6 @@
+
+# No copyright, written by ChatGPT
+
 # arguments:
 #   $jmap = global logical-name → file map
 
