@@ -130,6 +130,9 @@ public:
         return operator()(all, val, op);
     }
 
+    /**
+     * Reduction for power of two elements
+     */
     template <simd_type T, immediate_mask_for<T> M,
         reduction_operator_for<T> BinaryOp>
     requires reducible<T, M::value> && (accumulations<M> == 1)
@@ -154,6 +157,9 @@ public:
         return reduction_result<T, M::value>(reducer(value));
     }
 
+    /**
+     * Reduction for non-power of two elements
+     */
     template <simd_type T, immediate_mask_for<T> M,
         reduction_operator_for<T> BinaryOp>
     requires reducible<T, M::value>
@@ -163,6 +169,25 @@ public:
         static_assert(accumulations<M> > 1);
         static constexpr auto active = dx::popcount(mask);
         static constexpr auto activity_width = sizeof(active) * char_bit_v;
+        // The way the logic works is dependent on the binary number
+        // representation of 'active'. e.g. For 11 elements, the binary
+        // representation is 0b1011.
+
+        // An additional buffer is requires to accumulate a 'remainder' The
+        // remainder consists of the accumulation of the permuted vectors of
+        // each level (except the last) in the shuffle tree where the
+        // corresponding binary representation of the active element count is
+        // set. The final result is then:
+        //  op(reduction[depth], rotate(mask, remainder, (1 << depth) - 1))
+        // where depth == std::bit_width(active) - 1
+        // and reduction[depth] is the reduction result using the shuffle tree
+        // up to and including the depth of std::bit_width(active) - 1
+
+        // So the maximum 'complexity' of non-power of two elements is
+        // essentially:
+        // Reduction of `depth` elements + popcnt(active % depth) op + 1 permute
+        // e.g. 11 elements: reduction of 8 elements + 2 op and 1 permute
+
         struct nothing_t {};
         union remainder_t {
             nothing_t null;
@@ -177,7 +202,7 @@ public:
             if constexpr (I + 1 == (activity_width - dx::countl_zero(active))) {
                 constexpr auto idx = seq::rotate(mask, iota, (1zu << I) - 1);
                 remain.value = [&]<size_t... Is>( __DPL index_sequence<Is...>) {
-                    return dx::permutei<idx[Is]...>(value);
+                    return dx::permutei<idx[Is]...>(remain.value);
                 }(iota_sequence<T>);
                 return __DPL invoke(op, value, remain.value);
             } else {
