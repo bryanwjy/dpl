@@ -14,7 +14,6 @@
 #  include "dpl/core/concepts/common_order_with.h" // IWYU pragma: keep
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_element.h"
-#  include "dpl/core/type_traits/element_count.h"
 #  include "dpl/std/concepts/different_from.h"
 #endif
 
@@ -29,7 +28,13 @@ public:
     using abi_type = A;
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr size_t size() noexcept { return element_count<E, A>; }
+    static constexpr size_t size() noexcept {
+        if constexpr (fixed_width_abi<A>) {
+            return A::size / sizeof(E);
+        } else {
+            return A::template element_count<E>();
+        }
+    }
 
     __DPL_HIDE_FROM_ABI constexpr basic_simd() noexcept
         : basic_simd(datapar::broadcast<basic_simd>(0)) {}
@@ -78,7 +83,6 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     constexpr auto operator[](
         this basic_simd self, internal::extraction_index auto idx) noexcept {
-        // assert(idx < element_count<basic_simd>);
         return datapar::extract(self, idx);
     }
 

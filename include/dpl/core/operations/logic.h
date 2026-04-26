@@ -10,7 +10,7 @@
 #include "dpl/core/operations/negated_mask.h"    // IWYU pragma: export
 
 #if !DPL_MODULES
-#  include "dpl/core/basic/to_native_vector.h"
+#  include "dpl/core/basic/to_native_type.h"
 #  include "dpl/core/concepts/simd_mask_type.h"
 #endif
 
@@ -40,7 +40,7 @@ struct logical_not_t {
     template <simd_mask_type M>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M val) noexcept {
-        return negated_mask<M>(datapar::to_native_vector(val));
+        return negated_mask<M>(datapar::to_native_type(val));
     }
 
     template <simd_mask_type M>

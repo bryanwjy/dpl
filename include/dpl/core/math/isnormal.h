@@ -5,7 +5,7 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/basic_type.h"
-#  include "dpl/core/concepts/compatible_mask_for.h"
+#  include "dpl/core/concepts/compatible_mask_with.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_type.h"
 #  include "dpl/core/constants/infinity.h"
@@ -36,7 +36,7 @@ public:
         if constexpr (requires {
                           {
                               isnormal(internal::abi<T>, arg)
-                          } -> compatible_mask_for<T>;
+                          } -> compatible_mask_with<T>;
                       }) {
             if constexpr (basic_simd_type<T>) {
                 if consteval {

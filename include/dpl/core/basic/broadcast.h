@@ -3,19 +3,15 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/basic/immediate.h"
-#include "dpl/core/basic/initialize.h"
-
 #if !DPL_MODULES
 #  include "dpl/core/fwd.h"
 
 #  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/broadcastable_to.h"
 #  include "dpl/core/concepts/simd_class.h"
-#  include "dpl/core/type_traits/iota_sequence.h"
-#  include "dpl/std/concepts/convertible_to.h"
+#  include "dpl/core/type_traits/basic_type.h"
 #  include "dpl/std/concepts/invocable.h"
-#  include "dpl/std/utility/sequence.h"
+#  include "dpl/std/utility/forward.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -32,8 +28,6 @@ struct broadcast_t<A> {
     template <simd_element E>
     using simd DPL_NODEBUG = basic_simd<E, A>;
 
-    using mask DPL_NODEBUG = basic_simd_mask<float, A>;
-
 public:
     template <simd_element E>
     requires regular_invocable<broadcast_t<simd<E>>, E>
@@ -41,51 +35,16 @@ public:
     static constexpr simd<E> operator()(E scalar) noexcept {
         return broadcast_t<simd<E>>::operator()(scalar);
     }
-
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr mask operator()(same_as<bool> auto scalar) noexcept {
-        return broadcast_t<mask>::operator()(scalar);
-    }
 };
 
 template <simd_abi A, simd_element E>
 struct broadcast_t<A, E> {
-    template <size_t... Is>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr basic_simd<E, A> fallback(
-        E val, index_sequence<Is...>) noexcept {
-        return dx::initialize<basic_simd<E, A>>(
-            [val]<size_t I>(immediate<I>) { return val; }(imm<Is>)...);
-    }
-
-    template <size_t... Is>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr basic_simd_mask<E, A> fallback(
-        bool val, index_sequence<Is...>) noexcept {
-        return dx::initialize<basic_simd<E, A>>(
-            [val]<size_t I>(immediate<I>) { return val; }(imm<Is>)...);
-    }
-
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr basic_simd<E, A> fallback(E val) noexcept {
-        return fallback(val, iota_sequence<E, A>);
-    }
-
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr basic_simd_mask<E, A> fallback(bool val) noexcept {
-        return fallback(val, iota_sequence<E, A>);
-    }
-
 public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr basic_simd<E, A> operator()(E scalar) noexcept
     requires requires { broadcast<E>(internal::abi<A>, scalar); }
     {
-        if consteval {
-            return fallback(scalar);
-        } else {
-            return broadcast<E>(internal::abi<A>, scalar);
-        }
+        return broadcast<E>(internal::abi<A>, scalar);
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
@@ -93,11 +52,7 @@ public:
         same_as<bool> auto scalar) noexcept
     requires requires { broadcast<E>(internal::abi<A>, scalar); }
     {
-        if consteval {
-            return fallback(scalar);
-        } else {
-            return broadcast<E>(internal::abi<A>, scalar);
-        }
+        return broadcast<E>(internal::abi<A>, scalar);
     }
 };
 

@@ -5,7 +5,7 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/basic_type.h"
-#  include "dpl/core/concepts/common_arithmetic_with.h"
+#  include "dpl/core/concepts/common_float_with.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_type.h"
 #  include "dpl/core/operations/arithmetic.h"

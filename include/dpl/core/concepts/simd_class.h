@@ -12,6 +12,13 @@ namespace datapar {
 DPL_EXPORT template <typename T>
 concept simd_class =
     atom::simd_basics<T> && (atom::simd_mask_type<T> || atom::simd_type<T>);
+
+DPL_EXPORT template <typename T>
+concept fixed_width_class =
+    simd_class<T> && fixed_width_abi<typename T::abi_type>;
+
+DPL_EXPORT template <typename T>
+concept scalable_class = simd_class<T> && scalable_abi<typename T::abi_type>;
 } // namespace datapar
 
 DPL_DEFAULT_NAMESPACE_END

@@ -46,6 +46,7 @@ private:
 
 public:
     template <ordered_simd T>
+    requires fixed_width_simd<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T arg) noexcept {
         if constexpr (unqualified_hmax<T>) {
@@ -62,6 +63,18 @@ public:
             return fallback(arg);
         } else {
             return operator()(dx::to_basic_type(arg));
+        }
+    }
+
+    template <ordered_simd T>
+    requires scalable_simd<T> &&
+        (unqualified_hmax<T> || unqualified_hmax<basic_type_t<T>>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T arg) noexcept {
+        if constexpr (unqualified_hmax<T>) {
+            return hmax(internal::abi<T>, arg);
+        } else {
+            return hmax(internal::abi<T>, dx::to_basic_type(arg));
         }
     }
 
@@ -98,7 +111,7 @@ private:
 
 public:
     template <arithmetic_simd T>
-    requires requires {
+    requires fixed_width_simd<T> && requires {
         typename mask_type<T>;
         requires regular_invocable<hmax_t, mask_type<T>, T>;
     }

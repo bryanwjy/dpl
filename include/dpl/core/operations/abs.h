@@ -3,15 +3,14 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/operations/bit.h"
 #include "dpl/core/operations/bitwise.h"
-#include "dpl/core/operations/transform.h"
+#include "dpl/core/operations/minmax.h"
+#include "dpl/core/operations/negate.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/immediate_mask.h"
 #  include "dpl/core/basic/reinterpret.h"
 #  include "dpl/core/concepts/arithmetic_type.h"
-#  include "dpl/core/constants/msb.h"
 #  include "dpl/core/type_traits/common_arithmetic_type.h"
 #endif
 
@@ -62,9 +61,7 @@ private:
         } else if constexpr (unsigned_integral_simd<E>) {
             return val;
         } else {
-            return internal::transform<basic_simd<T, A>>(
-                [](auto val) { return static_cast<T>(val < 0 ? -val : val); },
-                val);
+            return dx::max(dx::reinterpret<T>(val), dx::negate(val));
         }
     }
 
@@ -73,7 +70,7 @@ private:
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd_mask<E, A> mask, basic_simd<E, A> val) noexcept {
         using T = negated_type<E>;
-        return dx::select(mask, fallback(val), dx::reinterpret<T>(val));
+        return dx::max(dx::reinterpret<T>(val), dx::negate(mask, val));
     }
 
     template <integral auto V, arithmetic_type E, simd_abi A>
@@ -88,46 +85,13 @@ private:
             return dx::reinterpret<T>(val);
         } else {
             using T = negated_type<E>;
-            return internal::itransform<basic_simd<T, A>>(
-                [](size_t idx, auto val) {
-                    return static_cast<T>(mask[idx] && val < 0 ? -val : val);
-                },
-                val);
+            return dx::max(dx::reinterpret<T>(val), dx::negatei<V>(val));
         }
     }
-
-#ifndef DPL_DISABLE_IEC559_FALLBACK
-
-    template <arithmetic_type E, simd_abi A>
-    requires floating_point<E>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallback(basic_simd<E, A> val) noexcept {
-        return dx::reinterpret<E>(dx::bwandnot(val, dx::msb));
-    }
-
-    template <integral auto V, arithmetic_type E, simd_abi A>
-    requires floating_point<E>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallbacki(basic_simd<E, A> val) noexcept {
-        static constexpr immediate_mask<element_count<E, A>, V> mask{};
-        if constexpr (all_of(mask)) {
-            return fallback(val);
-        } else if constexpr (none_of(mask)) {
-            using T = negated_type<E>;
-            return dx::reinterpret<T>(val);
-        } else {
-            constexpr auto nmask = ~mask;
-            constexpr auto masked_msb =
-                dx::bit_drop(nmask, dx::msb_v<basic_simd<E, A>>);
-            return dx::reinterpret<E>(dx::bwandnot(val, masked_msb));
-        }
-    }
-#endif
 
 public:
     template <arithmetic_simd T>
+    requires fixed_width_simd<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr negated_simd<T> operator()(T val) noexcept {
         if constexpr (unqualified_abs<T>) {
@@ -147,8 +111,20 @@ public:
         }
     }
 
-    template <arithmetic_simd T, compatible_mask_for<T> M>
-    requires same_abi_simd_as<T, M>
+    template <arithmetic_simd T>
+    requires scalable_simd<T> &&
+        (unqualified_abs<T> || unqualified_abs<basic_type_t<T>>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr negated_simd<T> operator()(T val) noexcept {
+        if constexpr (unqualified_abs<T>) {
+            return abs(internal::abi<T>, val);
+        } else {
+            return abs(internal::abi<T>, dx::to_basic_type(val));
+        }
+    }
+
+    template <arithmetic_simd T, compatible_mask_with<T> M>
+    requires same_abi_simd_as<T, M> && fixed_width_simd<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr negated_simd<T> operator()(M mask, T val) noexcept {
         using A = typename T::abi_type;
@@ -169,10 +145,10 @@ public:
         }
     }
 
-    template <arithmetic_simd T, compatible_mask_for<T> M>
-    requires (!same_abi_simd_as<T, M> &&
+    template <arithmetic_simd T, compatible_mask_with<T> M>
+    requires (!same_abi_simd_as<T, M> || scalable_simd<T>) &&
         (unqualified_mabs<M, T> ||
-            unqualified_mabs<basic_type_t<M>, basic_type_t<T>>))
+            unqualified_mabs<basic_type_t<M>, basic_type_t<T>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr negated_simd<T> operator()(M mask, T val) noexcept {
         using A = common_abi_t<M, T>;

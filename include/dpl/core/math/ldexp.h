@@ -79,15 +79,16 @@ struct ldexp_t : binary_operation_base<ldexp_t> {
         rebind_simd_t<T, signed_rep_t<typename T::value_type>>;
 
 public:
-    template <floating_point_simd T>
+    template <floating_point_simd T, signed_integral_simd I>
+    requires common_size_simd_with<T, I> && same_abi_simd_as<T, I>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T num, int_simd<T> exp) noexcept {
+    static constexpr auto operator()(T num, I exp) noexcept {
         if constexpr (requires {
                           {
                               ldexp(internal::abi<T>, num, exp)
                           } -> equivalent_simd_as<T>;
                       }) {
-            if constexpr (basic_simd_type<T>) {
+            if constexpr (basic_simd_type<T> && basic_simd_type<I>) {
                 if consteval {
                     return fallback(num, exp);
                 } else {
@@ -96,7 +97,7 @@ public:
             } else {
                 return ldexp(internal::abi<T>, num, exp);
             }
-        } else if constexpr (basic_simd_type<T>) {
+        } else if constexpr (basic_simd_type<T> && basic_simd_type<I>) {
             return fallback(num, exp);
         } else {
             return operator()(dx::to_basic_type(num), dx::to_basic_type(exp));

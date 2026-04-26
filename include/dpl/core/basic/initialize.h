@@ -9,7 +9,6 @@
 #  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/simd_class.h"
 #  include "dpl/core/type_traits/basic_type.h"
-#  include "dpl/core/type_traits/element_count.h"
 #  include "dpl/std/bit/char_bit.h"
 #  include "dpl/std/bit/has_single_bit.h"
 #  include "dpl/std/concepts/array_initializable.h"
@@ -29,10 +28,19 @@ template <typename...>
 struct initialize_t {};
 
 template <simd_abi A, simd_element E>
+requires fixed_width_abi<A>
 struct initialize_t<A, E> {
 private:
-    using barray_type DPL_NODEBUG = bool[element_count<E, A>];
-    using array_type DPL_NODEBUG = E[element_count<E, A>];
+    static constexpr size_t lanes = []() {
+        if constexpr (fixed_width_abi<A>) {
+            return A::size / sizeof(E);
+        } else {
+            return A::max_size / sizeof(E);
+        }
+    }();
+
+    using barray_type DPL_NODEBUG = bool[lanes];
+    using array_type DPL_NODEBUG = E[lanes];
 
 public:
     template <core_convertible_to<E>... Args>
@@ -67,11 +75,18 @@ struct initialize_t<T> {
 private:
     using A DPL_NODEBUG = typename T::abi_type;   // bool for masks
     using E DPL_NODEBUG = typename T::value_type; // bool for masks
-    using Array DPL_NODEBUG = E[element_count<T>];
+    static constexpr size_t lanes = []() {
+        if constexpr (fixed_width_class<T>) {
+            return A::size / sizeof(simd_element_type_t<T>);
+        } else {
+            return A::max_size / sizeof(simd_element_type_t<T>);
+        }
+    }();
+    using array_type DPL_NODEBUG = E[lanes];
 
 public:
     template <core_convertible_to<E>... Args>
-    requires array_initializable<Array, Args...>
+    requires array_initializable<array_type, Args...>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr T operator()(Args&&... args) noexcept
     requires simd_type<T> && regular_invocable<initialize_t<A, E>, Args...>
@@ -80,7 +95,7 @@ public:
     }
 
     template <same_as<bool>... Bs>
-    requires array_initializable<Array, Bs...>
+    requires array_initializable<array_type, Bs...>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr T operator()(Bs... args) noexcept
     requires simd_mask_type<T> &&
@@ -129,7 +144,6 @@ template <simd_class T>
 struct initialize_t<T> {
 private:
     using E DPL_NODEBUG = typename T::value_type; // bool for masks
-    using Array DPL_NODEBUG = E[element_count<T>];
     using base_type DPL_NODEBUG = initialize_t<basic_type_t<T>>;
 
 public:

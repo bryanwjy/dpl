@@ -6,6 +6,7 @@
 #if !DPL_MODULES
 #  include "dpl/core/basic/immediate.h"
 #  include "dpl/core/concepts/basic_type.h"
+#  include "dpl/core/concepts/common_abi_with.h"
 #  include "dpl/core/type_traits/element_count.h"
 #  include "dpl/core/type_traits/iota_sequence.h"
 #  include "dpl/std/type_traits/is_invocable.h"
@@ -36,6 +37,8 @@ concept ivalue_invocable_r =
 
 template <basic_simd_class Result, basic_simd_class... Ts,
     ivalue_invocable_r<Result, Ts...> Op>
+requires (... && same_abi_simd_as<Result, Ts>) &&
+    (fixed_width_class<Result> && ... && fixed_width_class<Ts>)
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, FLATTEN, NODISCARD)
 constexpr Result itransform(Op func, Ts... args) noexcept {
 
@@ -52,6 +55,8 @@ constexpr Result itransform(Op func, Ts... args) noexcept {
 
 template <basic_simd_class Result, basic_simd_class... Ts,
     value_invocable_r<Result, Ts...> Op>
+requires (... && same_abi_simd_as<Result, Ts>) &&
+    (fixed_width_class<Result> && ... && fixed_width_class<Ts>)
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, FLATTEN, NODISCARD)
 constexpr Result transform(Op func, Ts... args) noexcept {
     return internal::itransform<Result>(

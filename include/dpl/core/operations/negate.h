@@ -21,13 +21,6 @@ namespace datapar::internal {
 template <auto>
 void negate(...) noexcept = delete;
 
-template <typename T>
-concept unqualified_negate = requires(T val) {
-    {
-        negate(internal::abi<T>, val)
-    } -> equivalent_simd_as<common_arithmetic_simd_t<T, T>>;
-};
-
 template <typename C, typename T, typename A = common_abi_t<T>>
 concept unqualified_mnegate = requires(C mask, T val) {
     {
@@ -89,39 +82,9 @@ private:
         }
     }
 
-#ifndef DPL_DISABLE_IEC559_FALLBACK
-
-    template <arithmetic_type E, simd_abi A>
-    requires floating_point<E>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallback(basic_simd<E, A> val) noexcept {
-        return dx::reinterpret<E>(dx::bwxor(val, dx::msb));
-    }
-
-    template <integral auto V, arithmetic_type E, simd_abi A>
-    requires floating_point<E>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallbacki(basic_simd<E, A> val) noexcept {
-        static constexpr immediate_mask<element_count<E, A>, V> mask{};
-        if constexpr (all_of(mask)) {
-            return fallback(val);
-        } else if constexpr (none_of(mask)) {
-            using T = negated_type<E>;
-            return dx::reinterpret<T>(val);
-        } else {
-            constexpr auto nmask = ~mask;
-            constexpr auto msb =
-                dx::bit_drop(nmask, dx::msb_v<basic_simd<E, A>>);
-            return dx::reinterpret<E>(dx::bwxor(val, msb));
-        }
-    }
-
-#endif
-
 public:
     template <arithmetic_simd T>
+    requires fixed_width_simd<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr negated_simd<T> operator()(T val) noexcept {
         if constexpr (unqualified_negate<T>) {
@@ -141,7 +104,19 @@ public:
         }
     }
 
-    template <arithmetic_simd T, compatible_mask_for<T> M>
+    template <arithmetic_simd T>
+    requires scalable_simd<T> &&
+        (unqualified_negate<T> || unqualified_negate<basic_type_t<T>>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr negated_simd<T> operator()(T val) noexcept {
+        if constexpr (unqualified_negate<T>) {
+            return negate(internal::abi<T>, val);
+        } else {
+            return negate(internal::abi<T>, dx::to_basic_type(val));
+        }
+    }
+
+    template <arithmetic_simd T, compatible_mask_with<T> M>
     requires same_abi_simd_as<T, M>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr negated_simd<T> operator()(M mask, T val) noexcept {
@@ -163,7 +138,7 @@ public:
         }
     }
 
-    template <arithmetic_simd T, compatible_mask_for<T> M>
+    template <arithmetic_simd T, compatible_mask_with<T> M>
     requires (!same_abi_simd_as<T, M> &&
         (unqualified_mnegate<M, T> ||
             unqualified_mnegate<basic_type_t<M>, basic_type_t<T>>))

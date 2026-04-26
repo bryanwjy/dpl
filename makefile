@@ -201,7 +201,7 @@ $(OUTPUT_DIR)/%.pass.cpp.o: $(ROOT_DIR)/%.pass.cpp $(OUTPUT_DIR)/%.pass.cpp.mrsp
 -include $(DEP_TARGETS)
 
 $(OUTPUT_DIR)/%.pass.cpp.trsp: $(OUTPUT_DIR)/%.pass.jdir $(OUTPUT_DIR)/supported_flags.txt
-	@jq -r '.[] | .["compile-flags"] // [] | .[]' $< | grep -Fxf $(OUTPUT_DIR)/supported_flags.txt - > $@ || touch $@
+	@$(call replace_if_different, (jq -r '.[] | .["compile-flags"] // [] | .[]' $< | grep -Fxf $(OUTPUT_DIR)/supported_flags.txt - || true))
 
 $(OUTPUT_DIR)/supported_flags.txt: $(OUTPUT_DIR)/candidate_flags.txt
 	@mkdir -p $(OUTPUT_DIR)/probe

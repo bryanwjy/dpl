@@ -9,9 +9,9 @@
 
 #  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/common_abi_with.h"
+#  include "dpl/core/concepts/common_size_with.h"
 #  include "dpl/core/concepts/simd_class.h"
 #  include "dpl/core/concepts/simd_equivalence.h"
-#  include "dpl/core/type_traits/element_count.h"
 #  include "dpl/std/concepts/invocable.h"
 #endif
 
@@ -72,7 +72,7 @@ public:
     }
 
     template <simd_mask_type T>
-    requires (element_count<E, typename T::abi_type> == element_count<T>) &&
+    requires common_size_with<simd_element_type_t<T>, E> &&
         (!basic_simd_mask_type<T>) &&
         (unqualified_emreinterpretable_as<T, E> ||
             unqualified_emreinterpretable_as<basic_type_t<T>, E> ||
@@ -91,7 +91,7 @@ public:
     }
 
     template <basic_simd_mask_type T>
-    requires (element_count<E, typename T::abi_type> == element_count<T>) &&
+    requires common_size_with<simd_element_type_t<T>, E> &&
         (unqualified_emreinterpretable_as<T, E> ||
             same_as<E, simd_element_type_t<T>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -116,7 +116,7 @@ private:
 
 public:
     template <common_class_with<To> From>
-    requires (simd_type<From> || element_count<To> == element_count<From>) &&
+    requires (simd_type<From> || common_size_simd_with<To, From>) &&
         same_abi_simd_as<From, To> &&
         (same_as<To, From> || unqualified_reinterpretable_as<From, To> ||
             regular_invocable<base_type, From>)
@@ -139,7 +139,7 @@ private:
 
 public:
     template <common_class_with<To> From>
-    requires (simd_type<From> || element_count<To> == element_count<From>) &&
+    requires (simd_type<From> || common_size_simd_with<To, From>) &&
         same_abi_simd_as<From, To> &&
         (same_as<From, To> || unqualified_reinterpretable_as<From, To>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -152,7 +152,7 @@ public:
     }
 
     template <common_class_with<To> From>
-    requires (simd_type<From> || element_count<To> == element_count<From>) &&
+    requires (simd_type<From> || common_size_simd_with<To, From>) &&
         same_abi_simd_as<From, To> &&
         (!unqualified_reinterpretable_as<From, To> && !same_as<From, To>) &&
         regular_invocable<base_type, From> &&

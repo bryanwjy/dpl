@@ -41,7 +41,7 @@ template <simd_element To>
 struct cast_t<To> {
 private:
     template <basic_simd_element From>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr To safe_cast(From val) noexcept {
         if consteval {
             // Do we need this?
@@ -66,9 +66,9 @@ private:
     }
 
     template <basic_simd_element From, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_simd<To, A> fallback(
-        basic_simd<From, A> arg) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr basic_simd<To, A> DPL_VECTORCALL
+        fallback(basic_simd<From, A> arg) noexcept {
         using S = basic_simd<From, A>;
         using R = basic_simd<To, A>;
         return []<size_t... Is>(S arg, index_sequence<Is...>) {
@@ -82,9 +82,9 @@ private:
     }
 
 public:
-    template <simd_type From>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(From val) noexcept {
+    template <fixed_width_simd From>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(From val) noexcept {
         if constexpr (unqualified_element_castable_to<From, To>) {
             if constexpr (basic_simd_type<From>) {
                 if consteval {
@@ -99,6 +99,18 @@ public:
             return fallback(val);
         } else {
             return operator()(dx::to_basic_type(val));
+        }
+    }
+
+    template <scalable_simd From>
+    requires unqualified_element_castable_to<From, To> ||
+        unqualified_element_castable_to<basic_type_t<From>, To>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(From val) noexcept {
+        if constexpr (unqualified_element_castable_to<From, To>) {
+            return cast<To>(internal::abi<From>, val);
+        } else {
+            return cast<To>(internal::abi<From>, dx::to_basic_type(val));
         }
     }
 };

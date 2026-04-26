@@ -5,7 +5,6 @@
 
 #include "dpl/core/operations/bitwise.h"
 #include "dpl/core/operations/operation_base.h"
-#include "dpl/core/operations/pack_mask.h"
 #include "dpl/core/operations/select.h"
 #include "dpl/core/operations/transform.h"
 
@@ -13,7 +12,8 @@
 #  include "dpl/core/basic/immediate_mask.h"
 #  include "dpl/core/basic/reinterpret.h"
 #  include "dpl/core/concepts/common_bits_with.h"
-#  include "dpl/core/concepts/compatible_mask_for.h"
+#  include "dpl/core/concepts/compatible_mask_with.h"
+#  include "dpl/core/concepts/immediate_mask_like.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/constants/all_bits.h"
 #  include "dpl/core/constants/zero.h"
@@ -157,7 +157,7 @@ private:
 
 public:
     template <simd_type L, common_bits_simd_with<L> R>
-    requires same_abi_simd_as<L, R>
+    requires same_abi_simd_as<L, R> && fixed_width_abi<common_abi_t<L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs) noexcept {
         using A = typename L::abi_type; // Same ABI, just pick one
@@ -179,7 +179,7 @@ public:
     }
 
     template <simd_type L, common_bits_simd_with<L> R>
-    requires (!same_abi_simd_as<L, R>) &&
+    requires (!same_abi_simd_as<L, R> || scalable_abi<common_abi_t<L, R>>) &&
         (unqualified_bit_drop<L, R> ||
             unqualified_bit_drop<basic_type_t<L>, basic_type_t<R>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -193,8 +193,8 @@ public:
         }
     }
 
-    template <simd_type R, compatible_mask_for<R> L>
-    requires same_abi_simd_as<L, R>
+    template <simd_type R, compatible_mask_with<R> L>
+    requires same_abi_simd_as<L, R> && fixed_width_abi<common_abi_t<L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs) noexcept {
         using A = typename L::abi_type; // Same ABI, just pick one
@@ -215,8 +215,8 @@ public:
         }
     }
 
-    template <simd_type R, compatible_mask_for<R> L>
-    requires (!same_abi_simd_as<L, R>) &&
+    template <simd_type R, compatible_mask_with<R> L>
+    requires (!same_abi_simd_as<L, R> || scalable_abi<common_abi_t<L, R>>) &&
         (unqualified_mbit_drop<L, R> ||
             unqualified_mbit_drop<basic_type_t<L>, basic_type_t<R>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -325,7 +325,7 @@ private:
 
 public:
     template <simd_type L, common_bits_simd_with<L> R>
-    requires same_abi_simd_as<L, R>
+    requires same_abi_simd_as<L, R> && fixed_width_abi<common_abi_t<L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs) noexcept {
         using A = typename L::abi_type; // Same ABI, just pick one
@@ -347,7 +347,7 @@ public:
     }
 
     template <simd_type L, common_bits_simd_with<L> R>
-    requires (!same_abi_simd_as<L, R>) &&
+    requires (!same_abi_simd_as<L, R> || scalable_abi<common_abi_t<L, R>>) &&
         (unqualified_bit_fill<L, R> ||
             unqualified_bit_fill<basic_type_t<L>, basic_type_t<R>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -361,8 +361,8 @@ public:
         }
     }
 
-    template <simd_type R, compatible_mask_for<R> L>
-    requires same_abi_simd_as<L, R>
+    template <simd_type R, compatible_mask_with<R> L>
+    requires same_abi_simd_as<L, R> && fixed_width_abi<common_abi_t<L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs) noexcept {
         using A = typename L::abi_type; // Same ABI, just pick one
@@ -383,8 +383,8 @@ public:
         }
     }
 
-    template <simd_type R, compatible_mask_for<R> L>
-    requires (!same_abi_simd_as<L, R>) &&
+    template <simd_type R, compatible_mask_with<R> L>
+    requires (!same_abi_simd_as<L, R> || scalable_abi<common_abi_t<L, R>>) &&
         (unqualified_mbit_fill<L, R> ||
             unqualified_mbit_fill<basic_type_t<L>, basic_type_t<R>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -493,7 +493,7 @@ private:
 
 public:
     template <simd_type L, common_bits_simd_with<L> R>
-    requires same_abi_simd_as<L, R>
+    requires same_abi_simd_as<L, R> && fixed_width_abi<common_abi_t<L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs) noexcept {
         using A = typename L::abi_type; // Same ABI, just pick one
@@ -515,7 +515,7 @@ public:
     }
 
     template <simd_type L, common_bits_simd_with<L> R>
-    requires (!same_abi_simd_as<L, R>) &&
+    requires (!same_abi_simd_as<L, R> || scalable_abi<common_abi_t<L, R>>) &&
         (unqualified_bit_keep<L, R> ||
             unqualified_bit_keep<basic_type_t<L>, basic_type_t<R>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -529,8 +529,8 @@ public:
         }
     }
 
-    template <simd_type R, compatible_mask_for<R> L>
-    requires same_abi_simd_as<L, R>
+    template <simd_type R, compatible_mask_with<R> L>
+    requires same_abi_simd_as<L, R> && fixed_width_abi<common_abi_t<L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs) noexcept {
         using A = typename L::abi_type; // Same ABI, just pick one
@@ -551,8 +551,8 @@ public:
         }
     }
 
-    template <simd_type R, compatible_mask_for<R> L>
-    requires (!same_abi_simd_as<L, R>) &&
+    template <simd_type R, compatible_mask_with<R> L>
+    requires (!same_abi_simd_as<L, R> || scalable_abi<common_abi_t<L, R>>) &&
         (unqualified_mbit_keep<L, R> ||
             unqualified_mbit_keep<basic_type_t<L>, basic_type_t<R>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -629,7 +629,7 @@ public:
         requires regular_invocable<bit_keep_t, mask_type<T>, T>;
     }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(T arg) noexcept {
+    static constexpr auto operator()(T arg) noexcept {
         constexpr mask_type<T> mask{};
         return bit_keep_t::operator()(mask, arg);
     }
@@ -667,7 +667,7 @@ private:
 
 public:
     template <simd_type L, common_bits_simd_with<L> R>
-    requires same_abi_simd_as<L, R>
+    requires same_abi_simd_as<L, R> && fixed_width_abi<common_abi_t<L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs) noexcept {
         using A = typename L::abi_type; // Same ABI, just pick one
@@ -689,7 +689,7 @@ public:
     }
 
     template <simd_type L, common_bits_simd_with<L> R>
-    requires (!same_abi_simd_as<L, R>) &&
+    requires (!same_abi_simd_as<L, R> || scalable_abi<common_abi_t<L, R>>) &&
         (unqualified_bit_stencil<L, R> ||
             unqualified_bit_stencil<basic_type_t<L>, basic_type_t<R>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -703,8 +703,8 @@ public:
         }
     }
 
-    template <simd_type R, compatible_mask_for<R> L>
-    requires same_abi_simd_as<L, R>
+    template <simd_type R, compatible_mask_with<R> L>
+    requires same_abi_simd_as<L, R> && fixed_width_abi<common_abi_t<L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L lhs, R rhs) noexcept {
         using A = typename L::abi_type; // Same ABI, just pick one
@@ -725,8 +725,8 @@ public:
         }
     }
 
-    template <simd_type R, compatible_mask_for<R> L>
-    requires (!same_abi_simd_as<L, R>) &&
+    template <simd_type R, compatible_mask_with<R> L>
+    requires (!same_abi_simd_as<L, R> || scalable_abi<common_abi_t<L, R>>) &&
         (unqualified_mbit_stencil<L, R> ||
             unqualified_mbit_stencil<basic_type_t<L>, basic_type_t<R>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -803,7 +803,7 @@ public:
         requires regular_invocable<bit_stencil_t, mask_type<T>, T>;
     }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(T arg) noexcept {
+    static constexpr auto operator()(T arg) noexcept {
         constexpr mask_type<T> mask{};
         return bit_stencil_t::operator()(mask, arg);
     }
@@ -812,17 +812,17 @@ public:
 struct bit_select_t {
 private:
     template <auto V, basic_simd_element ET, basic_simd_element EF, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto fallbacki(
-        basic_simd<ET, A> tval, basic_simd<EF, A> fval) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL
+        fallbacki(basic_simd<ET, A> tval, basic_simd<EF, A> fval) noexcept {
         using ER = common_bits_type_t<ET, EF>;
         return dx::selecti<V>(
             dx::reinterpret<ER>(tval), dx::reinterpret<ER>(fval));
     }
 
     template <auto V, basic_simd_element ET, basic_simd_element EF, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto fallbacki(
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL fallbacki(
         basic_simd_mask<ET, A> tval, basic_simd_mask<EF, A> fval) noexcept {
         using ER = common_size_type_t<ET, EF>;
         return dx::selecti<V>(
@@ -831,8 +831,8 @@ private:
 
     template <basic_simd_element EM, basic_simd_element ET,
         basic_simd_element EF, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto fallback(basic_simd_mask<EM, A> mask,
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL fallback(basic_simd_mask<EM, A> mask,
         basic_simd<ET, A> tval, basic_simd<EF, A> fval) noexcept {
         using ER = common_bits_type_t<ET, EF>;
         return dx::select(
@@ -841,8 +841,8 @@ private:
 
     template <basic_simd_element EM, basic_simd_element ET,
         basic_simd_element EF, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto fallback(basic_simd_mask<EM, A> mask,
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL fallback(basic_simd_mask<EM, A> mask,
         basic_simd_mask<ET, A> tval, basic_simd_mask<EF, A> fval) noexcept {
         using ER = common_size_type_t<ET, EF>;
         return dx::select(
@@ -851,8 +851,8 @@ private:
 
     template <basic_simd_element EM, basic_simd_element ET,
         basic_simd_element EF, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto fallback(basic_simd<EM, A> mask,
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL fallback(basic_simd<EM, A> mask,
         basic_simd<ET, A> tval, basic_simd<EF, A> fval) noexcept {
         using ER = common_bits_type_t<ET, EF, EM>;
         return dx::bwor(
@@ -931,18 +931,19 @@ public:
     }
 
     template <simd_type T, common_bits_simd_with<T> F,
-        compatible_mask_for<common_bits_simd_t<T, F>> M>
+        compatible_mask_with<common_bits_simd_t<T, F>> M>
     requires same_abi_simd_as<T, F> && same_abi_simd_as<T, M> &&
-        same_abi_simd_as<F, M>
+        same_abi_simd_as<F, M> && fixed_width_abi<common_abi_t<T, F, M>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, T tval, F fval) noexcept {
         return impl(mask, tval, fval);
     }
 
     template <simd_type T, common_bits_simd_with<T> F,
-        compatible_mask_for<common_bits_simd_t<T, F>> M>
+        compatible_mask_with<common_bits_simd_t<T, F>> M>
     requires (!same_abi_simd_as<T, F> || !same_abi_simd_as<T, M> ||
-                 !same_abi_simd_as<F, M>) &&
+                 !same_abi_simd_as<F, M> ||
+                 scalable_abi<common_abi_t<T, F, M>>) &&
         (unqualified_bit_select<M, T, F> ||
             unqualified_bit_select<M, basic_type_t<T>, basic_type_t<F>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -968,16 +969,18 @@ private:
     template <simd_abi A, simd_class L, typename R>
     requires unqualified_bit_selecti<mask_type<L>, L, R, A> ||
         unqualified_mbit_selecti<mask_type<L>, L, R, A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto native(A abi, L left, R right) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL
+        native(A abi, L left, R right) noexcept {
         return bit_select<V>(internal::abi<A>, left, right);
     }
 
     template <simd_abi A, typename L, simd_class R>
     requires unqualified_bit_selecti<mask_type<R>, L, R, A> ||
         unqualified_mbit_selecti<mask_type<R>, L, R, A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto native(A abi, L left, R right) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL
+        native(A abi, L left, R right) noexcept {
         return bit_select<V>(internal::abi<A>, left, right);
     }
 
@@ -987,8 +990,8 @@ public:
         typename mask_type<T>;
         requires regular_invocable<bit_select_t, mask_type<T>, T, F>;
     }
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(T tval, F fval) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T tval, F fval) noexcept {
         constexpr mask_type<T> mask{};
         return bit_select_t::operator()(mask, tval, fval);
     }
@@ -996,11 +999,27 @@ public:
     using binary_operation_base<bit_selecti_t>::operator();
 };
 
+template <typename T, typename U>
+concept bit_result_simd_for = integral_simd<T> && common_size_simd_with<T, U>;
+
+template <typename T>
+concept unqualified_popcount = requires(T arg) {
+    { popcount(internal::abi<T>, arg) } -> bit_result_simd_for<T>;
+};
+
+template <typename T>
+concept unqualified_mpopcount = requires(T arg) {
+    { popcount(internal::abi<T>, arg) } -> core_convertible_to<size_t>;
+};
+
 struct popcount_t {
 private:
     template <simd_element E, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto fallback(basic_simd<E, A> arg) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL
+        fallback(basic_simd<E, A> arg) noexcept {
+        static_assert(
+            fixed_width_abi<A>, "Scalable ABIs have no viable fallback");
         return internal::transform<basic_simd<E, A>>(
             [](auto val) {
                 auto const count = __DPL popcount(__DPL to_unsigned(val));
@@ -1010,20 +1029,29 @@ private:
     }
 
     template <simd_element E, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr int fallback(basic_simd_mask<E, A> arg) noexcept {
-        // TODO: What if pack_mask is not an integer?
-        return __DPL popcount(dx::pack_mask(arg));
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr size_t DPL_VECTORCALL
+        fallback(basic_simd_mask<E, A> arg) noexcept {
+        return []<size_t I>(this auto self, auto arg, immediate<I>) {
+            if constexpr (I > 0) {
+                return arg[I] + self(arg, imm<I - 1>);
+            } else {
+                return arg[I];
+            }
+        }(arg, imm<element_count<E, A> - 1>);
     }
 
 public:
     template <integral_simd T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(T arg) noexcept {
-        if constexpr (requires { popcount(internal::abi<T>, arg); }) {
+    requires fixed_width_simd<T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T arg) noexcept {
+        if constexpr (unqualified_popcount<T>) {
             if constexpr (basic_simd_type<T>) {
+                using E = typename decltype(popcount(
+                    internal::abi<T>, arg))::value_type;
                 if consteval {
-                    return fallback(arg);
+                    return dx::reinterpret<E>(fallback(arg));
                 } else {
                     return popcount(internal::abi<T>, arg);
                 }
@@ -1037,10 +1065,23 @@ public:
         }
     }
 
+    template <integral_simd T>
+    requires scalable_simd<T> &&
+        (unqualified_popcount<T> || unqualified_popcount<basic_type_t<T>>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T arg) noexcept {
+        if constexpr (unqualified_popcount<T>) {
+            return popcount(internal::abi<T>, arg);
+        } else {
+            return popcount(internal::abi<T>, dx::to_basic_type(arg));
+        }
+    }
+
     template <simd_mask_type T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr int DPL_VECTORCALL operator()(T arg) noexcept {
-        if constexpr (requires { popcount(internal::abi<T>, arg); }) {
+    requires fixed_width_mask<T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr size_t operator()(T arg) noexcept {
+        if constexpr (unqualified_mpopcount<T>) {
             if constexpr (basic_simd_mask_type<T>) {
                 if consteval {
                     return fallback(arg);
@@ -1057,11 +1098,44 @@ public:
         }
     }
 
-    template <integral_constant_like T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr int DPL_VECTORCALL operator()(T) noexcept {
-        return __DPL popcount(__DPL to_unsigned(T::value));
+    template <simd_mask_type T>
+    requires scalable_mask<T> &&
+        (unqualified_mpopcount<T> || unqualified_mpopcount<basic_type_t<T>>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr size_t operator()(T arg) noexcept {
+        if constexpr (unqualified_mpopcount<T>) {
+            return popcount(internal::abi<T>, arg);
+        } else {
+            return popcount(internal::abi<T>, dx::to_basic_type(arg));
+        }
     }
+
+    template <integral_constant_like T>
+    requires unsigned_integral<typename T::value_type>
+    static consteval size_t operator()(T) noexcept {
+        return __DPL popcount(T::value);
+    }
+
+    template <immediate_mask_like T>
+    static consteval size_t operator()(T val) noexcept {
+        if constexpr (requires {
+                          { popcount(val) } -> core_convertible_to<size_t>;
+                      }) {
+            return popcount(val);
+        } else {
+            return __DPL popcount(T::value);
+        }
+    }
+};
+
+template <typename T>
+concept unqualified_countl_zero = requires(T arg) {
+    { countl_zero(internal::abi<T>, arg) } -> bit_result_simd_for<T>;
+};
+
+template <typename T>
+concept unqualified_mcountl_zero = requires(T arg) {
+    { countl_zero(internal::abi<T>, arg) } -> core_convertible_to<size_t>;
 };
 
 struct countl_zero_t {
@@ -1069,6 +1143,8 @@ private:
     template <simd_element E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto fallback(basic_simd<E, A> arg) noexcept {
+        static_assert(
+            fixed_width_abi<A>, "Scalable ABIs have no viable fallback");
         return internal::transform<basic_simd<E, A>>(arg, [](auto val) {
             auto const count = __DPL countl_zero(__DPL to_unsigned(val));
             return static_cast<E>(count);
@@ -1077,19 +1153,31 @@ private:
 
     template <simd_element E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto fallback(basic_simd_mask<E, A> arg) noexcept {
-        // TODO: What if pack_mask is not an integer?
-        return __DPL countl_zero(dx::pack_mask(arg));
+    static constexpr size_t fallback(basic_simd_mask<E, A> arg) noexcept {
+        static_assert(
+            fixed_width_abi<A>, "Scalable ABIs have no viable fallback");
+        return []<size_t I>(this auto self, auto arg, immediate<I>) {
+            auto val = !arg[I];
+            if constexpr (I > 0) {
+                auto const mask = val ? -1 : 0;
+                return val + (mask & self(arg, imm<I - 1>));
+            } else {
+                return val;
+            }
+        }(arg, imm<element_count<E, A> - 1>);
     }
 
 public:
     template <integral_simd T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(T arg) noexcept {
-        if constexpr (requires { countl_zero(internal::abi<T>, arg); }) {
+    requires fixed_width_mask<T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T arg) noexcept {
+        if constexpr (unqualified_countl_zero<T>) {
             if constexpr (basic_simd_type<T>) {
                 if consteval {
-                    return fallback(arg);
+                    using E = typename decltype(countl_zero(
+                        internal::abi<T>, arg))::value_type;
+                    return dx::reinterpret<E>(fallback(arg));
                 } else {
                     return countl_zero(internal::abi<T>, arg);
                 }
@@ -1103,10 +1191,23 @@ public:
         }
     }
 
-    template <simd_mask_type T>
+    template <integral_simd T>
+    requires scalable_simd<T> &&
+        (unqualified_countl_zero<T> || unqualified_countl_zero<basic_type_t<T>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr int DPL_VECTORCALL operator()(T arg) noexcept {
-        if constexpr (requires { countl_zero(internal::abi<T>, arg); }) {
+    static constexpr auto DPL_VECTORCALL operator()(T arg) noexcept {
+        if constexpr (unqualified_countl_zero<T>) {
+            return countl_zero(internal::abi<T>, arg);
+        } else {
+            return countl_zero(internal::abi<T>, dx::to_basic_type(arg));
+        }
+    }
+
+    template <simd_mask_type T>
+    requires fixed_width_mask<T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr size_t operator()(T arg) noexcept {
+        if constexpr (unqualified_mcountl_zero<T>) {
             if constexpr (basic_simd_mask_type<T>) {
                 if consteval {
                     return fallback(arg);
@@ -1123,11 +1224,49 @@ public:
         }
     }
 
-    template <integral_constant_like T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr int DPL_VECTORCALL operator()(T) noexcept {
-        return __DPL countl_zero(__DPL to_unsigned(T::value));
+    template <simd_mask_type T>
+    requires scalable_mask<T> &&
+        (unqualified_mcountl_zero<T> ||
+            unqualified_mcountl_zero<basic_type_t<T>>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr size_t operator()(T arg) noexcept {
+        if constexpr (unqualified_mcountl_zero<T>) {
+            return countl_zero(internal::abi<T>, arg);
+        } else {
+            return countl_zero(internal::abi<T>, dx::to_basic_type(arg));
+        }
     }
+
+    template <integral_constant_like T>
+    requires unsigned_integral<typename T::value_type>
+    static consteval size_t operator()(T) noexcept {
+        return __DPL countl_zero(T::value);
+    }
+
+    template <immediate_mask_like T>
+    static consteval size_t operator()(T val) noexcept {
+        if constexpr (requires {
+                          { countl_zero(val) } -> core_convertible_to<size_t>;
+                      }) {
+            return countl_zero(val);
+        } else {
+            constexpr auto mask =
+                static_cast<typename T::value_type>((1ll << T::width) - 1);
+            constexpr auto remainder =
+                sizeof(typename T::value_type) * char_bit_v - T::width;
+            return __DPL countl_zero(T::value & mask) - remainder;
+        }
+    }
+};
+
+template <typename T>
+concept unqualified_countl_one = requires(T arg) {
+    { countl_one(internal::abi<T>, arg) } -> bit_result_simd_for<T>;
+};
+
+template <typename T>
+concept unqualified_mcountl_one = requires(T arg) {
+    { countl_one(internal::abi<T>, arg) } -> core_convertible_to<size_t>;
 };
 
 struct countl_one_t {
@@ -1135,6 +1274,8 @@ private:
     template <simd_element E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto fallback(basic_simd<E, A> arg) noexcept {
+        static_assert(
+            fixed_width_abi<A>, "Scalable ABIs have no viable fallback");
         return internal::transform<basic_simd<E, A>>(arg, [](auto val) {
             auto const count = __DPL countl_one(__DPL to_unsigned(val));
             return static_cast<E>(count);
@@ -1144,18 +1285,30 @@ private:
     template <simd_element E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto fallback(basic_simd_mask<E, A> arg) noexcept {
-        // TODO: What if pack_mask is not an integer?
-        return __DPL countl_one(dx::pack_mask(arg));
+        static_assert(
+            fixed_width_abi<A>, "Scalable ABIs have no viable fallback");
+        return []<size_t I>(this auto self, auto arg, immediate<I>) {
+            auto val = arg[I];
+            if constexpr (I > 0) {
+                auto const mask = val ? -1 : 0;
+                return val + (mask & self(arg, imm<I - 1>));
+            } else {
+                return val;
+            }
+        }(arg, imm<element_count<E, A> - 1>);
     }
 
 public:
     template <integral_simd T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(T arg) noexcept {
-        if constexpr (requires { countl_one(internal::abi<T>, arg); }) {
+    requires fixed_width_mask<T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T arg) noexcept {
+        if constexpr (unqualified_countl_one<T>) {
             if constexpr (basic_simd_type<T>) {
                 if consteval {
-                    return fallback(arg);
+                    using E = typename decltype(countl_one(
+                        internal::abi<T>, arg))::value_type;
+                    return dx::reinterpret<E>(fallback(arg));
                 } else {
                     return countl_one(internal::abi<T>, arg);
                 }
@@ -1169,10 +1322,23 @@ public:
         }
     }
 
-    template <simd_mask_type T>
+    template <integral_simd T>
+    requires scalable_simd<T> &&
+        (unqualified_countl_one<T> || unqualified_countl_one<basic_type_t<T>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr int DPL_VECTORCALL operator()(T arg) noexcept {
-        if constexpr (requires { countl_one(internal::abi<T>, arg); }) {
+    static constexpr auto DPL_VECTORCALL operator()(T arg) noexcept {
+        if constexpr (unqualified_countl_one<T>) {
+            return countl_one(internal::abi<T>, arg);
+        } else {
+            return countl_one(internal::abi<T>, dx::to_basic_type(arg));
+        }
+    }
+
+    template <simd_mask_type T>
+    requires fixed_width_mask<T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr size_t operator()(T arg) noexcept {
+        if constexpr (unqualified_mcountl_one<T>) {
             if constexpr (basic_simd_mask_type<T>) {
                 if consteval {
                     return fallback(arg);
@@ -1189,11 +1355,48 @@ public:
         }
     }
 
-    template <integral_constant_like T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr int DPL_VECTORCALL operator()(T) noexcept {
-        return __DPL countl_one(__DPL to_unsigned(T::value));
+    template <simd_mask_type T>
+    requires scalable_mask<T> &&
+        (unqualified_mcountl_one<T> || unqualified_mcountl_one<basic_type_t<T>>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr size_t operator()(T arg) noexcept {
+        if constexpr (unqualified_mcountl_one<T>) {
+            return countl_one(internal::abi<T>, arg);
+        } else {
+            return countl_one(internal::abi<T>, dx::to_basic_type(arg));
+        }
     }
+
+    template <integral_constant_like T>
+    requires unsigned_integral<typename T::value_type>
+    static consteval size_t operator()(T) noexcept {
+        return __DPL countl_one(T::value);
+    }
+
+    template <immediate_mask_like T>
+    static consteval size_t operator()(T val) noexcept {
+        if constexpr (requires {
+                          { countl_one(val) } -> core_convertible_to<size_t>;
+                      }) {
+            return countl_one(val);
+        } else {
+            constexpr auto mask =
+                static_cast<typename T::value_type>(-1ll << T::width);
+            constexpr auto remainder =
+                sizeof(typename T::value_type) * char_bit_v - T::width;
+            return __DPL countl_one(T::value | mask) - remainder;
+        }
+    }
+};
+
+template <typename T>
+concept unqualified_countr_zero = requires(T arg) {
+    { countr_zero(internal::abi<T>, arg) } -> bit_result_simd_for<T>;
+};
+
+template <typename T>
+concept unqualified_mcountr_zero = requires(T arg) {
+    { countr_zero(internal::abi<T>, arg) } -> core_convertible_to<size_t>;
 };
 
 struct countr_zero_t {
@@ -1210,18 +1413,28 @@ private:
     template <simd_element E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto fallback(basic_simd_mask<E, A> arg) noexcept {
-        // TODO: What if pack_mask is not an integer?
-        return __DPL countr_zero(dx::pack_mask(arg));
+        return []<size_t I>(this auto self, auto arg, immediate<I>) {
+            auto val = !arg[I];
+            if constexpr (I < element_count<E, A>) {
+                auto const mask = val ? -1 : 0;
+                return val + (mask & self(arg, imm<I - 1>));
+            } else {
+                return 0;
+            }
+        }(arg, imm<0>);
     }
 
 public:
     template <integral_simd T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(T arg) noexcept {
-        if constexpr (requires { countr_zero(internal::abi<T>, arg); }) {
+    requires fixed_width_mask<T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T arg) noexcept {
+        if constexpr (unqualified_countr_zero<T>) {
             if constexpr (basic_simd_type<T>) {
                 if consteval {
-                    return fallback(arg);
+                    using E = typename decltype(countr_zero(
+                        internal::abi<T>, arg))::value_type;
+                    return dx::reinterpret<E>(fallback(arg));
                 } else {
                     return countr_zero(internal::abi<T>, arg);
                 }
@@ -1235,10 +1448,23 @@ public:
         }
     }
 
-    template <simd_mask_type T>
+    template <integral_simd T>
+    requires scalable_simd<T> &&
+        (unqualified_countr_zero<T> || unqualified_countr_zero<basic_type_t<T>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr int DPL_VECTORCALL operator()(T arg) noexcept {
-        if constexpr (requires { countr_zero(internal::abi<T>, arg); }) {
+    static constexpr auto DPL_VECTORCALL operator()(T arg) noexcept {
+        if constexpr (unqualified_countr_zero<T>) {
+            return countr_zero(internal::abi<T>, arg);
+        } else {
+            return countr_zero(internal::abi<T>, dx::to_basic_type(arg));
+        }
+    }
+
+    template <simd_mask_type T>
+    requires fixed_width_mask<T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr size_t operator()(T arg) noexcept {
+        if constexpr (unqualified_mcountr_zero<T>) {
             if constexpr (basic_simd_mask_type<T>) {
                 if consteval {
                     return fallback(arg);
@@ -1255,18 +1481,54 @@ public:
         }
     }
 
-    template <integral_constant_like T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr int DPL_VECTORCALL operator()(T) noexcept {
-        return __DPL countr_zero(__DPL to_unsigned(T::value));
+    template <simd_mask_type T>
+    requires scalable_mask<T> &&
+        (unqualified_mcountr_zero<T> ||
+            unqualified_mcountr_zero<basic_type_t<T>>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr size_t operator()(T arg) noexcept {
+        if constexpr (unqualified_mcountr_zero<T>) {
+            return countr_zero(internal::abi<T>, arg);
+        } else {
+            return countr_zero(internal::abi<T>, dx::to_basic_type(arg));
+        }
     }
+
+    template <integral_constant_like T>
+    requires unsigned_integral<typename T::value_type>
+    static consteval size_t operator()(T) noexcept {
+        return __DPL countr_zero(T::value);
+    }
+
+    template <immediate_mask_like T>
+    static consteval size_t operator()(T val) noexcept {
+        if constexpr (requires {
+                          { countr_zero(val) } -> core_convertible_to<size_t>;
+                      }) {
+            return countr_zero(val);
+        } else {
+            auto const count = __DPL countr_zero(T::value);
+            return count < T::width ? count : T::width;
+        }
+    }
+};
+
+template <typename T>
+concept unqualified_countr_one = requires(T arg) {
+    { countr_one(internal::abi<T>, arg) } -> bit_result_simd_for<T>;
+};
+
+template <typename T>
+concept unqualified_mcountr_one = requires(T arg) {
+    { countr_one(internal::abi<T>, arg) } -> core_convertible_to<size_t>;
 };
 
 struct countr_one_t {
 private:
     template <simd_element E, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto fallback(basic_simd<E, A> arg) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL
+        fallback(basic_simd<E, A> arg) noexcept {
         return internal::transform<basic_simd<E, A>>(arg, [](auto val) {
             auto const count = __DPL countr_one(__DPL to_unsigned(val));
             return static_cast<E>(count);
@@ -1274,20 +1536,31 @@ private:
     }
 
     template <simd_element E, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto fallback(basic_simd_mask<E, A> arg) noexcept {
-        // TODO: What if pack_mask is not an integer?
-        return __DPL countr_one(dx::pack_mask(arg));
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL
+        fallback(basic_simd_mask<E, A> arg) noexcept {
+        return []<size_t I>(this auto self, auto arg, immediate<I>) {
+            auto val = arg[I];
+            if constexpr (I < element_count<E, A>) {
+                auto const mask = val ? -1 : 0;
+                return val + (mask & self(arg, imm<I - 1>));
+            } else {
+                return 0;
+            }
+        }(arg, imm<0>);
     }
 
 public:
     template <integral_simd T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(T arg) noexcept {
-        if constexpr (requires { countr_one(internal::abi<T>, arg); }) {
+    requires fixed_width_mask<T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T arg) noexcept {
+        if constexpr (unqualified_countr_one<T>) {
             if constexpr (basic_simd_type<T>) {
                 if consteval {
-                    return fallback(arg);
+                    using E = typename decltype(countr_one(
+                        internal::abi<T>, arg))::value_type;
+                    return dx::reinterpret<E>(fallback(arg));
                 } else {
                     return countr_one(internal::abi<T>, arg);
                 }
@@ -1301,10 +1574,23 @@ public:
         }
     }
 
-    template <simd_mask_type T>
+    template <integral_simd T>
+    requires scalable_simd<T> &&
+        (unqualified_countr_one<T> || unqualified_countr_one<basic_type_t<T>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr int DPL_VECTORCALL operator()(T arg) noexcept {
-        if constexpr (requires { countr_one(internal::abi<T>, arg); }) {
+    static constexpr auto DPL_VECTORCALL operator()(T arg) noexcept {
+        if constexpr (unqualified_countr_one<T>) {
+            return countr_one(internal::abi<T>, arg);
+        } else {
+            return countr_one(internal::abi<T>, dx::to_basic_type(arg));
+        }
+    }
+
+    template <simd_mask_type T>
+    requires fixed_width_mask<T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr size_t operator()(T arg) noexcept {
+        if constexpr (unqualified_mcountr_one<T>) {
             if constexpr (basic_simd_mask_type<T>) {
                 if consteval {
                     return fallback(arg);
@@ -1321,31 +1607,60 @@ public:
         }
     }
 
-    template <integral_constant_like T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr int DPL_VECTORCALL operator()(T) noexcept {
-        return __DPL countr_one(__DPL to_unsigned(T::value));
+    template <simd_mask_type T>
+    requires scalable_mask<T> &&
+        (unqualified_mcountr_one<T> || unqualified_mcountr_one<basic_type_t<T>>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr size_t operator()(T arg) noexcept {
+        if constexpr (unqualified_mcountr_one<T>) {
+            return countr_one(internal::abi<T>, arg);
+        } else {
+            return countr_one(internal::abi<T>, dx::to_basic_type(arg));
+        }
     }
+
+    template <integral_constant_like T>
+    requires unsigned_integral<typename T::value_type>
+    static consteval size_t operator()(T) noexcept {
+        return __DPL countr_one(T::value);
+    }
+
+    template <immediate_mask_like T>
+    static consteval size_t operator()(T val) noexcept {
+        if constexpr (requires {
+                          { countr_one(val) } -> core_convertible_to<size_t>;
+                      }) {
+            return countr_one(val);
+        } else {
+            auto const count = __DPL countr_one(T::value);
+            return count < T::width ? count : T::width;
+        }
+    }
+};
+
+template <typename T>
+concept unqualified_byteswap = requires(T arg) {
+    { byteswap(internal::abi<T>, arg) } -> equivalent_simd_as<T>;
 };
 
 struct byteswap_t {
 private:
     template <integral E, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto fallback(basic_simd<E, A> arg) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL
+        fallback(basic_simd<E, A> arg) noexcept {
+        static_assert(
+            fixed_width_abi<A>, "Scalable ABIs have no viable fallback");
         return internal::transform<basic_simd<E, A>>(
             arg, [](auto val) { return __DPL byteswap(val); });
     }
 
 public:
     template <integral_simd T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(T arg) noexcept {
-        if constexpr (requires {
-                          {
-                              byteswap(internal::abi<T>, arg)
-                          } -> equivalent_simd_as<T>;
-                      }) {
+    requires fixed_width_simd<T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T arg) noexcept {
+        if constexpr (unqualified_byteswap<T>) {
             if constexpr (basic_simd_type<T>) {
                 if consteval {
                     return fallback(arg);
@@ -1362,33 +1677,20 @@ public:
         }
     }
 
-    template <simd_mask_type T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr int DPL_VECTORCALL operator()(T arg) noexcept {
-        if constexpr (requires {
-                          {
-                              byteswap(internal::abi<T>, arg)
-                          } -> core_convertible_to<int>;
-                      }) {
-            if constexpr (basic_simd_mask_type<T>) {
-                if consteval {
-                    return fallback(arg);
-                } else {
-                    return byteswap(internal::abi<T>, arg);
-                }
-            } else {
-                return byteswap(internal::abi<T>, arg);
-            }
-        } else if constexpr (basic_simd_mask_type<T>) {
-            return fallback(arg);
+    template <integral_simd T>
+    requires scalable_simd<T> &&
+        (unqualified_byteswap<T> || unqualified_byteswap<basic_type_t<T>>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T arg) noexcept {
+        if constexpr (unqualified_byteswap<T>) {
+            return byteswap(internal::abi<T>, arg);
         } else {
-            return operator()(dx::to_basic_type(arg));
+            return byteswap(internal::abi<T>, dx::to_basic_type(arg));
         }
     }
 
     template <integral_constant_like T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(T) noexcept {
+    static consteval auto operator()(T) noexcept {
         return __DPL byteswap(T::value);
     }
 };

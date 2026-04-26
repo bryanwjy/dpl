@@ -10,6 +10,10 @@
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
+DPL_EXPORT template <typename T>
+inline constexpr bool enable_simd_abi = false;
+DPL_EXPORT inline constexpr size_t scalable_size = -1zu;
+
 namespace internal {
 template <template <typename> typename>
 struct unary_template;
@@ -18,13 +22,25 @@ struct constant_value;
 } // namespace internal
 
 DPL_EXPORT template <typename T>
-concept simd_abi = is_empty_v<T> && semiregular<T> && requires {
-    typename internal::constant_value<T{}>;
+concept simd_abi =
+    enable_simd_abi<T> && is_empty_v<T> && semiregular<T> && requires {
+        typename internal::constant_value<T{}>;
+        typename internal::unary_template<T::template native_type>;
+        typename internal::unary_template<T::template native_mask>;
+    };
+
+DPL_EXPORT template <typename T>
+concept fixed_width_abi = simd_abi<T> && requires {
     typename internal::constant_value<T::size>;
     typename internal::constant_value<T::alignment>;
-    typename internal::unary_template<T::template native_type>;
-    typename internal::unary_template<T::template native_mask>;
-};
+} && (T::size != scalable_size);
+
+DPL_EXPORT template <typename T>
+concept scalable_abi = !fixed_width_abi<T> && simd_abi<T> &&
+    (T::size == scalable_size) && requires {
+        typename internal::constant_value<T::max_size>;
+        // TODO: element_count
+    };
 
 namespace internal {
 template <simd_abi A>

@@ -50,6 +50,11 @@ DPL_EXPORT template <simd_type T>
 struct simd_element_type<T> {
     using type DPL_NODEBUG = typename T::value_type;
 };
+DPL_EXPORT template <typename T>
+concept scalable_simd = simd_type<T> && scalable_abi<typename T::abi_type>;
+DPL_EXPORT template <typename T>
+concept fixed_width_simd =
+    simd_type<T> && fixed_width_abi<typename T::abi_type>;
 
 DPL_EXPORT template <typename T>
 concept integral_simd = simd_type<T> && integral<simd_element_type_t<T>>;

@@ -8,6 +8,7 @@
 #include "dpl/core/basic/zero.h"
 
 #if !DPL_MODULES
+#  include "dpl/core/concepts/immediate_mask_like.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/type_traits/element_count.h"
 #  include "dpl/core/type_traits/iota_sequence.h"
@@ -24,12 +25,18 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
 DPL_EXPORT template <size_t W, bit_type_t<W> V>
+struct basic_immediate_mask;
+
+DPL_EXPORT template <size_t W, bit_type_t<W> V>
+inline constexpr bool enable_immediate_mask<basic_immediate_mask<W, V>> = true;
+
+DPL_EXPORT template <size_t W, bit_type_t<W> V>
 struct basic_immediate_mask {
     using value_type = bit_type_t<W>;
     using type = basic_immediate_mask;
     static constexpr size_t width = W;
     static constexpr value_type value =
-        (V & static_cast<value_type>((1 << W) - 1));
+        (V & static_cast<value_type>((1ll << W) - 1));
     __DPL_HIDE_FROM_ABI constexpr operator immediate<value>(
         this basic_immediate_mask) noexcept {
         return imm<value>;
@@ -171,24 +178,45 @@ struct basic_immediate_mask {
         return (static_cast<value_type>(1zu << idx) & value) > 0;
     }
 
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    friend constexpr auto all_of(basic_immediate_mask val) noexcept {
+    friend consteval auto all_of(basic_immediate_mask val) noexcept {
         return val == all_bits_t{};
     }
 
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    friend constexpr auto any_of(basic_immediate_mask val) noexcept {
+    friend consteval auto any_of(basic_immediate_mask val) noexcept {
         return val != zero_t{};
     }
 
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    friend constexpr auto none_of(basic_immediate_mask val) noexcept {
+    friend consteval auto none_of(basic_immediate_mask val) noexcept {
         return val == zero_t{};
     }
 
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    friend constexpr auto some_of(basic_immediate_mask val) noexcept {
+    friend consteval auto some_of(basic_immediate_mask val) noexcept {
         return any_of(val) && !all_of(val);
+    }
+
+    friend consteval auto popcount(basic_immediate_mask) noexcept {
+        return __DPL popcount(value);
+    }
+
+    friend consteval auto countr_zero(basic_immediate_mask) noexcept {
+        auto const count = __DPL countr_zero(value);
+        return count < W ? count : W;
+    }
+
+    friend consteval auto countr_one(basic_immediate_mask) noexcept {
+        auto const count = __DPL countr_one(value);
+        return count < W ? count : W;
+    }
+
+    friend consteval auto countl_one(basic_immediate_mask) noexcept {
+        constexpr auto mask = static_cast<value_type>(-1ll << width);
+        auto const remainder = sizeof(value_type) * char_bit_v - width;
+        return __DPL countl_one(value | mask) - remainder;
+    }
+
+    friend consteval auto countl_zero(basic_immediate_mask) noexcept {
+        auto const offset = sizeof(value_type) * char_bit_v - W;
+        return __DPL countl_zero(value) - offset;
     }
 };
 
@@ -203,26 +231,26 @@ DPL_EXPORT template <typename C, auto V>
 using make_immediate_mask_t DPL_NODEBUG =
     typename make_immediate_mask<C, V>::type;
 
-DPL_EXPORT template <simd_class C, auto V>
+DPL_EXPORT template <fixed_width_class C, auto V>
 struct make_immediate_mask<C, V> {
     using type DPL_NODEBUG = immediate_mask<element_count<C>, V>;
 };
 
 DPL_EXPORT template <typename M, typename T>
-concept immediate_mask_for = simd_class<T> && requires(M mask) {
-    typename immediate<M::value>;
-    typename basic_immediate_mask<element_count<T>, M::value>;
-    requires convertible_to<M,
-        basic_immediate_mask<element_count<T>, M::value>>;
-};
+concept immediate_mask_for =
+    fixed_width_class<T> && integral_constant_like<M> && requires(M mask) {
+        typename basic_immediate_mask<element_count<T>, M::value>;
+        requires convertible_to<M,
+            basic_immediate_mask<element_count<T>, M::value>>;
+    };
 
-DPL_EXPORT template <simd_class T, immediate_mask_for<T> M>
+DPL_EXPORT template <fixed_width_class T, immediate_mask_for<T> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr auto to_immediate_mask(M mask) noexcept {
     return static_cast<basic_immediate_mask<element_count<T>, M::value>>(mask);
 }
 
-template <simd_class T, immediate_mask_for<T> M>
+template <fixed_width_class T, immediate_mask_for<T> M>
 inline constexpr auto immediate_mask_v =
     decltype(datapar::to_immediate_mask<T>(M{}))::value;
 

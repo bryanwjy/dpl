@@ -11,7 +11,7 @@
 #  include "dpl/core/basic/immediate_mask.h"
 #  include "dpl/core/concepts/common_arithmetic_with.h"
 #  include "dpl/core/concepts/common_size_with.h"
-#  include "dpl/core/concepts/compatible_mask_for.h"
+#  include "dpl/core/concepts/compatible_mask_with.h"
 #  include "dpl/core/concepts/simd_class.h"
 #  include "dpl/core/concepts/simd_equivalence.h"
 #  include "dpl/core/type_traits/common_size_type.h"
@@ -72,7 +72,7 @@ struct ternary_simd<L, R> {
 
 template <typename R, typename L, typename C = make_simd_mask_type_t<L>>
 concept selectable_with = common_size_simd_with<R, L> &&
-    compatible_mask_for<C, R> && compatible_mask_for<C, L> && requires {
+    compatible_mask_with<C, R> && compatible_mask_with<C, L> && requires {
         typename ternary_simd_t<L, R>;
         requires common_size_with<ternary_simd_t<L, R>,
             common_size_type_t<R, L>>;
@@ -131,6 +131,8 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(basic_simd_mask<M, A> mask,
         basic_simd<ET, A> tval, basic_simd<EF, A> fval) noexcept {
+        static_assert(
+            fixed_width_abi<A>, "Scalable ABIs have no viable fallback");
         using ER = ternary_type_t<ET, EF>;
         return internal::transform<basic_simd<ER, A>>(
             [](bool cond, ET tval, EF fval) -> ER {
@@ -143,6 +145,8 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(basic_simd_mask<M, A> mask,
         basic_simd_mask<ET, A> tval, basic_simd_mask<EF, A> fval) noexcept {
+        static_assert(
+            fixed_width_abi<A>, "Scalable ABIs have no viable fallback");
         using ER = common_size_type_t<M, ET, EF>;
         return internal::transform<basic_simd_mask<ER, A>>(
             [](bool cond, bool tval, bool fval) -> bool {
@@ -155,6 +159,8 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallbacki(basic_simd<ET, A> tval, basic_simd<EF, A> fval) noexcept {
+        static_assert(
+            fixed_width_abi<A>, "Scalable ABIs have no viable fallback");
         static constexpr immediate_mask<element_count<ET, A>, V> mask{};
         using ER = ternary_type_t<ET, EF>;
         return internal::itransform<basic_simd<ER, A>>(
@@ -168,6 +174,8 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallbacki(
         basic_simd_mask<ET, A> tval, basic_simd_mask<EF, A> fval) noexcept {
+        static_assert(
+            fixed_width_abi<A>, "Scalable ABIs have no viable fallback");
         static constexpr immediate_mask<element_count<ET, A>, V> mask{};
         using ER = common_size_type_t<ET, EF>;
         return internal::itransform<basic_simd_mask<ER, A>>(
@@ -178,9 +186,9 @@ private:
     }
 
 public:
-    template <simd_type TT, compatible_mask_for<TT> C,
+    template <simd_type TT, compatible_mask_with<TT> C,
         selectable_with<TT, C> TF>
-    requires same_abi_simd_as<TT, TF>
+    requires same_abi_simd_as<TT, TF> && fixed_width_abi<common_abi_t<TT, TF>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(C mask, TT tval, TF fval) noexcept {
         using A = typename C::abi_type;
@@ -204,9 +212,10 @@ public:
         }
     }
 
-    template <simd_type TT, compatible_mask_for<TT> C,
+    template <simd_type TT, compatible_mask_with<TT> C,
         selectable_with<TT, C> TF>
-    requires (!same_abi_simd_as<TT, TF>) &&
+    requires (!same_abi_simd_as<TT, TF> ||
+                 scalable_abi<common_abi_t<TT, TF>>) &&
         (unqualified_select<C, TT, TF> ||
             unqualified_select<C, basic_type_t<TT>, basic_type_t<TF>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -222,7 +231,7 @@ public:
 
     template <simd_mask_type TT, common_size_simd_with<TT> C,
         mselectable_with<TT, C> TF>
-    requires same_abi_simd_as<TT, TF>
+    requires same_abi_simd_as<TT, TF> && fixed_width_abi<common_abi_t<TT, TF>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(C mask, TT tval, TF fval) noexcept {
         using A = typename C::abi_type;
@@ -248,7 +257,8 @@ public:
 
     template <simd_mask_type TT, common_size_simd_with<TT> C,
         mselectable_with<TT, C> TF>
-    requires (!same_abi_simd_as<TT, TF>) &&
+    requires (!same_abi_simd_as<TT, TF> ||
+                 scalable_abi<common_abi_t<TT, TF>>) &&
         (unqualified_mselect<C, TT, TF> ||
             unqualified_mselect<C, basic_type_t<TT>, basic_type_t<TF>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -263,7 +273,7 @@ public:
     }
 
     template <simd_type TT, selectablei_with<TT> TF, immediate_mask_for<TT> C>
-    requires same_abi_simd_as<TT, TF>
+    requires same_abi_simd_as<TT, TF> && fixed_width_abi<common_abi_t<TT, TF>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(C mask, TT tval, TF fval) noexcept {
         using A = typename TT::abi_type;
@@ -287,7 +297,8 @@ public:
     }
 
     template <simd_type TT, selectablei_with<TT> TF, immediate_mask_for<TT> C>
-    requires (!same_abi_simd_as<TT, TF>) &&
+    requires (!same_abi_simd_as<TT, TF> ||
+                 scalable_abi<common_abi_t<TT, TF>>) &&
         (unqualified_selecti<C, TT, TF> ||
             unqualified_selecti<C, basic_type_t<TT>, basic_type_t<TF>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)

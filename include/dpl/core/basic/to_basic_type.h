@@ -3,7 +3,7 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/basic/to_native_vector.h"
+#include "dpl/core/basic/to_native_type.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/basic_type.h"
@@ -27,7 +27,7 @@ constexpr basic_type_t<T> DPL_VECTORCALL to_basic_type(T src) noexcept {
     if constexpr (explicitly_convertible_to<T, basic_type_t<T>>) {
         return static_cast<basic_type_t<T>>(src);
     } else {
-        return datapar::to_native_vector(src);
+        return datapar::to_native_type(src);
     }
 }
 

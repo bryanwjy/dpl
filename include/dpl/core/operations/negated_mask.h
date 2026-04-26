@@ -13,7 +13,7 @@
 
 #  include "dpl/core/basic/extract.h"
 #  include "dpl/core/basic/reinterpret.h"
-#  include "dpl/core/basic/to_native_vector.h"
+#  include "dpl/core/basic/to_native_type.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_element.h"
 #  include "dpl/core/concepts/simd_mask_type.h"
@@ -45,14 +45,14 @@ public:
     static constexpr size_t size() noexcept { return element_count<T>; }
 
     __DPL_HIDE_FROM_ABI constexpr negated_mask() noexcept
-        : negated_mask(dx::to_native_vector(basic_type_t<T>())) {}
+        : negated_mask(dx::to_native_type(basic_type_t<T>())) {}
 
     template <common_size_simd_with<T> U>
     requires (!same_as<T, U>) && same_abi_simd_as<T, U> &&
         regular_invocable<internal::reinterpret_t<element_type>, U>
     __DPL_HIDE_FROM_ABI constexpr negated_mask(negated_mask<U> other) noexcept
         : negated_mask(
-              dx::to_native_vector(dx::reinterpret<element_type>(!other))) {}
+              dx::to_native_type(dx::reinterpret<element_type>(!other))) {}
 
     template <common_size_simd_with<T> U>
     requires same_abi_simd_as<T, U>
@@ -62,14 +62,20 @@ public:
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    constexpr mask_type operator+(this negated_mask self) noexcept {
-        return dx::to_native_vector(dx::bwnot(!self));
+    explicit constexpr operator mask_type(this negated_mask self) noexcept {
+        return dx::to_native_type(dx::bwnot(!self));
+    }
+
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    constexpr mask_type operator+(this negated_mask self) noexcept
+    requires basic_simd_mask_type<T>
+    {
+        return dx::to_native_type(dx::bwnot(!self));
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     constexpr bool operator[](
         this negated_mask self, internal::extraction_index auto idx) noexcept {
-        assert(idx < element_count<negated_mask>);
         return !dx::extract(!self, idx);
     }
 

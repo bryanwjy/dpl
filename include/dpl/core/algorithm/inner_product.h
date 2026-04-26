@@ -57,7 +57,7 @@ private:
 
 public:
     template <simd_type L, common_arithmetic_simd_with<L> R>
-    requires same_abi_simd_as<L, R>
+    requires same_abi_simd_as<L, R> && fixed_width_abi<common_abi_t<L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs) noexcept {
         using A = typename L::abi_type;
@@ -79,7 +79,7 @@ public:
     }
 
     template <simd_type L, common_arithmetic_simd_with<L> R>
-    requires (!same_abi_simd_as<L, R>) &&
+    requires (!same_abi_simd_as<L, R> || scalable_abi<common_abi_t<L, R>>) &&
         (unqualified_inner_product<L, R> ||
             unqualified_inner_product<basic_type_t<L>, basic_type_t<R>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -145,7 +145,7 @@ private:
     using mask_type DPL_NODEBUG = immediate_mask<element_count<T>, V>;
 
 public:
-    template <simd_type L, common_arithmetic_simd_with<L> R>
+    template <fixed_width_simd L, common_arithmetic_simd_with<L> R>
     requires requires {
         typename mask_type<L>;
         requires regular_invocable<inner_product_t, mask_type<L>, L, R>;

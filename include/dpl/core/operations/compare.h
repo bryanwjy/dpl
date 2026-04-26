@@ -109,14 +109,16 @@ private:
 
 public:
     template <simd_type L, common_order_simd_with<L> R>
-    requires same_abi_simd_as<L, R>
+    requires same_abi_simd_as<L, R> && fixed_width_abi<common_abi_t<L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs) noexcept {
         using A = typename L::abi_type;
         if constexpr (unqualified_cmpeq<L, R, A>) {
             if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
                 if consteval {
-                    return fallback(lhs, rhs);
+                    using E = simd_element_type_t<decltype(cmpeq(
+                        internal::abi<A>, lhs, rhs))>;
+                    return dx::reinterpret<E>(fallback(lhs, rhs));
                 } else {
                     return cmpeq(internal::abi<L>, lhs, rhs);
                 }
@@ -131,7 +133,7 @@ public:
     }
 
     template <simd_type L, common_order_simd_with<L> R>
-    requires (!same_abi_simd_as<L, R>) &&
+    requires (!same_abi_simd_as<L, R> || scalable_abi<common_abi_t<L, R>>) &&
         (unqualified_cmpeq<L, R> ||
             unqualified_cmpeq<basic_type_t<L>, basic_type_t<R>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -146,14 +148,16 @@ public:
     }
 
     template <simd_mask_type L, common_size_simd_with<L> R>
-    requires same_abi_simd_as<L, R>
+    requires same_abi_simd_as<L, R> && fixed_width_abi<common_abi_t<L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs) noexcept {
         using A = typename L::abi_type;
         if constexpr (unqualified_mcmpeq<L, R, A>) {
             if constexpr (basic_simd_mask_type<L> && basic_simd_mask_type<R>) {
                 if consteval {
-                    return fallback(lhs, rhs);
+                    using E = simd_element_type_t<decltype(cmpeq(
+                        internal::abi<A>, lhs, rhs))>;
+                    return dx::reinterpret<E>(fallback(lhs, rhs));
                 } else {
                     return cmpeq(internal::abi<L>, lhs, rhs);
                 }
@@ -169,7 +173,7 @@ public:
     }
 
     template <simd_mask_type L, common_size_simd_with<L> R>
-    requires (!same_abi_simd_as<L, R>) &&
+    requires (!same_abi_simd_as<L, R> || scalable_abi<common_abi_t<L, R>>) &&
         (unqualified_mcmpeq<L, R> ||
             unqualified_mcmpeq<basic_type_t<L>, basic_type_t<R>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -206,16 +210,27 @@ private:
             [](auto lhs, auto rhs) -> bool { return lhs != rhs; }, lhs, rhs);
     }
 
+    template <simd_element L, common_size_with<L> R, simd_abi A>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL fallback(
+        basic_simd_mask<L, A> lhs, basic_simd_mask<R, A> rhs) noexcept {
+        using T = common_size_type_t<L, R>;
+        return internal::transform<basic_simd_mask<T, A>>(
+            [](auto lhs, auto rhs) -> bool { return lhs != rhs; }, lhs, rhs);
+    }
+
 public:
     template <simd_type L, common_order_simd_with<L> R>
-    requires same_abi_simd_as<L, R>
+    requires same_abi_simd_as<L, R> && fixed_width_abi<common_abi_t<L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs) noexcept {
         using A = typename L::abi_type;
         if constexpr (unqualified_cmpneq<L, R, A>) {
             if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
                 if consteval {
-                    return fallback(lhs, rhs);
+                    using E = simd_element_type_t<decltype(cmpneq(
+                        internal::abi<A>, lhs, rhs))>;
+                    return dx::reinterpret<E>(fallback(lhs, rhs));
                 } else {
                     return cmpneq(internal::abi<L>, lhs, rhs);
                 }
@@ -230,7 +245,7 @@ public:
     }
 
     template <simd_type L, common_order_simd_with<L> R>
-    requires (!same_abi_simd_as<L, R>) &&
+    requires (!same_abi_simd_as<L, R> || scalable_abi<common_abi_t<L, R>>) &&
         (unqualified_cmpneq<L, R> ||
             unqualified_cmpneq<basic_type_t<L>, basic_type_t<R>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -245,14 +260,16 @@ public:
     }
 
     template <simd_mask_type L, common_size_simd_with<L> R>
-    requires same_abi_simd_as<L, R>
+    requires same_abi_simd_as<L, R> && fixed_width_abi<common_abi_t<L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs) noexcept {
         using A = typename L::abi_type;
         if constexpr (unqualified_mcmpneq<L, R, A>) {
             if constexpr (basic_simd_mask_type<L> && basic_simd_mask_type<R>) {
                 if consteval {
-                    return fallback(lhs, rhs);
+                    using E = simd_element_type_t<decltype(cmpneq(
+                        internal::abi<A>, lhs, rhs))>;
+                    return dx::reinterpret<E>(fallback(lhs, rhs));
                 } else {
                     return cmpneq(internal::abi<L>, lhs, rhs);
                 }
@@ -268,7 +285,7 @@ public:
     }
 
     template <simd_mask_type L, common_size_simd_with<L> R>
-    requires (!same_abi_simd_as<L, R>) &&
+    requires (!same_abi_simd_as<L, R> || scalable_abi<common_abi_t<L, R>>) &&
         (unqualified_mcmpneq<L, R> ||
             unqualified_mcmpneq<basic_type_t<L>, basic_type_t<R>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -307,14 +324,16 @@ private:
 
 public:
     template <simd_type L, common_order_simd_with<L> R>
-    requires same_abi_simd_as<L, R>
+    requires same_abi_simd_as<L, R> && fixed_width_abi<common_abi_t<L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs) noexcept {
         using A = typename L::abi_type;
         if constexpr (unqualified_cmplt<L, R, A>) {
             if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
                 if consteval {
-                    return fallback(lhs, rhs);
+                    using E = simd_element_type_t<decltype(cmplt(
+                        internal::abi<A>, lhs, rhs))>;
+                    return dx::reinterpret<E>(fallback(lhs, rhs));
                 } else {
                     return cmplt(internal::abi<L>, lhs, rhs);
                 }
@@ -329,7 +348,7 @@ public:
     }
 
     template <simd_type L, common_order_simd_with<L> R>
-    requires (!same_abi_simd_as<L, R>) &&
+    requires (!same_abi_simd_as<L, R> || scalable_abi<common_abi_t<L, R>>) &&
         (unqualified_cmplt<L, R> ||
             unqualified_cmplt<basic_type_t<L>, basic_type_t<R>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -368,14 +387,16 @@ private:
 
 public:
     template <simd_type L, common_order_simd_with<L> R>
-    requires same_abi_simd_as<L, R>
+    requires same_abi_simd_as<L, R> && fixed_width_abi<common_abi_t<L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs) noexcept {
         using A = typename L::abi_type;
         if constexpr (unqualified_cmple<L, R, A>) {
             if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
                 if consteval {
-                    return fallback(lhs, rhs);
+                    using E = simd_element_type_t<decltype(cmple(
+                        internal::abi<A>, lhs, rhs))>;
+                    return dx::reinterpret<E>(fallback(lhs, rhs));
                 } else {
                     return cmple(internal::abi<L>, lhs, rhs);
                 }
@@ -390,7 +411,7 @@ public:
     }
 
     template <simd_type L, common_order_simd_with<L> R>
-    requires (!same_abi_simd_as<L, R>) &&
+    requires (!same_abi_simd_as<L, R> || scalable_abi<common_abi_t<L, R>>) &&
         (unqualified_cmple<L, R> ||
             unqualified_cmple<basic_type_t<L>, basic_type_t<R>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -424,15 +445,16 @@ private:
 
 public:
     template <simd_type L, common_order_simd_with<L> R>
-    requires same_abi_simd_as<L, R>
+    requires same_abi_simd_as<L, R> && fixed_width_abi<common_abi_t<L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs) noexcept {
         using A = typename L::abi_type;
         if constexpr (unqualified_cmpgt<L, R, A>) {
             if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
                 if consteval {
-                    return cmplt_t::operator()(
-                        dx::to_basic_type(rhs), dx::to_basic_type(lhs));
+                    using E = simd_element_type_t<decltype(cmpgt(
+                        internal::abi<A>, lhs, rhs))>;
+                    return dx::reinterpret<E>(cmplt_t::operator()(rhs, lhs));
                 } else {
                     return cmpgt(internal::abi<L>, lhs, rhs);
                 }
@@ -446,7 +468,7 @@ public:
     }
 
     template <simd_type L, common_order_simd_with<L> R>
-    requires (!same_abi_simd_as<L, R>) &&
+    requires (!same_abi_simd_as<L, R> || scalable_abi<common_abi_t<L, R>>) &&
         (unqualified_cmpgt<L, R> ||
             unqualified_cmpgt<basic_type_t<L>, basic_type_t<R>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -480,15 +502,16 @@ private:
 
 public:
     template <simd_type L, common_order_simd_with<L> R>
-    requires same_abi_simd_as<L, R>
+    requires same_abi_simd_as<L, R> && fixed_width_abi<common_abi_t<L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs) noexcept {
         using A = typename L::abi_type;
         if constexpr (unqualified_cmpge<L, R, A>) {
             if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
                 if consteval {
-                    return cmple_t::operator()(
-                        dx::to_basic_type(rhs), dx::to_basic_type(lhs));
+                    using E = simd_element_type_t<decltype(cmpgt(
+                        internal::abi<A>, lhs, rhs))>;
+                    return dx::reinterpret<E>(cmple_t::operator()(rhs, lhs));
                 } else {
                     return cmpge(internal::abi<L>, lhs, rhs);
                 }
@@ -502,7 +525,7 @@ public:
     }
 
     template <simd_type L, common_order_simd_with<L> R>
-    requires (!same_abi_simd_as<L, R>) &&
+    requires (!same_abi_simd_as<L, R> || scalable_abi<common_abi_t<L, R>>) &&
         (unqualified_cmpge<L, R> ||
             unqualified_cmpge<basic_type_t<L>, basic_type_t<R>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)

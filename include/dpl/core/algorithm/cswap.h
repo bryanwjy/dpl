@@ -5,7 +5,7 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/immediate_mask.h"
-#  include "dpl/core/concepts/compatible_mask_for.h"
+#  include "dpl/core/concepts/compatible_mask_with.h"
 #  include "dpl/core/operations/select.h"
 #  include "dpl/std/concepts/invocable.h"
 #  include "dpl/std/type_traits/is_invocable.h"
@@ -33,8 +33,8 @@ public:
         rhs = right;
     }
 
-    template <simd_class L, selectable_with<L> R, compatible_mask_for<L> M>
-    requires compatible_mask_for<M, R> &&
+    template <simd_class L, selectable_with<L> R, compatible_mask_with<L> M>
+    requires compatible_mask_with<M, R> &&
         regular_invocable<internal::select_t, M, L, R> &&
         regular_invocable<internal::select_t, M, R, L> &&
         assignable_from<L&, selection_t<M, R, L> const&> &&
@@ -57,7 +57,7 @@ private:
     using mask_type DPL_NODEBUG = immediate_mask<element_count<T>, V>;
 
 public:
-    template <simd_class L, common_size_simd_with<L> R>
+    template <fixed_width_class L, common_size_simd_with<L> R>
     requires requires {
         typename mask_type<L>;
         requires regular_invocable<cswap_t, mask_type<L>, L, R>;

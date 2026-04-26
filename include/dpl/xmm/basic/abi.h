@@ -11,6 +11,7 @@
 #if !DPL_MODULES
 #  include "dpl/core/fwd.h"
 
+#  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_element.h"
 #  include "dpl/std/concepts/enumeration.h"
 #  include "dpl/std/concepts/same_as.h"
@@ -21,11 +22,19 @@
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
+DPL_EXPORT namespace x86 {
+template <size_t N>
+struct sse_abi {
+    static constexpr size_t max_size = 64;
+    static constexpr size_t size = N;
+    static constexpr size_t alignment = N;
+};
+} // namespace x86
 DPL_EXPORT namespace xmm {}
 } // namespace datapar
 
 namespace datapar::xmm {
-namespace dx = __DPL datapar; // NOLINT
+namespace dx = __DPL datapar;       // NOLINT
 }
 
 DPL_EXPORT namespace xmm = datapar::xmm; // NOLINT
@@ -76,10 +85,7 @@ inline constexpr struct template_barrier_t {
         default;
 } barrier{};
 
-DPL_EXPORT
-struct abi_tag {
-    static constexpr size_t size = 16;
-    static constexpr size_t alignment = 16;
+DPL_EXPORT struct abi_tag : __DPL datapar::x86::sse_abi<16> {
 
     template <simd_element E>
     requires requires {
@@ -114,5 +120,10 @@ using front_t DPL_NODEBUG =
 } // namespace details
 
 } // namespace datapar::xmm
+
+namespace datapar {
+template <>
+inline constexpr bool enable_simd_abi<xmm::abi_tag> = true;
+}
 
 DPL_DEFAULT_NAMESPACE_END

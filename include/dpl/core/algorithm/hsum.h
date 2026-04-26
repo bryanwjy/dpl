@@ -66,6 +66,18 @@ public:
         }
     }
 
+    template <ordered_simd T>
+    requires scalable_simd<T> &&
+        (unqualified_hsum<T> || unqualified_hsum<basic_type_t<T>>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T arg) noexcept {
+        if constexpr (unqualified_hsum<T>) {
+            return hsum(internal::abi<T>, arg);
+        } else {
+            return hsum(internal::abi<T>, dx::to_basic_type(arg));
+        }
+    }
+
     template <arithmetic_simd T, immediate_mask_for<T> M>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, T arg) noexcept {
@@ -99,7 +111,7 @@ private:
 
 public:
     template <arithmetic_simd T>
-    requires requires {
+    requires fixed_width_simd<T> && requires {
         typename mask_type<T>;
         requires regular_invocable<hsum_t, mask_type<T>, T>;
     }

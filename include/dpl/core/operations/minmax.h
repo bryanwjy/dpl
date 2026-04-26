@@ -4,9 +4,10 @@
 #include "dpl/config.h"
 
 #include "dpl/core/operations/operation_base.h"
-#include "dpl/core/operations/transform.h"
+#include "dpl/core/operations/select.h"
 
 #if !DPL_MODULES
+#  include "dpl/core/basic/reinterpret.h"
 #  include "dpl/core/concepts/common_order_with.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_element.h"
@@ -45,31 +46,29 @@ private:
     }
 
     template <simd_element L, simd_element R, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
-        fallback(basic_simd<L, A> left, basic_simd<R, A> right) noexcept {
+        fallback(basic_simd<L, A> lhs, basic_simd<R, A> rhs) noexcept {
         using T = common_order_type_t<L, R>;
-        return internal::transform<basic_simd<T, A>>(
-            [](auto lhs, auto rhs) {
-                return static_cast<T>(lhs < rhs ? lhs : rhs);
-            },
-            left, right);
+        return dx::reinterpret<T>(dx::select(lhs < rhs, lhs, rhs));
     }
 
     template <simd_type L, simd_type R>
     using result_for = common_order_simd_t<basic_type_t<L>, basic_type_t<R>>;
 
 public:
-    template <basic_simd_type L, common_order_simd_with<L> R>
-    requires basic_simd_type<R> && same_abi_simd_as<L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept {
+    template <simd_type L, common_order_simd_with<L> R>
+    requires same_abi_simd_as<L, R> && fixed_width_abi<common_abi_t<L, R>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(L left, R right) noexcept {
         using T = common_order_simd_t<L, R>;
         using A = typename T::abi_type;
         if constexpr (unqualified_min<L, R, A>) {
             if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
                 if consteval {
-                    return fallback(left, right);
+                    using E = typename decltype(min(
+                        internal::abi<T>, left, right))::value_type;
+                    return dx::reinterpret<E>(fallback(left, right));
                 } else {
                     return min(internal::abi<T>, left, right);
                 }
@@ -85,7 +84,7 @@ public:
     }
 
     template <simd_type L, common_order_simd_with<L> R>
-    requires (!same_abi_simd_as<L, R>) &&
+    requires (!same_abi_simd_as<L, R> || scalable_abi<common_abi_t<L, R>>) &&
         (unqualified_min<L, R> ||
             unqualified_min<basic_type_t<L>, basic_type_t<R>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -114,31 +113,29 @@ private:
     }
 
     template <simd_element L, simd_element R, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
-        fallback(basic_simd<L, A> left, basic_simd<R, A> right) noexcept {
+        fallback(basic_simd<L, A> lhs, basic_simd<R, A> rhs) noexcept {
         using T = common_order_type_t<L, R>;
-        return internal::transform<basic_simd<T, A>>(
-            [](auto lhs, auto rhs) {
-                return static_cast<T>(lhs > rhs ? lhs : rhs);
-            },
-            left, right);
+        return dx::reinterpret<T>(dx::select(rhs < lhs, lhs, rhs));
     }
 
     template <simd_type L, simd_type R>
     using result_for = common_order_simd_t<basic_type_t<L>, basic_type_t<R>>;
 
 public:
-    template <basic_simd_type L, common_order_simd_with<L> R>
-    requires basic_simd_type<R> && same_abi_simd_as<L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(L left, R right) noexcept {
+    template <simd_type L, common_order_simd_with<L> R>
+    requires same_abi_simd_as<L, R> && fixed_width_simd<L>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(L left, R right) noexcept {
         using T = common_order_simd_t<L, R>;
         using A = typename T::abi_type;
         if constexpr (unqualified_max<L, R, A>) {
             if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
                 if consteval {
-                    return fallback(left, right);
+                    using E = typename decltype(max(
+                        internal::abi<T>, left, right))::value_type;
+                    return dx::reinterpret<E>(fallback(left, right));
                 } else {
                     return max(internal::abi<T>, left, right);
                 }
@@ -154,7 +151,7 @@ public:
     }
 
     template <simd_type L, common_order_simd_with<L> R>
-    requires (!same_abi_simd_as<L, R>) &&
+    requires (!same_abi_simd_as<L, R> || scalable_abi<common_abi_t<L, R>>) &&
         (unqualified_max<L, R> ||
             unqualified_max<basic_type_t<L>, basic_type_t<R>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)

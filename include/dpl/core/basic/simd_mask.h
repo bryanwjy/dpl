@@ -33,7 +33,13 @@ public:
     using abi_type = A;
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr size_t size() noexcept { return element_count<E, A>; }
+    static constexpr size_t size() noexcept {
+        if constexpr (fixed_width_abi<A>) {
+            return A::size / sizeof(E);
+        } else {
+            return A::template element_count<E>();
+        }
+    }
 
     __DPL_HIDE_FROM_ABI constexpr basic_simd_mask() noexcept
         : basic_simd_mask(datapar::broadcast<basic_simd_mask>(false)) {}

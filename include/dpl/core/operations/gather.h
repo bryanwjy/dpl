@@ -23,6 +23,8 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_simd<E, A> fallback(
         E const* ptr, basic_simd<I, A> idx) noexcept {
+        static_assert(
+            fixed_width_abi<A>, "Scalable ABIs have no viable fallback");
         return []<size_t... Is>(
                    E const* ptr, basic_simd<I, A> idx, index_sequence<Is...>) {
             return dx::initialize<E>(internal::abi<A>, ptr[idx[imm<Is>]]...);
@@ -30,9 +32,8 @@ private:
     }
 
 public:
-    template <basic_simd_element E, basic_simd_type I>
-    requires integral_simd<I> &&
-        (element_count<rebind_simd_t<I, E>> <= element_count<I>)
+    template <basic_simd_element E, integral_simd I>
+    requires basic_simd_type<I> && (sizeof(E) >= sizeof(typename I::value_type))
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
     static constexpr rebind_simd_t<I, E> DPL_VECTORCALL operator()(
         E const* ptr, I idx) noexcept {
@@ -51,9 +52,9 @@ public:
         }
     }
 
-    template <basic_simd_element E, simd_type I>
-    requires integral_simd<I> &&
-        (element_count<rebind_simd_t<I, E>> <= element_count<I>)
+    template <basic_simd_element E, integral_simd I>
+    requires (
+        !basic_simd_type<I> && sizeof(E) >= sizeof(typename I::value_type))
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr DPL_VECTORCALL auto operator()(E const* ptr,
         I idx) noexcept -> equivalent_simd_as<rebind_simd_t<I, E>> auto {

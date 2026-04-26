@@ -11,7 +11,9 @@
 #  include "dpl/core/concepts/simd_mask_type.h"
 #  include "dpl/core/type_traits/basic_element.h"
 #  include "dpl/core/type_traits/iota_sequence.h"
+#  include "dpl/std/concepts/boolean_testable.h"
 #  include "dpl/std/concepts/convertible_to.h"
+
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -29,15 +31,17 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr bool DPL_VECTORCALL
         fallback(basic_simd_mask<E, A> mask) noexcept {
+        static_assert(
+            fixed_width_abi<A>, "Scalable ABIs have no viable fallback");
         return []<size_t... Is>(auto mask, index_sequence<Is...>) {
             return (... && mask[Is]);
         }(mask, iota_sequence<E, A>);
     }
 
 public:
-    template <simd_mask_type T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr bool DPL_VECTORCALL operator()(T mask) noexcept {
+    template <fixed_width_mask T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr bool operator()(T mask) noexcept {
         if constexpr (unqualified_all_of<T>) {
             if constexpr (basic_simd_mask_type<T>) {
                 if consteval {
@@ -55,10 +59,28 @@ public:
         }
     }
 
-    template <size_t W, bit_type_t<W> V>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr bool operator()(basic_immediate_mask<W, V> val) noexcept {
-        return all_of(val);
+    template <scalable_mask T>
+    requires unqualified_all_of<T> || unqualified_all_of<basic_type_t<T>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr bool operator()(T mask) noexcept {
+        if constexpr (unqualified_all_of<T>) {
+            return all_of(internal::abi<T>, mask);
+        } else {
+            return all_of(internal::abi<T>, dx::to_basic_type(mask));
+        }
+    }
+
+    template <immediate_mask_like T>
+    static consteval bool operator()(T val) noexcept {
+        if constexpr (requires {
+                          { all_of(val) } -> boolean_testable;
+                      }) {
+            return all_of(val);
+        } else {
+            constexpr auto all =
+                static_cast<typename T::value_type>((1ll << T::width) - 1);
+            return (T::value & all) == all;
+        }
     }
 };
 
@@ -73,15 +95,17 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr bool DPL_VECTORCALL
         fallback(basic_simd_mask<E, A> mask) noexcept {
+        static_assert(
+            fixed_width_abi<A>, "Scalable ABIs have no viable fallback");
         return []<size_t... Is>(auto mask, index_sequence<Is...>) {
             return (... || mask[Is]);
         }(mask, iota_sequence<E, A>);
     }
 
 public:
-    template <simd_mask_type T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr bool DPL_VECTORCALL operator()(T mask) noexcept {
+    template <fixed_width_mask T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr bool operator()(T mask) noexcept {
         if constexpr (unqualified_any_of<T>) {
             if constexpr (basic_simd_mask_type<T>) {
                 if consteval {
@@ -99,10 +123,28 @@ public:
         }
     }
 
-    template <size_t W, bit_type_t<W> V>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr bool operator()(basic_immediate_mask<W, V> val) noexcept {
-        return any_of(val);
+    template <scalable_mask T>
+    requires unqualified_any_of<T> || unqualified_any_of<basic_type_t<T>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr bool operator()(T mask) noexcept {
+        if constexpr (unqualified_any_of<T>) {
+            return any_of(internal::abi<T>, mask);
+        } else {
+            return any_of(internal::abi<T>, dx::to_basic_type(mask));
+        }
+    }
+
+    template <immediate_mask_like T>
+    static consteval bool operator()(T val) noexcept {
+        if constexpr (requires {
+                          { any_of(val) } -> boolean_testable;
+                      }) {
+            return any_of(val);
+        } else {
+            constexpr auto all =
+                static_cast<typename T::value_type>((1ll << T::width) - 1);
+            return (T::value & all) != 0;
+        }
     }
 };
 
@@ -121,7 +163,7 @@ private:
     }
 
 public:
-    template <simd_mask_type T>
+    template <fixed_width_mask T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr bool DPL_VECTORCALL operator()(T mask) noexcept {
         if constexpr (unqualified_none_of<T>) {
@@ -141,10 +183,28 @@ public:
         }
     }
 
-    template <size_t W, bit_type_t<W> V>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr bool operator()(basic_immediate_mask<W, V> val) noexcept {
-        return none_of(val);
+    template <scalable_mask T>
+    requires unqualified_none_of<T> || unqualified_none_of<basic_type_t<T>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr bool operator()(T mask) noexcept {
+        if constexpr (unqualified_none_of<T>) {
+            return none_of(internal::abi<T>, mask);
+        } else {
+            return none_of(internal::abi<T>, dx::to_basic_type(mask));
+        }
+    }
+
+    template <immediate_mask_like T>
+    static consteval bool operator()(T val) noexcept {
+        if constexpr (requires {
+                          { none_of(val) } -> boolean_testable;
+                      }) {
+            return none_of(val);
+        } else {
+            constexpr auto all =
+                static_cast<typename T::value_type>((1ll << T::width) - 1);
+            return (T::value & all) == 0;
+        }
     }
 };
 
@@ -163,9 +223,9 @@ private:
     }
 
 public:
-    template <simd_mask_type T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr bool DPL_VECTORCALL operator()(T mask) noexcept {
+    template <fixed_width_mask T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr bool operator()(T mask) noexcept {
         if constexpr (unqualified_some_of<T>) {
             if constexpr (basic_simd_mask_type<T>) {
                 if consteval {
@@ -183,10 +243,27 @@ public:
         }
     }
 
-    template <size_t W, bit_type_t<W> V>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr bool operator()(basic_immediate_mask<W, V> val) noexcept {
-        return some_of(val);
+    template <scalable_mask T>
+    requires unqualified_some_of<T> || unqualified_some_of<basic_type_t<T>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr bool operator()(T mask) noexcept {
+        if constexpr (unqualified_some_of<T>) {
+            return some_of(internal::abi<T>, mask);
+        } else {
+            return some_of(internal::abi<T>, dx::to_basic_type(mask));
+        }
+    }
+
+    template <immediate_mask_like T>
+    static consteval bool operator()(T val) noexcept {
+        if constexpr (requires {
+                          { some_of(val) } -> boolean_testable;
+                      }) {
+            return some_of(val);
+        } else {
+            return internal::any_of_t::operator()(val) &&
+                !internal::all_of_t::operator()(val);
+        }
     }
 };
 } // namespace datapar::internal

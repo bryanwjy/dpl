@@ -13,11 +13,16 @@ namespace datapar {
 
 template <simd_class T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr auto DPL_VECTORCALL to_native_vector(T src) noexcept {
+constexpr auto DPL_VECTORCALL to_native_type(T src) noexcept {
     using A = typename T::abi_type;
     using E = simd_element_type_t<T>;
-    using native_type = typename A::template native_type<E>;
-    return static_cast<native_type>(src);
+    if constexpr (simd_type<T>) {
+        using native_type = typename A::template native_type<E>;
+        return static_cast<native_type>(src);
+    } else {
+        using native_type = typename A::template native_mask<E>;
+        return static_cast<native_type>(src);
+    }
 }
 
 } // namespace datapar
