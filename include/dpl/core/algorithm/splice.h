@@ -3,10 +3,7 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/operations/bitwise.h"
-#include "dpl/core/operations/operation_base.h"
-#include "dpl/core/operations/select.h"
-#include "dpl/core/operations/shift.h"
+#include "dpl/core/algorithm/shift.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/reinterpret.h"
@@ -14,6 +11,9 @@
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_element.h"
 #  include "dpl/core/concepts/simd_equivalence.h"
+#  include "dpl/core/operations/bitwise.h"
+#  include "dpl/core/operations/operation_base.h"
+#  include "dpl/core/operations/select.h"
 #  include "dpl/core/type_traits/common_order_type.h"
 #endif
 
@@ -41,7 +41,7 @@ struct splice_t {
 private:
     template <simd_element EM, simd_element EL, simd_element ER, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    constexpr auto DPL_VECTORCALL fallback(basic_simd_mask<EM, A> mask,
+    static constexpr auto DPL_VECTORCALL fallback(basic_simd_mask<EM, A> mask,
         basic_simd<EL, A> lhs, basic_simd<ER, A> rhs) noexcept {
         using mask_type = basic_simd_mask<EM, A>;
         auto const low = dx::countr_zero(mask);
@@ -53,11 +53,9 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallbacki(basic_simd<EL, A> lhs, basic_simd<ER, A> rhs) noexcept {
-        static_assert(
-            fixed_width_abi<A>, "Scalable ABIs have no viable fallback");
         constexpr immediate_mask<element_count<EL, A>, V> inmask{};
-        constexpr auto low = dx::countr_zero(mask);
-        constexpr auto high = dx::countr_zero(mask);
+        constexpr auto low = dx::countr_zero(inmask);
+        constexpr auto high = dx::countr_zero(inmask);
         return dx::slide_left(
             dx::shift_right(lhs, imm<high>), rhs, imm<high + low>);
     }
@@ -67,7 +65,7 @@ public:
     requires same_abi_simd_as<L, R> && fixed_width_abi<common_abi_t<L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, L lhs, R rhs) noexcept {
-        using A = typename C::abi_type;
+        using A = typename M::abi_type;
         if constexpr (unqualified_splice<M, L, R, A>) {
             if constexpr (basic_simd_type<L> && basic_simd_type<R> &&
                 basic_simd_mask_type<M>) {
@@ -92,7 +90,7 @@ public:
     requires (!same_abi_simd_as<L, R> || scalable_abi<common_abi_t<L, R>>) &&
         (unqualified_splice<M, L, R> ||
             unqualified_splice<M, basic_type_t<L>, basic_type_t<R>>)
-    DPL_ALRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, L lhs, R rhs) noexcept {
         using A = common_abi_t<L, R>;
         if constexpr (unqualified_splice<M, L, R>) {
@@ -105,7 +103,7 @@ public:
 
     template <simd_type L, selectablei_with<L> R, immediate_mask_for<L> M>
     requires same_abi_simd_as<L, R> && fixed_width_abi<common_abi_t<L, R>>
-    DPL_ALRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, L lhs, R rhs) noexcept {
         using A = typename L::abi_type;
         constexpr auto V = decltype(dx::to_immediate_mask<L>(mask))::value;
@@ -131,7 +129,7 @@ public:
     requires (!same_abi_simd_as<L, R> || scalable_abi<common_abi_t<L, R>>) &&
         (unqualified_splicei<M, L, R> ||
             unqualified_splicei<M, basic_type_t<L>, basic_type_t<R>>)
-    DPL_ALRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, L lhs, R rhs) noexcept {
         using A = common_abi_t<L, R>;
         constexpr auto V = decltype(dx::to_immediate_mask<L>(mask))::value;
@@ -143,6 +141,9 @@ public:
         }
     }
 };
+
+template <auto V>
+struct splicei_t {};
 
 template <integral auto V>
 struct splicei_t<V> : binary_operation_base<splicei_t<V>> {

@@ -52,7 +52,8 @@ public:
         if constexpr (unqualified_hmax<T>) {
             if constexpr (basic_simd_type<T>) {
                 if consteval {
-                    return fallback(arg);
+                    using RT = decltype(hmax(internal::abi<T>, arg));
+                    return dx::reinterpret<RT>(fallback(arg));
                 } else {
                     return hmax(internal::abi<T>, arg);
                 }
@@ -85,7 +86,8 @@ public:
         if constexpr (unqualified_hmaxi<M, T>) {
             if constexpr (basic_simd_type<T>) {
                 if consteval {
-                    return fallbacki<V>(arg);
+                    using RT = decltype(hmax<V>(internal::abi<T>, arg));
+                    return dx::reinterpret<RT>(fallbacki<V>(arg));
                 } else {
                     return hmax<V>(internal::abi<T>, arg);
                 }

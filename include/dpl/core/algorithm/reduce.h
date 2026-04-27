@@ -4,6 +4,7 @@
 #include "dpl/config.h"
 
 #include "dpl/core/algorithm/packed_indices.h"
+#include "dpl/core/algorithm/permute.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/immediate.h"
@@ -12,7 +13,6 @@
 #  include "dpl/core/basic/to_native_type.h"
 #  include "dpl/core/operations/bit.h"
 #  include "dpl/core/operations/logic.h"
-#  include "dpl/core/operations/permute.h"
 #  include "dpl/core/type_traits/iota_sequence.h"
 #  include "dpl/std/bit/bit_width.h"
 #  include "dpl/std/bit/countr.h"
@@ -23,19 +23,6 @@
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
-namespace datapar {
-DPL_EXPORT struct predication_t {
-    __DPL_HIDE_FROM_ABI explicit constexpr predication_t() noexcept = default;
-};
-DPL_EXPORT struct adaptive_t {
-    __DPL_HIDE_FROM_ABI explicit constexpr adaptive_t() noexcept = default;
-};
-
-DPL_EXPORT inline constexpr predication_t predication{};
-DPL_EXPORT inline constexpr adaptive_t adaptive{};
-
-} // namespace datapar
-
 namespace datapar::internal {
 
 template <simd_type T, auto V>
@@ -102,6 +89,14 @@ public:
         return bit_keep<inv>(abi, self);
     }
 
+    template <simd_element E>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    friend constexpr auto DPL_VECTORCALL
+        reinterpret(abi_type, reduction_result self) noexcept {
+        using rebind = rebind_simd_t<T, E>;
+        return reduction_result<rebind, V>(dx::reinterpret<E>(self.result_));
+    }
+
 private:
     T result_;
 };
@@ -115,6 +110,24 @@ concept reducible = simd_type<T> && integral<decltype(V)> &&
     (V == static_cast<decltype(V)>(-1) ||
         __DPL bit_width(__DPL to_unsigned(V)) <= element_count<T>);
 
+template <typename T, typename BinaryOp>
+concept unqualified_reduce = requires(T val, BinaryOp op) {
+    { reduce(internal::abi<T>, val, op) } -> equivalent_simd_as<T>;
+};
+
+template <typename M, typename T, typename BinaryOp>
+concept unqualified_mreduce = requires(M mask, T val, BinaryOp op) {
+    { reduce(internal::abi<T>, mask, val, op) } -> equivalent_simd_as<T>;
+};
+
+template <typename M, typename T, typename BinaryOp>
+concept unqualified_reducei =
+    immediate_mask_for<M, T> && requires(T val, BinaryOp op) {
+        {
+            reduce<immediate_mask_v<T, M>>(internal::abi<T>, val, op)
+        } -> equivalent_simd_as<T>;
+    };
+
 struct reduce_t {
 private:
     template <immediate_mask_like M>
@@ -122,89 +135,69 @@ private:
     template <simd_type T, reduction_operator_for<T> BinaryOp>
     static constexpr bool is_nothrow_v = is_nothrow_invocable_v<BinaryOp, T, T>;
 
-public:
-    template <simd_type T, reduction_operator_for<T> BinaryOp>
+    template <typename M, simd_type T, typename BinaryOp>
+    requires (accumulations<M> == 1)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto operator()(T val, BinaryOp op) noexcept {
-        constexpr auto all = immediate_mask<element_count<T>, -1>{};
-        return operator()(all, val, op);
-    }
-
-    /**
-     * Reduction for power of two elements
-     */
-    template <simd_type T, immediate_mask_for<T> M,
-        reduction_operator_for<T> BinaryOp>
-    requires reducible<T, M::value> && (accumulations<M> == 1)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto operator()(M mask, T value, BinaryOp op) noexcept(
+    static constexpr auto fallbacki(M mask, T value, BinaryOp&& op) noexcept(
         is_nothrow_v<T, BinaryOp>) {
-        auto const reducer =
-            [&]<size_t I = 0>(this auto const self, T value,
-                immediate<I> = {}) noexcept(is_nothrow_v<T, BinaryOp>) {
-                constexpr seq::packed_indices<element_count<T>> iota{};
-                if constexpr (I == dx::countr_zero(dx::popcount(mask))) {
-                    return value;
-                } else {
-                    constexpr auto idx = seq::rotate(mask, iota, 1zu << I);
-                    auto rhs = [&]<size_t... Is>(__DPL index_sequence<Is...>) {
-                        return dx::permutei<idx[Is]...>(value);
-                    }(iota_sequence<T>);
-                    return self( __DPL invoke(op, value, rhs), imm<I + 1>);
-                }
-            };
+        auto const reducer = [&]<size_t I = 0>(this auto const self, T value,
+                                 immediate<I> = {}) {
+            constexpr seq::packed_indices<element_count<T>> iota{};
+            if constexpr (I == dx::countr_zero(dx::popcount(mask))) {
+                return value;
+            } else {
+                constexpr auto idx = seq::rotate(mask, iota, 1zu << I);
+                auto rhs = [&]<size_t... Is>(__DPL index_sequence<Is...>) {
+                    return dx::permutei<idx[Is]...>(value);
+                }(iota_sequence<T>);
+                return self( __DPL invoke_r<T>(op, value, rhs), imm<I + 1>);
+            }
+        };
 
-        return reduction_result<T, M::value>(reducer(value));
+        if constexpr (dx::all_of(mask)) {
+            return reducer(value);
+        } else {
+            return reduction_result<T, M::value>(reducer(value));
+        }
     }
 
-    /**
-     * Reduction for non-power of two elements
-     */
-    template <simd_type T, immediate_mask_for<T> M,
-        reduction_operator_for<T> BinaryOp>
-    requires reducible<T, M::value>
+    template <typename M, simd_type T, typename BinaryOp>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto operator()(M mask, T value, BinaryOp op) noexcept(
+    static constexpr auto fallbacki(M mask, T value, BinaryOp&& op) noexcept(
         is_nothrow_v<T, BinaryOp>) {
         static_assert(accumulations<M> > 1);
+        // (Comment re-written by Gemini for better clarity)
+        // Logic: Decompose 'active' elements into power-of-two chunks based on
+        // its binary form.
+        // Example: 11 elements (0b1011)
+        // 1. Primary Tree: Reduces the largest power-of-two (2^3 = 8).
+        // 2. Remainder: Accumulates partial reductions from levels where bits
+        // are set (2^1 and 2^0).
+        //
+        // Complexity:
+        // - Tree Depth: floor(log2(active)) shuffles.
+        // - Merging: (popcnt(active) - 1) additional operations.
+        // - Final: 1 permutation to align the remainder with the primary tree
+        // result.
+
         static constexpr auto active = dx::popcount(mask);
         static constexpr auto activity_width = sizeof(active) * char_bit_v;
-        // The way the logic works is dependent on the binary number
-        // representation of 'active'. e.g. For 11 elements, the binary
-        // representation is 0b1011.
-
-        // An additional buffer is requires to accumulate a 'remainder' The
-        // remainder consists of the accumulation of the permuted vectors of
-        // each level (except the last) in the shuffle tree where the
-        // corresponding binary representation of the active element count is
-        // set. The final result is then:
-        //  op(reduction[depth], rotate(mask, remainder, (1 << depth) - 1))
-        // where depth == std::bit_width(active) - 1
-        // and reduction[depth] is the reduction result using the shuffle tree
-        // up to and including the depth of std::bit_width(active) - 1
-
-        // So the maximum 'complexity' of non-power of two elements is
-        // essentially:
-        // Reduction of `depth` elements + popcnt(active % depth) op + 1 permute
-        // e.g. 11 elements: reduction of 8 elements + 2 op and 1 permute
-
         struct nothing_t {};
         union remainder_t {
             nothing_t null;
             T value;
         };
 
-        auto const reducer =
-            [&]<size_t I = 0>(this auto const self, T lhs,
-                remainder_t remain = {.null = {}},
-                immediate<I> = {}) noexcept(is_nothrow_v<T, BinaryOp>) -> T {
+        auto const reducer = [&]<size_t I = 0>(this auto const self, T lhs,
+                                 remainder_t remain = {.null = {}},
+                                 immediate<I> = {}) -> T {
             constexpr seq::packed_indices<element_count<T>> iota{};
             if constexpr (I + 1 == (activity_width - dx::countl_zero(active))) {
                 constexpr auto idx = seq::rotate(mask, iota, (1zu << I) - 1);
                 remain.value = [&]<size_t... Is>( __DPL index_sequence<Is...>) {
                     return dx::permutei<idx[Is]...>(remain.value);
                 }(iota_sequence<T>);
-                return __DPL invoke(op, value, remain.value);
+                return __DPL invoke_r<T>(op, value, remain.value);
             } else {
                 constexpr auto idx = seq::rotate(mask, iota, 1zu << I);
                 auto const rhs = [&]<size_t... Is>(
@@ -215,14 +208,82 @@ public:
                     if constexpr (I == __DPL countr_zero(active)) {
                         remain = remainder_t{.value = rhs};
                     } else {
-                        remain.value = __DPL invoke(op, remain.value, rhs);
+                        remain.value = __DPL invoke_r<T>(op, remain.value, rhs);
                     }
                 }
-                return self( __DPL invoke(op, lhs, rhs), remain, imm<I + 1>);
+                return self(
+                    __DPL invoke_r<T>(op, lhs, rhs), remain, imm<I + 1>);
             }
         };
 
         return reduction_result<T, M::value>(reducer(value));
+    }
+
+public:
+    template <simd_type T, reduction_operator_for<T> BinaryOp>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto operator()(T value, BinaryOp op) noexcept {
+        constexpr auto all = immediate_mask<element_count<T>, -1>{};
+        if constexpr (unqualified_reduce<T, BinaryOp>) {
+            if constexpr (basic_simd_type<T>) {
+                if consteval {
+                    using E = typename decltype(reduce(
+                        internal::abi<T>, value, op))::value_type;
+                    return dx::reinterpret<E>(fallbacki(all, value, op));
+                } else {
+                    return reduce(internal::abi<T>, value, op);
+                }
+            } else {
+                return reduce(internal::abi<T>, value, op);
+            }
+        } else if constexpr (basic_simd_type<T>) {
+            return fallbacki(all, value, op);
+        } else {
+            return operator()(dx::to_basic_type(value), op);
+        }
+    }
+
+    template <simd_type T, immediate_mask_for<T> M,
+        reduction_operator_for<T> BinaryOp>
+    requires reducible<T, M::value>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto operator()(M mask, T value, BinaryOp op) noexcept(
+        is_nothrow_v<T, BinaryOp>) {
+        if constexpr (unqualified_reduce<T, BinaryOp>) {
+            constexpr auto V = immediate_mask_v<T, M>;
+            if constexpr (basic_simd_type<T>) {
+                if consteval {
+                    using E = typename decltype(reduce<V>(
+                        internal::abi<T>, value, op))::value_type;
+                    return dx::reinterpret<E>(fallbacki(mask, value, op));
+                } else {
+                    return reduce<V>(internal::abi<T>, value, op);
+                }
+            } else {
+                return reduce<V>(internal::abi<T>, value, op);
+            }
+        } else if constexpr (basic_simd_type<T>) {
+            return fallbacki(mask, value, op);
+        } else {
+            return operator()(mask, dx::to_basic_type(value), op);
+        }
+    }
+
+    template <simd_type T, compatible_mask_with<T> M,
+        reduction_operator_for<T> BinaryOp>
+    requires reducible<T, M::value> &&
+        (unqualified_mreduce<M, T, BinaryOp> ||
+            unqualified_mreduce<basic_type_t<M>, basic_type_t<T>, BinaryOp>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto operator()(M mask, T value, BinaryOp op) noexcept(
+        is_nothrow_v<T, BinaryOp>) {
+        // TODO: Investigate if a performant fallback is even possible
+        if constexpr (unqualified_mreduce<M, T, BinaryOp>) {
+            return reduce(internal::abi<T>, mask, value, op);
+        } else {
+            return reduce(internal::abi<T>, dx::to_basic_type(mask),
+                dx::to_basic_type(value), op);
+        }
     }
 };
 
@@ -253,8 +314,12 @@ public:
 namespace datapar {
 DPL_EXPORT template <simd_type T, integral auto V>
 inline constexpr bool enable_simd_type<internal::reduction_result<T, V>> = true;
+DPL_EXPORT template <simd_type T, integral auto V, simd_element E, simd_abi A>
+struct rebind_simd<internal::reduction_result<T, V>, E, A> {
+    using type = internal::reduction_result<rebind_simd_t<T, E, A>, V>;
+};
 inline namespace cpo {
-DPL_EXPORT template <integral auto V>
+DPL_EXPORT template <auto V>
 inline constexpr internal::reducei_t<V> reducei{};
 DPL_EXPORT inline constexpr internal::reduce_t reduce{};
 } // namespace cpo

@@ -52,7 +52,8 @@ public:
         if constexpr (unqualified_hsum<T>) {
             if constexpr (basic_simd_type<T>) {
                 if consteval {
-                    return fallback(arg);
+                    using RT = decltype(hsum(internal::abi<T>, arg));
+                    return dx::reinterpret<RT>(fallback(arg));
                 } else {
                     return hsum(internal::abi<T>, arg);
                 }
@@ -85,7 +86,8 @@ public:
         if constexpr (unqualified_hsumi<M, T>) {
             if constexpr (basic_simd_type<T>) {
                 if consteval {
-                    return fallbacki<V>(arg, dx::add);
+                    using RT = decltype(hsum<V>(internal::abi<T>, arg));
+                    return dx::reinterpret<RT>(fallbacki<V>(arg));
                 } else {
                     return hsum<V>(internal::abi<T>, arg);
                 }

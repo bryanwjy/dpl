@@ -20,6 +20,8 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
 namespace seq {
+
+// Deliberately not exported!
 template <size_t N>
 class packed_indices {
     static_assert(__DPL has_single_bit(N));

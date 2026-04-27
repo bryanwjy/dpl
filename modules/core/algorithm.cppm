@@ -25,5 +25,10 @@ import :core.utility;
 #include "dpl/core/algorithm/hmin.h"
 #include "dpl/core/algorithm/hsum.h"
 #include "dpl/core/algorithm/inner_product.h"
+#include "dpl/core/algorithm/permute.h"
 #include "dpl/core/algorithm/reduce.h"
+#include "dpl/core/algorithm/rotate.h"
+#include "dpl/core/algorithm/shift.h"
+#include "dpl/core/algorithm/slide.h"
+#include "dpl/core/algorithm/splice.h"
 // IWYU pragma: end_exports

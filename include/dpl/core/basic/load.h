@@ -140,10 +140,10 @@ struct aligned_load_t<A> : private load_t<A> {
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT template <typename A>
-inline constexpr internal::load_t<A> load{};
-DPL_EXPORT template <typename A>
-inline constexpr internal::aligned_load_t<A> aligned_load{};
+DPL_EXPORT template <typename... Args>
+inline constexpr internal::load_t<Args...> load{};
+DPL_EXPORT template <typename... Args>
+inline constexpr internal::aligned_load_t<Args...> aligned_load{};
 } // namespace cpo
 } // namespace datapar
 DPL_DEFAULT_NAMESPACE_END

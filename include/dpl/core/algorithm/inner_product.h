@@ -64,7 +64,9 @@ public:
         if constexpr (unqualified_inner_product<L, R, A>) {
             if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
                 if consteval {
-                    return fallback(lhs, rhs);
+                    using RT =
+                        decltype(inner_product(internal::abi<A>, lhs, rhs));
+                    return dx::reinterpret<RT>(fallback(lhs, rhs));
                 } else {
                     return inner_product(internal::abi<A>, lhs, rhs);
                 }
@@ -103,7 +105,9 @@ public:
         if constexpr (unqualified_inner_producti<M, L, R, A>) {
             if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
                 if consteval {
-                    return fallbacki<V>(lhs, rhs);
+                    using RT =
+                        decltype(inner_product<V>(internal::abi<A>, lhs, rhs));
+                    return dx::reinterpret<RT>(fallbacki<V>(lhs, rhs));
                 } else {
                     return inner_product<V>(internal::abi<A>, lhs, rhs);
                 }

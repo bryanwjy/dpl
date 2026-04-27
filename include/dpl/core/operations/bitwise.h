@@ -36,9 +36,9 @@ void bwornot(...) noexcept = delete;
 void bwnot(...) noexcept = delete;
 void bwshift_left(...) noexcept = delete;
 void bwshift_right(...) noexcept = delete;
-template <auto>
+template <size_t>
 void bwshift_left(...) noexcept = delete;
-template <auto>
+template <size_t>
 void bwshift_right(...) noexcept = delete;
 
 template <typename T, typename L, typename R>
@@ -1250,6 +1250,28 @@ public:
     }
 };
 
+template <size_t V>
+struct bwshift_lefti_t {
+public:
+    template <simd_class T>
+    requires regular_invocable<bwshift_left_t, T, immediate<V>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T arg) noexcept {
+        return bwshift_left_t::operator()(arg, imm<V>);
+    }
+};
+
+template <size_t V>
+struct bwshift_righti_t {
+public:
+    template <simd_class T>
+    requires regular_invocable<bwshift_right_t, T, immediate<V>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T arg) noexcept {
+        return bwshift_right_t::operator()(arg, imm<V>);
+    }
+};
+
 } // namespace datapar::internal
 
 namespace datapar {
@@ -1262,6 +1284,10 @@ DPL_EXPORT inline constexpr internal::bwornot_t bwornot{};
 DPL_EXPORT inline constexpr internal::bwnot_t bwnot{};
 DPL_EXPORT inline constexpr internal::bwshift_left_t bwshift_left{};
 DPL_EXPORT inline constexpr internal::bwshift_right_t bwshift_right{};
+DPL_EXPORT template <size_t V>
+inline constexpr internal::bwshift_lefti_t<V> bwshift_lefti{};
+DPL_EXPORT template <size_t V>
+inline constexpr internal::bwshift_righti_t<V> bwshift_righti{};
 } // namespace cpo
 
 DPL_EXPORT template <typename D>

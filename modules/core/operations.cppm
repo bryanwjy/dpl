@@ -25,6 +25,5 @@ import :core.constants;
 #include "dpl/core/operations/logic.h"
 #include "dpl/core/operations/minmax.h"
 #include "dpl/core/operations/negate.h"
-#include "dpl/core/operations/permute.h"
 #include "dpl/core/operations/select.h"
 // IWYU pragma: end_exports

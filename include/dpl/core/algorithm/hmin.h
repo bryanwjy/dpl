@@ -48,7 +48,8 @@ public:
         if constexpr (unqualified_hmin<T>) {
             if constexpr (basic_simd_type<T>) {
                 if consteval {
-                    return fallback(arg);
+                    using RT = decltype(hmin(internal::abi<T>, arg));
+                    return dx::reinterpret<RT>(fallback(arg));
                 } else {
                     return hmin(internal::abi<T>, arg);
                 }
@@ -81,7 +82,8 @@ public:
         if constexpr (unqualified_hmini<M, T>) {
             if constexpr (basic_simd_type<T>) {
                 if consteval {
-                    return fallbacki<V>(arg);
+                    using RT = decltype(hmin<V>(internal::abi<T>, arg));
+                    return dx::reinterpret<RT>(fallbacki<V>(arg));
                 } else {
                     return hmin<V>(internal::abi<T>, arg);
                 }

@@ -3,9 +3,7 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/operations/operation_base.h"
-#include "dpl/core/operations/select.h"
-#include "dpl/core/operations/shift.h"
+#include "dpl/core/algorithm/shift.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/reinterpret.h"
@@ -13,47 +11,49 @@
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_element.h"
 #  include "dpl/core/concepts/simd_equivalence.h"
+#  include "dpl/core/operations/operation_base.h"
+#  include "dpl/core/operations/select.h"
 #  include "dpl/core/type_traits/common_order_type.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
-template <auto>
+template <size_t>
 void slide_left(...) noexcept = delete;
 void slide_left(...) noexcept = delete;
-template <auto>
+template <size_t>
 void slide_right(...) noexcept = delete;
 void slide_right(...) noexcept = delete;
 
+template <typename T, typename L, typename R>
+concept slide_result = simd_with<R, typename L::value_type> &&
+    simd_with<T, typename L::value_type, common_abi_t<L, R>>;
+
 template <typename V, typename L, typename R, typename A = common_abi_t<L, R>>
 concept unqualified_slide_lefti = requires(L lhs, R rhs) {
-    {
-        slide_left<V::value>(internal::abi<A>, lhs, rhs)
-    } -> equivalent_simd_as<T>;
+    { slide_left<V::value>(internal::abi<A>, lhs, rhs) } -> slide_result<L, R>;
 };
 
 template <typename L, typename R, typename A = common_abi_t<L, R>>
 concept unqualified_slide_left = requires(L lhs, R rhs, size_t count) {
-    { slide_left(internal::abi<A>, lhs, rhs, count) } -> equivalent_simd_as<T>;
+    { slide_left(internal::abi<A>, lhs, rhs, count) } -> slide_result<L, R>;
 };
 
 template <typename V, typename L, typename R, typename A = common_abi_t<L, R>>
 concept unqualified_slide_righti = requires(L lhs, R rhs) {
-    {
-        slide_right<V::value>(internal::abi<A>, lhs, rhs)
-    } -> equivalent_simd_as<T>;
+    { slide_right<V::value>(internal::abi<A>, lhs, rhs) } -> slide_result<L, R>;
 };
 
 template <typename L, typename R, typename A = common_abi_t<L, R>>
 concept unqualified_slide_right = requires(L lhs, R rhs, size_t count) {
-    { slide_right(internal::abi<A>, lhs, rhs, count) } -> equivalent_simd_as<T>;
+    { slide_right(internal::abi<A>, lhs, rhs, count) } -> slide_result<L, R>;
 };
 
 struct slide_left_t {
 private:
     template <simd_element E, fixed_width_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    constexpr auto fallback(
+    static constexpr auto DPL_VECTORCALL fallback(
         basic_simd<E, A> lhs, basic_simd<E, A> rhs, size_t num) noexcept {
         num = num <= element_count<E, A> ? num : element_count<E, A>;
         auto const low = dx::shift_left(lhs, num);
@@ -63,8 +63,8 @@ private:
 
     template <size_t N, simd_element E, fixed_width_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    constexpr auto fallback(
-        basic_simd<E, A> lhs, basic_simd<E, A> rhs) noexcept {
+    static constexpr auto DPL_VECTORCALL
+        fallback(basic_simd<E, A> lhs, basic_simd<E, A> rhs) noexcept {
         static_assert(N <= element_count<E, A>);
         constexpr auto size = 2 * element_count<E, A>;
         auto const low = dx::shift_left(lhs, imm<N>);
@@ -156,37 +156,11 @@ public:
     }
 };
 
-template <auto V>
-struct slide_lefti_t : binary_operation_base<slide_lefti_t> {
-private:
-    friend binary_operation_base<slide_lefti_t>;
-
-    template <simd_abi A, typename L, typename R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto native(A, L lhs, R rhs) noexcept
-    requires requires {
-        { slide_left<V>(internal::abi<A>, lhs, rhs) } -> simd_with_abi<A>;
-    }
-    {
-        return slide_left<V>(internal::abi<A>, lhs, rhs);
-    }
-
-public:
-    template <simd_type L, simd_with<typename L::value_type> R>
-    requires regular_invocable<slide_left_t, L, R, immediate<V>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L lhs, R rhs) noexcept {
-        return slide_left_t::operator()(lhs, rhs, imm<V>);
-    }
-
-    using binary_operation_base<slide_lefti_t>::operator();
-};
-
 struct slide_right_t {
 private:
     template <simd_element E, fixed_width_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    constexpr auto fallback(
+    static constexpr auto DPL_VECTORCALL fallback(
         basic_simd<E, A> lhs, basic_simd<E, A> rhs, size_t num) noexcept {
         num = num <= element_count<E, A> ? num : element_count<E, A>;
         return slide_left_t::operator()(lhs, rhs, element_count<E, A> - num);
@@ -194,9 +168,10 @@ private:
 
     template <size_t N, simd_element E, fixed_width_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    constexpr auto fallbacki(
-        basic_simd<E, A> lhs, basic_simd<E, A> rhs) noexcept {
-        return slide_lefti_t<element_count<E, A> - N>::operator()(lhs, rhs);
+    static constexpr auto DPL_VECTORCALL
+        fallbacki(basic_simd<E, A> lhs, basic_simd<E, A> rhs) noexcept {
+        constexpr auto num = element_count<E, A> - N;
+        return slide_left_t::operator()(lhs, rhs, imm<num>);
     }
 
 public:
@@ -283,8 +258,34 @@ public:
     }
 };
 
-template <auto V>
-struct slide_righti_t : binary_operation_base<slide_righti_t> {
+template <size_t V>
+struct slide_lefti_t : binary_operation_base<slide_lefti_t<V>> {
+private:
+    friend binary_operation_base<slide_lefti_t>;
+
+    template <simd_abi A, typename L, typename R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto native(A, L lhs, R rhs) noexcept
+    requires requires {
+        { slide_left<V>(internal::abi<A>, lhs, rhs) } -> simd_with_abi<A>;
+    }
+    {
+        return slide_left<V>(internal::abi<A>, lhs, rhs);
+    }
+
+public:
+    template <simd_type L, simd_with<typename L::value_type> R>
+    requires regular_invocable<slide_left_t, L, R, immediate<V>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(L lhs, R rhs) noexcept {
+        return slide_left_t::operator()(lhs, rhs, imm<V>);
+    }
+
+    using binary_operation_base<slide_lefti_t>::operator();
+};
+
+template <size_t V>
+struct slide_righti_t : binary_operation_base<slide_righti_t<V>> {
 private:
     friend binary_operation_base<slide_righti_t>;
 

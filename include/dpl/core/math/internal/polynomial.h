@@ -33,7 +33,7 @@ union optional {
  */
 template <size_t S, floating_point E, simd_abi A>
 class vpowers : protected vpowers<S - 1, E, A> {
-    using base_type = vpowers<S - 1, E, A>;
+    using base_type DPL_NODEBUG = vpowers<S - 1, E, A>;
 
 public:
     __DPL_HIDE_FROM_ABI constexpr vpowers() noexcept = default;
@@ -98,15 +98,16 @@ private:
 
         template <int I>
         static consteval T operator[](immediate<I>) noexcept {
-#if __cpp_pack_indexing >= 202311L & (DPL_CXX26 | DPL_COMPILER_CLANG)
-#  if DPL_COMPILER_CLANG & !DPL_CXX26
+#if __cpp_pack_indexing >= 202311L & \
+    (DPL_CXX26 | DPL_COMPILER_CLANG | DPL_COMPILER_GCC)
+#  if !DPL_CXX26
             DPL_DISABLE_WARNING_PUSH()
             DPL_DISABLE_WARNING("-Wc++26-extensions")
 #  endif
             static_assert(digits_v<T> <=
                 digits_v<remove_const_t<decltype(Vs...[I - 1])>>);
             return static_cast<T>(Vs...[I - 1]);
-#  if DPL_COMPILER_CLANG & !DPL_CXX26
+#  if !DPL_CXX26
             DPL_DISABLE_WARNING_POP()
 #  endif
 #else
