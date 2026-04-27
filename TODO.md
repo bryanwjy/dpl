@@ -1,9 +1,12 @@
 
+* Make build system more configurable
+  * e.g. different targets, different build config
+* Expose a configuration to disable the ALWAYS_INLINE attribute
 * How to default the simd ABI?
   * Should this be configurable?
 * Support scalable vector ABIs
   * ~~How to deal with constexpr~~ Up to implementation, but typically disabled
-* Redesign `cload` API
+* Maybe redesign `cload` API
 * Define extensible concatenation API
   * i.e. How can one define a new ABI, e.g. ymm, that could then hook into DPL's concat mechanism
     such that something like `concat(xmm_vectora, xmm_vectorb)` is well-formed
