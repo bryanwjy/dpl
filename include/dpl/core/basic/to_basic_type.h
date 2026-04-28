@@ -14,13 +14,13 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
-template <simd_class T>
+DPL_EXPORT template <simd_class T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr T to_basic_type(T src) noexcept {
     return src;
 }
 
-template <simd_class T>
+DPL_EXPORT template <simd_class T>
 requires (!basic_simd_class<T>)
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr basic_type_t<T> DPL_VECTORCALL to_basic_type(T src) noexcept {

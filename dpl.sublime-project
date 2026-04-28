@@ -35,7 +35,7 @@
                 },
             	"enabled": false,
 			},
-        },
+        }
 	},
 	"syntax_override": {
 		".*\\.(h|cpp)$": ["cpp-sublime-syntax/C++20"],

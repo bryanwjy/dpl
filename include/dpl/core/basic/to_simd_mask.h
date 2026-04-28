@@ -13,12 +13,12 @@
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
-DPL_EXPORT struct assume_cannonical_mask_t {
-    __DPL_HIDE_FROM_ABI explicit constexpr assume_cannonical_mask_t() noexcept =
+DPL_EXPORT struct assume_canonical_mask_t {
+    __DPL_HIDE_FROM_ABI explicit constexpr assume_canonical_mask_t() noexcept =
         default;
 };
 
-DPL_EXPORT inline constexpr assume_cannonical_mask_t assume_cannonical_mask{};
+DPL_EXPORT inline constexpr assume_canonical_mask_t assume_canonical_mask{};
 } // namespace datapar
 
 namespace datapar::internal {
@@ -48,7 +48,7 @@ public:
     template <basic_simd_type T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr make_simd_mask_type_t<T> operator()(
-        assume_cannonical_mask_t tag, T src) noexcept {
+        assume_canonical_mask_t tag, T src) noexcept {
         if constexpr (requires { to_simd_mask(internal::abi<T>, tag, src); }) {
             if consteval {
                 return operator()(src);
@@ -62,7 +62,7 @@ public:
 
     template <simd_type T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto operator()(assume_cannonical_mask_t tag,
+    static constexpr auto operator()(assume_canonical_mask_t tag,
         T src) noexcept -> equivalent_mask_as<make_simd_mask_type_t<T>> auto {
         if constexpr (requires { to_simd_mask(internal::abi<T>, tag, src); }) {
             return to_simd_mask(internal::abi<T>, tag, src);

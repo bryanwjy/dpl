@@ -128,7 +128,7 @@ public:
         (unqualified_inner_producti<M, L, R> ||
             unqualified_inner_producti<M, basic_type_t<L>, basic_type_t<R>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L lhs, R rhs) noexcept {
+    static constexpr auto operator()(M, L lhs, R rhs) noexcept {
         using A = common_abi_t<L, R>;
         constexpr auto V = immediate_mask_v<L, M>;
         if constexpr (unqualified_inner_producti<M, L, R>) {

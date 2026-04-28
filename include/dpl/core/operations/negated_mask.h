@@ -47,6 +47,8 @@ public:
     __DPL_HIDE_FROM_ABI constexpr negated_mask() noexcept
         : negated_mask(dx::to_native_type(basic_type_t<T>())) {}
 
+    __DPL_HIDE_FROM_ABI constexpr negated_mask(T mask) noexcept : mask_(mask) {}
+
     template <common_size_simd_with<T> U>
     requires (!same_as<T, U>) && same_abi_simd_as<T, U> &&
         regular_invocable<internal::reinterpret_t<element_type>, U>
@@ -81,6 +83,11 @@ public:
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     constexpr T operator!(this negated_mask self) noexcept {
+        return self.mask_;
+    }
+
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    friend constexpr T logical_not(abi_type, negated_mask self) noexcept {
         return self.mask_;
     }
 

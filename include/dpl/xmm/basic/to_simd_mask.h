@@ -75,7 +75,7 @@ constexpr mask<E> DPL_VECTORCALL
 DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr mask<E> DPL_VECTORCALL
-    to_simd_mask(abi_tag tag, assume_cannonical_mask_t, simd<E> src) noexcept {
+    to_simd_mask(abi_tag tag, assume_canonical_mask_t, simd<E> src) noexcept {
     return +src;
 }
 
@@ -88,7 +88,7 @@ constexpr mask<E> DPL_VECTORCALL to_simd_mask(simd<E> src) noexcept {
 DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr mask<E> DPL_VECTORCALL
-    to_simd_mask(assume_cannonical_mask_t tag, simd<E> src) noexcept {
+    to_simd_mask(assume_canonical_mask_t tag, simd<E> src) noexcept {
     return xmm::to_simd_mask(xmm::abi, tag, src);
 }
 

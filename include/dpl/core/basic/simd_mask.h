@@ -61,7 +61,7 @@ public:
 
     template <common_bits_simd_with<simd_type> T>
     __DPL_HIDE_FROM_ABI explicit constexpr basic_simd_mask(
-        assume_cannonical_mask_t tag, T simd) noexcept
+        assume_canonical_mask_t tag, T simd) noexcept
         : basic_simd_mask(datapar::to_simd_mask(
               tag, datapar::reinterpret<simd_type>(simd))) {}
 
@@ -95,7 +95,7 @@ private:
 template <simd_element E, simd_abi A>
 explicit basic_simd_mask(basic_simd<E, A>) -> basic_simd_mask<E, A>;
 template <simd_element E, simd_abi A>
-explicit basic_simd_mask(assume_cannonical_mask_t, basic_simd<E, A>)
+explicit basic_simd_mask(assume_canonical_mask_t, basic_simd<E, A>)
     -> basic_simd_mask<E, A>;
 
 } // namespace datapar

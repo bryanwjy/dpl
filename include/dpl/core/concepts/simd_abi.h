@@ -36,11 +36,9 @@ concept fixed_width_abi = simd_abi<T> && requires {
 } && (T::size != scalable_size);
 
 DPL_EXPORT template <typename T>
-concept scalable_abi = !fixed_width_abi<T> && simd_abi<T> &&
-    (T::size == scalable_size) && requires {
-        typename internal::constant_value<T::max_size>;
-        // TODO: element_count
-    };
+concept scalable_abi =
+    !fixed_width_abi<T> && simd_abi<T> && (T::size == scalable_size) &&
+    requires { typename internal::constant_value<T::max_size>; };
 
 namespace internal {
 template <simd_abi A>

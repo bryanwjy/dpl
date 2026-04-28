@@ -25,82 +25,6 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 
-template <simd_type T, auto V>
-class reduction_result {
-    using vector_type =
-        typename T::abi_type::template native_type<typename T::value_type>;
-
-public:
-    using value_type = typename T::value_type;
-    using abi_type = typename T::abi_type;
-
-    __DPL_HIDE_FROM_ABI constexpr reduction_result() noexcept = default;
-    __DPL_HIDE_FROM_ABI constexpr reduction_result(T result) noexcept
-        : result_(result) {}
-    __DPL_HIDE_FROM_ABI constexpr reduction_result(vector_type vec) noexcept
-        : result_(vec) {}
-
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    explicit constexpr DPL_VECTORCALL operator vector_type(
-        this reduction_result self) noexcept {
-        return datapar::to_native_type(self.result_);
-    }
-
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    explicit constexpr DPL_VECTORCALL operator T(
-        this reduction_result self) noexcept {
-        return self.result_;
-    }
-
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    constexpr auto operator[](
-        this reduction_result self, extraction_index auto idx) noexcept {
-        constexpr immediate_mask<element_count<T>, V> mask{};
-        if constexpr (integral_constant_like<decltype(idx)>) {
-            static_assert(mask[idx]);
-        }
-        return self.result_[idx];
-    }
-
-    template <integral auto O>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    friend constexpr auto DPL_VECTORCALL
-        bit_keep(abi_type, reduction_result self) noexcept {
-        static constexpr immediate_mask<element_count<T>, V> mask{};
-        static constexpr auto not_zpos = dx::countr_zero(mask);
-        if constexpr (V == O) {
-            return self.result_;
-        } else if ((V | O) == V) {
-            return dx::bit_keepi<O>(self.result_);
-        } else if constexpr (dx::all_of(mask)) {
-            return dx::broadcast_lanei<not_zpos>(self.result_);
-        } else {
-            return dx::bit_keepi<O>(
-                dx::broadcast_lanei<not_zpos>(self.result_));
-        }
-    }
-
-    template <integral auto O>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    friend constexpr auto DPL_VECTORCALL
-        bit_drop(abi_type abi, reduction_result self) noexcept {
-        static constexpr immediate_mask<element_count<T>, V> mask{};
-        static constexpr auto inv = decltype(~mask)::value;
-        return bit_keep<inv>(abi, self);
-    }
-
-    template <simd_element E>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    friend constexpr auto DPL_VECTORCALL
-        reinterpret(abi_type, reduction_result self) noexcept {
-        using rebind = rebind_simd_t<T, E>;
-        return reduction_result<rebind, V>(dx::reinterpret<E>(self.result_));
-    }
-
-private:
-    T result_;
-};
-
 template <typename F, typename T>
 concept reduction_operator_for = simd_type<T> && regular_invocable<F, T, T> &&
     core_convertible_to<invoke_result_t<F, T, T>, T>;
@@ -154,11 +78,7 @@ private:
             }
         };
 
-        if constexpr (dx::all_of(mask)) {
-            return reducer(value);
-        } else {
-            return reduction_result<T, M::value>(reducer(value));
-        }
+        return reducer(value);
     }
 
     template <typename M, simd_type T, typename BinaryOp>
@@ -216,7 +136,7 @@ private:
             }
         };
 
-        return reduction_result<T, M::value>(reducer(value));
+        return reducer(value);
     }
 
 public:

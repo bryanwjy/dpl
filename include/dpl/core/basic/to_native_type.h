@@ -11,7 +11,7 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
-template <simd_class T>
+DPL_EXPORT template <simd_class T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr auto DPL_VECTORCALL to_native_type(T src) noexcept {
     using A = typename T::abi_type;
