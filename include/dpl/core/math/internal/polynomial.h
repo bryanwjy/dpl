@@ -73,7 +73,7 @@ protected:
         decltype(nullptr), basic_simd<E, A> x0) noexcept
     requires (S == 1)
         : base_type(x0)
-        , data{.none = {}} {}
+        , data{.val = dx::multiply(x0, x0)} {}
 
     __DPL_HIDE_FROM_ABI explicit constexpr vpowers(
         decltype(nullptr) tag, basic_simd<E, A> x0) noexcept
@@ -137,36 +137,33 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto eval_estrin(
         Powers&& x, immediate<B> = {}, immediate<L> = {}) noexcept {
-        constexpr auto S = 1 << L;      // stride for the next level
-        constexpr auto Sp = (S << 1);   // current level's stride
-        constexpr auto Sgp = (Sp << 1); // parent level's stride
-        constexpr auto parent_consumes = B + Sp <= degree;
-        constexpr auto parent_maximal = B + Sgp + Sp > degree;
+        constexpr auto S = 1 << L; // stride for the next level
         if constexpr (L == 0) {
             // Leaf
             if constexpr (B + S <= degree) {
-                if constexpr (parent_consumes && parent_maximal) {
-                    x.template initialize<L + 1>();
-                }
                 return dx::fmadd(
                     x[imm<L>], coeffs<E>[imm<B + S>], coeffs<E>[imm<B>]);
             } else {
                 return dx::broadcast<A>(coeffs<E>[imm<B>]);
             }
         } else if constexpr (B + S <= degree) {
-            auto const left = eval_estrin<E, A>(x, imm<B + S>, imm<L - 1>);
             auto const right = eval_estrin<E, A>(x, imm<B>, imm<L - 1>);
-            if constexpr (parent_consumes && parent_maximal) {
-                // initialize squares as late as possible with the fma
-                // below hiding the latency of the multiplication
-
-                // parent_consumes => parent consumes x^2^(L+1)
-                // parent_maximal => parent is earliest consumer
+            auto const left = eval_estrin<E, A>(x, imm<B + S>, imm<L - 1>);
+            if constexpr (B == 2 * S) {
+                // Late initialization of squares for powers greater than 2
+                // Pray that OOO execution can hide it's latency
                 x.template initialize<L + 1>();
             }
+
             // x[L] => x^2^L
             return dx::fmadd(x[imm<L>], left, right);
         } else {
+            if constexpr (B == 2 * S) {
+                // Late initialization of squares for powers greater than 2
+                // Pray that OOO execution can hide it's latency
+                x.template initialize<L + 1>();
+            }
+
             return eval_estrin<E, A>(x, imm<B>, imm<L - 1>);
         }
     }
@@ -175,22 +172,13 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         eval_estrin(basic_simd<E, A> x) noexcept {
-        // Compiler Explorer: https://godbolt.org/z/rbKK8T31a
+        // Compiler Explorer: https://godbolt.org/z/nsvsYnez1
         // Evaluates estrin with lower register pressure by deferring
-        // the square operation as late as possible, leaving
-        // at least one fma between the square operation and the use
-        // of the square's result. This results in 2 less active powers
-        // during evaluation and about 3-4 less active registers for
-        // large polynomials, e.g. 18th degree, on clang
-
-        // On GCC, this resulted in 1 extra register use compared
-        // to the naive implementation of preinitializing all even
-        // powers.
-
-        // Since it's a lot better on clang and only slightly worse
-        // on GCC, the deferred method will be used. It's not
-        // too difficult to switch back to the naive implementation
-        // if required.
+        // the square operation as late as possible, using the FMA dependency
+        // chain to hide it's latency.
+        // This results in lower register pressures and register
+        // lifetimes reductions for large polynomials, e.g. 18th degree, on
+        // clang
         return eval_estrin<E, A>(estrin::vpowers<depth, E, A>(x));
     }
 
@@ -215,7 +203,7 @@ public:
     template <floating_point T, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(basic_simd<T, A> x) noexcept {
-        if constexpr (sizeof...(Vs) <= 4) {
+        if constexpr (degree < 6) {
             return eval_horner(x);
         } else {
             return eval_estrin(x);

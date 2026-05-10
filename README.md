@@ -1,10 +1,9 @@
 
 # Data Parallel Library (dpl): An Extensible C++ SIMD Abstraction
 
-A header-only C++ library for SIMD operations, designed with a focus on extensibility and zero-cost abstractions. This project serves as a showcase of modern C++ techniques (C++23) and hardware-level optimization.
+A header-only C++ library for SIMD operations, designed with a focus on extensibility and zero-cost abstractions. This project serves as a showcase of modern C++ techniques (C++23) and hardware-level optimization. 
 
-> Project Status: Experimental / Technical Portfolio
-This library is an exploration of "clean-room" C++ development. It is currently optimized for Clang on Linux and is used as a playground for testing C++23 Modules and freestanding library design. (By 'optimized for', I mean 'only works on')
+This library is an exploration of an idea I had about compile-time declarative dependency injection in C++. As you can probably tell from the state of the [`test`](test) folder, almost none of the code has been tested. It is currently optimized for Clang on Linux and is used as a playground for testing C++23 Modules and freestanding library design (By 'optimized for', I mean 'only works on').
 
 ## Why build this?
 
