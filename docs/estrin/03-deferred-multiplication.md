@@ -181,11 +181,11 @@ First, let's see what happens when we run `late` on x86, specifically on Zen5 (b
 
 ![late-x86-gcc-o1-mca](./assets/late-x86-clang-o1-mca.png)
 
-The red blocks in the diagram represent cycles that an instruction is stuck waiting for data dependencies. What we're looking for here, is are there any FMAs directly dependent on the multiplications, stuck waiting for the multiplications.
+The red blocks in the diagram represent cycles that an instruction is stuck waiting for data dependencies. What we're looking for is: are there any FMAs directly dependent on the multiplications, stuck waiting for the multiplications?
 
 The answer, unsurprisingly, is no.
 
-Thanks to the magic of out-of-order execution, the multiplication started executing so much earlier in the evaluation then one would expect. In fact, *all* the multiplications complete even before the half-way point of the evaluation was reached, practically not affecting the FMAs at all. So my assumption regarding out-of-order CPUs was correct (in this isolated simulation), the only change that moving the multiplication up would introduce is to shift the instruction dispatch (Blue blocks) earlier. Even then, their actual execution will likely remain at the same locations.
+Thanks to the magic of out-of-order execution, the multiplication started executing so much earlier in the evaluation than one would expect. In fact, *all* the multiplications complete even before the half-way point of the evaluation, practically not affecting the FMAs at all. So my assumption regarding out-of-order CPUs was correct (in this isolated simulation), the only change that moving the multiplication up would introduce is to shift the instruction dispatch (Blue blocks) earlier. Even then, their actual execution will likely remain at the same locations.
 
 ### In-Order CPUs
 
