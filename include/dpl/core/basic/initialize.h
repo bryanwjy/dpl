@@ -9,6 +9,7 @@
 #  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/simd_class.h"
 #  include "dpl/core/type_traits/basic_type.h"
+#  include "dpl/core/type_traits/simd_abi_traits.h"
 #  include "dpl/std/bit/char_bit.h"
 #  include "dpl/std/bit/has_single_bit.h"
 #  include "dpl/std/concepts/array_initializable.h"
@@ -31,8 +32,8 @@ template <simd_abi A, simd_element E>
 requires fixed_width_abi<A>
 struct initialize_t<A, E> {
 private:
-    using barray_type DPL_NODEBUG = bool[simd_abi_traits<E, A>::max_size];
-    using array_type DPL_NODEBUG = E[simd_abi_traits<E, A>::max_size];
+    using barray_type DPL_NODEBUG = bool[simd_abi_traits<E, A>::size];
+    using array_type DPL_NODEBUG = E[simd_abi_traits<E, A>::size];
 
 public:
     template <core_convertible_to<E>... Args>
@@ -63,11 +64,12 @@ template <simd_abi A, simd_element E>
 struct initialize_t<E, A> : initialize_t<A, E> {};
 
 template <basic_simd_class T>
+requires fixed_width_class<T>
 struct initialize_t<T> {
 private:
-    using A DPL_NODEBUG = typename T::abi_type;   // bool for masks
+    using A DPL_NODEBUG = typename T::abi_type;
     using E DPL_NODEBUG = typename T::value_type; // bool for masks
-    using array_type DPL_NODEBUG = E[simd_abi_traits<E, A>::max_size];
+    using array_type DPL_NODEBUG = E[simd_abi_traits<T>::size];
 
 public:
     template <core_convertible_to<E>... Args>

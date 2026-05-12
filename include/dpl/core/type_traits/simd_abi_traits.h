@@ -39,7 +39,7 @@ struct simd_abi_traits<T> {
                       }) {
             return T::max_size / sizeof(E);
         } else {
-            return T::size();
+            return simd_abi_traits::size<E>();
         }
     }
 
