@@ -31,16 +31,8 @@ template <simd_abi A, simd_element E>
 requires fixed_width_abi<A>
 struct initialize_t<A, E> {
 private:
-    static constexpr size_t lanes = []() {
-        if constexpr (fixed_width_abi<A>) {
-            return A::size / sizeof(E);
-        } else {
-            return A::max_size / sizeof(E);
-        }
-    }();
-
-    using barray_type DPL_NODEBUG = bool[lanes];
-    using array_type DPL_NODEBUG = E[lanes];
+    using barray_type DPL_NODEBUG = bool[simd_abi_traits<E, A>::max_size];
+    using array_type DPL_NODEBUG = E[simd_abi_traits<E, A>::max_size];
 
 public:
     template <core_convertible_to<E>... Args>
@@ -75,14 +67,7 @@ struct initialize_t<T> {
 private:
     using A DPL_NODEBUG = typename T::abi_type;   // bool for masks
     using E DPL_NODEBUG = typename T::value_type; // bool for masks
-    static constexpr size_t lanes = []() {
-        if constexpr (fixed_width_class<T>) {
-            return A::size / sizeof(simd_element_type_t<T>);
-        } else {
-            return A::max_size / sizeof(simd_element_type_t<T>);
-        }
-    }();
-    using array_type DPL_NODEBUG = E[lanes];
+    using array_type DPL_NODEBUG = E[simd_abi_traits<E, A>::max_size];
 
 public:
     template <core_convertible_to<E>... Args>
