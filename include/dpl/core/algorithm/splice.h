@@ -39,7 +39,7 @@ concept unqualified_splicei =
 
 struct splice_t {
 private:
-    template <simd_element EM, simd_element EL, simd_element ER, simd_abi A>
+    template <typename EM, typename EL, typename ER, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(basic_simd_mask<EM, A> mask,
         basic_simd<EL, A> lhs, basic_simd<ER, A> rhs) noexcept {
@@ -49,11 +49,11 @@ private:
         return dx::slide_left(dx::shift_right(lhs, high), rhs, high + low);
     }
 
-    template <auto V, simd_element EL, simd_element ER, simd_abi A>
+    template <auto V, typename EL, typename ER, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallbacki(basic_simd<EL, A> lhs, basic_simd<ER, A> rhs) noexcept {
-        constexpr immediate_mask<element_count<EL, A>, V> inmask{};
+        constexpr immediate_mask<simd_abi_traits<EL, A>::size, V> inmask{};
         constexpr auto low = dx::countr_zero(inmask);
         constexpr auto high = dx::countr_zero(inmask);
         return dx::slide_left(
@@ -149,7 +149,7 @@ template <integral auto V>
 struct splicei_t<V> : binary_operation_base<splicei_t<V>> {
 private:
     template <typename T>
-    using mask_type DPL_NODEBUG = immediate_mask<element_count<T>, V>;
+    using mask_type DPL_NODEBUG = immediate_mask<simd_abi_traits<T>::size, V>;
 
 public:
     template <simd_type L, simd_type R>

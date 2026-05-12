@@ -41,14 +41,14 @@ concept basic_inner_product =
 
 struct inner_product_t {
 private:
-    template <simd_element L, simd_element R, simd_abi A>
+    template <typename L, typename R, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<L, A> lhs, basic_simd<L, A> rhs) noexcept {
         return dx::hsum(dx::multiply(lhs, rhs));
     }
 
-    template <auto V, simd_element L, simd_element R, simd_abi A>
+    template <auto V, typename L, typename R, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallbacki(basic_simd<L, A> lhs, basic_simd<L, A> rhs) noexcept {
@@ -146,7 +146,7 @@ template <integral auto V>
 struct inner_producti_t<V> : binary_operation_base<inner_producti_t<V>> {
 private:
     template <typename T>
-    using mask_type DPL_NODEBUG = immediate_mask<element_count<T>, V>;
+    using mask_type DPL_NODEBUG = make_immediate_mask_t<T, V>;
 
 public:
     template <fixed_width_simd L, common_arithmetic_simd_with<L> R>

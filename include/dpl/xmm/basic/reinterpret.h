@@ -29,12 +29,12 @@ DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr simd<E> reinterpret(abi_tag tag, simd<F> src) noexcept {
     if consteval {
         // Need to work around unions (no consteval bitcast) in MSVC
-        struct alignas(16) {
-            F data[element_count<F, xmm::abi_tag>];
+        struct alignas(xmm::abi_tag::alignment) {
+            F data[xmm::abi_tag::size / sizeof(F)];
         } tmp{};
         xmm::store(tag, src, tmp.data);
-        struct alignas(16) dst_t {
-            E data[element_count<E, xmm::abi_tag>];
+        struct alignas(xmm::abi_tag::alignment) dst_t {
+            E data[xmm::abi_tag::size / sizeof(E)];
         } dst = __DPL bit_cast<dst_t>(tmp);
         return xmm::load<E>(tag, dst.data);
     } else {

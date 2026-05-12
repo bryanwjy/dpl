@@ -89,7 +89,7 @@ private:
         return cmpeq(internal::abi<A>, left, right);
     }
 
-    template <simd_element L, common_order_with<L> R, simd_abi A>
+    template <typename L, typename R, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<L, A> lhs, basic_simd<R, A> rhs) noexcept {
@@ -98,7 +98,7 @@ private:
             [](auto lhs, auto rhs) -> bool { return lhs == rhs; }, lhs, rhs);
     }
 
-    template <simd_element L, common_size_with<L> R, simd_abi A>
+    template <typename L, typename R, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(
         basic_simd_mask<L, A> lhs, basic_simd_mask<R, A> rhs) noexcept {
@@ -201,7 +201,7 @@ private:
         return cmpneq(internal::abi<A>, left, right);
     }
 
-    template <simd_element L, common_order_with<L> R, simd_abi A>
+    template <typename L, typename R, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<L, A> lhs, basic_simd<R, A> rhs) noexcept {
@@ -210,7 +210,7 @@ private:
             [](auto lhs, auto rhs) -> bool { return lhs != rhs; }, lhs, rhs);
     }
 
-    template <simd_element L, common_size_with<L> R, simd_abi A>
+    template <typename L, typename R, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(
         basic_simd_mask<L, A> lhs, basic_simd_mask<R, A> rhs) noexcept {
@@ -313,7 +313,7 @@ private:
         return cmplt(internal::abi<A>, left, right);
     }
 
-    template <simd_element L, common_order_with<L> R, simd_abi A>
+    template <typename L, typename R, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<L, A> lhs, basic_simd<R, A> rhs) noexcept {
@@ -376,7 +376,7 @@ private:
         return cmple(internal::abi<A>, left, right);
     }
 
-    template <simd_element L, common_order_with<L> R, simd_abi A>
+    template <typename L, typename R, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<L, A> lhs, basic_simd<R, A> rhs) noexcept {

@@ -27,7 +27,7 @@ concept unqualified_all_of = simd_mask_type<T> && requires(T mask) {
 
 struct all_of_t {
 private:
-    template <basic_simd_element E, simd_abi A>
+    template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr bool DPL_VECTORCALL
         fallback(basic_simd_mask<E, A> mask) noexcept {
@@ -91,7 +91,7 @@ concept unqualified_any_of = simd_mask_type<T> && requires(T mask) {
 
 struct any_of_t {
 private:
-    template <basic_simd_element E, simd_abi A>
+    template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr bool DPL_VECTORCALL
         fallback(basic_simd_mask<E, A> mask) noexcept {
@@ -155,7 +155,7 @@ concept unqualified_none_of = simd_mask_type<T> && requires(T mask) {
 
 struct none_of_t {
 private:
-    template <basic_simd_element E, simd_abi A>
+    template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr bool DPL_VECTORCALL
         fallback(basic_simd_mask<E, A> mask) noexcept {
@@ -215,7 +215,7 @@ concept unqualified_some_of = simd_mask_type<T> && requires(T mask) {
 
 struct some_of_t {
 private:
-    template <basic_simd_element E, simd_abi A>
+    template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr bool DPL_VECTORCALL
         fallback(basic_simd_mask<E, A> mask) noexcept {

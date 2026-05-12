@@ -278,7 +278,7 @@ protected:
         using simdf = basic_simd<E, A>;
         using sint = signed_rep_t<E>;
         using simdi = basic_simd<sint, A>;
-        static constexpr immediate_mask<element_count<E, A>, V> mask;
+        static constexpr make_immediate_mask_t<simdf, V> mask;
         simdf const qf = [](basic_simd<E, A> arg) {
             if constexpr (dx::none_of(mask)) {
                 return dx::round(arg * dx::inv_pi,

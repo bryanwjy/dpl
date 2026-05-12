@@ -10,8 +10,8 @@
 #if !DPL_MODULES
 #  include "dpl/core/concepts/immediate_mask_like.h"
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/type_traits/element_count.h"
 #  include "dpl/core/type_traits/iota_sequence.h"
+#  include "dpl/core/type_traits/simd_abi_traits.h"
 #  include "dpl/std/bit/bit_type.h"
 #  include "dpl/std/bit/char_bit.h"
 #  include "dpl/std/bit/countr.h"
@@ -74,7 +74,7 @@ struct basic_immediate_mask {
     }
 
     template <simd_element E, simd_abi A>
-    requires (element_count<E, A> == W)
+    requires (simd_abi_traits<E, A>::size == W)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     constexpr operator basic_simd_mask<E, A>() const noexcept {
         return []<size_t... Is>(index_sequence<Is...>) {
@@ -233,21 +233,22 @@ using make_immediate_mask_t DPL_NODEBUG =
 
 DPL_EXPORT template <fixed_width_class C, auto V>
 struct make_immediate_mask<C, V> {
-    using type DPL_NODEBUG = immediate_mask<element_count<C>, V>;
+    using type DPL_NODEBUG = immediate_mask<simd_abi_traits<C>::size, V>;
 };
 
 DPL_EXPORT template <typename M, typename T>
 concept immediate_mask_for =
     fixed_width_class<T> && integral_constant_like<M> && requires(M mask) {
-        typename basic_immediate_mask<element_count<T>, M::value>;
+        typename basic_immediate_mask<simd_abi_traits<T>::size, M::value>;
         requires convertible_to<M,
-            basic_immediate_mask<element_count<T>, M::value>>;
+            basic_immediate_mask<simd_abi_traits<T>::size, M::value>>;
     };
 
 DPL_EXPORT template <fixed_width_class T, immediate_mask_for<T> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr auto to_immediate_mask(M mask) noexcept {
-    return static_cast<basic_immediate_mask<element_count<T>, M::value>>(mask);
+    return static_cast<
+        basic_immediate_mask<simd_abi_traits<T>::size, M::value>>(mask);
 }
 
 template <fixed_width_class T, immediate_mask_for<T> M>

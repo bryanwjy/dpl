@@ -15,7 +15,7 @@
 #  include "dpl/core/concepts/common_bits_with.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_element.h"
-#  include "dpl/core/type_traits/element_count.h"
+#  include "dpl/core/type_traits/simd_abi_traits.h"
 #  include "dpl/std/concepts/different_from.h"
 #endif
 
@@ -24,8 +24,9 @@ namespace datapar {
 
 DPL_EXPORT template <simd_element E, simd_abi A>
 class basic_simd_mask<E, A> {
-    using mask_type DPL_NODEBUG = typename A::template native_mask<E>;
-    using vector_type DPL_NODEBUG = typename A::template native_type<E>;
+    using traits DPL_NODEBUG = simd_abi_traits<E, A>;
+    using mask_type DPL_NODEBUG = typename traits::native_mask;
+    using vector_type DPL_NODEBUG = typename traits::native_type;
 
 public:
     using simd_type = basic_simd<E, A>;
@@ -35,9 +36,9 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr size_t size() noexcept {
         if constexpr (fixed_width_abi<A>) {
-            return A::size / sizeof(E);
+            return traits::size;
         } else {
-            return A::template element_count<E>();
+            return traits::size();
         }
     }
 
@@ -48,7 +49,7 @@ public:
         : mask_{data} {}
 
     template <core_convertible_to<bool>... Bs>
-    requires (sizeof...(Bs) == element_count<E, A>)
+    requires fixed_width_abi<A> && (sizeof...(Bs) == traits::size)
     __DPL_HIDE_FROM_ABI constexpr basic_simd_mask(Bs&&... args) noexcept
         : basic_simd_mask(datapar::initialize<A>(
               static_cast<bool>(__DPL forward<Bs>(args))...)) {}
@@ -79,7 +80,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     constexpr bool operator[](this basic_simd_mask self,
         internal::extraction_index auto idx) noexcept {
-        // assert(idx < element_count<basic_simd_mask>);
+        // assert(idx < simd_abi_traits<basic_simd_mask>::size);
         return datapar::extract(self, idx);
     }
 

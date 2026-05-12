@@ -26,14 +26,14 @@ concept unqualified_hmini = immediate_mask_for<M, T> && requires(T val) {
 
 struct hmin_t {
 private:
-    template <simd_element E, simd_abi A>
+    template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<E, A> val) noexcept {
         return dx::reduce(val, dx::max);
     }
 
-    template <auto V, simd_element E, simd_abi A>
+    template <auto V, typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallbacki(basic_simd<E, A> val) noexcept {
@@ -105,7 +105,7 @@ template <integral auto V>
 struct hmini_t<V> {
 private:
     template <typename T>
-    using mask_type DPL_NODEBUG = immediate_mask<element_count<T>, V>;
+    using mask_type DPL_NODEBUG = make_immediate_mask_t<T, V>;
 
 public:
     template <arithmetic_simd T>

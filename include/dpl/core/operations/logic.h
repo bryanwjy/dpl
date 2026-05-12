@@ -138,7 +138,7 @@ struct logical_not_t {
                 return logical_not(internal::abi<T>, val);
             }
         } else {
-            return negated_mask<M>(val);
+            return negated_mask<T>(val);
         }
     }
 };

@@ -19,12 +19,10 @@ void gather(...) noexcept = delete;
 
 struct gather_t {
 private:
-    template <simd_element E, integral I, simd_abi A>
+    template <typename E, typename I, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_simd<E, A> fallback(
         E const* ptr, basic_simd<I, A> idx) noexcept {
-        static_assert(
-            fixed_width_abi<A>, "Scalable ABIs have no viable fallback");
         return []<size_t... Is>(
                    E const* ptr, basic_simd<I, A> idx, index_sequence<Is...>) {
             return dx::initialize<E>(internal::abi<A>, ptr[idx[imm<Is>]]...);

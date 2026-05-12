@@ -54,7 +54,7 @@ template <integral auto V>
 struct cswapi_t<V> {
 private:
     template <typename T>
-    using mask_type DPL_NODEBUG = immediate_mask<element_count<T>, V>;
+    using mask_type DPL_NODEBUG = make_immediate_mask_t<T, V>;
 
 public:
     template <fixed_width_class L, common_size_simd_with<L> R>

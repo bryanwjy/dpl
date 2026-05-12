@@ -18,7 +18,6 @@
 #  include "dpl/core/concepts/simd_element.h"
 #  include "dpl/core/concepts/simd_mask_type.h"
 #  include "dpl/core/type_traits/basic_type.h"
-#  include "dpl/core/type_traits/element_count.h"
 #  include "dpl/std/concepts/same_as.h"
 #endif
 
@@ -38,11 +37,12 @@ public:
     using value_type = bool;
 
 private:
-    using mask_type = typename abi_type::template native_mask<element_type>;
+    using mask_type DPL_NODEBUG =
+        typename abi_type::template native_mask<element_type>;
 
 public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr size_t size() noexcept { return element_count<T>; }
+    static constexpr size_t size() noexcept { return simd_abi_traits<T>::size; }
 
     __DPL_HIDE_FROM_ABI constexpr negated_mask() noexcept
         : negated_mask(dx::to_native_type(basic_type_t<T>())) {}

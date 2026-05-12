@@ -9,6 +9,8 @@ namespace {
 namespace xmm = dpl::datapar::xmm;
 namespace dpp = dpl::datapar;
 using abi = xmm::abi_tag;
+template <typename... Ts>
+constexpr auto element_count = dpp::simd_abi_traits<Ts...>::size;
 
 #if DPL_SUPPORTS_EXT_BFLOAT16 & !defined(__BFLT16_MAX__)
 consteval dpl::bfloat16 operator""_bf16(long double val) noexcept {
@@ -37,7 +39,7 @@ template <dpl::floating_point To, dpl::floating_point From,
 requires dpl::different_from<From, To>
 constexpr bool round_trip(From val, Pred pred = dpp::cmpeq) noexcept {
     constexpr auto count =
-        min(dpp::element_count<From, abi>, dpp::element_count<To, abi>);
+        min(element_count<From, abi>, element_count<To, abi>);
     constexpr auto keep_mask = dpp::imm<(1 << count) - 1>;
     auto const src = dpp::bit_keep(keep_mask, dpp::broadcast<From, abi>(val));
     static_assert(dpl::same_as<From,
@@ -83,7 +85,7 @@ template <dpl::floating_point To, dpl::floating_point From,
 requires (dpp::digits_v<To> != dpp::digits_v<From>)
 constexpr bool one_way(From val, Pred pred = dpp::cmpeq) noexcept {
     constexpr auto count =
-        min(dpp::element_count<From, abi>, dpp::element_count<To, abi>);
+        min(element_count<From, abi>, element_count<To, abi>);
     constexpr auto keep_mask = dpp::imm<(1 << count) - 1>;
     auto const src = dpp::bit_keep(keep_mask, dpp::broadcast<From, abi>(val));
     auto const dst =

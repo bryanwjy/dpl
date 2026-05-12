@@ -170,12 +170,12 @@ public:
     template <fixed_width_simd T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T arg) noexcept {
-        static_assert((sizeof...(Is) <= element_count<T>) &&
-            (... && (Is < element_count<T>)));
+        static_assert((sizeof...(Is) <= simd_abi_traits<T>::size) &&
+            (... && (Is < simd_abi_traits<T>::size)));
         if constexpr (same_as<index_sequence<Is...>,
                           make_index_sequence<sizeof...(Is)>>) {
             return arg;
-        } else if constexpr (sizeof...(Is) < element_count<T>) {
+        } else if constexpr (sizeof...(Is) < simd_abi_traits<T>::size) {
             return []<size_t... Js>(T arg, index_sequence<Js...>) {
                 return permutei_t<Is..., (sizeof...(Is) + Js)...>::operator()(
                     arg);
@@ -213,7 +213,7 @@ public:
     template <fixed_width_simd T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T arg) noexcept {
-        static_assert(I < element_count<T>);
+        static_assert(I < simd_abi_traits<T>::size);
         if constexpr (unqualified_broadcast_lanei<I, T>) {
             if constexpr (basic_simd_class<T>) {
                 if consteval {

@@ -40,7 +40,7 @@ concept unqualified_element_castable_to =
 template <simd_element To>
 struct cast_t<To> {
 private:
-    template <basic_simd_element From>
+    template <typename From>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr To safe_cast(From val) noexcept {
         if consteval {
@@ -65,16 +65,17 @@ private:
         }
     }
 
-    template <basic_simd_element From, simd_abi A>
+    template <typename From, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr basic_simd<To, A> DPL_VECTORCALL
         fallback(basic_simd<From, A> arg) noexcept {
         using S = basic_simd<From, A>;
         using R = basic_simd<To, A>;
         return []<size_t... Is>(S arg, index_sequence<Is...>) {
-            constexpr auto extent = element_count<S> < element_count<R>
-                ? element_count<S>
-                : element_count<R>;
+            constexpr auto extent =
+                simd_abi_traits<S>::size < simd_abi_traits<R>::size
+                ? simd_abi_traits<S>::size
+                : simd_abi_traits<R>::size;
             array_for<R> buffer{
                 (Is < extent ? safe_cast(arg[Is]) : dx::zero_v<To>)...};
             return dx::load<R>(aligned, buffer.data);

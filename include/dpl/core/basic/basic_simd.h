@@ -14,6 +14,7 @@
 #  include "dpl/core/concepts/common_order_with.h" // IWYU pragma: keep
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_element.h"
+#  include "dpl/core/type_traits/simd_abi_traits.h"
 #  include "dpl/std/concepts/different_from.h"
 #endif
 
@@ -21,18 +22,19 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 DPL_EXPORT template <simd_element E, simd_abi A>
 class basic_simd<E, A> {
-    using vector_type DPL_NODEBUG = typename A::template native_type<E>;
+    using traits DPL_NODEBUG = simd_abi_traits<E, A>;
+    using vector_type DPL_NODEBUG = typename traits::native_type;
 
 public:
-    using value_type = E;
+    using value_type = typename traits::element_type;
     using abi_type = A;
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr size_t size() noexcept {
         if constexpr (fixed_width_abi<A>) {
-            return A::size / sizeof(E);
+            return traits::size;
         } else {
-            return A::template element_count<E>();
+            return traits::size();
         }
     }
 

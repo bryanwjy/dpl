@@ -22,7 +22,7 @@ concept unqualified_clamp = requires(L val, M low, R high) {
 
 struct clamp_t {
 private:
-    template <basic_simd_element E, simd_abi A>
+    template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(basic_simd<E, A> val,
         basic_simd<E, A> low, basic_simd<E, A> high) noexcept {

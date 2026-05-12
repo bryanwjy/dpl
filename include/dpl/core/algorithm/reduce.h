@@ -32,7 +32,7 @@ concept reduction_operator_for = simd_type<T> && regular_invocable<F, T, T> &&
 template <typename T, auto V>
 concept reducible = simd_type<T> && integral<decltype(V)> &&
     (V == static_cast<decltype(V)>(-1) ||
-        __DPL bit_width(__DPL to_unsigned(V)) <= element_count<T>);
+        __DPL bit_width(__DPL to_unsigned(V)) <= simd_abi_traits<T>::size);
 
 template <typename T, typename BinaryOp>
 concept unqualified_reduce = requires(T val, BinaryOp op) {
@@ -66,7 +66,7 @@ private:
         is_nothrow_v<T, BinaryOp>) {
         auto const reducer = [&]<size_t I = 0>(this auto const self, T value,
                                  immediate<I> = {}) {
-            constexpr seq::packed_indices<element_count<T>> iota{};
+            constexpr seq::packed_indices<simd_abi_traits<T>::size> iota{};
             if constexpr (I == dx::countr_zero(dx::popcount(mask))) {
                 return value;
             } else {
@@ -111,7 +111,7 @@ private:
         auto const reducer = [&]<size_t I = 0>(this auto const self, T lhs,
                                  remainder_t remain = {.null = {}},
                                  immediate<I> = {}) -> T {
-            constexpr seq::packed_indices<element_count<T>> iota{};
+            constexpr seq::packed_indices<simd_abi_traits<T>::size> iota{};
             if constexpr (I + 1 == (activity_width - dx::countl_zero(active))) {
                 constexpr auto idx = seq::rotate(mask, iota, (1zu << I) - 1);
                 remain.value = [&]<size_t... Is>( __DPL index_sequence<Is...>) {
@@ -140,10 +140,10 @@ private:
     }
 
 public:
-    template <simd_type T, reduction_operator_for<T> BinaryOp>
+    template <fixed_width_simd T, reduction_operator_for<T> BinaryOp>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto operator()(T value, BinaryOp op) noexcept {
-        constexpr auto all = immediate_mask<element_count<T>, -1>{};
+        constexpr auto all = make_immediate_mask_t<T, -1>{};
         if constexpr (unqualified_reduce<T, BinaryOp>) {
             if constexpr (basic_simd_type<T>) {
                 if consteval {
@@ -163,7 +163,7 @@ public:
         }
     }
 
-    template <simd_type T, immediate_mask_for<T> M,
+    template <fixed_width_simd T, immediate_mask_for<T> M,
         reduction_operator_for<T> BinaryOp>
     requires reducible<T, M::value>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
@@ -189,7 +189,7 @@ public:
         }
     }
 
-    template <simd_type T, compatible_mask_with<T> M,
+    template <fixed_width_simd T, compatible_mask_with<T> M,
         reduction_operator_for<T> BinaryOp>
     requires reducible<T, M::value> &&
         (unqualified_mreduce<M, T, BinaryOp> ||
@@ -214,7 +214,7 @@ template <integral auto V>
 struct reducei_t<V> {
 private:
     template <typename T>
-    using mask_type DPL_NODEBUG = immediate_mask<element_count<T>, V>;
+    using mask_type DPL_NODEBUG = make_immediate_mask_t<T, V>;
 
 public:
     template <arithmetic_simd T>
@@ -232,12 +232,6 @@ public:
 } // namespace datapar::internal
 
 namespace datapar {
-DPL_EXPORT template <simd_type T, integral auto V>
-inline constexpr bool enable_simd_type<internal::reduction_result<T, V>> = true;
-DPL_EXPORT template <simd_type T, integral auto V, simd_element E, simd_abi A>
-struct rebind_simd<internal::reduction_result<T, V>, E, A> {
-    using type = internal::reduction_result<rebind_simd_t<T, E, A>, V>;
-};
 inline namespace cpo {
 DPL_EXPORT template <auto V>
 inline constexpr internal::reducei_t<V> reducei{};

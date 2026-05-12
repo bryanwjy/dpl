@@ -45,7 +45,7 @@ private:
         return min(internal::abi<A>, left, right);
     }
 
-    template <simd_element L, simd_element R, simd_abi A>
+    template <typename L, typename R, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<L, A> lhs, basic_simd<R, A> rhs) noexcept {
@@ -112,7 +112,7 @@ private:
         return max(internal::abi<A>, left, right);
     }
 
-    template <simd_element L, simd_element R, simd_abi A>
+    template <typename L, typename R, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<L, A> lhs, basic_simd<R, A> rhs) noexcept {

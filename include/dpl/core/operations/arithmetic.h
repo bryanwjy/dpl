@@ -76,7 +76,7 @@ private:
         return add(internal::abi<A>, lhs, rhs);
     }
 
-    template <arithmetic_type L, arithmetic_type R, simd_abi A>
+    template <typename L, typename R, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<L, A> lhs, basic_simd<R, A> rhs) noexcept {
@@ -146,7 +146,7 @@ private:
         return subtract(internal::abi<A>, lhs, rhs);
     }
 
-    template <arithmetic_type L, arithmetic_type R, simd_abi A>
+    template <typename L, typename R, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<L, A> lhs, basic_simd<R, A> rhs) noexcept {
@@ -216,7 +216,7 @@ private:
         return multiply(internal::abi<A>, lhs, rhs);
     }
 
-    template <arithmetic_type L, arithmetic_type R, simd_abi A>
+    template <typename L, typename R, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<L, A> lhs, basic_simd<R, A> rhs) noexcept {
@@ -289,7 +289,7 @@ private:
         return divide(internal::abi<A>, lhs, rhs);
     }
 
-    template <floating_point E, simd_abi A>
+    template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr basic_simd<E, A> DPL_VECTORCALL
         fallback(basic_simd<E, A> lhs, basic_simd<E, A> rhs) noexcept {
@@ -352,7 +352,7 @@ private:
     template <arithmetic_simd T>
     using result_simd DPL_NODEBUG = common_arithmetic_simd_t<T, T>;
 
-    template <arithmetic_type E, simd_abi A>
+    template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<E, A> val) noexcept {

@@ -51,7 +51,7 @@ private:
     template <typename T>
     using negated_simd DPL_NODEBUG = common_arithmetic_simd_t<T, T>;
 
-    template <arithmetic_type E, simd_abi A>
+    template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<E, A> val) noexcept {
@@ -65,19 +65,19 @@ private:
         }
     }
 
-    template <simd_element C, arithmetic_type E, simd_abi A>
+    template <typename C, typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
-        fallback(basic_simd_mask<E, A> mask, basic_simd<E, A> val) noexcept {
+        fallback(basic_simd_mask<C, A> mask, basic_simd<E, A> val) noexcept {
         using T = negated_type<E>;
         return dx::max(dx::reinterpret<T>(val), dx::negate(mask, val));
     }
 
-    template <integral auto V, arithmetic_type E, simd_abi A>
+    template <integral auto V, typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr basic_simd<E, A> DPL_VECTORCALL
         fallbacki(basic_simd<E, A> val) noexcept {
-        static constexpr immediate_mask<element_count<E, A>, V> mask{};
+        static constexpr immediate_mask<simd_abi_traits<E, A>::size, V> mask{};
         if constexpr (all_of(mask)) {
             return fallback(val);
         } else if constexpr (none_of(mask)) {
@@ -185,7 +185,7 @@ template <auto V>
 struct absi_t {
 private:
     template <typename T>
-    using mask_type DPL_NODEBUG = immediate_mask<element_count<T>, V>;
+    using mask_type DPL_NODEBUG = make_immediate_mask_t<T, V>;
 
 public:
     template <simd_class T>

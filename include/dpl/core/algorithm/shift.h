@@ -11,7 +11,9 @@
 #  include "dpl/core/concepts/simd_equivalence.h"
 #  include "dpl/core/operations/operation_base.h"
 #  include "dpl/core/operations/select.h"
+#  include "dpl/core/type_traits/array_for.h"
 #  include "dpl/core/type_traits/common_order_type.h"
+#  include "dpl/core/type_traits/simd_abi_traits.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -44,38 +46,39 @@ concept unqualified_shift_right = requires(T val, size_t shift) {
 
 struct shift_left_t {
 private:
-    template <simd_element E, fixed_width_abi A>
+    template <typename E, fixed_width_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto fallback(
         basic_simd<E, A> val, size_t lanes) noexcept {
-        lanes = lanes > element_count<E, A> ? element_count<E, A> : lanes;
-        alignas(A::alignment) E data[2 * element_count<E, A>]{};
+        using traits = simd_abi_traits<E, A>;
+        lanes = lanes > traits::size ? traits::size : lanes;
+        alignas(traits::alignment) E data[2 * traits::size]{};
         dx::store(val, data);
         return dx::load<E, A>(data + lanes);
     }
 
-    template <simd_element E, fixed_width_abi A>
+    template <typename E, fixed_width_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto fallback(
         basic_simd_mask<E, A> val, size_t lanes) noexcept {
         return dx::bwshift_left(val, lanes);
     }
 
-    template <size_t V, simd_element E, fixed_width_abi A>
+    template <size_t V, typename E, fixed_width_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto fallbacki(basic_simd<E, A> val) noexcept {
-        if constexpr (V >= element_count<E, A>) {
+        using traits = simd_abi_traits<E, A>;
+        if constexpr (V >= traits::size) {
             return dx::broadcast<E, A>(dx::zero);
         } else {
             return [&]<size_t... Is>(index_sequence<Is...>) {
                 return dx::initialize<E, A>(
-                    (Is + V >= element_count<E, A> ? dx::zero
-                                                   : val[imm<Is + V>])...);
-            }(iota_sequence<E, A>);
+                    (Is + V >= traits::size ? dx::zero : val[imm<Is + V>])...);
+            }(make_index_sequence<traits::size>{});
         }
     }
 
-    template <size_t V, simd_element E, fixed_width_abi A>
+    template <size_t V, typename E, fixed_width_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto fallbacki(basic_simd_mask<E, A> val) noexcept {
         return dx::bwshift_lefti<V>(val);
@@ -156,8 +159,9 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<E, A> val, size_t lanes) noexcept {
-        lanes = lanes > element_count<E, A> ? element_count<E, A> : lanes;
-        alignas(A::alignment) E data[2 * element_count<E, A>]{};
+        using traits = simd_abi_traits<E, A>;
+        lanes = lanes > traits::size ? traits::size : lanes;
+        alignas(traits::alignment) E data[2 * traits::size]{};
         dx::store(val, data);
         return dx::load<E, A>(data + lanes);
     }
@@ -173,13 +177,14 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallbacki(basic_simd<E, A> val) noexcept {
-        if constexpr (V >= element_count<E, A>) {
+        using traits = simd_abi_traits<E, A>;
+        if constexpr (V >= traits::size) {
             return dx::broadcast<E, A>(dx::zero);
         } else {
             return [&]<size_t... Is>(index_sequence<Is...>) {
                 return dx::initialize<E, A>(
                     (Is < V ? dx::zero : val[imm<Is>])...);
-            }(iota_sequence<E, A>);
+            }(make_index_sequence<traits::size>{});
         }
     }
 

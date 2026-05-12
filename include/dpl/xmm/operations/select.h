@@ -55,8 +55,8 @@ struct ternary_type<L, R> {
     using type DPL_NODEBUG = ternary_result_t<L, R>;
 };
 
-DPL_EXPORT template <template_barrier_t = barrier, simd_element C,
-    simd_element T, simd_element F>
+DPL_EXPORT template <template_barrier_t = barrier, simd_element C, simd_element T,
+    simd_element F>
 requires common_size_with<T, F> && common_size_with<T, C> &&
     common_size_with<F, C> &&
     common_size_with<ternary_type_t<T, F>, common_size_type_t<T, F>>
@@ -91,8 +91,8 @@ inline simd<ternary_type_t<T, F>> DPL_VECTORCALL
     }
 }
 
-DPL_EXPORT template <template_barrier_t = barrier, simd_element C,
-    simd_element T, simd_element F>
+DPL_EXPORT template <template_barrier_t = barrier, simd_element C, simd_element T,
+    simd_element F>
 requires common_size_with<T, F> && common_size_with<T, C> &&
     common_size_with<F, C>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
@@ -103,8 +103,8 @@ inline mask<common_size_type_t<T, F>> DPL_VECTORCALL
         simd<V>(+xmm::reinterpret<V>(or_else)));
 }
 
-DPL_EXPORT template <template_barrier_t = barrier, simd_element C,
-    simd_element T, simd_element F>
+DPL_EXPORT template <template_barrier_t = barrier, simd_element C, simd_element T,
+    simd_element F>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 inline auto select(
     abi_tag tag, mask<C> condition, simd<T> if_true, simd<F> or_else) noexcept
@@ -113,8 +113,8 @@ requires requires { xmm::select(condition, if_true, or_else); }
     return xmm::select(condition, if_true, or_else);
 }
 
-DPL_EXPORT template <template_barrier_t = barrier, simd_element C,
-    simd_element T, simd_element F>
+DPL_EXPORT template <template_barrier_t = barrier, simd_element C, simd_element T,
+    simd_element F>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 inline auto select(
     abi_tag tag, mask<C> condition, mask<T> if_true, mask<F> or_else) noexcept
@@ -137,7 +137,7 @@ DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<ternary_type_t<T, F>> select(
     simd<T> if_true, simd<F> or_else) noexcept {
     using V = ternary_type_t<T, F>;
-    constexpr immediate_mask<element_count<V, abi_tag>, C> mask{};
+    constexpr immediate_mask<simd_abi_traits<V, abi_tag>::size, C> mask{};
     constexpr auto imm8 = static_cast<int>(mask);
     if constexpr (common_float_with<float, V>) {
         return _mm_blend_ps(+or_else, +if_true, imm8);

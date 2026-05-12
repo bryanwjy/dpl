@@ -8,10 +8,12 @@
 
 import dpl.xmm;
 
+namespace {
 namespace xmm = dpl::datapar::xmm;
 namespace dpp = dpl::datapar;
+template <typename... Ts>
+constexpr auto element_count = dpp::simd_abi_traits<Ts...>::size;
 
-namespace {
 template <typename T>
 consteval T repeat_as(unsigned char val) {
     T x = val;
@@ -26,8 +28,8 @@ constexpr auto min(auto lhs, auto rhs) noexcept {
 
 template <dpl::integral To, dpl::integral From>
 constexpr bool test(From src) noexcept {
-    constexpr auto keep = min(dpp::element_count<To, xmm::abi_tag>,
-        dpp::element_count<From, xmm::abi_tag>);
+    constexpr auto keep =
+        min(element_count<To, xmm::abi_tag>, element_count<From, xmm::abi_tag>);
     constexpr auto keep_mask = dpp::imm<(1 << keep) - 1>;
 
     return dpp::all_of(dpp::cast<To>(dpp::broadcast<From, xmm::abi_tag>(src)) ==
