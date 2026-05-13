@@ -91,7 +91,7 @@ private:
             }
         }();
 
-        auto const q = dx::cast<signed_rep_t<E>>(qf);
+        auto const q = dx::cast<signed_representation_t<E>>(qf);
         t.upper = fmath::ldexp(fmath::compliance::speed, t.upper, q);
         t.lower = fmath::ldexp(fmath::compliance::speed, t.lower, q);
         auto const underflow = is_exp_underflow(arg);

@@ -28,13 +28,13 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr basic_simd_mask<E, A> DPL_VECTORCALL
         fallback(basic_simd<E, A> val) noexcept {
-        constexpr signed_rep_t<E> signaling_bit = signed_rep_t<E>(1)
-            << (dx::mantissa_width_v<E> - 1);
-        constexpr signed_rep_t<E> max_snan =
-            __DPL bit_cast<signed_rep_t<E>>(dx::value_bits_v<E>) ^
+        constexpr signed_representation_t<E> signaling_bit =
+            signed_representation_t<E>(1) << (dx::mantissa_width_v<E> - 1);
+        constexpr signed_representation_t<E> max_snan =
+            __DPL bit_cast<signed_representation_t<E>>(dx::value_bits_v<E>) ^
             signaling_bit;
 
-        using sint = signed_rep_t<E>;
+        using sint = signed_representation_t<E>;
         return dx::cmpgt(dx::reinterpret<sint>(dx::abs(val)), max_snan);
     }
 

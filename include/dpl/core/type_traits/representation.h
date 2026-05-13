@@ -60,18 +60,6 @@ struct unsigned_representation<T> {
     using type DPL_NODEBUG =
         make_unsigned_t<bit_type_t<sizeof(T) * char_bit_v>>;
 };
-
-namespace internal {
-template <typename T>
-using signed_rep DPL_NODEBUG = signed_representation<T>;
-template <typename T>
-using signed_rep_t DPL_NODEBUG = signed_representation_t<T>;
-template <typename T>
-using unsigned_rep DPL_NODEBUG = unsigned_representation<T>;
-template <typename T>
-using unsigned_rep_t DPL_NODEBUG = unsigned_representation_t<T>;
-} // namespace internal
-
 } // namespace datapar
 
 DPL_DEFAULT_NAMESPACE_END

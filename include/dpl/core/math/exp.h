@@ -38,7 +38,7 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<E, A> val) noexcept {
-        using sint = signed_rep_t<float>;
+        using sint = signed_representation_t<float>;
         auto const qf = dx::round(
             val * fmath::inv_ln2, rounding::no_exc | rounding::to_nearest_int);
         auto const q = dx::cast<sint>(qf);
@@ -72,7 +72,7 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<float, A> val) noexcept {
-        using sint = signed_rep_t<float>;
+        using sint = signed_representation_t<float>;
         auto const qf = dx::round(
             val * fmath::inv_ln2, rounding::no_exc | rounding::to_nearest_int);
         auto const q = dx::cast<sint>(qf);
@@ -99,7 +99,7 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<double, A> val) noexcept {
-        using sint = signed_rep_t<double>;
+        using sint = signed_representation_t<double>;
         auto const q = dx::cast<sint>(val * fmath::inv_ln2);
         auto const qf = dx::cast<double>(q);
         using fpair = fmath::pair<double, A>;

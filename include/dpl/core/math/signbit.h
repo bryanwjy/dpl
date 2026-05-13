@@ -25,7 +25,7 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr basic_simd_mask<E, A> DPL_VECTORCALL
         fallback(basic_simd<E, A> arg) noexcept {
-        using sint = signed_rep_t<E>;
+        using sint = signed_representation_t<E>;
         return dx::reinterpret<E>(
             dx::cmplt(dx::reinterpret<sint>(arg), dx::zero));
     }
