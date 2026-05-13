@@ -4,7 +4,7 @@
 #include "dpl/config.h"
 
 #include "dpl/core/concepts/simd_abi.h"
-#include "dpl/core/concepts/simd_element.h"
+#include "dpl/core/concepts/simd_element_for.h"
 #include "dpl/core/concepts/simd_type.h"
 
 #if !DPL_MODULES
@@ -16,8 +16,8 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 DPL_EXPORT template <typename T>
 inline constexpr bool enable_simd_mask = false;
-DPL_EXPORT template <simd_element T, simd_abi Abi>
-inline constexpr bool enable_simd_mask<basic_simd_mask<T, Abi>> = true;
+DPL_EXPORT template <simd_abi A, simd_element_for<A> E>
+inline constexpr bool enable_simd_mask<basic_simd_mask<E, A>> = true;
 
 namespace atom {
 template <typename M>

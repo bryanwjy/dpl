@@ -7,7 +7,6 @@
 #  include "dpl/core/basic/reinterpret.h"
 #  include "dpl/core/concepts/common_order_with.h"
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/concepts/simd_element.h"
 #  include "dpl/core/concepts/simd_equivalence.h"
 #  include "dpl/core/operations/operation_base.h"
 #  include "dpl/core/operations/select.h"
@@ -155,7 +154,7 @@ public:
 
 struct shift_right_t {
 private:
-    template <simd_element E, fixed_width_abi A>
+    template <typename E, fixed_width_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<E, A> val, size_t lanes) noexcept {
@@ -166,14 +165,14 @@ private:
         return dx::load<E, A>(data + lanes);
     }
 
-    template <simd_element E, fixed_width_abi A>
+    template <typename E, fixed_width_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd_mask<E, A> val, size_t lanes) noexcept {
         return dx::bwshift_right(val, lanes);
     }
 
-    template <size_t V, simd_element E, fixed_width_abi A>
+    template <size_t V, typename E, fixed_width_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallbacki(basic_simd<E, A> val) noexcept {
@@ -188,7 +187,7 @@ private:
         }
     }
 
-    template <size_t V, simd_element E, fixed_width_abi A>
+    template <size_t V, typename E, fixed_width_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallbacki(basic_simd_mask<E, A> val) noexcept {

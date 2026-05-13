@@ -5,7 +5,7 @@
 
 #include "dpl/core/concepts/simd_abi.h"
 #include "dpl/core/concepts/simd_class.h"
-#include "dpl/core/concepts/simd_element.h"
+#include "dpl/core/concepts/simd_element_for.h"
 #include "dpl/core/concepts/simd_lane_representation.h"
 #include "dpl/core/concepts/simd_lane_type.h"
 
@@ -24,11 +24,11 @@ namespace datapar {
 namespace internal {
 template <typename>
 inline constexpr bool is_canonical_simd = false;
-template <simd_element E, simd_abi A>
+template <simd_abi A, simd_element_for<A> E>
 inline constexpr bool is_canonical_simd<basic_simd<E, A>> = true;
 template <typename>
 inline constexpr bool is_canonical_mask = false;
-template <simd_element E, simd_abi A>
+template <simd_abi A, simd_element_for<A> E>
 inline constexpr bool is_canonical_mask<basic_simd_mask<E, A>> = true;
 template <typename T>
 concept canonical_simd_specialization = is_canonical_simd<T>;

@@ -81,9 +81,6 @@ private:
         }(arg, iota_sequence<R>);
     }
 
-    template <typename T>
-    using basic_value DPL_NODEBUG = typename basic_type_t<T>::value_type;
-
 public:
     template <fixed_width_simd From>
     requires basic_simd_type<rebind_simd_t<From, To>>
@@ -131,17 +128,19 @@ public:
     requires (!basic_simd_type<rebind_simd_t<From, To>> &&
                  !unqualified_element_castable_to<From, To>) &&
         requires {
-            typename basic_value<rebind_simd_t<From, To>>;
+            typename simd_lane_representation_t<rebind_simd_t<From, To>>;
             typename invoke_result_t<
-                cast_t<basic_value<rebind_simd_t<From, To>>>, From>;
+                cast_t<simd_lane_representation_t<rebind_simd_t<From, To>>>,
+                From>;
             requires regular_invocable<reinterpret_t<rebind_simd_t<From, To>>,
-                invoke_result_t<cast_t<basic_value<rebind_simd_t<From, To>>>,
+                invoke_result_t<
+                    cast_t<simd_lane_representation_t<rebind_simd_t<From, To>>>,
                     From>>;
         }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(From arg) noexcept {
         using result = rebind_simd_t<From, To>;
-        using base = cast_t<basic_value<result>>;
+        using base = cast_t<simd_lane_representation_t<result>>;
         return dx::reinterpret<result>(base::operator()(arg));
     }
 };

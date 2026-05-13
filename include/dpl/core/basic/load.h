@@ -26,7 +26,7 @@ struct load_t {};
 template <typename...>
 struct aligned_load_t {};
 
-template <simd_abi A, simd_element E>
+template <simd_abi A, simd_element_for<A> E>
 struct load_t<A, E> {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr basic_simd<E, A> operator()(E const* data) noexcept
@@ -52,7 +52,7 @@ struct load_t<A, E> {
     }
 };
 
-template <simd_element E, simd_abi A>
+template <simd_abi A, simd_element_for<A> E>
 struct load_t<E, A> : load_t<A, E> {};
 
 template <basic_simd_type T>
@@ -84,18 +84,18 @@ public:
 template <simd_abi A>
 struct load_t<A> {
 private:
-    template <simd_element E>
+    template <typename E>
     using base_type DPL_NODEBUG = load_t<basic_simd<E, A>>;
 
 public:
-    template <simd_element E>
+    template <simd_element_for<A> E>
     requires regular_invocable<base_type<E>, E const*>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(E const* src) noexcept {
         return base_type<E>::operator()(src);
     }
 
-    template <simd_element E>
+    template <simd_element_for<A> E>
     requires regular_invocable<base_type<E>, aligned_t, E const*>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(aligned_t tag, E const* src) noexcept {
@@ -103,7 +103,7 @@ public:
     }
 };
 
-template <simd_abi A, simd_element E>
+template <simd_abi A, simd_element_for<A> E>
 struct aligned_load_t<A, E> {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(E const* src) noexcept
@@ -113,7 +113,7 @@ struct aligned_load_t<A, E> {
     }
 };
 
-template <simd_element E, simd_abi A>
+template <simd_abi A, simd_element_for<A> E>
 struct aligned_load_t<E, A> : aligned_load_t<A, E> {};
 
 template <simd_type T>
@@ -129,7 +129,7 @@ struct aligned_load_t<T> : private load_t<T> {
 
 template <simd_abi A>
 struct aligned_load_t<A> : private load_t<A> {
-    template <simd_element E>
+    template <simd_element_for<A> E>
     requires regular_invocable<load_t<A>, aligned_t, E const*>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(E const* src) noexcept {

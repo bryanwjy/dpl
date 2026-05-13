@@ -18,11 +18,6 @@ struct simd_lane_type {};
 DPL_EXPORT template <typename T>
 using simd_lane_type_t = typename simd_lane_type<T>::type;
 
-DPL_EXPORT template <simd_element T>
-struct simd_lane_type<T> {
-    using type DPL_NODEBUG = T;
-};
-
 DPL_EXPORT template <simd_type T>
 struct simd_lane_type<T> {
     using type DPL_NODEBUG = typename T::value_type;
@@ -30,6 +25,11 @@ struct simd_lane_type<T> {
 
 DPL_EXPORT template <simd_mask_type T>
 struct simd_lane_type<T> : simd_lane_type<typename T::simd_type> {};
+
+DPL_EXPORT template <simd_element T>
+struct simd_lane_type<T> {
+    using type DPL_NODEBUG = T;
+};
 
 } // namespace datapar
 

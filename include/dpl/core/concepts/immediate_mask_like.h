@@ -3,8 +3,6 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/concepts/simd_element.h"
-
 #if !DPL_MODULES
 #  include "dpl/std/bit/char_bit.h"
 #  include "dpl/std/concepts/integral.h"

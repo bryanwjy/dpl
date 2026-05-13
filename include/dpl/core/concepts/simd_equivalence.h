@@ -31,12 +31,12 @@ concept equivalent_mask_as =
     simd_mask_type<T> && simd_mask_type<U> && equivalent_class_as<T, U>;
 
 DPL_EXPORT template <typename T, typename E, typename A = typename T::abi_type>
-concept simd_with = simd_element<E> && simd_abi<A> && simd_type<T> &&
+concept simd_with = simd_abi<A> && simd_element_for<E, A> && simd_type<T> &&
     equivalent_simd_as<T, basic_simd<E, A>>;
 
 DPL_EXPORT template <typename T, typename E, typename A = typename T::abi_type>
-concept mask_with = simd_element<E> && simd_abi<A> && simd_mask_type<T> &&
-    equivalent_mask_as<T, basic_simd_mask<E, A>>;
+concept mask_with = simd_abi<A> && simd_element_for<E, A> &&
+    simd_mask_type<T> && equivalent_mask_as<T, basic_simd_mask<E, A>>;
 
 DPL_EXPORT template <typename T, typename A>
 concept simd_with_abi =

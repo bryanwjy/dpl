@@ -28,7 +28,7 @@ void initialize(...) noexcept = delete;
 template <typename...>
 struct initialize_t {};
 
-template <simd_abi A, simd_element E>
+template <simd_abi A, simd_element_for<A> E>
 requires fixed_width_abi<A>
 struct initialize_t<A, E> {
 private:
@@ -60,7 +60,7 @@ public:
     }
 };
 
-template <simd_abi A, simd_element E>
+template <simd_abi A, simd_element_for<A> E>
 struct initialize_t<E, A> : initialize_t<A, E> {};
 
 template <basic_simd_class T>
@@ -98,7 +98,7 @@ private:
     template <typename... Es>
     requires requires {
         typename common_type_t<Es...>;
-        requires simd_element<decay_t<common_type_t<Es...>>>;
+        requires simd_element_for<decay_t<common_type_t<Es...>>, A>;
     }
     using deduced_simd DPL_NODEBUG =
         basic_simd<decay_t<common_type_t<Es...>>, A>;

@@ -13,14 +13,15 @@
 #  include "dpl/core/concepts/common_arithmetic_with.h"
 #  include "dpl/core/concepts/common_order_with.h" // IWYU pragma: keep
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/concepts/simd_element.h"
+#  include "dpl/core/concepts/simd_element_for.h"
 #  include "dpl/core/type_traits/simd_abi_traits.h"
 #  include "dpl/std/concepts/different_from.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
-DPL_EXPORT template <simd_element E, simd_abi A>
+DPL_EXPORT template <typename E, simd_abi A>
+requires simd_element_for<E, A>
 class basic_simd<E, A> {
     using traits DPL_NODEBUG = simd_abi_traits<E, A>;
     using vector_type DPL_NODEBUG = typename traits::native_type;

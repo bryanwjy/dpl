@@ -25,11 +25,11 @@ void broadcast(...) noexcept = delete;
 
 template <simd_abi A>
 struct broadcast_t<A> {
-    template <simd_element E>
+    template <typename E>
     using simd DPL_NODEBUG = basic_simd<E, A>;
 
 public:
-    template <simd_element E>
+    template <simd_element_for<A> E>
     requires regular_invocable<broadcast_t<simd<E>>, E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr simd<E> operator()(E scalar) noexcept {
@@ -37,7 +37,7 @@ public:
     }
 };
 
-template <simd_abi A, simd_element E>
+template <simd_abi A, simd_element_for<A> E>
 struct broadcast_t<A, E> {
 public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
@@ -56,7 +56,7 @@ public:
     }
 };
 
-template <simd_element E, simd_abi A>
+template <simd_abi A, simd_element_for<A> E>
 struct broadcast_t<E, A> : broadcast_t<A, E> {};
 
 template <basic_simd_class T>

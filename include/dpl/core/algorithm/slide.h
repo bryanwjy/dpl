@@ -9,7 +9,6 @@
 #  include "dpl/core/basic/reinterpret.h"
 #  include "dpl/core/concepts/common_order_with.h"
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/concepts/simd_element.h"
 #  include "dpl/core/concepts/simd_equivalence.h"
 #  include "dpl/core/operations/operation_base.h"
 #  include "dpl/core/operations/select.h"
@@ -161,7 +160,7 @@ public:
 
 struct slide_right_t {
 private:
-    template <simd_element E, fixed_width_abi A>
+    template <typename E, fixed_width_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(
         basic_simd<E, A> lhs, basic_simd<E, A> rhs, size_t num) noexcept {
@@ -171,7 +170,7 @@ private:
             lhs, rhs, simd_abi_traits<E, A>::size - num);
     }
 
-    template <size_t N, simd_element E, fixed_width_abi A>
+    template <size_t N, typename E, fixed_width_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallbacki(basic_simd<E, A> lhs, basic_simd<E, A> rhs) noexcept {

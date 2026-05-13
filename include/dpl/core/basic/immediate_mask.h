@@ -73,7 +73,7 @@ struct basic_immediate_mask {
         basic_immediate_mask<W2, static_cast<bit_type_t<W2>>(value)>) noexcept {
     }
 
-    template <simd_element E, simd_abi A>
+    template <simd_abi A, simd_element_for<A> E>
     requires (simd_abi_traits<E, A>::size == W)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     constexpr operator basic_simd_mask<E, A>() const noexcept {

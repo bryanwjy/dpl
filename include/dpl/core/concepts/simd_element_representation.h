@@ -3,8 +3,8 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/concepts/basic_element.h"
 #include "dpl/core/concepts/simd_abi.h"
-#include "dpl/core/concepts/simd_element.h"
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 
@@ -17,7 +17,7 @@ DPL_EXPORT template <typename A, typename E>
 using simd_element_representation_t =
     typename simd_element_representation<A, E>::type;
 
-DPL_EXPORT template <simd_abi A, simd_element E>
+DPL_EXPORT template <simd_abi A, basic_element E>
 struct simd_element_representation<A, E> {
     using type = E;
 };

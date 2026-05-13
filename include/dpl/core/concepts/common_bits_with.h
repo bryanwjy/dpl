@@ -5,7 +5,6 @@
 
 #include "dpl/core/concepts/common_abi_with.h"
 #include "dpl/core/concepts/common_size_with.h"
-#include "dpl/core/concepts/simd_element.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/fwd.h"
