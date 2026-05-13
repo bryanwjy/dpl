@@ -9,7 +9,6 @@
 #  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_mask_type.h"
-#  include "dpl/core/type_traits/basic_element.h"
 #  include "dpl/core/type_traits/iota_sequence.h"
 #  include "dpl/std/concepts/boolean_testable.h"
 #  include "dpl/std/concepts/convertible_to.h"

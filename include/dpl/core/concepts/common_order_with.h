@@ -3,7 +3,6 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/concepts/common_basic_element_with.h"
 #include "dpl/core/concepts/common_class_with.h"
 #include "dpl/core/concepts/common_float_with.h"
 #include "dpl/core/concepts/common_integral_with.h"
@@ -59,14 +58,12 @@ concept enum_comparable =
         });
 
 template <typename T, typename U>
-concept enum_common_order_with = (enumeration<T> && enum_comparable<T, U>) ||
+concept common_enum_order_with = (enumeration<T> && enum_comparable<T, U>) ||
     (enumeration<U> && enum_comparable<U, T>);
 
 template <typename A, typename B>
-concept common_order_with =
-    (atom::common_basic_element_with<A, B> &&
-        (atom::common_float_with<A, B> || atom::common_integral_with<A, B>)) ||
-    atom::enum_common_order_with<A, B>;
+concept common_order_with = atom::common_float_with<A, B> ||
+    atom::common_integral_with<A, B> || atom::common_enum_order_with<A, B>;
 
 } // namespace atom
 
@@ -76,14 +73,16 @@ concept common_order_with =
 
 DPL_EXPORT template <typename A, typename B>
 concept common_order_simd_with = common_class_with<A, B> &&
-    common_order_with<simd_element_type_t<A>, simd_element_type_t<B>>;
+    common_order_with<simd_lane_representation_t<A>,
+        simd_lane_representation_t<B>>;
 
 DPL_EXPORT template <typename T>
 concept ordered_type = atom::common_order_with<T, T>;
 
 DPL_EXPORT template <typename T>
 concept ordered_simd = simd_type<T> &&
-    atom::common_order_with<simd_element_type_t<T>, simd_element_type_t<T>>;
+    atom::common_order_with<simd_lane_representation_t<T>,
+        simd_lane_representation_t<T>>;
 
 } // namespace datapar
 DPL_DEFAULT_NAMESPACE_END

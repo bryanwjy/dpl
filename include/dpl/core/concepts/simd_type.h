@@ -46,30 +46,11 @@ concept simd_type = enable_simd_type<T> &&
 DPL_EXPORT template <typename T>
 concept simd_type = atom::simd_basics<T> && atom::simd_type<T>;
 
-DPL_EXPORT template <simd_type T>
-struct simd_element_type<T> {
-    using type DPL_NODEBUG = typename T::value_type;
-};
 DPL_EXPORT template <typename T>
 concept scalable_simd = simd_type<T> && scalable_abi<typename T::abi_type>;
 DPL_EXPORT template <typename T>
 concept fixed_width_simd =
     simd_type<T> && fixed_width_abi<typename T::abi_type>;
-
-DPL_EXPORT template <typename T>
-concept integral_simd = simd_type<T> && integral<simd_element_type_t<T>>;
-DPL_EXPORT template <typename T>
-concept signed_integral_simd =
-    simd_type<T> && signed_integral<simd_element_type_t<T>>;
-DPL_EXPORT template <typename T>
-concept unsigned_integral_simd =
-    simd_type<T> && unsigned_integral<simd_element_type_t<T>>;
-DPL_EXPORT template <typename T>
-concept floating_point_simd =
-    simd_type<T> && floating_point<simd_element_type_t<T>>;
-DPL_EXPORT template <typename T>
-concept enumeration_simd = simd_type<T> && enumeration<simd_element_type_t<T>>;
-
 } // namespace datapar
 
 DPL_DEFAULT_NAMESPACE_END

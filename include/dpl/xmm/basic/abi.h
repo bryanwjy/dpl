@@ -80,6 +80,9 @@ concept native_vector_type = same_as<T, __m128> //
     || same_as<T, __m128bh>                     //
     || same_as<T, __m128h>;
 
+template <typename T>
+concept vectorizable = requires { typename native_vector_t<T>; };
+
 inline constexpr struct template_barrier_t {
     __DPL_HIDE_FROM_ABI explicit constexpr template_barrier_t() noexcept =
         default;

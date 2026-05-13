@@ -16,6 +16,7 @@
 #  include "dpl/core/concepts/common_bits_with.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_equivalence.h"
+#  include "dpl/core/concepts/simd_traits.h"
 #  include "dpl/core/constants/all_bits.h"
 #  include "dpl/core/type_traits/common_bits_type.h"
 #  include "dpl/core/type_traits/common_size_type.h"
@@ -238,7 +239,7 @@ public:
         if constexpr (unqualified_mbwor<L, R, A>) {
             if constexpr (basic_simd_mask_type<L> && basic_simd_mask_type<R>) {
                 if consteval {
-                    using E = simd_element_type_t<decltype(bwor(
+                    using E = simd_lane_type_t<decltype(bwor(
                         internal::abi<A>, lhs, rhs))>;
                     return dx::reinterpret<E>(fallback(lhs, rhs));
                 } else {
@@ -359,7 +360,7 @@ public:
         if constexpr (unqualified_mbwand<L, R, A>) {
             if constexpr (basic_simd_mask_type<L> && basic_simd_mask_type<R>) {
                 if consteval {
-                    using E = simd_element_type_t<decltype(bwand(
+                    using E = simd_lane_type_t<decltype(bwand(
                         internal::abi<A>, lhs, rhs))>;
                     return dx::reinterpret<E>(fallback(lhs, rhs));
                 } else {
@@ -480,7 +481,7 @@ public:
         if constexpr (unqualified_mbwxor<L, R, A>) {
             if constexpr (basic_simd_mask_type<L> && basic_simd_mask_type<R>) {
                 if consteval {
-                    using E = simd_element_type_t<decltype(bwxor(
+                    using E = simd_lane_type_t<decltype(bwxor(
                         internal::abi<A>, lhs, rhs))>;
                     return dx::reinterpret<E>(fallback(lhs, rhs));
                 } else {
@@ -601,7 +602,7 @@ public:
         if constexpr (unqualified_mbwandnot<L, R, A>) {
             if constexpr (basic_simd_mask_type<L> && basic_simd_mask_type<R>) {
                 if consteval {
-                    using E = simd_element_type_t<decltype(bwandnot(
+                    using E = simd_lane_type_t<decltype(bwandnot(
                         internal::abi<A>, lhs, rhs))>;
                     return dx::reinterpret<E>(fallback(lhs, rhs));
                 } else {
@@ -722,7 +723,7 @@ public:
         if constexpr (unqualified_mbwornot<L, R, A>) {
             if constexpr (basic_simd_mask_type<L> && basic_simd_mask_type<R>) {
                 if consteval {
-                    using E = simd_element_type_t<decltype(bwornot(
+                    using E = simd_lane_type_t<decltype(bwornot(
                         internal::abi<A>, lhs, rhs))>;
                     return dx::reinterpret<E>(fallback(lhs, rhs));
                 } else {
@@ -835,7 +836,7 @@ public:
         if constexpr (unqualified_mbwnot<T>) {
             if constexpr (basic_simd_mask_type<T>) {
                 if consteval {
-                    using E = simd_element_type_t<decltype(bwnot(
+                    using E = simd_lane_type_t<decltype(bwnot(
                         internal::abi<T>, val))>;
                     return dx::reinterpret<E>(fallback(val));
                 } else {

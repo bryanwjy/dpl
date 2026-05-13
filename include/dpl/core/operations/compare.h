@@ -116,7 +116,7 @@ public:
         if constexpr (unqualified_cmpeq<L, R, A>) {
             if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
                 if consteval {
-                    using E = simd_element_type_t<decltype(cmpeq(
+                    using E = simd_lane_type_t<decltype(cmpeq(
                         internal::abi<A>, lhs, rhs))>;
                     return dx::reinterpret<E>(fallback(lhs, rhs));
                 } else {
@@ -155,7 +155,7 @@ public:
         if constexpr (unqualified_mcmpeq<L, R, A>) {
             if constexpr (basic_simd_mask_type<L> && basic_simd_mask_type<R>) {
                 if consteval {
-                    using E = simd_element_type_t<decltype(cmpeq(
+                    using E = simd_lane_type_t<decltype(cmpeq(
                         internal::abi<A>, lhs, rhs))>;
                     return dx::reinterpret<E>(fallback(lhs, rhs));
                 } else {
@@ -228,7 +228,7 @@ public:
         if constexpr (unqualified_cmpneq<L, R, A>) {
             if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
                 if consteval {
-                    using E = simd_element_type_t<decltype(cmpneq(
+                    using E = simd_lane_type_t<decltype(cmpneq(
                         internal::abi<A>, lhs, rhs))>;
                     return dx::reinterpret<E>(fallback(lhs, rhs));
                 } else {
@@ -267,7 +267,7 @@ public:
         if constexpr (unqualified_mcmpneq<L, R, A>) {
             if constexpr (basic_simd_mask_type<L> && basic_simd_mask_type<R>) {
                 if consteval {
-                    using E = simd_element_type_t<decltype(cmpneq(
+                    using E = simd_lane_type_t<decltype(cmpneq(
                         internal::abi<A>, lhs, rhs))>;
                     return dx::reinterpret<E>(fallback(lhs, rhs));
                 } else {
@@ -331,7 +331,7 @@ public:
         if constexpr (unqualified_cmplt<L, R, A>) {
             if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
                 if consteval {
-                    using E = simd_element_type_t<decltype(cmplt(
+                    using E = simd_lane_type_t<decltype(cmplt(
                         internal::abi<A>, lhs, rhs))>;
                     return dx::reinterpret<E>(fallback(lhs, rhs));
                 } else {
@@ -394,7 +394,7 @@ public:
         if constexpr (unqualified_cmple<L, R, A>) {
             if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
                 if consteval {
-                    using E = simd_element_type_t<decltype(cmple(
+                    using E = simd_lane_type_t<decltype(cmple(
                         internal::abi<A>, lhs, rhs))>;
                     return dx::reinterpret<E>(fallback(lhs, rhs));
                 } else {
@@ -452,7 +452,7 @@ public:
         if constexpr (unqualified_cmpgt<L, R, A>) {
             if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
                 if consteval {
-                    using E = simd_element_type_t<decltype(cmpgt(
+                    using E = simd_lane_type_t<decltype(cmpgt(
                         internal::abi<A>, lhs, rhs))>;
                     return dx::reinterpret<E>(cmplt_t::operator()(rhs, lhs));
                 } else {
@@ -509,7 +509,7 @@ public:
         if constexpr (unqualified_cmpge<L, R, A>) {
             if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
                 if consteval {
-                    using E = simd_element_type_t<decltype(cmpgt(
+                    using E = simd_lane_type_t<decltype(cmpgt(
                         internal::abi<A>, lhs, rhs))>;
                     return dx::reinterpret<E>(cmple_t::operator()(rhs, lhs));
                 } else {

@@ -7,6 +7,8 @@
 #  include "dpl/core/fwd.h"
 
 #  include "dpl/core/concepts/simd_element.h"
+#  include "dpl/core/concepts/simd_element_representation.h"
+#  include "dpl/core/concepts/simd_lane_representation.h"
 #  include "dpl/std/bit/bit_type.h"
 #  include "dpl/std/bit/char_bit.h"
 #  include "dpl/std/type_traits/make_signed.h"

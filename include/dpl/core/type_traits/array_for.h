@@ -23,7 +23,7 @@ struct alignas(simd_abi_traits<E, A>::alignment) array_for<E, A> {
 
 template <simd_type T>
 struct alignas(simd_abi_traits<T>::alignment) array_for<T> {
-    simd_element_type_t<T> data[simd_abi_traits<T>::size];
+    simd_lane_type_t<T> data[simd_abi_traits<T>::size];
 };
 
 } // namespace datapar::internal

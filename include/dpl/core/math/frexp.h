@@ -9,6 +9,7 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/simd_abi.h"
+#  include "dpl/core/concepts/simd_traits.h"
 #  include "dpl/core/constants/exponent_bias.h"
 #  include "dpl/core/constants/mantissa_width.h"
 #  include "dpl/core/constants/min_value.h"
@@ -181,8 +182,7 @@ DPL_EXPORT inline constexpr internal::frexp_cmath_t frexp_cmath{};
 DPL_EXPORT inline constexpr internal::frexp_wide_t frexp_wide{};
 DPL_EXPORT inline constexpr internal::frexp_reduced_t frexp_reduced{};
 DPL_EXPORT inline constexpr internal::frexp_integral_t frexp_integral{};
-DPL_EXPORT inline constexpr internal::frexp_floating_point_t
-    frexp_floating_point{};
+DPL_EXPORT inline constexpr internal::frexp_floating_point_t frexp_floating_point{};
 DPL_EXPORT inline constexpr auto frexp_default =
     frexp_copysign | frexp_cmath | frexp_integral;
 
@@ -190,8 +190,7 @@ template <typename T>
 concept is_frexp_type = same_as<T, internal::frexp_integral_t> ||
     same_as<T, internal::frexp_floating_point_t>;
 
-DPL_EXPORT template <floating_point_simd T,
-    is_frexp_type auto E = frexp_integral>
+DPL_EXPORT template <floating_point_simd T, is_frexp_type auto E = frexp_integral>
 struct frexp_result {
     T fr;
     T exp;

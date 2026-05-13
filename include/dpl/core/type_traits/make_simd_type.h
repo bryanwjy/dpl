@@ -3,7 +3,7 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/type_traits/simd_element_type.h"
+#include "dpl/core/type_traits/simd_lane_type.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/fwd.h"
@@ -34,7 +34,7 @@ struct make_simd_type<T> {
 DPL_EXPORT template <simd_class T>
 struct make_simd_type<T> {
     using type DPL_NODEBUG =
-        basic_simd<simd_element_type_t<T>, typename T::abi_type>;
+        basic_simd<simd_lane_type_t<T>, typename T::abi_type>;
 };
 
 } // namespace datapar

@@ -61,7 +61,7 @@ private:
     }
 
 public:
-    template <simd_type L, compatible_mask_with<L> M, selectable_with<L, M> R>
+    template <simd_type L, simd_mask_type M, selectable_with<L, M> R>
     requires same_abi_simd_as<L, R> && fixed_width_abi<common_abi_t<L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, L lhs, R rhs) noexcept {
@@ -86,7 +86,7 @@ public:
         }
     }
 
-    template <simd_type L, compatible_mask_with<L> M, selectable_with<L, M> R>
+    template <simd_type L, simd_mask_type M, selectable_with<L, M> R>
     requires (!same_abi_simd_as<L, R> || scalable_abi<common_abi_t<L, R>>) &&
         (unqualified_splice<M, L, R> ||
             unqualified_splice<M, basic_type_t<L>, basic_type_t<R>>)

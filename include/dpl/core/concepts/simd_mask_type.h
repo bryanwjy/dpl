@@ -38,9 +38,6 @@ concept scalable_mask = simd_mask_type<T> && scalable_abi<typename T::abi_type>;
 DPL_EXPORT template <typename T>
 concept fixed_width_mask =
     simd_mask_type<T> && fixed_width_abi<typename T::abi_type>;
-
-DPL_EXPORT template <simd_mask_type T>
-struct simd_element_type<T> : simd_element_type<typename T::simd_type> {};
 } // namespace datapar
 
 DPL_DEFAULT_NAMESPACE_END

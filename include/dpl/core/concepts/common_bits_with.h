@@ -43,7 +43,7 @@ concept common_bits_with =
 
 DPL_EXPORT template <typename A, typename B>
 concept common_bits_simd_with = common_class_with<A, B> &&
-    common_bits_with<simd_element_type_t<A>, simd_element_type_t<B>>;
+    common_bits_with<simd_lane_type_t<A>, simd_lane_type_t<B>>;
 
 } // namespace datapar
 

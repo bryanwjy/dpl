@@ -71,7 +71,7 @@ struct store_t {
         T src, typename T::value_type* dst) noexcept {
         if constexpr (requires { store(internal::abi<T>, src, dst); }) {
             store(internal::abi<T>, src, dst);
-        } else if constexpr (basic_simd_element<typename T::value_type>) {
+        } else if constexpr (equivalent_simd_as<basic_type_t<T>, T>) {
             operator()(dx::to_basic_type(src), dst);
         } else {
             array_for<basic_type_t<T>> array{};
@@ -86,7 +86,7 @@ struct store_t {
         aligned_t tag, T src, typename T::value_type* dst) noexcept {
         if constexpr (requires { aligned_store(internal::abi<T>, src, dst); }) {
             aligned_store(internal::abi<T>, src, dst);
-        } else if constexpr (basic_simd_element<typename T::value_type>) {
+        } else if constexpr (equivalent_simd_as<basic_type_t<T>, T>) {
             operator()(tag, dx::to_basic_type(src), dst);
         } else {
             array_for<basic_type_t<T>> array{};

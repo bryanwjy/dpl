@@ -3,10 +3,10 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/type_traits/basic_element.h"
-
 #if !DPL_MODULES
 #  include "dpl/core/fwd.h"
+
+#  include "dpl/core/concepts/simd_element.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -19,14 +19,17 @@ using basic_type_t = typename basic_type<T>::type;
 
 DPL_EXPORT template <simd_type T>
 struct basic_type<T> {
-    using type DPL_NODEBUG = basic_simd<basic_element_t<typename T::value_type>,
-        typename T::abi_type>;
+    using type DPL_NODEBUG =
+        basic_simd<simd_element_representation_t<typename T::abi_type,
+                       typename T::value_type>,
+            typename T::abi_type>;
 };
 
 DPL_EXPORT template <simd_mask_type T>
 struct basic_type<T> {
     using type DPL_NODEBUG =
-        basic_simd_mask<basic_element_t<typename T::simd_type::value_type>,
+        basic_simd_mask<simd_element_representation_t<typename T::abi_type,
+                            typename T::simd_type::value_type>,
             typename T::abi_type>;
 };
 } // namespace datapar

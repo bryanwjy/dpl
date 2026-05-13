@@ -11,6 +11,7 @@
 #  include "dpl/core/basic/immediate_mask.h"
 #  include "dpl/core/basic/reinterpret.h"
 #  include "dpl/core/concepts/arithmetic_type.h"
+#  include "dpl/core/concepts/simd_traits.h"
 #  include "dpl/core/type_traits/common_arithmetic_type.h"
 #endif
 
@@ -32,9 +33,7 @@ template <typename C, typename T, typename A = common_abi_t<T>>
 concept unqualified_mabs = requires(C mask, T val) {
     {
         abs(internal::abi<A>, mask, val)
-    } -> simd_with<common_arithmetic_type_t<typename T::value_type,
-                       typename T::value_type>,
-        A>;
+    } -> simd_with<common_arithmetic_type_t<T, T>, A>;
 };
 
 template <auto V, typename T>

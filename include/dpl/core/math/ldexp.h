@@ -7,6 +7,7 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/simd_abi.h"
+#  include "dpl/core/concepts/simd_traits.h"
 #  include "dpl/core/constants/exponent_bias.h"
 #  include "dpl/core/constants/exponent_mask.h"
 #  include "dpl/core/constants/mantissa_width.h"

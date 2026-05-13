@@ -86,9 +86,9 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr T operator()(Bs... args) noexcept
     requires simd_mask_type<T> &&
-        regular_invocable<initialize_t<A, simd_element_type_t<T>>, Bs...>
+        regular_invocable<initialize_t<A, simd_lane_type_t<T>>, Bs...>
     {
-        return initialize_t<A, simd_element_type_t<T>>::operator()(args...);
+        return initialize_t<A, simd_lane_type_t<T>>::operator()(args...);
     }
 };
 

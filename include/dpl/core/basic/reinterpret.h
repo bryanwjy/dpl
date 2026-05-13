@@ -45,10 +45,10 @@ public:
     requires (!basic_simd_type<T>) &&
         (unqualified_ereinterpretable_as<T, E> ||
             unqualified_ereinterpretable_as<basic_type_t<T>, E> ||
-            same_as<E, simd_element_type_t<T>>)
+            same_as<E, simd_lane_type_t<T>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T arg) noexcept {
-        if constexpr (same_as<E, simd_element_type_t<T>>) {
+        if constexpr (same_as<E, simd_lane_type_t<T>>) {
             return arg;
         } else if constexpr (requires {
                                  reinterpret<E>(internal::abi<T>, arg);
@@ -61,10 +61,10 @@ public:
 
     template <basic_simd_type T>
     requires (unqualified_ereinterpretable_as<T, E> ||
-        same_as<E, simd_element_type_t<T>>)
+        same_as<E, simd_lane_type_t<T>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T arg) noexcept {
-        if constexpr (same_as<E, simd_element_type_t<T>>) {
+        if constexpr (same_as<E, simd_lane_type_t<T>>) {
             return arg;
         } else {
             return reinterpret<E>(internal::abi<T>, arg);
@@ -72,14 +72,14 @@ public:
     }
 
     template <simd_mask_type T>
-    requires common_size_with<simd_element_type_t<T>, E> &&
+    requires common_size_with<simd_lane_type_t<T>, E> &&
         (!basic_simd_mask_type<T>) &&
         (unqualified_emreinterpretable_as<T, E> ||
             unqualified_emreinterpretable_as<basic_type_t<T>, E> ||
-            same_as<E, simd_element_type_t<T>>)
+            same_as<E, simd_lane_type_t<T>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T arg) noexcept {
-        if constexpr (same_as<E, simd_element_type_t<T>>) {
+        if constexpr (same_as<E, simd_lane_type_t<T>>) {
             return arg;
         } else if constexpr (requires {
                                  reinterpret<E>(internal::abi<T>, arg);
@@ -91,12 +91,12 @@ public:
     }
 
     template <basic_simd_mask_type T>
-    requires common_size_with<simd_element_type_t<T>, E> &&
+    requires common_size_with<simd_lane_type_t<T>, E> &&
         (unqualified_emreinterpretable_as<T, E> ||
-            same_as<E, simd_element_type_t<T>>)
+            same_as<E, simd_lane_type_t<T>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T arg) noexcept {
-        if constexpr (same_as<E, simd_element_type_t<T>>) {
+        if constexpr (same_as<E, simd_lane_type_t<T>>) {
             return arg;
         } else {
             return reinterpret<E>(internal::abi<T>, arg);
@@ -112,7 +112,7 @@ concept unqualified_reinterpretable_as = requires(From from) {
 template <basic_simd_class To>
 struct reinterpret_t<To> {
 private:
-    using base_type DPL_NODEBUG = reinterpret_t<simd_element_type_t<To>>;
+    using base_type DPL_NODEBUG = reinterpret_t<simd_lane_type_t<To>>;
 
 public:
     template <common_class_with<To> From>
@@ -127,7 +127,7 @@ public:
         } else if constexpr (unqualified_reinterpretable_as<From, To>) {
             return reinterpret<To>(internal::abi<From>, from);
         } else {
-            return reinterpret_t<simd_element_type_t<To>>::operator()(from);
+            return reinterpret_t<simd_lane_type_t<To>>::operator()(from);
         }
     }
 };
@@ -135,7 +135,7 @@ public:
 template <simd_class To>
 struct reinterpret_t<To> {
 private:
-    using base_type DPL_NODEBUG = reinterpret_t<simd_element_type_t<To>>;
+    using base_type DPL_NODEBUG = reinterpret_t<simd_lane_type_t<To>>;
 
 public:
     template <common_class_with<To> From>

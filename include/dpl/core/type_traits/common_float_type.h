@@ -3,7 +3,7 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/type_traits/simd_element_type.h"
+#include "dpl/core/type_traits/simd_lane_type.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/common_float_with.h"
@@ -18,23 +18,30 @@ namespace datapar {
 DPL_EXPORT template <typename... T>
 struct common_float_type {};
 DPL_EXPORT template <simd_element T>
-struct common_float_type<T> : simd_element_type<T> {};
+struct common_float_type<T> : simd_lane_type<T> {};
 DPL_EXPORT template <simd_class T>
-struct common_float_type<T> : simd_element_type<T> {};
+struct common_float_type<T> : simd_lane_type<T> {};
 DPL_EXPORT template <simd_class T>
-struct common_float_type<T, T> : simd_element_type<T> {};
+struct common_float_type<T, T> : simd_lane_type<T> {};
 DPL_EXPORT template <simd_element T>
-struct common_float_type<T, T> : simd_element_type<T> {};
+struct common_float_type<T, T> : simd_lane_type<T> {};
 
 DPL_EXPORT template <simd_class A, simd_element B>
 struct common_float_type<A, B> :
-    common_float_type<simd_element_type_t<A>, B> {};
+    common_float_type<simd_element_representation_t<typename A::abi_type,
+                          simd_lane_type_t<A>>,
+        B> {};
 DPL_EXPORT template <simd_element A, simd_class B>
 struct common_float_type<A, B> :
-    common_float_type<A, simd_element_type_t<B>> {};
+    common_float_type<A,
+        simd_element_representation_t<typename B::abi_type,
+            simd_lane_type_t<B>>> {};
 DPL_EXPORT template <simd_class A, simd_class B>
 struct common_float_type<A, B> :
-    common_float_type<simd_element_type_t<A>, simd_element_type_t<B>> {};
+    common_float_type<simd_element_representation_t<typename A::abi_type,
+                          simd_lane_type_t<A>>,
+        simd_element_representation_t<typename B::abi_type,
+            simd_lane_type_t<B>>> {};
 
 DPL_EXPORT template <typename... Ts>
 using common_float_type_t = typename common_float_type<Ts...>::type;

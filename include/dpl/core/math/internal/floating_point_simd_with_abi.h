@@ -5,6 +5,7 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/simd_equivalence.h"
+#  include "dpl/core/concepts/simd_traits.h"
 #  include "dpl/core/concepts/simd_type.h"
 #endif
 

@@ -6,6 +6,7 @@
 #if !DPL_MODULES
 #  include "dpl/core/basic/reinterpret.h"
 #  include "dpl/core/basic/to_basic_type.h"
+#  include "dpl/core/concepts/simd_traits.h"
 #  include "dpl/core/constants/digits.h"
 #endif
 

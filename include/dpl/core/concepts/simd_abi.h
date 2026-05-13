@@ -17,12 +17,10 @@ inline constexpr bool enable_simd_abi = false;
 namespace internal {
 template <template <typename> typename>
 struct unary_template;
-template <auto>
-struct constant_value;
 template <typename T>
 concept simd_abi =
     enable_simd_abi<T> && is_empty_v<T> && semiregular<T> && requires {
-        typename internal::constant_value<T{}>;
+        typename integral_constant<T, T{}>;
         typename internal::unary_template<T::template native_type>;
         typename internal::unary_template<T::template native_mask>;
     };

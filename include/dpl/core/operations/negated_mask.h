@@ -29,7 +29,7 @@ inline constexpr bool is_negated_mask_specialization = false;
 
 template <simd_mask_type T>
 class negated_mask {
-    using element_type = simd_element_type_t<T>;
+    using element_type = simd_lane_type_t<T>;
 
 public:
     using simd_type = basic_simd<element_type, typename T::abi_type>;

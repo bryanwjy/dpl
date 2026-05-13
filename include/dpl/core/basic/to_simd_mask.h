@@ -13,12 +13,61 @@
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
-DPL_EXPORT struct assume_canonical_mask_t {
-    __DPL_HIDE_FROM_ABI explicit constexpr assume_canonical_mask_t() noexcept =
+
+/**
+ * @brief Indicates that a SIMD value is already normalized for direct mask
+ * conversion.
+ *
+ * This sentinel enables a fast-path overload of `to_simd_mask` by informing the
+ * implementation that the input SIMD object already satisfies the backend's
+ * normalized mask representation.
+ *
+ * The exact definition of a normalized mask is ABI-specific. In general, it
+ * means that each lane is already encoded in the precise bit pattern expected
+ * by the backend's native mask type, allowing conversion to bypass per-lane
+ * normalization checks (such as testing for non-zero values) and instead
+ * perform a direct reinterpretation or equivalent zero-cost conversion.
+ *
+ * For example, for SSE backends where mask and SIMD values share the same
+ * underlying representation (`__m128`), a normalized mask requires:
+ *
+ * - `true` lanes to contain all bits set (`0xFFFFFFFF`)
+ * - `false` lanes to contain all bits cleared (`0x00000000`)
+ *
+ * Other ABIs may define different normalized representations depending on their
+ * native mask encoding.
+ *
+ * Passing this sentinel when the value does not satisfy the ABI's normalization
+ * requirements results in undefined semantic behavior, as the resulting mask
+ * may not reflect the intended boolean lane values.
+ *
+ * Example (SSE):
+ *
+ * @code
+ * __m128 x = _mm_cmpgt_ps(a, b); // Produces normalized SSE mask lanes
+ *
+ * auto mask = to_simd_mask(
+ *     xmm::abi_tag{},
+ *     assume_normalized_mask,
+ *     basic_simd<float, xmm::abi_tag>{x}
+ * );
+ * @endcode
+ *
+ * In contrast, arbitrary SIMD values such as:
+ *
+ * @code
+ * __m128 x = _mm_set_ps(1.f, 0.f, -3.f, 2.f);
+ * @endcode
+ *
+ * are not guaranteed to be normalized and must use the regular `to_simd_mask`
+ * overload.
+ */
+DPL_EXPORT struct assume_normalized_mask_t {
+    __DPL_HIDE_FROM_ABI explicit constexpr assume_normalized_mask_t() noexcept =
         default;
 };
 
-DPL_EXPORT inline constexpr assume_canonical_mask_t assume_canonical_mask{};
+DPL_EXPORT inline constexpr assume_normalized_mask_t assume_normalized_mask{};
 } // namespace datapar
 
 namespace datapar::internal {
@@ -48,7 +97,7 @@ public:
     template <basic_simd_type T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr make_simd_mask_type_t<T> operator()(
-        assume_canonical_mask_t tag, T src) noexcept {
+        assume_normalized_mask_t tag, T src) noexcept {
         if constexpr (requires { to_simd_mask(internal::abi<T>, tag, src); }) {
             if consteval {
                 return operator()(src);
@@ -62,7 +111,7 @@ public:
 
     template <simd_type T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto operator()(assume_canonical_mask_t tag,
+    static constexpr auto operator()(assume_normalized_mask_t tag,
         T src) noexcept -> equivalent_mask_as<make_simd_mask_type_t<T>> auto {
         if constexpr (requires { to_simd_mask(internal::abi<T>, tag, src); }) {
             return to_simd_mask(internal::abi<T>, tag, src);

@@ -15,6 +15,7 @@
 #  include "dpl/core/concepts/compatible_mask_with.h"
 #  include "dpl/core/concepts/immediate_mask_like.h"
 #  include "dpl/core/concepts/simd_abi.h"
+#  include "dpl/core/concepts/simd_traits.h"
 #  include "dpl/core/constants/all_bits.h"
 #  include "dpl/core/constants/zero.h"
 #  include "dpl/core/type_traits/common_bits_type.h"

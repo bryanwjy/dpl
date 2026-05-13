@@ -9,6 +9,7 @@
 #  include "dpl/core/basic/to_basic_type.h"
 #  include "dpl/core/concepts/simd_class.h"
 #  include "dpl/core/concepts/simd_equivalence.h"
+#  include "dpl/core/concepts/simd_traits.h"
 #  include "dpl/core/type_traits/iota_sequence.h"
 #  include "dpl/std/utility/sequence.h"
 #endif
@@ -48,7 +49,7 @@ struct broadcast_lanei_t;
 
 struct permute_t {
 private:
-    template <basic_simd_class T, common_size_with<simd_element_type_t<T>> E,
+    template <basic_simd_class T, common_size_with<simd_lane_type_t<T>> E,
         same_as<typename T::abi_type> A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr T DPL_VECTORCALL
@@ -111,7 +112,7 @@ private:
     template <basic_simd_class T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr T DPL_VECTORCALL fallback(T arg, size_t idx) noexcept {
-        return dx::broadcast<simd_element_type_t<T>>(arg[idx]);
+        return dx::broadcast<simd_lane_type_t<T>>(arg[idx]);
     }
 
 public:

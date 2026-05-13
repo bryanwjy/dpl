@@ -8,6 +8,7 @@
 #  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/common_arithmetic_with.h"
 #  include "dpl/core/concepts/simd_abi.h"
+#  include "dpl/core/concepts/simd_traits.h"
 #  include "dpl/core/concepts/simd_type.h"
 #  include "dpl/core/operations/arithmetic.h"
 #  include "dpl/core/operations/negate.h"
@@ -228,7 +229,7 @@ private:
         return fmadd(abi, a, b, c);
     }
 
-    template <basic_simd_element E, simd_abi A>
+    template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(
         basic_simd<E, A> a, basic_simd<E, A> b, basic_simd<E, A> c) noexcept {
@@ -298,7 +299,7 @@ private:
         return fmsub(abi, a, b, c);
     }
 
-    template <basic_simd_element E, simd_abi A>
+    template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(
         basic_simd<E, A> a, basic_simd<E, A> b, basic_simd<E, A> c) noexcept {
@@ -368,7 +369,7 @@ private:
         return fnmadd(abi, a, b, c);
     }
 
-    template <basic_simd_element E, simd_abi A>
+    template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(
         basic_simd<E, A> a, basic_simd<E, A> b, basic_simd<E, A> c) noexcept {
@@ -438,7 +439,7 @@ private:
         return fnmsub(abi, a, b, c);
     }
 
-    template <basic_simd_element E, simd_abi A>
+    template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(
         basic_simd<E, A> a, basic_simd<E, A> b, basic_simd<E, A> c) noexcept {
@@ -508,7 +509,7 @@ private:
         return fmaddsub(abi, a, b, c);
     }
 
-    template <basic_simd_element E, simd_abi A>
+    template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(
         basic_simd<E, A> a, basic_simd<E, A> b, basic_simd<E, A> c) noexcept {
@@ -578,7 +579,7 @@ private:
         return fmsubadd(abi, a, b, c);
     }
 
-    template <basic_simd_element E, simd_abi A>
+    template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(
         basic_simd<E, A> a, basic_simd<E, A> b, basic_simd<E, A> c) noexcept {

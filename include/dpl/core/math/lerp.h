@@ -5,6 +5,7 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/simd_abi.h"
+#  include "dpl/core/concepts/simd_traits.h"
 #  include "dpl/core/math/fma.h"
 #  include "dpl/core/operations/arithmetic.h"
 #endif
@@ -35,7 +36,7 @@ private:
         return lerp(internal::abi<A>, start, end, scale);
     }
 
-    template <basic_simd_element E, simd_abi A>
+    template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(basic_simd<E, A> start,
         basic_simd<E, A> end, basic_simd<E, A> scale) noexcept {

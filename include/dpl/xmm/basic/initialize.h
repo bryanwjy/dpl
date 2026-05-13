@@ -30,7 +30,7 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::xmm {
-DPL_EXPORT template <basic_simd_element E, core_convertible_to<E>... Args>
+DPL_EXPORT template <vectorizable E, core_convertible_to<E>... Args>
 requires (... && !same_as<Args, bool>)
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr simd<E> initialize(abi_tag tag, Args&&... args) noexcept {
@@ -145,7 +145,7 @@ constexpr mask<E> initialize(abi_tag tag, Args... scalars) noexcept {
         tag, (scalars ? dx::all_bits_v<E> : dx::zero_v<E>)...);
 }
 
-DPL_EXPORT template <basic_simd_element E, core_convertible_to<E>... Args>
+DPL_EXPORT template <vectorizable E, core_convertible_to<E>... Args>
 requires (... && !same_as<Args, bool>)
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr simd<E> initialize(Args&&... args) noexcept {

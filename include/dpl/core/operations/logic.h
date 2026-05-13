@@ -13,7 +13,7 @@
 #  include "dpl/core/basic/to_native_type.h"
 #  include "dpl/core/concepts/common_size_with.h"
 #  include "dpl/core/concepts/simd_mask_type.h"
-#  include "dpl/core/type_traits/simd_element_type.h"
+#  include "dpl/core/type_traits/simd_lane_type.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -48,7 +48,7 @@ struct logical_and_t {
         if constexpr (unqualified_logical_and<L, R, A>) {
             if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
                 if consteval {
-                    using E = simd_element_type_t<decltype(logical_and(
+                    using E = simd_lane_type_t<decltype(logical_and(
                         internal::abi<A>, lhs, rhs))>;
                     return dx::reinterpret<E>(dx::bwand(lhs, rhs));
                 } else {
@@ -89,7 +89,7 @@ struct logical_or_t {
         if constexpr (unqualified_logical_or<L, R, A>) {
             if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
                 if consteval {
-                    using E = simd_element_type_t<decltype(logical_or(
+                    using E = simd_lane_type_t<decltype(logical_or(
                         internal::abi<A>, lhs, rhs))>;
                     return dx::reinterpret<E>(dx::bwor(lhs, rhs));
                 } else {
@@ -128,7 +128,7 @@ struct logical_not_t {
         if constexpr (unqualified_logical_not<T>) {
             if constexpr (basic_simd_mask_type<T>) {
                 if consteval {
-                    using E = simd_element_type_t<decltype(logical_not(
+                    using E = simd_lane_type_t<decltype(logical_not(
                         internal::abi<T>, val))>;
                     return dx::reinterpret<E>(dx::bwnot(val));
                 } else {

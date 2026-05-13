@@ -13,6 +13,7 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/simd_abi.h"
+#  include "dpl/core/concepts/simd_traits.h"
 #  include "dpl/core/constants/inv_pi.h"
 #  include "dpl/core/constants/zero.h"
 #  include "dpl/core/operations/bit.h"

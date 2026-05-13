@@ -7,6 +7,7 @@
 #  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/compatible_mask_with.h"
 #  include "dpl/core/concepts/simd_abi.h"
+#  include "dpl/core/concepts/simd_traits.h"
 #  include "dpl/core/concepts/simd_type.h"
 #  include "dpl/core/constants/mantissa_width.h"
 #  include "dpl/core/constants/zero.h"

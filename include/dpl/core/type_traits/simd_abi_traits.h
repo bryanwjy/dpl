@@ -21,7 +21,24 @@ struct simd_abi_traits {};
 DPL_EXPORT template <simd_abi T>
 struct simd_abi_traits<T> {
 
-    template <simd_element E = char>
+    template <typename E>
+    requires requires { typename simd_element_representation_t<T, E>; }
+    using native_type =
+        typename T::template native_type<simd_element_representation_t<T, E>>;
+    template <typename E>
+    requires requires { typename simd_element_representation_t<T, E>; }
+    using native_mask =
+        typename T::template native_mask<simd_element_representation_t<T, E>>;
+
+    using type = T;
+    static constexpr T value = T{};
+
+    consteval operator T(this simd_abi_traits) noexcept { return value; }
+
+    consteval T operator()(this simd_abi_traits) noexcept { return value; }
+
+    template <typename E = char>
+    requires requires { typename simd_element_representation_t<T, E>; }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr size_t size() noexcept {
         if constexpr (scalable_simd<T>) {
@@ -31,7 +48,8 @@ struct simd_abi_traits<T> {
         }
     }
 
-    template <simd_element E = char>
+    template <typename E = char>
+    requires requires { typename simd_element_representation_t<T, E>; }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static consteval size_t max_size() noexcept {
         if constexpr (requires {
@@ -43,7 +61,8 @@ struct simd_abi_traits<T> {
         }
     }
 
-    template <simd_element E = char>
+    template <typename E = char>
+    requires requires { typename simd_element_representation_t<T, E>; }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static consteval size_t alignment() noexcept {
         if constexpr (requires {
@@ -51,30 +70,19 @@ struct simd_abi_traits<T> {
                       }) {
             return T::alignment;
         } else {
-            return alignof(typename T::template native_type<E>);
+            return alignof(native_type<E>);
         }
     }
-
-    template <typename E>
-    using native_type = typename T::template native_type<E>;
-    template <typename E>
-    using native_mask = typename T::template native_mask<E>;
-    using type = T;
-    static constexpr T value = T{};
-
-    consteval operator T(this simd_abi_traits) noexcept { return value; }
-
-    consteval T operator()(this simd_abi_traits) noexcept { return value; }
 };
 
 DPL_EXPORT template <simd_class T>
 struct simd_abi_traits<T> :
-    simd_abi_traits<simd_element_type_t<T>, typename T::abi_type> {};
+    simd_abi_traits<simd_lane_type_t<T>, typename T::abi_type> {};
 
-DPL_EXPORT template <simd_element E, scalable_abi A>
+DPL_EXPORT template <typename E, scalable_abi A>
 struct simd_abi_traits<A, E> : simd_abi_traits<E, A> {};
 
-DPL_EXPORT template <simd_element E, scalable_abi A>
+DPL_EXPORT template <typename E, scalable_abi A>
 struct simd_abi_traits<E, A> {
 private:
     using base_type DPL_NODEBUG = simd_abi_traits<A>;
@@ -101,7 +109,7 @@ public:
     consteval A operator()(this simd_abi_traits) noexcept { return value; }
 };
 
-DPL_EXPORT template <simd_element E, fixed_width_abi A>
+DPL_EXPORT template <typename E, fixed_width_abi A>
 struct simd_abi_traits<E, A> {
 private:
     using base_type DPL_NODEBUG = simd_abi_traits<A>;
