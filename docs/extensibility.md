@@ -21,32 +21,33 @@ In DPL, SIMD ABIs are required to satisfy a **base** set of constraints:
 ```c++
 template<typename A>
 concept simd_abi = enable_simd_abi<A> && is_empty_v<A> && semiregular<A> && requires {
-    requires /*is-constant-value*/<A{}>;
+    typename integral_constant<A, A{}>;
     requires /*is-unary-template*/<A::template native_type>;
     requires /*is-unary-template*/<A::template native_mask>;
 };
 ```
 
-The concepts `is-constant-value` and `is-unary-template` are exposition-only. To model `simd_abi`, a type must specialize `dpl::datapar::enable_simd_abi` to evaluate to true, and satisfy all additional constraints listed above.
+The concept `is-unary-template` is exposition-only. To model `simd_abi`, a type must specialize `dpl::datapar::enable_simd_abi` to evaluate to true, and satisfy all additional constraints listed above.
 
 Once a type satisfies `simd_abi`, it is further classified as either a _fixed-width_ or _scalable_ ABI. Every `simd_abi` **must model exactly one of these categories**.
 
 ```c++
 template <typename T>
 concept fixed_width_abi = simd_abi<T> && requires {
-    /*is-constant-value*/<T::size>;
-    /*is-constant-value*/<T::alignment>;
+    typename integral_constant<size_t, T::size>;
 } && (T::size != scalable_size);
 
 
 template <typename T>
 concept scalable_abi = !fixed_width_abi<T> && simd_abi<T> &&
     (T::size == scalable_size) && requires {
-        /*is-constant-value*/<T::max_size>;
+        /* has-size-function-template */
     };
 ```
 
 > Note: The API and constraints for `scalable_abi` are still under development. While DPL itself may evolve, support for scalable backends is currently more experimental. In particular, the design reflects my limited practical experience with scalable SIMD architectures, and may change as those use cases are better understood.
+
+The concept `has-size-function-template`, is an exposition-only concept that is satisfied if the class has a static member function template that returns the number of SIMD lanes given a simd-element. In practice, this concept cannot be defined, instead the implementation only checks for `requires { T::size<char>() } -> unsigned_integral`.
 
 A simple example is the ABI for the 128-bit xmm registers on the x86 architecture, which is implemented in the `dpl.xmm` module found [here](../include/dpl/xmm/basic/abi.h).
 
@@ -155,10 +156,8 @@ concept simd_basics = /*exposition-only*/
 template <typename T>
 concept simd_type = /*simd-basics*/<T> && enable_simd_type<T> &&
     requires {
-        requires simd_element<typename T::value_type>;
-        requires sizeof(typename T::value_type) <= T::abi_type::size &&
-                alignof(typename T::value_type) <= T::abi_type::alignment;
-        requires alignof(T) >= T::abi_type::alignment;
+        requires simd_element_for<typename T::value_type, typename T::abi_type>;
+        requires sizeof(typename T::value_type) <= T::abi_type::size;
     } &&
     explicitly_convertible_to<T,
         typename T::abi_type::template native_type<typename T::value_type>>;

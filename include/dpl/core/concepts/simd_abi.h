@@ -33,9 +33,8 @@ concept fixed_width_abi = internal::simd_abi<T> &&
 DPL_EXPORT template <typename T>
 concept scalable_abi =
     internal::simd_abi<T> && !fixed_width_abi<T> && requires {
-        typename integral_constant<size_t, T::max_size>;
-        // Cannot check
-        // { T::size<E>() } -> unsigned_integral;
+        // Checking everything seems to be quite expensive
+        { T::template size<char>() } -> unsigned_integral;
     };
 
 DPL_EXPORT template <typename T>

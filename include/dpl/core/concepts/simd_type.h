@@ -35,9 +35,7 @@ template <typename T>
 concept simd_type = enable_simd_type<T> &&
     requires {
         requires simd_element_for<typename T::value_type, typename T::abi_type>;
-        requires sizeof(typename T::value_type) <= T::abi_type::size &&
-                alignof(typename T::value_type) <= T::abi_type::alignment;
-        requires alignof(T) >= T::abi_type::alignment;
+        requires sizeof(typename T::value_type) <= T::abi_type::size;
     } &&
     explicitly_convertible_to<T,
         typename T::abi_type::template native_type<typename T::value_type>>;
