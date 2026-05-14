@@ -22,14 +22,6 @@
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
-DPL_EXPORT namespace x86 {
-template <size_t N>
-struct sse_abi {
-    static constexpr size_t max_size = 64;
-    static constexpr size_t size = N;
-    static constexpr size_t alignment = N;
-};
-} // namespace x86
 DPL_EXPORT namespace xmm {}
 } // namespace datapar
 
@@ -83,12 +75,10 @@ concept native_vector_type = same_as<T, __m128> //
 template <typename T>
 concept vectorizable = requires { typename native_vector_t<T>; };
 
-inline constexpr struct template_barrier_t {
-    __DPL_HIDE_FROM_ABI explicit constexpr template_barrier_t() noexcept =
-        default;
-} barrier{};
+DPL_EXPORT struct abi_tag {
 
-DPL_EXPORT struct abi_tag : __DPL datapar::x86::sse_abi<16> {
+    static constexpr size_t size = 16;
+    static constexpr size_t alignment = 16;
 
     template <simd_element E>
     requires requires {

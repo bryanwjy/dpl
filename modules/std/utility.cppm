@@ -15,6 +15,7 @@ import :std.concepts;
 #include "dpl/std/utility/forward.h"
 #include "dpl/std/utility/move.h"
 #include "dpl/std/utility/sequence.h"
+#include "dpl/std/utility/template_barrier.h"
 #include "dpl/std/utility/to_signed.h"
 #include "dpl/std/utility/to_underlying.h"
 #include "dpl/std/utility/to_unsigned.h"

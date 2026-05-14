@@ -24,6 +24,7 @@ import :core.concepts;
 #include "dpl/core/type_traits/iota_sequence.h"
 #include "dpl/core/type_traits/make_simd_mask_type.h"
 #include "dpl/core/type_traits/make_simd_type.h"
+#include "dpl/core/type_traits/promote_abi.h"
 #include "dpl/core/type_traits/rebind_simd.h"
 #include "dpl/core/type_traits/representation.h"
 #include "dpl/core/type_traits/simd_abi_traits.h"

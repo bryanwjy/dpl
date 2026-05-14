@@ -13,6 +13,7 @@
 
 #  include "dpl/core/type_traits/common_bits_type.h"
 #  include "dpl/core/type_traits/representation.h"
+#  include "dpl/std/utility/template_barrier.h"
 #  include "dpl/xmm/basic/abi.h"
 #  include "dpl/xmm/basic/reinterpret.h"
 
@@ -265,7 +266,7 @@ alignas(16) inline constexpr char niota_epi8[]{112, 113, 114, 115, 116, 117,
 
 } // namespace details
 
-template <template_barrier_t = barrier, simd_element E>
+template <template_barrier_t = __DPL template_barrier, simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline mask<E> DPL_VECTORCALL bwshift_left(mask<E> val, int shift) noexcept {
     if constexpr (floating_point<E>) {
@@ -284,7 +285,7 @@ inline mask<E> DPL_VECTORCALL bwshift_left(mask<E> val, int shift) noexcept {
     }
 }
 
-template <template_barrier_t = barrier, simd_element E>
+template <template_barrier_t = __DPL template_barrier, simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline mask<E> DPL_VECTORCALL bwshift_right(mask<E> val, int shift) noexcept {
     if constexpr (floating_point<E>) {
@@ -305,7 +306,7 @@ inline mask<E> DPL_VECTORCALL bwshift_right(mask<E> val, int shift) noexcept {
     }
 }
 
-template <template_barrier_t = barrier, simd_element E>
+template <template_barrier_t = __DPL template_barrier, simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 inline mask<E> bwshift_left(abi_tag, mask<E> val, int shift) noexcept
 requires requires { xmm::bwshift_left(val, shift); }
@@ -313,7 +314,7 @@ requires requires { xmm::bwshift_left(val, shift); }
     return xmm::bwshift_left(val, shift);
 }
 
-template <template_barrier_t = barrier, simd_element E>
+template <template_barrier_t = __DPL template_barrier, simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 inline mask<E> bwshift_right(abi_tag, mask<E> val, int shift) noexcept
 requires requires { xmm::bwshift_right(val, shift); }
@@ -372,7 +373,7 @@ requires requires { xmm::bwshift_right<V>(val); }
     return xmm::bwshift_right<V>(val);
 }
 
-template <template_barrier_t = barrier, simd_element E>
+template <template_barrier_t = __DPL template_barrier, simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<E> DPL_VECTORCALL bwshift_left(simd<E> val, int shift) noexcept {
     if constexpr (floating_point<E>) {
@@ -407,7 +408,7 @@ inline simd<E> DPL_VECTORCALL bwshift_left(simd<E> val, int shift) noexcept {
     }
 }
 
-template <template_barrier_t = barrier, simd_element E>
+template <template_barrier_t = __DPL template_barrier, simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<E> DPL_VECTORCALL
     bwshift_right(abi_tag tag, simd<E> val, int shift) noexcept {
@@ -471,7 +472,7 @@ inline simd<E> DPL_VECTORCALL
     }
 }
 
-template <template_barrier_t = barrier, simd_element E>
+template <template_barrier_t = __DPL template_barrier, simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 inline simd<E> bwshift_left(abi_tag, simd<E> val, int shift) noexcept
 requires requires { xmm::bwshift_left(val, shift); }
@@ -479,7 +480,7 @@ requires requires { xmm::bwshift_left(val, shift); }
     return xmm::bwshift_left(val, shift);
 }
 
-template <template_barrier_t = barrier, simd_element E>
+template <template_barrier_t = __DPL template_barrier, simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 inline simd<E> bwshift_right(abi_tag tag, simd<E> val, int shift) noexcept
 requires requires { xmm::bwshift_right(val, shift); }
@@ -606,7 +607,8 @@ requires requires { xmm::bwshift_right<V>(val); }
 
 #if DPL_SIMD_X86_AVX2
 
-template <template_barrier_t = barrier, simd_element L, simd_element R>
+template <template_barrier_t = __DPL template_barrier, simd_element L,
+    simd_element R>
 requires common_size_with<L, R> && integral<R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<L> DPL_VECTORCALL bwshift_left(simd<L> lhs, simd<R> rhs) noexcept {
@@ -664,7 +666,8 @@ inline simd<L> DPL_VECTORCALL bwshift_left(simd<L> lhs, simd<R> rhs) noexcept {
     }
 }
 
-template <template_barrier_t = barrier, simd_element L, simd_element R>
+template <template_barrier_t = __DPL template_barrier, simd_element L,
+    simd_element R>
 requires common_size_with<L, R> && integral<R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<L> DPL_VECTORCALL bwshift_right(simd<L> lhs, simd<R> rhs) noexcept {
@@ -776,7 +779,8 @@ inline simd<L> DPL_VECTORCALL bwshift_right(simd<L> lhs, simd<R> rhs) noexcept {
 
 #else
 // SSE 4.2
-template <template_barrier_t = barrier, simd_element L, simd_element R>
+template <template_barrier_t = __DPL template_barrier, simd_element L,
+    simd_element R>
 requires common_size_with<L, R> && integral<R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<L> DPL_VECTORCALL bwshift_left(simd<L> lhs, simd<R> rhs) noexcept {
@@ -849,7 +853,8 @@ inline simd<L> DPL_VECTORCALL bwshift_left(simd<L> lhs, simd<R> rhs) noexcept {
 // No efficient way to right shift without avx2
 #endif
 
-template <template_barrier_t = barrier, simd_element L, simd_element R>
+template <template_barrier_t = __DPL template_barrier, simd_element L,
+    simd_element R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 inline simd<L> bwshift_left(abi_tag, simd<L> lhs, simd<R> rhs) noexcept
 requires requires { xmm::bwshift_left(lhs, rhs); }
@@ -857,7 +862,8 @@ requires requires { xmm::bwshift_left(lhs, rhs); }
     return xmm::bwshift_left(lhs, rhs);
 }
 
-template <template_barrier_t = barrier, simd_element L, simd_element R>
+template <template_barrier_t = __DPL template_barrier, simd_element L,
+    simd_element R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 inline simd<L> bwshift_right(abi_tag, simd<L> lhs, simd<R> rhs) noexcept
 requires requires { xmm::bwshift_right(lhs, rhs); }
