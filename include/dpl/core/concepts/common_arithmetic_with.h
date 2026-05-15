@@ -4,7 +4,6 @@
 #include "dpl/config.h"
 
 #include "dpl/core/concepts/arithmetic_type.h"
-#include "dpl/core/concepts/common_basic_element_with.h"
 #include "dpl/core/concepts/common_class_with.h"
 #include "dpl/core/concepts/common_float_with.h"
 #include "dpl/core/concepts/common_size_with.h"
@@ -49,13 +48,8 @@ concept enum_common_arithmetic_with =
     (unscoped_enumeration<U> && enum_arithemtic_operable<U, T>);
 
 template <typename A, typename B>
-concept common_arithmetic_with =
-    (atom::common_float_with<A, B> && atom::common_basic_element_with<A, B>) ||
-    (integral<A> && integral<B> &&
-        atom::common_basic_element_with<make_signed_t<A>, make_signed_t<B>> &&
-        atom::common_basic_element_with<make_unsigned_t<A>,
-            make_unsigned_t<B>>) ||
-    atom::enum_common_arithmetic_with<A, B>;
+concept common_arithmetic_with = atom::common_float_with<A, B> ||
+    (integral<A> && integral<B>) || atom::enum_common_arithmetic_with<A, B>;
 } // namespace atom
 
 /**
@@ -69,6 +63,7 @@ concept common_arithmetic_with =
 
 DPL_EXPORT template <typename A, typename B>
 concept common_arithmetic_simd_with = common_class_with<A, B> &&
-    common_arithmetic_with<simd_element_type_t<A>, simd_element_type_t<B>>;
+    common_arithmetic_with<simd_lane_representation_t<A>,
+        simd_lane_representation_t<B>>;
 } // namespace datapar
 DPL_DEFAULT_NAMESPACE_END

@@ -11,8 +11,7 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
-DPL_EXPORT
-struct one_t : broadcastable_base {
+DPL_EXPORT struct one_t : broadcastable_base {
     __DPL_HIDE_FROM_ABI explicit constexpr one_t() noexcept = default;
 
     template <simd_element T>
@@ -22,8 +21,7 @@ struct one_t : broadcastable_base {
     }
 };
 
-DPL_EXPORT
-inline constexpr one_t one{};
+DPL_EXPORT inline constexpr one_t one{};
 
 DPL_EXPORT template <typename T>
 requires explicitly_convertible_to<one_t, T>

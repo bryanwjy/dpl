@@ -9,6 +9,7 @@
 #if !DPL_MODULES
 #  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/simd_abi.h"
+#  include "dpl/core/concepts/simd_traits.h"
 #  include "dpl/core/concepts/simd_type.h"
 #  include "dpl/core/constants/one.h"
 #  include "dpl/core/operations/arithmetic.h"
@@ -38,8 +39,8 @@ private:
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<E, A> val) noexcept {
         // Based on musl libm
-        using sint = signed_rep_t<E>;
-        using uint = unsigned_rep_t<E>;
+        using sint = signed_representation_t<E>;
+        using uint = unsigned_representation_t<E>;
         static constexpr auto width =
             dx::broadcast<sint, A>(sizeof(E) * char_bit_v);
         static constexpr auto margin = width - dx::mantissa_width_v<E>;

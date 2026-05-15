@@ -12,6 +12,7 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/simd_abi.h"
+#  include "dpl/core/concepts/simd_traits.h"
 #  include "dpl/core/operations/bit.h"
 #  include "dpl/core/operations/bitwise.h"
 #  include "dpl/core/operations/compare.h"
@@ -90,7 +91,7 @@ private:
             }
         }();
 
-        auto const q = dx::cast<signed_rep_t<E>>(qf);
+        auto const q = dx::cast<signed_representation_t<E>>(qf);
         t.upper = fmath::ldexp(fmath::compliance::speed, t.upper, q);
         t.lower = fmath::ldexp(fmath::compliance::speed, t.lower, q);
         auto const underflow = is_exp_underflow(arg);
@@ -107,7 +108,7 @@ public:
     static constexpr basic_simd<E, A> DPL_VECTORCALL
         fallback(basic_simd<E, A> const arg) noexcept {
         using simdf = basic_simd<E, A>;
-        static constexpr immediate_mask<element_count<E, A>, V> mask;
+        static constexpr make_immediate_mask_t<simdf, V> mask;
 
         auto const absarg = dx::abs(arg);
         auto const pair = [](fmath::pair<E, A> p) {

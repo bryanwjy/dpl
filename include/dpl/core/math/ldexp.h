@@ -7,6 +7,7 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/simd_abi.h"
+#  include "dpl/core/concepts/simd_traits.h"
 #  include "dpl/core/constants/exponent_bias.h"
 #  include "dpl/core/constants/exponent_mask.h"
 #  include "dpl/core/constants/mantissa_width.h"
@@ -46,11 +47,12 @@ struct ldexp_t : binary_operation_base<ldexp_t> {
 
     template <floating_point E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_simd<E, A> DPL_VECTORCALL fallback(
-        basic_simd<E, A> num, basic_simd<signed_rep_t<E>, A> exp) noexcept {
+    static constexpr basic_simd<E, A> DPL_VECTORCALL
+        fallback(basic_simd<E, A> num,
+            basic_simd<signed_representation_t<E>, A> exp) noexcept {
 
         constexpr auto mantissa_shift = imm<dx::mantissa_width_v<E>>;
-        using sint = signed_rep_t<E>;
+        using sint = signed_representation_t<E>;
         constexpr auto exp_mask =
             dx::exponent_mask_v<E, sint> >> mantissa_shift;
         constexpr auto exp_bias = dx::exponent_bias<E>;
@@ -76,7 +78,7 @@ struct ldexp_t : binary_operation_base<ldexp_t> {
 
     template <simd_type T>
     using int_simd DPL_NODEBUG =
-        rebind_simd_t<T, signed_rep_t<typename T::value_type>>;
+        rebind_simd_t<T, signed_representation_t<typename T::value_type>>;
 
 public:
     template <floating_point_simd T, signed_integral_simd I>

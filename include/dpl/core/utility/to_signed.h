@@ -13,10 +13,10 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 template <simd_class T>
-requires integral<simd_element_type_t<T>>
+requires integral<simd_lane_type_t<T>>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr auto to_signed(T simd) noexcept {
-    using To = make_signed_t<simd_element_type_t<T>>;
+    using To = make_signed_t<simd_lane_type_t<T>>;
     return datapar::reinterpret<To>(simd);
 }
 } // namespace datapar

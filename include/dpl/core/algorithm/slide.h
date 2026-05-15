@@ -9,7 +9,6 @@
 #  include "dpl/core/basic/reinterpret.h"
 #  include "dpl/core/concepts/common_order_with.h"
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/concepts/simd_element.h"
 #  include "dpl/core/concepts/simd_equivalence.h"
 #  include "dpl/core/operations/operation_base.h"
 #  include "dpl/core/operations/select.h"
@@ -51,24 +50,27 @@ concept unqualified_slide_right = requires(L lhs, R rhs, size_t count) {
 
 struct slide_left_t {
 private:
-    template <simd_element E, fixed_width_abi A>
+    template <typename E, fixed_width_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(
         basic_simd<E, A> lhs, basic_simd<E, A> rhs, size_t num) noexcept {
-        num = num <= element_count<E, A> ? num : element_count<E, A>;
+        constexpr auto simd_size = basic_simd<E, A>::size();
+        num = num <= simd_size ? num : simd_size;
         auto const low = dx::shift_left(lhs, num);
-        auto const high = dx::shift_right(rhs, element_count<E, A> - num);
+        auto const high =
+            dx::shift_right(rhs, simd_abi_traits<E, A>::size - num);
         return dx::reinterpret<E>(dx::bwor(low, high));
     }
 
-    template <size_t N, simd_element E, fixed_width_abi A>
+    template <size_t N, typename E, fixed_width_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<E, A> lhs, basic_simd<E, A> rhs) noexcept {
-        static_assert(N <= element_count<E, A>);
-        constexpr auto size = 2 * element_count<E, A>;
+        static_assert(N <= simd_abi_traits<E, A>::size);
+        constexpr auto size = 2 * simd_abi_traits<E, A>::size;
         auto const low = dx::shift_left(lhs, imm<N>);
-        auto const high = dx::shift_right(rhs, imm<element_count<E, A> - N>);
+        auto const high =
+            dx::shift_right(rhs, imm<simd_abi_traits<E, A>::size - N>);
         return dx::reinterpret<E>(dx::bwor(low, high));
     }
 
@@ -158,19 +160,21 @@ public:
 
 struct slide_right_t {
 private:
-    template <simd_element E, fixed_width_abi A>
+    template <typename E, fixed_width_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(
         basic_simd<E, A> lhs, basic_simd<E, A> rhs, size_t num) noexcept {
-        num = num <= element_count<E, A> ? num : element_count<E, A>;
-        return slide_left_t::operator()(lhs, rhs, element_count<E, A> - num);
+        num = num <= simd_abi_traits<E, A>::size ? num
+                                                 : simd_abi_traits<E, A>::size;
+        return slide_left_t::operator()(
+            lhs, rhs, simd_abi_traits<E, A>::size - num);
     }
 
-    template <size_t N, simd_element E, fixed_width_abi A>
+    template <size_t N, typename E, fixed_width_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallbacki(basic_simd<E, A> lhs, basic_simd<E, A> rhs) noexcept {
-        constexpr auto num = element_count<E, A> - N;
+        constexpr auto num = simd_abi_traits<E, A>::size - N;
         return slide_left_t::operator()(lhs, rhs, imm<num>);
     }
 

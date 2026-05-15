@@ -9,28 +9,6 @@
 #  define DPL_PRAGMA(ARG) _Pragma(#ARG)
 #endif
 
-#if DPL_TARGET_APPLE
-/* Apple supposedly silently ignores the region token */
-#  define DPL_SUPPORTS_PRAGMA_REGION
-#  define DPL_BEGIN_REGION(LABEL) DPL_PRAGMA(region LABEL)
-#  define DPL_END_REGION(LABEL) DPL_PRAGMA(endregion LABEL)
-#elif DPL_COMPILER_CLANG_AT_LEAST(6, 0, 0)
-#  define DPL_SUPPORTS_PRAGMA_REGION
-#  define DPL_BEGIN_REGION(LABEL) DPL_PRAGMA(region LABEL)
-#  define DPL_END_REGION(LABEL) DPL_PRAGMA(endregion LABEL)
-#elif DPL_COMPILER_GCC_AT_LEAST(13, 0, 0)
-#  define DPL_SUPPORTS_PRAGMA_REGION
-#  define DPL_BEGIN_REGION(LABEL) DPL_PRAGMA(region LABEL)
-#  define DPL_END_REGION(LABEL) DPL_PRAGMA(endregion LABEL)
-#elif DPL_COMPILER_MSVC
-#  define DPL_SUPPORTS_PRAGMA_REGION
-#  define DPL_BEGIN_REGION(LABEL) DPL_PRAGMA(region LABEL)
-#  define DPL_END_REGION(LABEL) DPL_PRAGMA(endregion LABEL)
-#else
-#  define DPL_BEGIN_REGION(_)
-#  define DPL_END_REGION(_)
-#endif
-
 #if DPL_COMPILER_CLANG || DPL_COMPILER_ICX
 
 #  define DPL_PRAGMA_WARN(x) DPL_PRAGMA(message #x)

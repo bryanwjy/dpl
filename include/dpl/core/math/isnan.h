@@ -7,6 +7,7 @@
 #  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/compatible_mask_with.h"
 #  include "dpl/core/concepts/simd_abi.h"
+#  include "dpl/core/concepts/simd_traits.h"
 #  include "dpl/core/concepts/simd_type.h"
 #  include "dpl/core/constants/infinity.h"
 #  include "dpl/core/constants/value_bits.h"
@@ -26,7 +27,7 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr basic_simd_mask<E, A> DPL_VECTORCALL
         fallback(basic_simd<E, A> arg) noexcept {
-        using uint = unsigned_rep_t<E>;
+        using uint = unsigned_representation_t<E>;
         constexpr auto inf_bits =
             dx::reinterpret<uint>(dx::infinity_v<basic_simd<E, A>>);
         constexpr auto abs_bits =

@@ -9,6 +9,7 @@
 #  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/simd_class.h"
 #  include "dpl/core/type_traits/basic_type.h"
+#  include "dpl/core/type_traits/simd_abi_traits.h"
 #  include "dpl/std/bit/char_bit.h"
 #  include "dpl/std/bit/has_single_bit.h"
 #  include "dpl/std/concepts/array_initializable.h"
@@ -27,20 +28,12 @@ void initialize(...) noexcept = delete;
 template <typename...>
 struct initialize_t {};
 
-template <simd_abi A, simd_element E>
+template <simd_abi A, simd_element_for<A> E>
 requires fixed_width_abi<A>
 struct initialize_t<A, E> {
 private:
-    static constexpr size_t lanes = []() {
-        if constexpr (fixed_width_abi<A>) {
-            return A::size / sizeof(E);
-        } else {
-            return A::max_size / sizeof(E);
-        }
-    }();
-
-    using barray_type DPL_NODEBUG = bool[lanes];
-    using array_type DPL_NODEBUG = E[lanes];
+    using barray_type DPL_NODEBUG = bool[simd_abi_traits<E, A>::size];
+    using array_type DPL_NODEBUG = E[simd_abi_traits<E, A>::size];
 
 public:
     template <core_convertible_to<E>... Args>
@@ -67,22 +60,16 @@ public:
     }
 };
 
-template <simd_abi A, simd_element E>
+template <simd_abi A, simd_element_for<A> E>
 struct initialize_t<E, A> : initialize_t<A, E> {};
 
 template <basic_simd_class T>
+requires fixed_width_class<T>
 struct initialize_t<T> {
 private:
-    using A DPL_NODEBUG = typename T::abi_type;   // bool for masks
+    using A DPL_NODEBUG = typename T::abi_type;
     using E DPL_NODEBUG = typename T::value_type; // bool for masks
-    static constexpr size_t lanes = []() {
-        if constexpr (fixed_width_class<T>) {
-            return A::size / sizeof(simd_element_type_t<T>);
-        } else {
-            return A::max_size / sizeof(simd_element_type_t<T>);
-        }
-    }();
-    using array_type DPL_NODEBUG = E[lanes];
+    using array_type DPL_NODEBUG = E[simd_abi_traits<T>::size];
 
 public:
     template <core_convertible_to<E>... Args>
@@ -99,9 +86,9 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr T operator()(Bs... args) noexcept
     requires simd_mask_type<T> &&
-        regular_invocable<initialize_t<A, simd_element_type_t<T>>, Bs...>
+        regular_invocable<initialize_t<A, simd_lane_type_t<T>>, Bs...>
     {
-        return initialize_t<A, simd_element_type_t<T>>::operator()(args...);
+        return initialize_t<A, simd_lane_type_t<T>>::operator()(args...);
     }
 };
 
@@ -111,7 +98,7 @@ private:
     template <typename... Es>
     requires requires {
         typename common_type_t<Es...>;
-        requires simd_element<decay_t<common_type_t<Es...>>>;
+        requires simd_element_for<decay_t<common_type_t<Es...>>, A>;
     }
     using deduced_simd DPL_NODEBUG =
         basic_simd<decay_t<common_type_t<Es...>>, A>;

@@ -9,7 +9,6 @@
 #  include "dpl/core/basic/reinterpret.h"
 #  include "dpl/core/concepts/common_order_with.h"
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/concepts/simd_element.h"
 #  include "dpl/core/concepts/simd_equivalence.h"
 #  include "dpl/core/operations/operation_base.h"
 #  include "dpl/core/operations/select.h"
@@ -47,34 +46,26 @@ concept unqualified_rotate_left = requires(T val, size_t lanes) {
 
 struct rotate_right_t {
 private:
-    template <simd_element E, fixed_width_abi A>
+    template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<E, A> val, size_t lanes) noexcept {
-        lanes %= element_count<E, A>;
+        lanes %= val.size();
         return dx::slide_right(val, val, lanes);
     }
 
-    template <simd_element E, fixed_width_abi A>
+    template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd_mask<E, A> val, size_t lanes) noexcept {
-        lanes %= element_count<E, A>;
+        lanes %= val.size();
         return dx::slide_right(val, val, lanes);
     }
 
-    template <size_t V, simd_element E, fixed_width_abi A>
+    template <size_t V, typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallbacki(basic_simd<E, A> val) noexcept {
-        return dx::slide_righti<V>(val, val);
-    }
-
-    template <size_t V, simd_element E, fixed_width_abi A,
-        integral_constant_like R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallbacki(basic_simd_mask<E, A> val) noexcept {
         return dx::slide_righti<V>(val, val);
     }
 
@@ -83,7 +74,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L arg, R lanes) noexcept {
         static_assert(R::value > 0);
-        constexpr auto V = R::value % element_count<L>;
+        constexpr auto V = R::value % simd_abi_traits<L>::size;
         if constexpr (unqualified_rotate_righti<V, L>) {
             if constexpr (basic_simd_class<L>) {
                 if consteval {
@@ -102,12 +93,14 @@ public:
     }
 
     template <scalable_class L, integral_constant_like R>
-    requires unqualified_rotate_righti<R::value % element_count<L>, L> ||
-        unqualified_rotate_righti<R::value % element_count<L>, basic_type_t<L>>
+    requires unqualified_rotate_righti<R::value % simd_abi_traits<L>::size,
+                 L> ||
+        unqualified_rotate_righti<R::value % simd_abi_traits<L>::size,
+            basic_type_t<L>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L arg, R lanes) noexcept {
         static_assert(R::value > 0);
-        constexpr auto V = R::value % element_count<L>;
+        constexpr auto V = R::value % simd_abi_traits<L>::size;
         if constexpr (unqualified_rotate_righti<V, L>) {
             return rotate_right<V>(internal::abi<L>, arg);
         } else {
@@ -151,34 +144,26 @@ public:
 
 struct rotate_left_t {
 private:
-    template <simd_element E, fixed_width_abi A>
+    template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<E, A> val, size_t lanes) noexcept {
-        lanes %= element_count<E, A>;
+        lanes %= simd_abi_traits<E, A>::size;
         return dx::slide_left(val, val, lanes);
     }
 
-    template <simd_element E, fixed_width_abi A>
+    template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd_mask<E, A> val, size_t lanes) noexcept {
-        lanes %= element_count<E, A>;
+        lanes %= simd_abi_traits<E, A>::size;
         return dx::slide_left(val, val, lanes);
     }
 
-    template <size_t V, simd_element E, fixed_width_abi A>
+    template <size_t V, typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallbacki(basic_simd<E, A> val) noexcept {
-        return dx::slide_lefti<V>(val, val);
-    }
-
-    template <size_t V, simd_element E, fixed_width_abi A,
-        integral_constant_like R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallbacki(basic_simd_mask<E, A> val) noexcept {
         return dx::slide_lefti<V>(val, val);
     }
 
@@ -187,7 +172,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L arg, R lanes) noexcept {
         static_assert(R::value > 0);
-        constexpr auto V = R::value % element_count<L>;
+        constexpr auto V = R::value % simd_abi_traits<L>::size;
         if constexpr (unqualified_rotate_lefti<V, L>) {
             if constexpr (basic_simd_class<L>) {
                 if consteval {
@@ -206,12 +191,13 @@ public:
     }
 
     template <scalable_class L, integral_constant_like R>
-    requires unqualified_rotate_lefti<R::value % element_count<L>, L> ||
-        unqualified_rotate_lefti<R::value % element_count<L>, basic_type_t<L>>
+    requires unqualified_rotate_lefti<R::value % simd_abi_traits<L>::size, L> ||
+        unqualified_rotate_lefti<R::value % simd_abi_traits<L>::size,
+            basic_type_t<L>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L arg, R lanes) noexcept {
         static_assert(R::value > 0);
-        constexpr auto V = R::value % element_count<L>;
+        constexpr auto V = R::value % simd_abi_traits<L>::size;
         if constexpr (unqualified_rotate_lefti<V, L>) {
             return rotate_left<V>(internal::abi<L>, arg);
         } else {

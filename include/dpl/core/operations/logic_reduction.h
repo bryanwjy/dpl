@@ -9,7 +9,6 @@
 #  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_mask_type.h"
-#  include "dpl/core/type_traits/basic_element.h"
 #  include "dpl/core/type_traits/iota_sequence.h"
 #  include "dpl/std/concepts/boolean_testable.h"
 #  include "dpl/std/concepts/convertible_to.h"
@@ -27,7 +26,7 @@ concept unqualified_all_of = simd_mask_type<T> && requires(T mask) {
 
 struct all_of_t {
 private:
-    template <basic_simd_element E, simd_abi A>
+    template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr bool DPL_VECTORCALL
         fallback(basic_simd_mask<E, A> mask) noexcept {
@@ -91,7 +90,7 @@ concept unqualified_any_of = simd_mask_type<T> && requires(T mask) {
 
 struct any_of_t {
 private:
-    template <basic_simd_element E, simd_abi A>
+    template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr bool DPL_VECTORCALL
         fallback(basic_simd_mask<E, A> mask) noexcept {
@@ -155,7 +154,7 @@ concept unqualified_none_of = simd_mask_type<T> && requires(T mask) {
 
 struct none_of_t {
 private:
-    template <basic_simd_element E, simd_abi A>
+    template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr bool DPL_VECTORCALL
         fallback(basic_simd_mask<E, A> mask) noexcept {
@@ -215,7 +214,7 @@ concept unqualified_some_of = simd_mask_type<T> && requires(T mask) {
 
 struct some_of_t {
 private:
-    template <basic_simd_element E, simd_abi A>
+    template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr bool DPL_VECTORCALL
         fallback(basic_simd_mask<E, A> mask) noexcept {

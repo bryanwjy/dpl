@@ -33,6 +33,27 @@
 
 #ifndef DPL_NS
 #  define DPL_NS dpl
+#  define DPL_IS_STD 0
+#elif !DPL_DISABLE_HOST_STL_SUPPORT
+#  define DPL_IS_STD 0
+static_assert(
+    [](int DPL_NS) {
+#  define std 1
+        return DPL_NS != 1;
+#  undef std
+    }(0),
+    "Namespace cannot be 'std' while host stl support is enabled");
+#else
+DPL_DISABLE_WARNING_PUSH()
+#  if DPL_COMPILER_GCC | DPL_COMPILER_CLANG
+DPL_DISABLE_WARNING("-Wundef")
+#  endif
+#  define __DPL_NAMESPACE_CHECK_std 1
+#  if DPL_CONCAT(__DPL_NAMESPACE_CHECK_, DPL_NS)
+#    define DPL_IS_STD 1
+#  endif
+#  undef __DPL_NAMESPACE_CHECK_std
+DPL_DISABLE_WARNING_POP()
 #endif
 
 #define __DPL ::DPL_NS::

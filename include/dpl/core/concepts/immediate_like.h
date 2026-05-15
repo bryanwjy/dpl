@@ -3,8 +3,6 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/concepts/simd_element.h"
-
 #if !DPL_MODULES
 #  include "dpl/std/concepts/convertible_to.h"
 #  include "dpl/std/concepts/equality_comparable.h"
@@ -23,11 +21,10 @@ concept immediate_like = convertible_to<T, decltype(T::value)> &&
     bool_constant<static_cast<decltype(T::value)>(T()) == T::value>::value;
 
 template <typename T, typename E>
-concept immediate_like_of =
-    simd_element<E> && convertible_to<T, E> && requires {
-        typename integral_constant<E, static_cast<E>(T())>;
-        requires immediate_like<integral_constant<E, static_cast<E>(T())>>;
-    };
+concept immediate_like_of = convertible_to<T, E> && requires {
+    typename integral_constant<E, static_cast<E>(T())>;
+    requires immediate_like<integral_constant<E, static_cast<E>(T())>>;
+};
 
 } // namespace internal
 } // namespace datapar

@@ -19,6 +19,19 @@ concept fixed_width_class =
 
 DPL_EXPORT template <typename T>
 concept scalable_class = simd_class<T> && scalable_abi<typename T::abi_type>;
+
+namespace internal {
+template <fixed_width_abi A>
+consteval size_t abi_width() noexcept {
+    return A::size;
+}
+
+template <fixed_width_class T>
+consteval size_t abi_width() noexcept {
+    return abi_width<typename T::abi_type>();
+}
+} // namespace internal
+
 } // namespace datapar
 
 DPL_DEFAULT_NAMESPACE_END

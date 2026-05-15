@@ -17,7 +17,6 @@
 #  include "dpl/core/concepts/simd_element.h"
 #  include "dpl/core/constants/all_bits.h"
 #  include "dpl/core/constants/zero.h"
-#  include "dpl/core/type_traits/element_count.h"
 #  include "dpl/std/bit/bit_cast.h"
 #  include "dpl/std/type_traits/is_const.h"
 #  include "dpl/std/type_traits/is_volatile.h"
@@ -31,14 +30,14 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::xmm {
-DPL_EXPORT template <basic_simd_element E, core_convertible_to<E>... Args>
+DPL_EXPORT template <vectorizable E, core_convertible_to<E>... Args>
 requires (... && !same_as<Args, bool>)
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr simd<E> initialize(abi_tag tag, Args&&... args) noexcept {
     static_assert(!is_const_v<E> && !is_volatile_v<E>);
     if consteval {
 #if !DPL_COMPILER_MSVC
-        using array = E[element_count<E, abi_tag>];
+        using array = E[abi_tag::size / sizeof(E)];
         alignas(abi_tag::alignment)
             array buffer{static_cast<E>(__DPL forward<Args>(args))...};
         return __DPL bit_cast<native_vector_t<E>>(buffer);
@@ -119,7 +118,7 @@ constexpr simd<E> initialize(abi_tag tag, Args&&... args) noexcept {
             DPL_DISABLE_WARNING_POP()
 #  endif
 #else
-            using array = E[element_count<E, abi_tag>];
+            using array = E[abi_tag::size / sizeof(E)];
             alignas(abi_tag::alignment)
                 array buffer{static_cast<E>(__DPL forward<Args>(args))...};
             return __DPL bit_cast<native_vector_t<E>>(buffer);
@@ -146,7 +145,7 @@ constexpr mask<E> initialize(abi_tag tag, Args... scalars) noexcept {
         tag, (scalars ? dx::all_bits_v<E> : dx::zero_v<E>)...);
 }
 
-DPL_EXPORT template <basic_simd_element E, core_convertible_to<E>... Args>
+DPL_EXPORT template <vectorizable E, core_convertible_to<E>... Args>
 requires (... && !same_as<Args, bool>)
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr simd<E> initialize(Args&&... args) noexcept {

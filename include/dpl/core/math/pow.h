@@ -14,6 +14,7 @@
 #if !DPL_MODULES
 #  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/simd_abi.h"
+#  include "dpl/core/concepts/simd_traits.h"
 #  include "dpl/core/concepts/simd_type.h"
 #  include "dpl/core/constants/infinity.h"
 #  include "dpl/core/operations/arithmetic.h" // IWYU pragma: keep
@@ -57,7 +58,7 @@ private:
         auto u = arg.upper + arg.lower;
         auto const qf =
             dx::round(u, rounding::to_nearest_int | rounding::no_exc);
-        auto const q = dx::cast<signed_rep_t<float>>(qf);
+        auto const q = dx::cast<signed_representation_t<float>>(qf);
         auto s = fmath::normalize(arg - qf);
         // polynomial for f(x) = (pow(2,x) - 1 - x ln(2)) / pow(x,2)
         static constexpr fmath::polynomial<0.24022650718688965f, //
@@ -92,7 +93,7 @@ private:
         auto u = arg.upper + arg.lower;
         auto const qf =
             dx::round(u, rounding::to_nearest_int | rounding::no_exc);
-        auto const q = dx::cast<signed_rep_t<double>>(qf);
+        auto const q = dx::cast<signed_representation_t<double>>(qf);
         auto s = fmath::normalize(arg - qf);
         // polynomial for f(x) = (pow(2,x) - 1 - x ln(2)) / pow(x,2)
         static constexpr fmath::polynomial<0.24069579622573783,
@@ -191,7 +192,7 @@ private:
 
         auto const islhs_zero = lhs == dx::zero;
         constexpr auto is_odd = [](auto rhs) {
-            using sint = signed_rep_t<E>;
+            using sint = signed_representation_t<E>;
             return (dx::cast<sint>(rhs) & dx::one) == dx::one &&
                 dx::trunc(rhs) == rhs && dx::abs(rhs) < fmath::maxint;
         };

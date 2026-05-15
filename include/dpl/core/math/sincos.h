@@ -13,6 +13,7 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/simd_abi.h"
+#  include "dpl/core/concepts/simd_traits.h"
 #  include "dpl/core/constants/inv_pi.h"
 #  include "dpl/core/constants/zero.h"
 #  include "dpl/core/operations/bit.h"
@@ -178,12 +179,12 @@ protected:
     template <floating_point E, simd_abi A>
     struct rempi_single {
         basic_simd<E, A> f;
-        basic_simd<signed_rep_t<E>, A> i;
+        basic_simd<signed_representation_t<E>, A> i;
     };
     template <floating_point E, simd_abi A>
     struct rempi_pair {
         fmath::pair<E, A> df;
-        basic_simd<signed_rep_t<E>, A> i;
+        basic_simd<signed_representation_t<E>, A> i;
     };
 
     template <floating_point E, simd_abi A>
@@ -193,7 +194,7 @@ protected:
         // It breaks a value down into its proximity to the nearest quarter
         // (0.25) and identifies which quarter-step it belongs to relative to
         // the nearest whole integer.
-        using sint = signed_rep_t<E>;
+        using sint = signed_representation_t<E>;
         constexpr E four = 4.0;
         constexpr E inv_four = 0.25;
         constexpr auto opt = rounding::to_nearest_int | rounding::no_exc;
@@ -207,7 +208,7 @@ protected:
     template <floating_point E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr rempi_pair<E, A> rempi(basic_simd<E, A> arg) noexcept {
-        using sint = signed_rep_t<E>;
+        using sint = signed_representation_t<E>;
         using simdi = basic_simd<sint, A>;
 
         struct expq {
@@ -276,9 +277,9 @@ protected:
     static constexpr basic_simd<E, A> fallback(
         basic_simd<E, A> const arg) noexcept {
         using simdf = basic_simd<E, A>;
-        using sint = signed_rep_t<E>;
+        using sint = signed_representation_t<E>;
         using simdi = basic_simd<sint, A>;
-        static constexpr immediate_mask<element_count<E, A>, V> mask;
+        static constexpr make_immediate_mask_t<simdf, V> mask;
         simdf const qf = [](basic_simd<E, A> arg) {
             if constexpr (dx::none_of(mask)) {
                 return dx::round(arg * dx::inv_pi,

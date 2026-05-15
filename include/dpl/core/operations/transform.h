@@ -7,7 +7,6 @@
 #  include "dpl/core/basic/immediate.h"
 #  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/common_abi_with.h"
-#  include "dpl/core/type_traits/element_count.h"
 #  include "dpl/core/type_traits/iota_sequence.h"
 #  include "dpl/std/type_traits/is_invocable.h"
 #  include "dpl/std/utility/sequence.h"
@@ -19,7 +18,7 @@ namespace datapar::internal {
 template <typename F, typename R, typename... Args>
 concept value_invocable_r =
     (basic_simd_class<R> && ... && basic_simd_class<Args>) &&
-    (... && (element_count<R> == element_count<Args>)) &&
+    (... && (simd_abi_traits<R>::size == simd_abi_traits<Args>::size)) &&
     is_invocable_r_v<typename R::value_type, F, typename Args::value_type...>;
 
 template <typename R, typename F, typename... Args, size_t... Is>
@@ -32,7 +31,7 @@ consteval bool invocable(index_sequence<Is...>) noexcept {
 template <typename F, typename R, typename... Args>
 concept ivalue_invocable_r =
     (basic_simd_class<R> && ... && basic_simd_class<Args>) &&
-    (... && (element_count<R> == element_count<Args>)) &&
+    (... && (simd_abi_traits<R>::size == simd_abi_traits<Args>::size)) &&
     internal::invocable<R, F, Args...>(iota_sequence<R>);
 
 template <basic_simd_class Result, basic_simd_class... Ts,

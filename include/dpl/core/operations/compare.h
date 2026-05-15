@@ -89,7 +89,7 @@ private:
         return cmpeq(internal::abi<A>, left, right);
     }
 
-    template <simd_element L, common_order_with<L> R, simd_abi A>
+    template <typename L, typename R, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<L, A> lhs, basic_simd<R, A> rhs) noexcept {
@@ -98,7 +98,7 @@ private:
             [](auto lhs, auto rhs) -> bool { return lhs == rhs; }, lhs, rhs);
     }
 
-    template <simd_element L, common_size_with<L> R, simd_abi A>
+    template <typename L, typename R, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(
         basic_simd_mask<L, A> lhs, basic_simd_mask<R, A> rhs) noexcept {
@@ -116,7 +116,7 @@ public:
         if constexpr (unqualified_cmpeq<L, R, A>) {
             if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
                 if consteval {
-                    using E = simd_element_type_t<decltype(cmpeq(
+                    using E = simd_lane_type_t<decltype(cmpeq(
                         internal::abi<A>, lhs, rhs))>;
                     return dx::reinterpret<E>(fallback(lhs, rhs));
                 } else {
@@ -155,7 +155,7 @@ public:
         if constexpr (unqualified_mcmpeq<L, R, A>) {
             if constexpr (basic_simd_mask_type<L> && basic_simd_mask_type<R>) {
                 if consteval {
-                    using E = simd_element_type_t<decltype(cmpeq(
+                    using E = simd_lane_type_t<decltype(cmpeq(
                         internal::abi<A>, lhs, rhs))>;
                     return dx::reinterpret<E>(fallback(lhs, rhs));
                 } else {
@@ -201,7 +201,7 @@ private:
         return cmpneq(internal::abi<A>, left, right);
     }
 
-    template <simd_element L, common_order_with<L> R, simd_abi A>
+    template <typename L, typename R, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<L, A> lhs, basic_simd<R, A> rhs) noexcept {
@@ -210,7 +210,7 @@ private:
             [](auto lhs, auto rhs) -> bool { return lhs != rhs; }, lhs, rhs);
     }
 
-    template <simd_element L, common_size_with<L> R, simd_abi A>
+    template <typename L, typename R, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(
         basic_simd_mask<L, A> lhs, basic_simd_mask<R, A> rhs) noexcept {
@@ -228,7 +228,7 @@ public:
         if constexpr (unqualified_cmpneq<L, R, A>) {
             if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
                 if consteval {
-                    using E = simd_element_type_t<decltype(cmpneq(
+                    using E = simd_lane_type_t<decltype(cmpneq(
                         internal::abi<A>, lhs, rhs))>;
                     return dx::reinterpret<E>(fallback(lhs, rhs));
                 } else {
@@ -267,7 +267,7 @@ public:
         if constexpr (unqualified_mcmpneq<L, R, A>) {
             if constexpr (basic_simd_mask_type<L> && basic_simd_mask_type<R>) {
                 if consteval {
-                    using E = simd_element_type_t<decltype(cmpneq(
+                    using E = simd_lane_type_t<decltype(cmpneq(
                         internal::abi<A>, lhs, rhs))>;
                     return dx::reinterpret<E>(fallback(lhs, rhs));
                 } else {
@@ -313,7 +313,7 @@ private:
         return cmplt(internal::abi<A>, left, right);
     }
 
-    template <simd_element L, common_order_with<L> R, simd_abi A>
+    template <typename L, typename R, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<L, A> lhs, basic_simd<R, A> rhs) noexcept {
@@ -331,7 +331,7 @@ public:
         if constexpr (unqualified_cmplt<L, R, A>) {
             if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
                 if consteval {
-                    using E = simd_element_type_t<decltype(cmplt(
+                    using E = simd_lane_type_t<decltype(cmplt(
                         internal::abi<A>, lhs, rhs))>;
                     return dx::reinterpret<E>(fallback(lhs, rhs));
                 } else {
@@ -376,7 +376,7 @@ private:
         return cmple(internal::abi<A>, left, right);
     }
 
-    template <simd_element L, common_order_with<L> R, simd_abi A>
+    template <typename L, typename R, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<L, A> lhs, basic_simd<R, A> rhs) noexcept {
@@ -394,7 +394,7 @@ public:
         if constexpr (unqualified_cmple<L, R, A>) {
             if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
                 if consteval {
-                    using E = simd_element_type_t<decltype(cmple(
+                    using E = simd_lane_type_t<decltype(cmple(
                         internal::abi<A>, lhs, rhs))>;
                     return dx::reinterpret<E>(fallback(lhs, rhs));
                 } else {
@@ -452,7 +452,7 @@ public:
         if constexpr (unqualified_cmpgt<L, R, A>) {
             if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
                 if consteval {
-                    using E = simd_element_type_t<decltype(cmpgt(
+                    using E = simd_lane_type_t<decltype(cmpgt(
                         internal::abi<A>, lhs, rhs))>;
                     return dx::reinterpret<E>(cmplt_t::operator()(rhs, lhs));
                 } else {
@@ -509,7 +509,7 @@ public:
         if constexpr (unqualified_cmpge<L, R, A>) {
             if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
                 if consteval {
-                    using E = simd_element_type_t<decltype(cmpgt(
+                    using E = simd_lane_type_t<decltype(cmpgt(
                         internal::abi<A>, lhs, rhs))>;
                     return dx::reinterpret<E>(cmple_t::operator()(rhs, lhs));
                 } else {

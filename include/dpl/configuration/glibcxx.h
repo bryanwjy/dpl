@@ -2,6 +2,8 @@
 
 #pragma once
 
+// IWYU pragma: private, include "dpl/configuration/stl.h"
+
 #ifdef _GLIBCXX_RELEASE
 
 #  include "dpl/preprocessor/concatenation.h"

@@ -13,6 +13,7 @@
 #if !DPL_MODULES
 #  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/simd_abi.h"
+#  include "dpl/core/concepts/simd_traits.h"
 #  include "dpl/core/concepts/simd_type.h"
 #  include "dpl/core/constants/one.h"
 #  include "dpl/core/operations/abs.h"
@@ -86,7 +87,7 @@ private:
             x += dx::bit_keep(fr > mx::half, dx::one_v<decltype(val)>);
             // there are bit tricks alternatives to casting available but
             // they usually just add more instructions
-            using sint = signed_rep_t<E>;
+            using sint = signed_representation_t<E>;
             auto const iseven = (dx::cast<sint>(i) & dx::one) == dx::zero;
             i += dx::bit_drop(iseven, dx::one_v<decltype(val)>);
 

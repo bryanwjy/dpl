@@ -4,7 +4,7 @@
 #include "dpl/config.h"
 
 #include "dpl/core/concepts/simd_abi.h"
-#include "dpl/core/concepts/simd_element.h"
+#include "dpl/core/concepts/simd_element_for.h"
 #include "dpl/core/concepts/simd_type.h"
 
 #if !DPL_MODULES
@@ -16,8 +16,8 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 DPL_EXPORT template <typename T>
 inline constexpr bool enable_simd_mask = false;
-DPL_EXPORT template <simd_element T, simd_abi Abi>
-inline constexpr bool enable_simd_mask<basic_simd_mask<T, Abi>> = true;
+DPL_EXPORT template <simd_abi A, simd_element_for<A> E>
+inline constexpr bool enable_simd_mask<basic_simd_mask<E, A>> = true;
 
 namespace atom {
 template <typename M>
@@ -38,9 +38,6 @@ concept scalable_mask = simd_mask_type<T> && scalable_abi<typename T::abi_type>;
 DPL_EXPORT template <typename T>
 concept fixed_width_mask =
     simd_mask_type<T> && fixed_width_abi<typename T::abi_type>;
-
-DPL_EXPORT template <simd_mask_type T>
-struct simd_element_type<T> : simd_element_type<typename T::simd_type> {};
 } // namespace datapar
 
 DPL_DEFAULT_NAMESPACE_END

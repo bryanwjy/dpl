@@ -5,7 +5,7 @@
 
 #include "dpl/core/type_traits/common_float_type.h"
 #include "dpl/core/type_traits/representation.h"
-#include "dpl/core/type_traits/simd_element_type.h"
+#include "dpl/core/type_traits/simd_lane_type.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/common_arithmetic_with.h"
@@ -22,27 +22,35 @@ namespace datapar {
 DPL_EXPORT template <typename... T>
 struct common_arithmetic_type {};
 DPL_EXPORT template <simd_element T>
-struct common_arithmetic_type<T> : simd_element_type<T> {};
+struct common_arithmetic_type<T> : simd_lane_type<T> {};
 DPL_EXPORT template <simd_class T>
-struct common_arithmetic_type<T> : simd_element_type<T> {};
+struct common_arithmetic_type<T> : simd_lane_type<T> {};
 DPL_EXPORT template <simd_class T>
-struct common_arithmetic_type<T, T> : simd_element_type<T> {};
+struct common_arithmetic_type<T, T> : simd_lane_type<T> {};
 DPL_EXPORT template <simd_element T>
-struct common_arithmetic_type<T, T> : simd_element_type<T> {};
+struct common_arithmetic_type<T, T> : simd_lane_type<T> {};
 DPL_EXPORT template <simd_element T>
-requires enumeration<T>
+requires (enumeration<T>)
 struct common_arithmetic_type<T, T> :
     common_arithmetic_type<T, underlying_type_t<T>> {};
 
 DPL_EXPORT template <simd_class A, simd_element B>
 struct common_arithmetic_type<A, B> :
-    common_arithmetic_type<simd_element_type_t<A>, B> {};
+    common_arithmetic_type<simd_element_representation_t<typename A::abi_type,
+                               simd_lane_type_t<A>>,
+        B> {};
 DPL_EXPORT template <simd_element A, simd_class B>
 struct common_arithmetic_type<A, B> :
-    common_arithmetic_type<A, simd_element_type_t<B>> {};
+    common_arithmetic_type<A,
+        simd_element_representation_t<typename B::abi_type,
+            simd_lane_type_t<B>>> {};
+
 DPL_EXPORT template <simd_class A, simd_class B>
 struct common_arithmetic_type<A, B> :
-    common_arithmetic_type<simd_element_type_t<A>, simd_element_type_t<B>> {};
+    common_arithmetic_type<simd_element_representation_t<typename A::abi_type,
+                               simd_lane_type_t<A>>,
+        simd_element_representation_t<typename B::abi_type,
+            simd_lane_type_t<B>>> {};
 
 DPL_EXPORT template <typename... Ts>
 using common_arithmetic_type_t = typename common_arithmetic_type<Ts...>::type;
@@ -95,13 +103,13 @@ private:
             return type_identity<A>{};
         } else if constexpr (common_arithmetic_with_common_type<A, B>) {
             return common_type<A, B>{};
-        } else if constexpr (signed_integral<A> && signed_integral<B>) {
-            return signed_representation<A>{};
-        } else if constexpr (unsigned_integral<A> && unsigned_integral<B>) {
-            return unsigned_representation<A>{};
         } else {
-            static_assert(same_as<basic_element_t<A>, basic_element_t<B>>);
-            return basic_element<A>{};
+            static_assert(integral<A> && integral<B>);
+            if constexpr (signed_integral<A> && signed_integral<B>) {
+                return signed_representation<A>{};
+            } else {
+                return unsigned_representation<A>{};
+            }
         }
     }
 

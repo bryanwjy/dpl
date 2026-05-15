@@ -4,7 +4,6 @@
 
 #include "dpl/config.h"
 
-DPL_EXPORT
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 inline namespace cpo {}

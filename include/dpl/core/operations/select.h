@@ -39,14 +39,15 @@ template <typename L, typename R>
 using ternary_type_t DPL_NODEBUG = typename ternary_type<L, R>::type;
 
 template <simd_type L, simd_element R>
-struct ternary_type<L, R> : ternary_type<typename L::value_type, R> {};
+struct ternary_type<L, R> : ternary_type<simd_lane_representation_t<L>, R> {};
 
 template <simd_element L, simd_type R>
-struct ternary_type<L, R> : ternary_type<L, typename R::value_type> {};
+struct ternary_type<L, R> : ternary_type<L, simd_lane_representation_t<R>> {};
 
 template <simd_type L, simd_type R>
 struct ternary_type<L, R> :
-    ternary_type<typename L::value_type, typename R::value_type> {};
+    ternary_type<simd_lane_representation_t<L>, simd_lane_representation_t<R>> {
+};
 
 template <simd_element L, simd_element R>
 requires requires {
@@ -127,12 +128,10 @@ concept unqualified_mselecti =
 
 struct select_t {
 private:
-    template <simd_element M, simd_element ET, simd_element EF, simd_abi A>
+    template <typename M, typename ET, typename EF, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(basic_simd_mask<M, A> mask,
         basic_simd<ET, A> tval, basic_simd<EF, A> fval) noexcept {
-        static_assert(
-            fixed_width_abi<A>, "Scalable ABIs have no viable fallback");
         using ER = ternary_type_t<ET, EF>;
         return internal::transform<basic_simd<ER, A>>(
             [](bool cond, ET tval, EF fval) -> ER {
@@ -141,12 +140,10 @@ private:
             mask, tval, fval);
     }
 
-    template <simd_element M, simd_element ET, simd_element EF, simd_abi A>
+    template <typename M, typename ET, typename EF, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(basic_simd_mask<M, A> mask,
         basic_simd_mask<ET, A> tval, basic_simd_mask<EF, A> fval) noexcept {
-        static_assert(
-            fixed_width_abi<A>, "Scalable ABIs have no viable fallback");
         using ER = common_size_type_t<M, ET, EF>;
         return internal::transform<basic_simd_mask<ER, A>>(
             [](bool cond, bool tval, bool fval) -> bool {
@@ -155,13 +152,11 @@ private:
             mask, tval, fval);
     }
 
-    template <auto V, simd_element ET, simd_element EF, simd_abi A>
+    template <auto V, typename ET, typename EF, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallbacki(basic_simd<ET, A> tval, basic_simd<EF, A> fval) noexcept {
-        static_assert(
-            fixed_width_abi<A>, "Scalable ABIs have no viable fallback");
-        static constexpr immediate_mask<element_count<ET, A>, V> mask{};
+        static constexpr immediate_mask<simd_abi_traits<ET, A>::size, V> mask{};
         using ER = ternary_type_t<ET, EF>;
         return internal::itransform<basic_simd<ER, A>>(
             [](auto idx, ET tval, EF fval) -> ER {
@@ -170,13 +165,11 @@ private:
             tval, fval);
     }
 
-    template <auto V, simd_element ET, simd_element EF, simd_abi A>
+    template <auto V, typename ET, typename EF, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallbacki(
         basic_simd_mask<ET, A> tval, basic_simd_mask<EF, A> fval) noexcept {
-        static_assert(
-            fixed_width_abi<A>, "Scalable ABIs have no viable fallback");
-        static constexpr immediate_mask<element_count<ET, A>, V> mask{};
+        static constexpr immediate_mask<simd_abi_traits<ET, A>::size, V> mask{};
         using ER = common_size_type_t<ET, EF>;
         return internal::itransform<basic_simd_mask<ER, A>>(
             [](auto idx, ET tval, EF fval) -> ER {
@@ -435,7 +428,7 @@ template <integral auto V>
 struct selecti_t<V> : binary_operation_base<selecti_t<V>> {
 private:
     template <typename T>
-    using mask_type DPL_NODEBUG = immediate_mask<element_count<T>, V>;
+    using mask_type DPL_NODEBUG = make_immediate_mask_t<T, V>;
 
 public:
     template <simd_class T, simd_class F>

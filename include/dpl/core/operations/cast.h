@@ -14,7 +14,6 @@
 #  include "dpl/core/constants/min_value.h"
 #  include "dpl/core/constants/zero.h"
 #  include "dpl/core/type_traits/array_for.h"
-#  include "dpl/core/type_traits/basic_element.h"
 #  include "dpl/core/type_traits/basic_type.h"
 #  include "dpl/core/type_traits/iota_sequence.h"
 #  include "dpl/core/type_traits/rebind_simd.h"
@@ -40,7 +39,7 @@ concept unqualified_element_castable_to =
 template <simd_element To>
 struct cast_t<To> {
 private:
-    template <basic_simd_element From>
+    template <typename From>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr To safe_cast(From val) noexcept {
         if consteval {
@@ -65,16 +64,17 @@ private:
         }
     }
 
-    template <basic_simd_element From, simd_abi A>
+    template <typename From, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr basic_simd<To, A> DPL_VECTORCALL
         fallback(basic_simd<From, A> arg) noexcept {
         using S = basic_simd<From, A>;
         using R = basic_simd<To, A>;
         return []<size_t... Is>(S arg, index_sequence<Is...>) {
-            constexpr auto extent = element_count<S> < element_count<R>
-                ? element_count<S>
-                : element_count<R>;
+            constexpr auto extent =
+                simd_abi_traits<S>::size < simd_abi_traits<R>::size
+                ? simd_abi_traits<S>::size
+                : simd_abi_traits<R>::size;
             array_for<R> buffer{
                 (Is < extent ? safe_cast(arg[Is]) : dx::zero_v<To>)...};
             return dx::load<R>(aligned, buffer.data);
@@ -83,6 +83,7 @@ private:
 
 public:
     template <fixed_width_simd From>
+    requires basic_simd_type<rebind_simd_t<From, To>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(From val) noexcept {
         if constexpr (unqualified_element_castable_to<From, To>) {
@@ -103,8 +104,9 @@ public:
     }
 
     template <scalable_simd From>
-    requires unqualified_element_castable_to<From, To> ||
-        unqualified_element_castable_to<basic_type_t<From>, To>
+    requires basic_simd_type<rebind_simd_t<From, To>> &&
+        (unqualified_element_castable_to<From, To> ||
+            unqualified_element_castable_to<basic_type_t<From>, To>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(From val) noexcept {
         if constexpr (unqualified_element_castable_to<From, To>) {
@@ -113,33 +115,33 @@ public:
             return cast<To>(internal::abi<From>, dx::to_basic_type(val));
         }
     }
-};
 
-template <simd_element To>
-requires (!basic_simd_element<To>)
-struct cast_t<To> {
-public:
     template <simd_type From>
-    requires unqualified_element_castable_to<From, To>
+    requires (!basic_simd_type<rebind_simd_t<From, To>>) &&
+        unqualified_element_castable_to<From, To>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(From arg) noexcept {
         return cast<To>(internal::abi<From>, arg);
     }
 
     template <simd_type From>
-    requires (!unqualified_element_castable_to<From, To>) && requires {
-        typename basic_element_t<To>;
-        typename invoke_result_t<cast_t<basic_element_t<To>>,
-            basic_type_t<From>>;
-        requires explicitly_convertible_to<
-            invoke_result_t<cast_t<basic_element_t<To>>, basic_type_t<From>>,
-            rebind_simd_t<From, To>>;
-    }
+    requires (!basic_simd_type<rebind_simd_t<From, To>> &&
+                 !unqualified_element_castable_to<From, To>) &&
+        requires {
+            typename simd_lane_representation_t<rebind_simd_t<From, To>>;
+            typename invoke_result_t<
+                cast_t<simd_lane_representation_t<rebind_simd_t<From, To>>>,
+                From>;
+            requires regular_invocable<reinterpret_t<rebind_simd_t<From, To>>,
+                invoke_result_t<
+                    cast_t<simd_lane_representation_t<rebind_simd_t<From, To>>>,
+                    From>>;
+        }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(From arg) noexcept {
         using result = rebind_simd_t<From, To>;
-        using base = cast_t<basic_element_t<To>>;
-        return static_cast<result>(base::operator()(dx::to_basic_type(arg)));
+        using base = cast_t<simd_lane_representation_t<result>>;
+        return dx::reinterpret<result>(base::operator()(arg));
     }
 };
 
@@ -185,16 +187,25 @@ public:
     }
 
     template <simd_type From>
-    requires (!unqualified_castable_to<From, To>) && requires {
-        typename basic_type_t<To>;
-        typename invoke_result_t<cast_t<basic_type_t<To>>, From>;
-        requires explicitly_convertible_to<
-            invoke_result_t<cast_t<basic_type_t<To>>, From>, To>;
-    }
+    requires (!unqualified_castable_to<From, To>) &&
+        requires {
+            typename basic_type_t<To>;
+            typename invoke_result_t<cast_t<basic_type_t<To>>, From>;
+        } &&
+        (explicitly_convertible_to<
+             invoke_result_t<cast_t<basic_type_t<To>>, From>, To> ||
+            regular_invocable<reinterpret_t<To>,
+                invoke_result_t<cast_t<basic_type_t<To>>, From>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr To operator()(From arg) noexcept {
         using base = cast_t<basic_type_t<To>>;
-        return static_cast<To>(base::operator()(arg));
+        if constexpr (explicitly_convertible_to<
+                          invoke_result_t<cast_t<basic_type_t<To>>, From>,
+                          To>) {
+            return static_cast<To>(base::operator()(arg));
+        } else {
+            return dx::reinterpret<To>(base::operator()(arg));
+        }
     }
 };
 

@@ -5,7 +5,7 @@
 
 #include "dpl/core/type_traits/common_float_type.h"
 #include "dpl/core/type_traits/representation.h"
-#include "dpl/core/type_traits/simd_element_type.h"
+#include "dpl/core/type_traits/simd_lane_type.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/common_float_with.h"
@@ -22,23 +22,21 @@ namespace datapar {
 DPL_EXPORT template <typename...>
 struct common_order_type {};
 DPL_EXPORT template <simd_element T>
-struct common_order_type<T> : simd_element_type<T> {};
+struct common_order_type<T> : simd_lane_type<T> {};
 DPL_EXPORT template <simd_class T>
-struct common_order_type<T> : simd_element_type<T> {};
+struct common_order_type<T> : simd_lane_type<T> {};
 DPL_EXPORT template <simd_class T>
-struct common_order_type<T, T> : simd_element_type<T> {};
+struct common_order_type<T, T> : simd_lane_type<T> {};
 DPL_EXPORT template <simd_element T>
-struct common_order_type<T, T> : simd_element_type<T> {};
+struct common_order_type<T, T> : simd_lane_type<T> {};
 
 DPL_EXPORT template <simd_class A, simd_element B>
-struct common_order_type<A, B> :
-    common_order_type<simd_element_type_t<A>, B> {};
+struct common_order_type<A, B> : common_order_type<simd_lane_type_t<A>, B> {};
 DPL_EXPORT template <simd_element A, simd_class B>
-struct common_order_type<A, B> :
-    common_order_type<A, simd_element_type_t<B>> {};
+struct common_order_type<A, B> : common_order_type<A, simd_lane_type_t<B>> {};
 DPL_EXPORT template <simd_class A, simd_class B>
 struct common_order_type<A, B> :
-    common_order_type<simd_element_type_t<A>, simd_element_type_t<B>> {};
+    common_order_type<simd_lane_type_t<A>, simd_lane_type_t<B>> {};
 
 DPL_EXPORT template <typename... Ts>
 using common_order_type_t = typename common_order_type<Ts...>::type;

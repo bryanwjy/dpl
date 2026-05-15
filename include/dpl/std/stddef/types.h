@@ -3,8 +3,6 @@
 
 #include "dpl/config.h"
 
-#include "dpl/std/stddef/namespace.h" // IWYU pragma: export
-
 #if !DPL_MODULES
 #  include <stdint.h>
 #endif

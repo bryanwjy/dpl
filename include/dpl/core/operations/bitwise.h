@@ -16,6 +16,7 @@
 #  include "dpl/core/concepts/common_bits_with.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_equivalence.h"
+#  include "dpl/core/concepts/simd_traits.h"
 #  include "dpl/core/constants/all_bits.h"
 #  include "dpl/core/type_traits/common_bits_type.h"
 #  include "dpl/core/type_traits/common_size_type.h"
@@ -166,7 +167,7 @@ private:
         return bwor(internal::abi<A>, left, right);
     }
 
-    template <simd_element L, common_bits_with<L> R, simd_abi A>
+    template <typename L, typename R, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<L, A> lhs, basic_simd<R, A> rhs) noexcept {
@@ -181,7 +182,7 @@ private:
             lhs, rhs);
     }
 
-    template <simd_element L, common_size_with<L> R, simd_abi A>
+    template <typename L, typename R, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(
         basic_simd_mask<L, A> left, basic_simd_mask<R, A> right) noexcept {
@@ -238,7 +239,7 @@ public:
         if constexpr (unqualified_mbwor<L, R, A>) {
             if constexpr (basic_simd_mask_type<L> && basic_simd_mask_type<R>) {
                 if consteval {
-                    using E = simd_element_type_t<decltype(bwor(
+                    using E = simd_lane_type_t<decltype(bwor(
                         internal::abi<A>, lhs, rhs))>;
                     return dx::reinterpret<E>(fallback(lhs, rhs));
                 } else {
@@ -287,7 +288,7 @@ private:
         return bwand(internal::abi<A>, left, right);
     }
 
-    template <simd_element L, common_bits_with<L> R, simd_abi A>
+    template <typename L, typename R, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<L, A> left, basic_simd<R, A> right) noexcept {
@@ -302,7 +303,7 @@ private:
             left, right);
     }
 
-    template <simd_element L, common_size_with<L> R, simd_abi A>
+    template <typename L, typename R, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(
         basic_simd_mask<L, A> left, basic_simd_mask<R, A> right) noexcept {
@@ -359,7 +360,7 @@ public:
         if constexpr (unqualified_mbwand<L, R, A>) {
             if constexpr (basic_simd_mask_type<L> && basic_simd_mask_type<R>) {
                 if consteval {
-                    using E = simd_element_type_t<decltype(bwand(
+                    using E = simd_lane_type_t<decltype(bwand(
                         internal::abi<A>, lhs, rhs))>;
                     return dx::reinterpret<E>(fallback(lhs, rhs));
                 } else {
@@ -408,7 +409,7 @@ private:
         return bwxor(internal::abi<A>, left, right);
     }
 
-    template <simd_element L, common_bits_with<L> R, simd_abi A>
+    template <typename L, typename R, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<L, A> left, basic_simd<R, A> right) noexcept {
@@ -423,7 +424,7 @@ private:
             left, right);
     }
 
-    template <simd_element L, common_size_with<L> R, simd_abi A>
+    template <typename L, typename R, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(
         basic_simd_mask<L, A> left, basic_simd_mask<R, A> right) noexcept {
@@ -480,7 +481,7 @@ public:
         if constexpr (unqualified_mbwxor<L, R, A>) {
             if constexpr (basic_simd_mask_type<L> && basic_simd_mask_type<R>) {
                 if consteval {
-                    using E = simd_element_type_t<decltype(bwxor(
+                    using E = simd_lane_type_t<decltype(bwxor(
                         internal::abi<A>, lhs, rhs))>;
                     return dx::reinterpret<E>(fallback(lhs, rhs));
                 } else {
@@ -529,7 +530,7 @@ private:
         return bwandnot(internal::abi<A>, left, right);
     }
 
-    template <simd_element L, common_bits_with<L> R, simd_abi A>
+    template <typename L, typename R, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<L, A> left, basic_simd<R, A> right) noexcept {
@@ -544,7 +545,7 @@ private:
             left, right);
     }
 
-    template <simd_element L, common_size_with<L> R, simd_abi A>
+    template <typename L, typename R, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(
         basic_simd_mask<L, A> left, basic_simd_mask<R, A> right) noexcept {
@@ -601,7 +602,7 @@ public:
         if constexpr (unqualified_mbwandnot<L, R, A>) {
             if constexpr (basic_simd_mask_type<L> && basic_simd_mask_type<R>) {
                 if consteval {
-                    using E = simd_element_type_t<decltype(bwandnot(
+                    using E = simd_lane_type_t<decltype(bwandnot(
                         internal::abi<A>, lhs, rhs))>;
                     return dx::reinterpret<E>(fallback(lhs, rhs));
                 } else {
@@ -650,7 +651,7 @@ private:
         return bwornot(internal::abi<A>, left, right);
     }
 
-    template <simd_element L, common_bits_with<L> R, simd_abi A>
+    template <typename L, typename R, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallback(basic_simd<L, A> left, basic_simd<R, A> right) noexcept {
@@ -665,7 +666,7 @@ private:
             left, right);
     }
 
-    template <simd_element L, common_size_with<L> R, simd_abi A>
+    template <typename L, typename R, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(
         basic_simd_mask<L, A> left, basic_simd_mask<R, A> right) noexcept {
@@ -722,7 +723,7 @@ public:
         if constexpr (unqualified_mbwornot<L, R, A>) {
             if constexpr (basic_simd_mask_type<L> && basic_simd_mask_type<R>) {
                 if consteval {
-                    using E = simd_element_type_t<decltype(bwornot(
+                    using E = simd_lane_type_t<decltype(bwornot(
                         internal::abi<A>, lhs, rhs))>;
                     return dx::reinterpret<E>(fallback(lhs, rhs));
                 } else {
@@ -835,7 +836,7 @@ public:
         if constexpr (unqualified_mbwnot<T>) {
             if constexpr (basic_simd_mask_type<T>) {
                 if consteval {
-                    using E = simd_element_type_t<decltype(bwnot(
+                    using E = simd_lane_type_t<decltype(bwnot(
                         internal::abi<T>, val))>;
                     return dx::reinterpret<E>(fallback(val));
                 } else {
@@ -1122,9 +1123,9 @@ private:
         using bit_type = bit_type_t<sizeof(L) * char_bit_v>;
         using mask_type = basic_simd_mask<L, A>;
         return []<size_t... Is>(mask_type arg, index_sequence<Is...>) {
-            return dx::initialize<mask_type>(
-                (Is + R::value < element_count<L, A> ? arg[Is + R::value]
-                                                     : false)...);
+            return dx::initialize<mask_type>((
+                Is + R::value < simd_abi_traits<L, A>::size ? arg[Is + R::value]
+                                                            : false)...);
         }(arg, iota_sequence<L, A>);
     }
 
@@ -1136,8 +1137,9 @@ private:
         using mask_type = basic_simd_mask<L, A>;
         return []<size_t... Is>(
                    mask_type arg, unsigned shift, index_sequence<Is...>) {
-            return dx::initialize<mask_type>((
-                Is + shift < element_count<L, A> ? arg[Is + shift] : false)...);
+            return dx::initialize<mask_type>(
+                (Is + shift < simd_abi_traits<L, A>::size ? arg[Is + shift]
+                                                          : false)...);
         }(arg, static_cast<unsigned>(shift), iota_sequence<L, A>);
     }
 

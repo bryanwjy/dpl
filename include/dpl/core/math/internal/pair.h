@@ -32,8 +32,7 @@ constexpr auto cpo(Args... args) noexcept {
     return func(args...);
 }
 
-template <simd_element T, simd_abi A>
-requires floating_point<T>
+template <floating_point T, simd_abi A>
 struct pair {
     using value_type = T;
     using abi_type = A;
@@ -171,13 +170,8 @@ using pair_of = pair<typename T::value_type, typename T::abi_type>;
 
 template <typename T>
 inline constexpr bool is_pair = false;
-template <simd_element T, simd_abi A>
-requires floating_point<T>
+template <floating_point T, simd_abi A>
 inline constexpr bool is_pair<pair<T, A>> = true;
-
-template <typename T, typename A>
-concept abi_float_type = simd_element<T> && simd_abi<A> && floating_point<T> &&
-    requires { typename A::template native_type<T>; };
 
 template <typename T>
 concept pair_type = is_pair<T> && requires {
@@ -189,7 +183,7 @@ concept pair_type = is_pair<T> && requires {
     requires simd_type<typename T::element_type>;
     requires same_as<typename T::element_type,
         basic_simd<typename T::value_type, typename T::abi_type>>;
-} && abi_float_type<typename T::value_type, typename T::abi_type>;
+};
 
 template <simd_type T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
@@ -223,12 +217,12 @@ constexpr pair<E, A> DPL_VECTORCALL make_pair(E upper, T2 lower = {}) noexcept {
     };
 }
 
-template <simd_abi A, abi_float_type<A> T, simd_element E>
-requires common_size_with<T, E>
+template <simd_abi A, floating_point E, simd_element C>
+requires common_size_with<E, C>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-constexpr pair<T, A> DPL_VECTORCALL select(
-    basic_simd_mask<E, A> mask, pair<T, A> left, pair<T, A> right) noexcept {
-    return pair<T, A>{
+constexpr pair<E, A> DPL_VECTORCALL select(
+    basic_simd_mask<C, A> mask, pair<E, A> left, pair<E, A> right) noexcept {
+    return pair<E, A>{
         .upper = dx::select(mask, left.upper, right.upper),
         .lower = dx::select(mask, left.lower, right.lower),
     };
@@ -244,43 +238,43 @@ constexpr T broadcast(C arg) noexcept {
     };
 }
 
-template <simd_abi A, abi_float_type<A> T>
+template <simd_abi A, floating_point E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-constexpr pair<T, A> DPL_VECTORCALL abs(pair<T, A> arg) noexcept {
-    return pair<T, A>{
+constexpr pair<E, A> DPL_VECTORCALL abs(pair<E, A> arg) noexcept {
+    return pair<E, A>{
         .upper = dx::abs(arg.upper),
         .lower = dx::abs(arg.lower),
     };
 }
 
-template <simd_abi A, abi_float_type<A> T>
+template <simd_abi A, floating_point E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-constexpr pair<T, A> DPL_VECTORCALL normalize(pair<T, A> arg) noexcept {
+constexpr pair<E, A> DPL_VECTORCALL normalize(pair<E, A> arg) noexcept {
     auto upper = arg.upper + arg.lower;
-    return pair<T, A>{
+    return pair<E, A>{
         .upper = upper,
         .lower = arg.upper - upper + arg.lower,
     };
 }
 
-template <simd_abi A, abi_float_type<A> T, typename S>
-requires requires(pair<T, A> p, S scale) {
+template <simd_abi A, floating_point E, typename S>
+requires requires(pair<E, A> p, S scale) {
     p.upper * scale;
     p.lower * scale;
 }
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-constexpr pair<T, A> DPL_VECTORCALL scale(pair<T, A> arg, S scale) noexcept {
-    return pair<T, A>{
+constexpr pair<E, A> DPL_VECTORCALL scale(pair<E, A> arg, S scale) noexcept {
+    return pair<E, A>{
         .upper = arg.upper * scale,
         .lower = arg.lower * scale,
     };
 }
 
-template <simd_abi A, abi_float_type<A> T>
+template <simd_abi A, floating_point E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-constexpr pair<T, A> DPL_VECTORCALL square(pair<T, A> arg) noexcept {
+constexpr pair<E, A> DPL_VECTORCALL square(pair<E, A> arg) noexcept {
     auto s = arg.upper * arg.upper;
-    return pair<T, A>{
+    return pair<E, A>{
         .upper = s,
         .lower = dx::fmadd(        //
             arg.upper + arg.upper, //
@@ -289,21 +283,21 @@ constexpr pair<T, A> DPL_VECTORCALL square(pair<T, A> arg) noexcept {
     };
 }
 
-template <simd_abi A, abi_float_type<A> T>
+template <simd_abi A, floating_point E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-constexpr pair<T, A> DPL_VECTORCALL rcp(pair<T, A> arg) noexcept {
+constexpr pair<E, A> DPL_VECTORCALL rcp(pair<E, A> arg) noexcept {
     auto s = dx::one / arg.upper;
-    return pair<T, A>{
+    return pair<E, A>{
         .upper = s,
         .lower =
             s * dx::fnmadd(arg.lower, s, dx::fnmadd(arg.upper, s, dx::one)),
     };
 }
 
-template <simd_abi A, abi_float_type<A> T>
+template <simd_abi A, floating_point E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-constexpr pair<T, A> DPL_VECTORCALL sqrt(pair<T, A> arg) noexcept {
-    using simd = typename pair<T, A>::element_type;
+constexpr pair<E, A> DPL_VECTORCALL sqrt(pair<E, A> arg) noexcept {
+    using simd = typename pair<E, A>::element_type;
     auto x = dx::rsqrt(arg.upper + arg.lower);
     auto r = arg * x;
     constexpr auto n3 = dx::broadcast<simd>(-3.0);
@@ -315,10 +309,10 @@ struct fast;
 template <typename T>
 struct single;
 
-template <simd_element T, simd_abi A>
-requires simd_type<basic_simd<T, A>>
-struct single<basic_simd<T, A>> {
-    using element_type = basic_simd<T, A>;
+template <floating_point E, simd_abi A>
+requires simd_type<basic_simd<E, A>>
+struct single<basic_simd<E, A>> {
+    using element_type = basic_simd<E, A>;
     element_type value;
     __DPL_HIDE_FROM_ABI explicit constexpr single(element_type val) noexcept
         : value(val) {}
@@ -333,7 +327,7 @@ struct single<basic_simd<T, A>> {
         this single self, element_type right) noexcept {
         auto s = self.value + right;
         auto v = s - self.value;
-        return pair<T, A>{
+        return pair<E, A>{
             .upper = s,
             .lower = self.value - (s - v) + (right - v),
         };
@@ -349,7 +343,7 @@ struct single<basic_simd<T, A>> {
     constexpr auto DPL_VECTORCALL operator-(
         this single self, element_type right) noexcept {
         auto s = self.value - right;
-        return pair<T, A>{
+        return pair<E, A>{
             .upper = s,
             .lower = (self.value - s) - right,
         };
@@ -365,7 +359,7 @@ struct single<basic_simd<T, A>> {
     constexpr auto DPL_VECTORCALL operator*(
         this single self, element_type right) noexcept {
         auto s = self.value * right;
-        return pair<T, A>{
+        return pair<E, A>{
             .upper = s,
             .lower = dx::fmsub(self.value, right, s),
         };
@@ -405,11 +399,11 @@ constexpr pair_of<T> DPL_VECTORCALL sqrt(single<T> arg) noexcept {
         arg + (single(t) * t) * fmath::rcp(single(t)), dx::broadcast<T>(0.5));
 }
 
-template <simd_element T, simd_abi A>
-requires pair_type<pair<T, A>>
-struct single<pair<T, A>> {
-    using element_type = pair<T, A>;
-    pair<T, A> value;
+template <floating_point E, simd_abi A>
+requires pair_type<pair<E, A>>
+struct single<pair<E, A>> {
+    using element_type = pair<E, A>;
+    pair<E, A> value;
 
     __DPL_HIDE_FROM_ABI explicit constexpr single(element_type val) noexcept
         : value(val) {}
@@ -420,10 +414,10 @@ struct single<pair<T, A>> {
     }
 };
 
-template <simd_element T, simd_abi A>
-explicit single(pair<T, A>) -> single<pair<T, A>>;
-template <simd_element T, simd_abi A>
-explicit single(basic_simd<T, A>) -> single<basic_simd<T, A>>;
+template <floating_point E, simd_abi A>
+explicit single(pair<E, A>) -> single<pair<E, A>>;
+template <floating_point E, simd_abi A>
+explicit single(basic_simd<E, A>) -> single<basic_simd<E, A>>;
 
 template <pair_type T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
@@ -445,7 +439,7 @@ struct element_type_if<T> {
     using type = typename T::element_type;
 };
 
-template <simd_element E, simd_abi A>
+template <floating_point E, simd_abi A>
 struct fast<basic_simd<E, A>> {
     using element_type = basic_simd<E, A>;
     basic_simd<E, A> value;

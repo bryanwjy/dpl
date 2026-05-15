@@ -5,7 +5,6 @@
 
 #include "dpl/core/concepts/common_abi_with.h"
 #include "dpl/core/concepts/common_size_with.h"
-#include "dpl/core/concepts/simd_element.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/fwd.h"
@@ -43,7 +42,7 @@ concept common_bits_with =
 
 DPL_EXPORT template <typename A, typename B>
 concept common_bits_simd_with = common_class_with<A, B> &&
-    common_bits_with<simd_element_type_t<A>, simd_element_type_t<B>>;
+    common_bits_with<simd_lane_type_t<A>, simd_lane_type_t<B>>;
 
 } // namespace datapar
 

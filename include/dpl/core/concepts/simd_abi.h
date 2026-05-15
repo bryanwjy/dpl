@@ -4,6 +4,7 @@
 #include "dpl/config.h"
 
 #if !DPL_MODULES
+#  include "dpl/std/concepts/integral.h"
 #  include "dpl/std/concepts/semiregular.h"
 #  include "dpl/std/type_traits/is_empty.h"
 #endif
@@ -12,33 +13,32 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 DPL_EXPORT template <typename T>
 inline constexpr bool enable_simd_abi = false;
-DPL_EXPORT inline constexpr size_t scalable_size = -1zu;
 
 namespace internal {
 template <template <typename> typename>
 struct unary_template;
-template <auto>
-struct constant_value;
-} // namespace internal
-
-DPL_EXPORT template <typename T>
+template <typename T>
 concept simd_abi =
     enable_simd_abi<T> && is_empty_v<T> && semiregular<T> && requires {
-        typename internal::constant_value<T{}>;
+        typename integral_constant<T, T{}>;
         typename internal::unary_template<T::template native_type>;
         typename internal::unary_template<T::template native_mask>;
     };
+} // namespace internal
 
 DPL_EXPORT template <typename T>
-concept fixed_width_abi = simd_abi<T> && requires {
-    typename internal::constant_value<T::size>;
-    typename internal::constant_value<T::alignment>;
-} && (T::size != scalable_size);
+concept fixed_width_abi = internal::simd_abi<T> &&
+    requires { typename integral_constant<size_t, T::size>; };
 
 DPL_EXPORT template <typename T>
 concept scalable_abi =
-    !fixed_width_abi<T> && simd_abi<T> && (T::size == scalable_size) &&
-    requires { typename internal::constant_value<T::max_size>; };
+    internal::simd_abi<T> && !fixed_width_abi<T> && requires {
+        // Checking everything seems to be quite expensive
+        { T::template size<char>() } -> unsigned_integral;
+    };
+
+DPL_EXPORT template <typename T>
+concept simd_abi = fixed_width_abi<T> || scalable_abi<T>;
 
 namespace internal {
 template <simd_abi A>

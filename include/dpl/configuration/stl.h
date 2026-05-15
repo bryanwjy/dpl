@@ -2,9 +2,24 @@
 
 #pragma once
 
-#include "dpl/configuration/glibcxx.h"  // IWYU pragma: keep
 #include "dpl/configuration/standard.h" // IWYU pragma: keep
 #include "dpl/preprocessor/concatenation.h"
+
+#ifndef DPL_DISABLE_HOST_STL_SUPPORT
+#  define DPL_DISABLE_HOST_STL_SUPPORT 0
+#endif
+
+#if DPL_DISABLE_HOST_STL_SUPPORT
+#  if __has_include(<bits/c++config>) // libstdc++
+#    include <bits/c++config>         // IWYU pragma: keep
+// BREAK
+#    include "dpl/configuration/glibcxx.h" // IWYU pragma: keep
+#  elif __has_include(<__config>)          // libc++
+#    include <__config>
+#  elif __has_include(<yvals.h>) // MSVC STL
+#    include <yvals.h>
+#  endif
+#endif
 
 /**
  * Standard library macros

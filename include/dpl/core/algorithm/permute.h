@@ -9,6 +9,7 @@
 #  include "dpl/core/basic/to_basic_type.h"
 #  include "dpl/core/concepts/simd_class.h"
 #  include "dpl/core/concepts/simd_equivalence.h"
+#  include "dpl/core/concepts/simd_traits.h"
 #  include "dpl/core/type_traits/iota_sequence.h"
 #  include "dpl/std/utility/sequence.h"
 #endif
@@ -48,7 +49,7 @@ struct broadcast_lanei_t;
 
 struct permute_t {
 private:
-    template <basic_simd_class T, common_size_with<simd_element_type_t<T>> E,
+    template <basic_simd_class T, common_size_with<simd_lane_type_t<T>> E,
         same_as<typename T::abi_type> A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr T DPL_VECTORCALL
@@ -111,7 +112,7 @@ private:
     template <basic_simd_class T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr T DPL_VECTORCALL fallback(T arg, size_t idx) noexcept {
-        return dx::broadcast<simd_element_type_t<T>>(arg[idx]);
+        return dx::broadcast<simd_lane_type_t<T>>(arg[idx]);
     }
 
 public:
@@ -170,12 +171,12 @@ public:
     template <fixed_width_simd T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T arg) noexcept {
-        static_assert((sizeof...(Is) <= element_count<T>) &&
-            (... && (Is < element_count<T>)));
+        static_assert((sizeof...(Is) <= simd_abi_traits<T>::size) &&
+            (... && (Is < simd_abi_traits<T>::size)));
         if constexpr (same_as<index_sequence<Is...>,
                           make_index_sequence<sizeof...(Is)>>) {
             return arg;
-        } else if constexpr (sizeof...(Is) < element_count<T>) {
+        } else if constexpr (sizeof...(Is) < simd_abi_traits<T>::size) {
             return []<size_t... Js>(T arg, index_sequence<Js...>) {
                 return permutei_t<Is..., (sizeof...(Is) + Js)...>::operator()(
                     arg);
@@ -213,7 +214,7 @@ public:
     template <fixed_width_simd T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T arg) noexcept {
-        static_assert(I < element_count<T>);
+        static_assert(I < simd_abi_traits<T>::size);
         if constexpr (unqualified_broadcast_lanei<I, T>) {
             if constexpr (basic_simd_class<T>) {
                 if consteval {

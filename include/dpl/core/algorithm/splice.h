@@ -9,7 +9,6 @@
 #  include "dpl/core/basic/reinterpret.h"
 #  include "dpl/core/concepts/common_order_with.h"
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/concepts/simd_element.h"
 #  include "dpl/core/concepts/simd_equivalence.h"
 #  include "dpl/core/operations/bitwise.h"
 #  include "dpl/core/operations/operation_base.h"
@@ -39,7 +38,7 @@ concept unqualified_splicei =
 
 struct splice_t {
 private:
-    template <simd_element EM, simd_element EL, simd_element ER, simd_abi A>
+    template <typename EM, typename EL, typename ER, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(basic_simd_mask<EM, A> mask,
         basic_simd<EL, A> lhs, basic_simd<ER, A> rhs) noexcept {
@@ -49,11 +48,11 @@ private:
         return dx::slide_left(dx::shift_right(lhs, high), rhs, high + low);
     }
 
-    template <auto V, simd_element EL, simd_element ER, simd_abi A>
+    template <auto V, typename EL, typename ER, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL
         fallbacki(basic_simd<EL, A> lhs, basic_simd<ER, A> rhs) noexcept {
-        constexpr immediate_mask<element_count<EL, A>, V> inmask{};
+        constexpr immediate_mask<simd_abi_traits<EL, A>::size, V> inmask{};
         constexpr auto low = dx::countr_zero(inmask);
         constexpr auto high = dx::countr_zero(inmask);
         return dx::slide_left(
@@ -61,7 +60,7 @@ private:
     }
 
 public:
-    template <simd_type L, compatible_mask_with<L> M, selectable_with<L, M> R>
+    template <simd_type L, simd_mask_type M, selectable_with<L, M> R>
     requires same_abi_simd_as<L, R> && fixed_width_abi<common_abi_t<L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, L lhs, R rhs) noexcept {
@@ -86,7 +85,7 @@ public:
         }
     }
 
-    template <simd_type L, compatible_mask_with<L> M, selectable_with<L, M> R>
+    template <simd_type L, simd_mask_type M, selectable_with<L, M> R>
     requires (!same_abi_simd_as<L, R> || scalable_abi<common_abi_t<L, R>>) &&
         (unqualified_splice<M, L, R> ||
             unqualified_splice<M, basic_type_t<L>, basic_type_t<R>>)
@@ -149,7 +148,7 @@ template <integral auto V>
 struct splicei_t<V> : binary_operation_base<splicei_t<V>> {
 private:
     template <typename T>
-    using mask_type DPL_NODEBUG = immediate_mask<element_count<T>, V>;
+    using mask_type DPL_NODEBUG = immediate_mask<simd_abi_traits<T>::size, V>;
 
 public:
     template <simd_type L, simd_type R>
