@@ -60,7 +60,7 @@ This introduces an important requirement:
 
 Without this guarantee:
 - mixed-ABI expressions could silently downgrade capacity
-- later stages (`promote_abi`, `target_abi`, `concat`) would need to repair invalid or undersized ABI choices
+- later stages of the concatenation would need to repair invalid or undersized ABI choices
 - concat target selection would become ambiguous or require repeated correction passes
 
 Therefore, `common_abi` a new invariant must be introduced.
@@ -76,7 +76,7 @@ This ensures:
 
 Since scalable ABIs have no compile-time width, if any input ABI is scalable, or the result ABI is scalable, this invariant is relaxed.
 
-Formally, the invariant is given by the constraint:
+Formally, the invariant is given by the following constraint:
 
 ```c++
 (scalable_abi<common_abi_t<Ts...>> || ... || scalable_abi<Ts>) || common_abi_t<Ts...>::size >= max(Ts::size...)
@@ -93,21 +93,19 @@ promote_abi<ymm> → zmm
 
 In the context of the concat pipeline, `promote_abi` provides the structural expansion path when operands must be packed into a wider register. It answers the question: *given the unified input ABI, what is the next wider ABI?*
 
-### Stage 3 — Target ABI Selection (`target_abi`)
+### Stage 3 — Target ABI Selection
 
-`target_abi` is an exposition-only metafunction used internally by the CPO. Given the set of operand ABIs, it computes the ABI that should hold the concatenated result. The existence of `target_abi` is a constraint of invoking the `concat` CPO.
+For target selection, an exposition-only metafunction, `concat-target-abi`, used internally by the CPO. Given the set of operand ABIs, it computes the ABI that should hold the concatenated result. The existence of `concat-target-abi` is a constraint of invoking the `concat` CPO. Its role is purely to route the call to the correct backend implementation. The selection is required to be deterministic and stable across translation units (TU).
 
-`target_abi` is not a concrete type exposed to users. Its role is purely to route the call to the correct backend implementation. The selection is required to be deterministic and stable across translation units.
-
-`target_abi<Ts...>` is an **exact-width ABI selection mechanism** derived through iterative promotion as follows:
+`concat-target-abi<Ts...>` is derived through iterative promotion as follows:
 
 1. `common_abi` is applied to unify operand ABIs.
 2. `promote_abi` is applied to widen toward a candidate target.
-3. Compare the total lane width of all operands and the lane width of `promote_abi_t`
+3. Compare the total lane width of all operands and the lane width of `promote_abi`
    a. If the values are equal:
-      - return the result of `promote_abi_t`
+      - return the result of `promote_abi`
 
-   b. If the lane width of `promote_abi_t` exceeds the total operand lane width:
+   b. If the lane width of `promote_abi` exceeds the total operand lane width:
       - error (no valid result exists)
 
    c. Otherwise:
@@ -116,13 +114,19 @@ In the context of the concat pipeline, `promote_abi` provides the structural exp
 
 ### Stage 4 — Backend Dispatch (ADL)
 
-Once the target ABI is resolved, the CPO invokes:
+Once the target ABI is resolved, the CPO invokes either:
 
 ```c++
-concat(target_abi<Ts...>{}, args...)
+concat<common_abi_t<Ts...>>(concat_target_abi<Ts...>{}, args...)
 ```
 
-via ADL. This follows the standard DPL backend dispatch pattern: passing the ABI tag as the leading argument ensures lookup resolves into the namespace associated with the target ABI. Similarly with other opeartions, precedence is given to overloads involving custom simd-types. If no such overloads exist, all types are converted to `basic_simd` specializations and that overload is invoked.
+or
+
+```c++
+concat<concat_target_abi<Ts...>>(common_abi_t<Ts...>{}, args...)
+```
+
+via ADL, with the latter taking precedence (see [docs](../include/dpl/core/operations/concat.h)).
 
 The backend implementation is then responsible for the actual register packing, lane layout, and any architecture-specific instruction selection. As with most fixed_width operations, a fallback is provided. However, unlike other operations, `concat`'s fallback is `consteval`, which means the fallback is only used if the a runtime concatenation is defined.
 
@@ -141,36 +145,169 @@ The backend implementation is then responsible for the actual register packing, 
 
 ### Fixed-Width Only
 
-`concat` is restricted to fixed-width ABIs for two reasons. First, the capacity constraint is verified statically, and the entire resolution pipeline depends on ABI widths being known at compile time. Second, scalable ABIs have only a single runtime-determined size — there is no wider scalable register to target, so the operation is not meaningful for them regardless of compile-time knowability.
+`concat` is restricted to fixed-width ABIs for two reasons. First, the capacity constraint is verified statically, and the entire resolution pipeline depends on ABI widths being known at compile time. Second, scalable ABIs have only a single runtime-determined size, there is no wider scalable register to target, so the operation is not meaningful for them regardless of compile-time knowledge.
 
 ### ABI Promotion Design
 
 Two approaches to `promote_abi` were evaluated. The chosen design is described first.
 
-#### Chosen: Exclusive Promotion
+#### Exclusive Promotion (Chosen)
 
-Promotion is defined by the **destination** ABI library, not the source. Each ABI that can receive concatenated values defines which smaller ABIs map into it — promotion is an incoming-edge relationship:
+In this approach, each `promote_abi` has exactly one answer within a given ABI family. 
+
+Promotion can be defined by the destination or the source ABI library. In practice, it is usually the destination library since Instruction Set Architecture (ISA) with larger registers are typically extensions of ISAs with smaller register. This is so that modularity and extensibility of ABI libraries is maintained, where extensions can define the promotion without modifying the extended library.
+
+A simple example are a set of modular libraries the implement the backend for Intel's x86 SIMD intrinsics:
 
 ```
+xmm
 xmm → ymm   (defined by the ymm library)
 ymm → zmm   (defined by the zmm library)
 ```
 
-There is no global promotion chain owned by a single authority. The source ABI has no say in what it promotes to; the target ABI declares what it accepts. Multiple targets may independently define valid promotions from the same source without conflict, because each specializes `promote_abi` for its own incoming edges.
+Starting with a standalone `xmm` ABI, a separate `ymm` library is defined and a promotion path is defined from `xmm` to `ymm` in the `ymm` library. The same can be done for the `zmm` library.
 
-This means `promote_abi<xmm>` has exactly one answer within a given ABI family — whichever target has declared that incoming edge. A third-party ABI that wants a different widening path from `xmm` cannot re-specialize `promote_abi<xmm>` without causing a conflict. The escape hatch in that case is the wrapper ABI pattern (see [Extension](#extension)).
+However, a single ABI identity cannot simultaneously participate in two different promotion graphs. A third-party backend that needs a structurally different widening path from a canonical ABI (e.g. `xmm → vendor256` instead of `xmm → ymm`) must introduce a distinct ABI identity via wrapping or a fully custom type (see [Extension](#extension)), rather than reusing the canonical one.
 
-**Properties:**
-- No promotion policy axis; no `ABI × context` space.
-- Deterministic: for a given set of input ABIs, `target_abi` always resolves to the same result.
-- Clean ownership: each ABI library owns how it accepts smaller ABIs; no library modifies another's definitions.
-- Natural extensibility: new ABI families declare their own incoming edges without touching existing libraries.
+##### Implementation: Stateful Friend Injection
 
-**Accepted tradeoff:** A single ABI identity cannot simultaneously participate in two different promotion graphs. A third-party backend that needs a structurally different widening path from a canonical ABI (e.g. `xmm → vendor256` instead of `xmm → ymm`) must introduce a distinct ABI identity via wrapping or a fully custom type, rather than reusing the canonical one with a different policy.
+With the exclusive promotion model chosen, the remaining question is how `promote_abi` (and its inverse) is implemented. Two mechanisms are available: conventional template specialization and stateful friend function injection. The latter is chosen.
+
+ABI promotion edges are registered by instantiating `define_promotion<Src, Target>()`:
+
+```c++
+namespace internal {
+
+template <typename To, typename From> // Exposition only
+concept valid_promotion_from = fixed_width_abi<To> && fixed_width_abi<From> &&
+    requires { requires To::size > From::size; } && common_abi_with<To, From>;
+
+template<typename T>
+struct promotion {
+    friend consteval auto promote(promotion<T>) noexcept;
+};
+
+template<typename T>
+struct demotion {
+    friend consteval auto demote(demotion<T>) noexcept;
+};
+
+template<fixed_width_abi T, valid_promotion_from<T> U>
+struct define_promotion_t {
+    friend consteval auto promote(promotion<T>) noexcept {
+        return std::type_identity<U>{};
+    }
+    friend consteval auto demote(demotion<U>) noexcept{
+        return std::type_identity<T>{};
+    }
+};
+
+} // namespace internal
+
+template<fixed_width_abi T, valid_promotion_from<T> U>
+consteval auto define_promotion() noexcept {
+    return sizeof(internal::define_promotion_t<T, U>) > 0;
+}
+
+template<typename T>
+using promote_abi_t = typename decltype(promote(internal::promotion<T>{}))::type;
+
+template<typename T>
+using demote_abi_t  = typename decltype(demote(internal::demotion<T>{}))::type;
+```
+
+> [!NOTE]
+> The above is just an example implementation, DPL's actual implementation may differ slightly
+
+ABI libraries register edges at namespace scope:
+
+```c++
+// In the ymm library header:
+static_assert(define_promotion<xmm, ymm>());
+
+// In the zmm library header:
+static_assert(define_promotion<ymm, zmm>());
+```
+
+Each `define_promotion<Src, Target>()` instantiation injects two friend functions into the `internal` namespace: `promote(promotion<Src>)` returning `Target`, and `demote(demotion<Target>)` returning `Src`. Both become discoverable via ADL from that point forward in the Translation Unit (TU). For C++23 (minimum requirement of DPL), the `static_assert` can be hidden behind a macro, e.g. `DPL_DEFINE_ABI_PROMOTION` for brevity, but in C++26 `consteval` block can be used instead:
+
+```c++
+consteval {
+   define_promotion<myabi<128>, myabi<256>>();
+}
+```
+
+##### Why not template specialization?
+
+Template specialization is the more familiar mechanism:
+
+```c++
+template<> struct promote_abi<xmm> { using type = ymm; };
+template<> struct promote_abi<ymm> { using type = zmm; };
+```
+
+It works correctly for simple cases, but it has a structural limitation: it is unidirectional. Defining a promotion from `xmm` to `ymm` does not automatically imply a demotion from `ymm` to `xmm`. A `split` API (the inverse of `concat`) needs `demote_abi_t`, which would require ABI library authors to maintain both `promote_abi` and `demote_abi` specializations independently, with no enforcement that they remain consistent. The alternative with be inroducing an conceptually asymetric API for `split` and `concat`, whereby `split<ABI>` the destrination ABI needs to be specified through the `split` function as opposed to a simpler mechanism like `split<N>`, where `N` is the number of results to split into.
+
+The friend injection mechanism eliminates this entirely. A single `define_promotion<xmm, ymm>()` call populates both directions atomically; the promotion and demotion graphs are always in sync by construction.
+
+##### Uniqueness constraint
+
+Because `define_promotion<Src, Target>()` injects `promote(promotion<Src>)` as a friend function, instantiating it for the same `Src` with two different targets produces a duplicate function definition — a hard compile error in any TU that includes both registrations. This enforces at the language level that each source ABI has at most one promotion target within a given TU, which is the uniqueness property the exclusive promotion model requires. 
+
+A third-party ABI that wants a different widening path from a canonical source (e.g. `xmm → vendor256` instead of `xmm → ymm`) therefore cannot call `define_promotion<xmm, vendor256>()` without conflicting with the canonical registration. The escape hatch is the wrapper ABI pattern (see [Extension](#extension)), which introduces a new source identity rather than competing over an existing one.
+
+##### Pattern matching for parametric ABI families
+
+Template specialization allows natural pattern matching over parametric ABI families:
+
+```c++
+template<size_t N>
+struct promote_abi<myabi<N>> { using type = myabi<(N << 1)>; };
+```
+
+Friend injection requires explicit enumeration instead, since partial specialization of a class template is not involved:
+
+```c++
+// Option 1: hardcode the known sizes (preferred for small graphs)
+static_assert(define_promotion<myabi<128>, myabi<256>>());
+static_assert(define_promotion<myabi<256>, myabi<512>>());
+
+// Option 2: generate via index_sequence for numerical patterns
+static_assert([]<size_t... Is>(std::index_sequence<Is...>) {
+    return (define_promotion<myabi<(128 << Is)>, myabi<(128 << Is + 1)>>() && ...);
+}(std::make_index_sequence<2>{}));
+
+// C++26 using dpl::index_sequence
+consteval {
+template for (auto idx : dpl::make_index_sequence<2>{}) {
+    define_promotion<myabi<(128 << idx)>, myabi<(128 << idx + 1)>>();
+}
+}
+```
+
+This is a real ergonomic regression for parametric families, but it is not a practical concern for SIMD ABI graphs. The x86 family has accumulated three register sizes over twenty years. Explicit enumeration is not only tractable — it is arguably more readable than a template pattern that requires readers to mentally evaluate the size expression.
+
+For non-numerical parametric patterns, the enumeration approach still applies, though the `static_assert` method must be used where needed to force instantiation without a clean numerical sequence.
+
+##### On the well-formedness of stateful TMP
+
+Stateful metaprogramming via injected friend functions is a gray-area in terms of whether it is classified as undefined behaviour. The main concern is whether or not this would introduce ODR violations. In the context of this design, that concern does not apply beyond what already exists for template specialization.
+
+Consider the two failure modes, which are symmetric across both mechanisms:
+
+| Scenario | Template specialization | Friend injection |
+|---|---|---|
+| TUs include disjoint promotion headers/modules | Silent ODR violation — `promote_abi_t<T>` differs per TU | Same — ADL resolves differently per TU |
+| TUs include conflicting promotion headers/modules | Hard error — duplicate specialization | Hard error — duplicate friend definition |
+| TUs include consistent promotion headers/modules | Well-defined | Well-defined |
+
+The risk profile is identical. Both mechanisms rely on the same discipline: the promotion graph must be consistently defined across all translation units. Neither provides stronger guarantees than the other in the face of misuse.
+
+It is also worth noting that stateful metaprogramming is no longer an exotic technique. C++26 formalizes the concept via the reflection API (`std::meta::define_class`) and `consteval` blocks, which provides first-class mechanisms for mutating compile-time state. The friend injection pattern is a pre-C++26 approximation of the same idea, though very much less powerful.
 
 ---
 
-#### Rejected: Promotion Policy
+#### Rejected: Multi-Promotion via Policy
 
 The alternative parameterized promotion by an explicit policy type:
 
@@ -186,30 +323,58 @@ A default DPL policy would encode canonical promotions; third parties would defi
 
 **Why it was rejected:**
 
-The policy approach introduces a new concept solely to make promotion work within concat. It adds noticeable complexity for very little practical benefit. The expected number of third-party ABI extensions is small, and adding thrid-party ABI extensions is not the intended or recommended extension path for the system (see [Custom SIMD Types](#custom-simd-types-preferred-extension-model)).
+The policy approach introduces a new concept solely to make promotion work. It adds noticeable complexity for very little practical benefit. The expected number of third-party ABI extensions is small, and adding thrid-party ABI extensions is not the intended or recommended extension path for the system (see [Custom SIMD Types](#custom-simd-types-preferred-extension-model)). In addition, even more complexity must be added to produce a bidirectional promotion graph.
 
 ---
 
 ## Extension
 
-### ABI Extension
+### ABI Extension (Advanced / Low-Level)
 
-The number of ABI families DPL needs to reason about is expected to be small, so no ABI policy or context dispatch layer is introduced. Third parties extending the ABI graph should provide appropriate specializations of `common_abi` and `promote_abi` for their types. The wrapper ABI pattern is one supported mechanism:
+DPL assumes that ABI promotion forms a deterministic directed graph, where each source ABI has a unique promotion path toward a given target ABI resolution. In other words, for a given ABI identity, the promotion behavior is not intended to be ambiguous or context-dependent.
+
+Because of this constraint, changing the result of ABI promotion (for example, redirecting a set of SIMD values from one target ABI to another) requires introducing a new source ABI identity, rather than modifying existing promotion rules.
+
+A supported mechanism for this is the wrapper ABI pattern:
 
 ```c++
 // Wrapper ABI: introduces a distinct ABI identity
 struct myxmm : xmm {};
 ```
 
-A wrapper ABI is treated as a separate ABI family and does not modify the canonical promotion behavior of the base ABI. This pattern requires that the base ABI type is not marked `final`; a `final` base class cannot be derived from, so the wrapper trick is unavailable in that case.
+A wrapper ABI creates a new ABI identity while preserving compatibility with the base ABI. It becomes a distinct node in the ABI promotion graph, allowing it to define an independent promotion path without modifying canonical ABI behavior.
 
-Because ADL includes the namespaces of all direct and indirect base classes of an argument type, operations defined for the base ABI remain reachable through the wrapper. A call such as `add(myxmm{}, a, b)` will find `add(xmm, ...)` overloads via ADL if no `myxmm`-specific overload exists, and `myxmm` converts implicitly to `xmm` via derived-to-base. The wrapper therefore inherits the full operation set of the base ABI without any additional definitions, while still introducing an independent promotion identity.
+Because the wrapper inherits from the base ABI, it also preserves ADL-based dispatch. Using the example above, operations defined for `xmm` remain usable for `myxmm` without reimplementation, unless explicitly overridden.
+
+However, this pattern is **not recommended for general use**.
+
+While it provides a mechanism for redirecting promotion behavior, it introduces several potential issues:
+
+* **User confusion:** most users do not directly interact with ABI types, making wrapper ABIs unintuitive at the usage level.
+* **Competing backend identity:** wrapper ABIs effectively introduce a parallel ABI hierarchy. In the best case, this remains invisible to ADL dispatch; however, in more complex cases it can increase the difficulty of reasoning about which promotion and dispatch paths are actually being taken, making ABI resolution behavior harder to trace and debug.
+* **Error complexity:** ABI resolution failures may surface as confusing compile-time errors across the library.
+* **Graph contamination risk:** users may accidentally mix wrapper and canonical ABIs, leading to inconsistent or incompatible ABI graph states.
+
+For these reasons, wrapper ABIs are considered an advanced escape hatch rather than a primary extension strategy.
 
 ### Custom SIMD Types (Preferred Extension Model)
 
-Third-party systems are encouraged to define custom SIMD types rather than extending the ABI graph directly. Custom types integrate via ADL-based dispatch, do not require modification of the `common_abi`/`promote_abi` graph, and do not compete with canonical promotion rules.
+Custom SIMD types are the preferred extension mechanism in DPL.
 
-DPL treats non-primary SIMD types (i.e. types that are not specializations of `basic_simd`) as first-class extension points. See the [extensibility documentation](./extensibility.md) for the full dispatch and fallback model.
+Library consumers are expected to use a single coherent ABI implementation set per backend family within a codebase. This does not mean restricting usage to a single ABI width (e.g. Intel 128-bit, 256-bit, 512-bit). Multiple ABI modules that belong to the same designed family and are intended to interoperate may be used together.
+
+However, introducing multiple competing ABI implementations for the same backend concept (e.g. two independent Intel 128-bit ABI implementations that either do not share a common promotion model or have a forced promotion model) is discouraged. Mixing such implementations can lead to ambiguity in promotion and resolution rules and makes ABI behavior harder to reason about.
+
+In practice, most user-facing code should not need to interact with ABI selection directly. Instead, behavior is expressed through custom SIMD types and CPOs, while ABI selection and promotion are handled internally by the chosen library implementation (including rules such as `common_abi` and `promote_abi`).
+
+Custom SIMD types therefore provide the primary extension path:
+
+* they integrate via ADL-based customization point objects (CPOs)
+* they do not participate in ABI transformations, e.g. `common_abi` and `promote_abi`
+* they avoid interaction with ABI-level resolution rules
+* they keep extension localized to user-defined types rather than global ABI structure
+
+This design keeps ABI-level complexity internal to the library, while allowing users to extend functionality through types that participate naturally in existing DPL operations.
 
 ---
 
@@ -222,13 +387,10 @@ concat(x0, x1, ...)
 common_abi          ← unify operand ABI domains
     │
     ▼
-promote_abi         ← find widening path (optional, may repeat)
+concat-target-abi          ← select destination ABI
     │
     ▼
-target_abi          ← select destination ABI
-    │
-    ▼
-concat(target_abi<Ts...>{}, x0, x1, ...)   ← ADL backend dispatch
+concat(concat-target-abi<Ts...>{}, x0, x1, ...)   ← ADL backend dispatch
     │
     ▼
 SIMD construction   ← architecture-specific lane packing

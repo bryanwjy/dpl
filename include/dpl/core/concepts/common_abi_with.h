@@ -149,11 +149,18 @@ struct common_abi<T, U, Ts...> : common_abi<common_abi_t<T, U>, Ts...> {};
 
 namespace atom {
 template <typename A, typename B>
-concept common_abi_with = same_as<A, B> || requires {
+concept monotonic_common_abi =
+    (scalable_abi<common_abi_t<A, B>> || scalable_abi<A> || scalable_abi<B>) ||
+    (common_abi_t<A, B>::size >= A::size &&
+        common_abi_t<A, B>::size >= B::size);
+
+template <typename A, typename B>
+concept common_abi_with = requires {
     typename common_abi_t<A, B>;
     typename common_abi_t<B, A>;
-    requires simd_abi<common_abi_t<A, B>> && simd_abi<common_abi_t<B, A>>;
-    requires same_as<common_abi_t<A, B>, common_abi_t<B, A>>;
+    requires same_as<common_abi_t<A, B>, common_abi_t<B, A>> &&
+        simd_abi<common_abi_t<A, B>> && simd_abi<common_abi_t<B, A>>;
+    requires monotonic_common_abi<A, B> && monotonic_common_abi<B, A>;
 };
 } // namespace atom
 

@@ -15,158 +15,49 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 
-void concat(...) noexcept = delete;
-
-template <typename A, typename T, typename... Ts>
-concept unqualified_concat = requires(T arg, Ts... args) {
-    {
-        concat(internal::abi<A>, arg, args...)
-    } -> simd_with<simd_lane_type_t<T>, A>;
-};
-
-struct concat_t {
-private:
-    template <size_t N, typename C>
-    struct promote {};
-
-    template <size_t N, typename C>
-    requires (N == C::size)
-    struct promote<N, C> {
-        using type DPL_NODEBUG = C;
-    };
-
-    template <size_t N, typename C>
-    requires (N > C::size) && requires { typename promote_abi_t<C>; }
-    struct promote<N, C> : promote<N, promote_abi_t<C>> {};
-
-    template <typename... Ts>
-    using target DPL_NODEBUG =
-        typename promote<(0zu + ... + Ts::abi_type::size),
-            promote_abi_t<common_abi_t<typename Ts::abi_type...>>>::type;
-
-    template <typename AT, typename E, typename... As>
-    static consteval auto fallback(basic_simd<E, As>... args) noexcept {
-        array_for<E, AT> buffer{};
-        auto* ptr = buffer.data;
-        (..., [&ptr]<typename A>(basic_simd<E, A> arg) {
-            dx::store(arg, ptr);
-            ptr += arg.size();
-        }(args));
-        return dx::load<AT>(buffer.data);
-    }
-
-    template <typename AT, typename E, typename... As>
-    static consteval auto fallback(basic_simd_mask<E, As>... args) noexcept {
-        array_for<bool, AT> buffer{};
-        auto* ptr = buffer.data;
-        (..., [&ptr]<typename A>(basic_simd_mask<E, A> arg) {
-            [&]<size_t I = 0>(this auto self, immediate<I> idx = {}) {
-                if constexpr (I < simd_abi_traits<E, A>::size) {
-                    ptr[idx] = arg[idx];
-                    self(imm<I + 1>);
-                }
-            }();
-            ptr += arg.size();
-        }(args));
-        return [&]<size_t... Is>(index_sequence<Is...>) {
-            return dx::initialize<AT>(buffer.data[Is]...);
-        }(iota_sequence<E, AT>);
-    }
-
-public:
-    template <fixed_width_simd T, fixed_width_simd... Ts>
-    requires (... &&
-                 same_as<typename T::value_type, typename Ts::value_type>) &&
-        requires {
-            typename common_abi_t<T, Ts...>;
-            typename promote_abi_t<common_abi_t<T, Ts...>>;
-            typename target<T, Ts...>;
-            requires (target<T, Ts...>::size ==
-                (T::abi_type::size + ... + Ts::abi_type::size));
-        } &&
-        (unqualified_concat<target<T, Ts...>, T, Ts...> ||
-            unqualified_concat<target<T, Ts...>, basic_type_t<T>,
-                basic_type_t<Ts>...>)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(
-        T arg, Ts... args) noexcept {
-        if constexpr (unqualified_concat<target<T, Ts...>, T, Ts...>) {
-            if constexpr ((basic_simd_type<T> && ... && basic_simd_type<Ts>)) {
-                if consteval {
-                    return fallback(arg, args...);
-                } else {
-                    return concat(
-                        internal::abi<target<T, Ts...>>, arg, args...);
-                }
-            }
-
-            return concat(internal::abi<target<T, Ts...>>, arg, args...);
-        } else {
-            return operator()(internal::abi<target<T, Ts...>>,
-                dx::to_basic_type(arg), dx::to_basic_type(args)...);
-        }
-    }
-
-    template <fixed_width_mask T, fixed_width_mask... Ts>
-    requires (... && common_size_simd_with<T, Ts>) &&
-        requires {
-            typename common_abi_t<T, Ts...>;
-            typename promote_abi_t<common_abi_t<T, Ts...>>;
-            typename target<T, Ts...>;
-            requires (target<T, Ts...>::size ==
-                (T::abi_type::size + ... + Ts::abi_type::size));
-        } &&
-        (unqualified_concat<target<T, Ts...>, T, Ts...> ||
-            unqualified_concat<target<T, Ts...>, basic_type_t<T>,
-                basic_type_t<Ts>...>)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(
-        T arg, Ts... args) noexcept {
-        using E = common_size_type_t<T, Ts...>;
-        if constexpr ((same_as<E, simd_lane_type_t<T>> && ... &&
-                          same_as<E, simd_lane_type_t<Ts>>)) {
-            if constexpr (unqualified_concat<target<T, Ts...>, T, Ts...>) {
-                if constexpr ((basic_simd_mask_type<T> && ... &&
-                                  basic_simd_mask_type<Ts>)) {
-                    if consteval {
-                        using result = simd_lane_type_t<decltype(concat(
-                            internal::abi<target<T, Ts...>>, arg, args...))>;
-                        return dx::reinterpret<result>(fallback(arg, args...));
-                    } else {
-                        return concat(
-                            internal::abi<target<T, Ts...>>, arg, args...);
-                    }
-                } else {
-                    return concat(
-                        internal::abi<target<T, Ts...>>, arg, args...);
-                }
-            } else {
-                return operator()(
-                    internal::abi<target<T, Ts...>>, arg, args...);
-            }
-        } else {
-            return operator()(internal::abi<target<T, Ts...>>,
-                dx::reinterpret<E>(arg), dx::reinterpret<E>(args)...);
-        }
-    }
-};
-
-} // namespace datapar::internal
-
-namespace datapar {
-inline namespace cpo {
 /**
- * Concatenates one or more SIMD objects into a single SIMD value.
+ * @brief Concatenates two or more SIMD values into a single wider SIMD value.
  *
- * Concatenation is performed by selecting a target ABI whose capacity exactly
- * matches the aggregate lane width of the input operands. Target selection is
- * resolved through ABI compatibility normalization (`common_abi`) followed by
- * iterative widening via `promote_abi`.
+ * Concatenation combines the lane contents of the input operands into a single
+ * SIMD object whose ABI is determined through ABI compatibility normalization
+ * followed by iterative promotion.
  *
- * The operation is only well-formed if a valid target ABI can be resolved and
- * the corresponding ABI library/module is visible at the call site. In
- * particular, any ABI required during target resolution (including intermediate
- * promotion targets) must be available in the current translation unit.
+ * Target resolution proceeds as follows:
+ *
+ * 1. The operand ABIs are normalized using @c common_abi.
+ * 2. The resulting ABI is iteratively widened via @c promote_abi.
+ * 3. Resolution succeeds when the candidate ABI width exactly matches the
+ *    aggregate lane width of all input operands.
+ *
+ * Formally, if @c A is the normalized ABI of the operand pack and @c B is the
+ * resolved target ABI, then @c B is the unique ABI reached through repeated
+ * application of @c promote_abi such that:
+ *
+ * @code
+ * B::size == (... + Ts::size)
+ * @endcode
+ *
+ * If no such ABI exists, the expression is ill-formed.
+ *
+ * Resolution is performed through ADL. Implementations may provide either:
+ *
+ * @code
+ * concat<TargetAbi>(SourceAbi{}, xs...)
+ * @endcode
+ *
+ * or
+ *
+ * @code
+ * concat<SourceAbi>(TargetAbi{}, xs...)
+ * @endcode
+ *
+ * where @c SourceAbi is the normalized operand ABI determined by
+ * @c common_abi.
+ *
+ * When both forms are present, the source-owned overload is preferred.
+ *
+ * The target-owned form exists to support extension scenarios where source and
+ * target ABI libraries are defined independently.
  *
  * There is no implicit truncation, padding, or partial fill.
  *
@@ -175,11 +66,203 @@ inline namespace cpo {
  *
  * @return A SIMD object whose ABI is the resolved concatenation target.
  *
- * @note The public API is ABI-agnostic. Target ABI resolution and backend
- * realization are delegated to ABI libraries through `target_abi` and ADL.
+ * @note This operation is only defined for fixed-width ABI families. Every ABI
+ *       reachable through promotion must be fixed-width.
  *
- * @pre `target_abi<Ts...>` is well-formed and visible.
+ * @note The public API is ABI-agnostic. Target resolution and backend
+ *       realization are delegated to ABI libraries through @c concat_target_t,
+ *       @c promote_abi, and ADL.
+ *
+ * @pre @c concat_target_t<Ts...> is well-formed and all ABI libraries required
+ * for resolution (including intermediate promotion targets) are visible at the
+ *      call site.
+ *
+ * @see common_abi
+ * @see promote_abi
+ * @see split
  */
+struct concat_t;
+template <typename>
+void concat(...) noexcept = delete;
+
+template <size_t N, typename C>
+struct concat_target {};
+
+template <size_t N, typename C>
+requires (N == C::size)
+struct concat_target<N, C> {
+    using type DPL_NODEBUG = C;
+};
+
+template <size_t N, typename C>
+requires (N > C::size) && requires { typename promote_abi_t<C>; }
+struct concat_target<N, C> : concat_target<N, promote_abi_t<C>> {};
+
+template <typename... As>
+using concat_target_t DPL_NODEBUG =
+    typename concat_target<(0zu + ... + As::size),
+        promote_abi_t<common_abi_t<As...>>>::type;
+
+template <typename T, typename... Ts>
+concept concatable = (fixed_width_class<T> && ... && fixed_width_class<Ts>) &&
+    (... && same_as<simd_lane_type_t<T>, simd_lane_type_t<Ts>>) &&
+    requires {
+        typename common_abi_t<typename T::abi_type, typename Ts::abi_type...>;
+        typename promote_abi_t<
+            common_abi_t<typename T::abi_type, typename Ts::abi_type...>>;
+        typename concat_target_t<typename T::abi_type,
+            typename Ts::abi_type...>;
+    } &&
+    concat_target_t<typename T::abi_type>::size ==
+        (T::abi_type::size + ... + Ts::abi_type::size);
+
+template <typename T, typename... Ts>
+concept unqualified_concat_to = requires(T arg, Ts... args) {
+    {
+        concat<concat_target_t<typename T::abi_type, typename Ts::abi_type...>>(
+            internal::abi<
+                common_abi_t<typename T::abi_type, typename Ts::abi_type...>>,
+            arg, args...)
+    } -> equivalent_class_as<rebind_simd_t<T, simd_lane_type_t<T>,
+        concat_target_t<typename T::abi_type, typename Ts::abi_type...>>>;
+};
+
+template <typename T, typename... Ts>
+concept unqualified_concat_from = requires(T arg, Ts... args) {
+    {
+        concat<common_abi_t<typename T::abi_type, typename Ts::abi_type...>>(
+            internal::abi<concat_target_t<typename T::abi_type,
+                typename Ts::abi_type...>>,
+            arg, args...)
+    } -> equivalent_class_as<rebind_simd_t<T, simd_lane_type_t<T>,
+        concat_target_t<typename T::abi_type, typename Ts::abi_type...>>>;
+};
+
+struct concat_t {
+private:
+    template <typename AT, typename E, typename... As>
+    static consteval auto fallback(basic_simd<E, As>... args) noexcept {
+        array_for<E, AT> buffer{};
+        auto* ptr = buffer.data;
+#if __cpp_expansion_statements >= 202506L & \
+    (DPL_CXX26 | DPL_COMPILER_CLANG | DPL_COMPILER_GCC)
+#  if !DPL_CXX26
+        DPL_DISABLE_WARNING_PUSH()
+        DPL_DISABLE_WARNING("-Wc++26-extensions")
+#  endif
+        template for (auto const& arg : {args...}) {
+            dx::store(arg, ptr);
+            ptr += arg.size();
+        }
+#  if !DPL_CXX26
+        DPL_DISABLE_WARNING_POP()
+#  endif
+#else
+        (..., [&ptr]<typename A>(basic_simd<E, A> arg) {
+            dx::store(arg, ptr);
+            ptr += arg.size();
+        }(args));
+#endif
+        return dx::load<AT>(buffer.data);
+    }
+
+    template <typename AT, typename E, typename... As>
+    static consteval auto fallback(basic_simd_mask<E, As>... args) noexcept {
+        bool buffer[AT::size]{};
+#if __cpp_expansion_statements >= 202506L & \
+    (DPL_CXX26 | DPL_COMPILER_CLANG | DPL_COMPILER_GCC)
+#  if !DPL_CXX26
+        DPL_DISABLE_WARNING_PUSH()
+        DPL_DISABLE_WARNING("-Wc++26-extensions")
+#  endif
+        template for (auto* ptr = buffer; auto const& arg : {args...}) {
+            template for (auto const idx : iota_sequence<E, A>) {
+                ptr[idx] = arg[idx];
+            }
+            ptr += arg.size();
+        }
+#  if !DPL_CXX26
+        DPL_DISABLE_WARNING_POP()
+#  endif
+#else
+        (..., [ptr = buffer]<typename A>(basic_simd_mask<E, A> arg) {
+            [&]<size_t I = 0>(this auto self, immediate<I> idx = {}) {
+                if constexpr (I < simd_abi_traits<E, A>::size) {
+                    ptr[idx] = arg[idx];
+                    self(imm<I + 1>);
+                }
+            }();
+            ptr += arg.size();
+        }(args));
+#endif
+
+        return [&]<size_t... Is>(index_sequence<Is...>) {
+            return dx::initialize<AT>(buffer[Is]...);
+        }(iota_sequence<E, AT>);
+    }
+
+public:
+    template <fixed_width_class T, fixed_width_class... Ts>
+    requires concatable<T, Ts...> &&
+        (unqualified_concat_to<T, Ts...> ||
+            unqualified_concat_to<basic_type_t<T>, basic_type_t<Ts>...>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(
+        T arg, Ts... args) noexcept {
+        if constexpr (unqualified_concat_to<T, Ts...>) {
+            using To =
+                concat_target_t<typename T::abi_type, typename Ts::abi_type...>;
+            using From =
+                common_abi_t<typename T::abi_type, typename Ts::abi_type...>;
+            if constexpr ((basic_simd_type<T> && ... && basic_simd_type<Ts>)) {
+                if consteval {
+                    return fallback<To>(arg, args...);
+                } else {
+                    return concat<To>(internal::abi<From>, arg, args...);
+                }
+            } else {
+                return concat<To>(internal::abi<From>, arg, args...);
+            }
+        } else {
+            return operator()(
+                dx::to_basic_type(arg), dx::to_basic_type(args)...);
+        }
+    }
+
+    template <fixed_width_class T, fixed_width_class... Ts>
+    requires concatable<T, Ts...> &&
+        (!unqualified_concat_to<T, Ts...> &&
+            !unqualified_concat_to<basic_type_t<T>, basic_type_t<Ts>...>) &&
+        (unqualified_concat_from<T, Ts...> ||
+            unqualified_concat_from<basic_type_t<T>, basic_type_t<Ts>...>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(
+        T arg, Ts... args) noexcept {
+        if constexpr (unqualified_concat_from<T, Ts...>) {
+            using To =
+                concat_target_t<typename T::abi_type, typename Ts::abi_type...>;
+            using From =
+                common_abi_t<typename T::abi_type, typename Ts::abi_type...>;
+            if constexpr ((... && basic_simd_type<Ts>)) {
+                if consteval {
+                    return fallback<To>(arg, args...);
+                } else {
+                    return concat<From>(internal::abi<To>, arg, args...);
+                }
+            } else {
+                return concat<From>(internal::abi<To>, arg, args...);
+            }
+        } else {
+            return operator()(
+                dx::to_basic_type(arg), dx::to_basic_type(args)...);
+        }
+    }
+};
+
+} // namespace datapar::internal
+
+namespace datapar {
+inline namespace cpo {
 DPL_EXPORT inline constexpr internal::concat_t concat{};
 }
 } // namespace datapar

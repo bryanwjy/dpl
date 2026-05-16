@@ -13,6 +13,7 @@ import :std.concepts;
 #include "dpl/std/utility/as_const.h"
 #include "dpl/std/utility/exchange.h"
 #include "dpl/std/utility/forward.h"
+#include "dpl/std/utility/forward_like.h"
 #include "dpl/std/utility/move.h"
 #include "dpl/std/utility/sequence.h"
 #include "dpl/std/utility/structured_bindings.h"
@@ -20,5 +21,6 @@ import :std.concepts;
 #include "dpl/std/utility/to_signed.h"
 #include "dpl/std/utility/to_underlying.h"
 #include "dpl/std/utility/to_unsigned.h"
+#include "dpl/std/utility/tuple_like.h"
 #include "dpl/std/utility/unreachable.h"
 // IWYU pragma: end_exports
