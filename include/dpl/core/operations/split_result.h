@@ -58,7 +58,7 @@ struct split_result {
     explicit(internal::is_explicit_constructible_from<U, split_result>)
     operator U(this S&& self) noexcept {
         constexpr make_index_sequence<N> seq{};
-        return []<size_t... Is>(index_sequence<Is...>) {
+        return [&]<size_t... Is>(index_sequence<Is...>) {
             if constexpr (is_aggregate_v<U>) {
                 return U{__DPL forward_like<S>(self.data[Is])...};
             } else {
@@ -74,7 +74,7 @@ template <simd_class... Ts>
 requires (... && convertible_to<Ts, common_type_t<Ts...>>)
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr auto make_split_result(Ts&&... data) noexcept {
-    return split_result<common_type_t<Ts...>, sizeof...(N)>{
+    return split_result<common_type_t<Ts...>, sizeof...(Ts)>{
         static_cast<common_type_t<Ts...>>(__DPL forward<Ts>(data))...};
 }
 
@@ -108,12 +108,12 @@ constexpr decltype(auto)
 
 } // namespace datapar
 
-DPL_EXPORT template <size_t N, datapar::simd_class T>
+DPL_EXPORT template <datapar::simd_class T, size_t N>
 struct tuple_size<datapar::split_result<T, N>> :
     integral_constant<size_t, N> {};
 
-DPL_EXPORT template <size_t I, datapar::simd_class T>
-struct tuple_element<datapar::split_result<T, N>> {
+DPL_EXPORT template <size_t I, datapar::simd_class T, size_t N>
+struct tuple_element<I, datapar::split_result<T, N>> {
     using type = T;
 };
 

@@ -106,7 +106,7 @@ inline constexpr details::get_element_t<I> get_element{};
 }
 } // namespace ranges
 
-namespace details {
+namespace details::tuple_like {
 template <typename T>
 struct sequence_for {};
 
@@ -131,10 +131,11 @@ template <typename T, size_t... Is>
 inline constexpr bool is_tuple_like<T, index_sequence<Is...>> =
     (... && regular_invocable<ranges::details::get_element_t<Is>, T>);
 
-} // namespace details
+} // namespace details::tuple_like
 
 DPL_EXPORT template <typename T>
-concept tuple_like = requires { typename details::sequence_for_t<T>; } &&
-    details::is_tuple_like<T>;
+concept tuple_like = requires {
+    typename details::tuple_like::sequence_for_t<T>;
+} && details::tuple_like::is_tuple_like<T>;
 
 DPL_DEFAULT_NAMESPACE_END

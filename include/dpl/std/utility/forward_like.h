@@ -4,12 +4,13 @@
 
 #include "dpl/config.h"
 
+#include "dpl/std/utility/as_const.h"
+#include "dpl/std/utility/move.h"
+
 #if !DPL_MODULES
 #  include "dpl/std/type_traits/is_const.h"
 #  include "dpl/std/type_traits/is_lvalue_reference.h"
 #  include "dpl/std/type_traits/remove_reference.h"
-#  include "dpl/std/utility/as_const.h"
-#  include "dpl/std/utility/move.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN

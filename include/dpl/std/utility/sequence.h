@@ -29,7 +29,7 @@ struct tuple_size<integer_sequence<T, Is...>> : size_constant<sizeof...(Is)> {};
 DPL_EXPORT template <size_t I, typename T, T... Is>
 requires (I < sizeof...(Is))
 struct tuple_element<I, integer_sequence<T, Is...>> {
-#if __cpp_pack_indexing >= 202311L && DPL_HAS_CXX26_EXTENSIONS
+#if (DPL_HAS_CXX26_EXTENSIONS || DPL_CXX26) && __cpp_pack_indexing >= 202311L
     using type = integral_constant<T, Is...[I]>;
 #else
 private:

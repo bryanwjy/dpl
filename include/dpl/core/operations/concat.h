@@ -149,7 +149,8 @@ private:
     static consteval auto fallback(basic_simd<E, As>... args) noexcept {
         array_for<E, AT> buffer{};
         auto* ptr = buffer.data;
-#if __cpp_expansion_statements >= 202506L && DPL_HAS_CXX26_EXTENSIONS
+#if (DPL_HAS_CXX26_EXTENSIONS || DPL_CXX26) && \
+    __cpp_expansion_statements >= 202506L
         template for (auto const& arg : {args...}) {
             dx::store(arg, ptr);
             ptr += arg.size();
@@ -166,7 +167,8 @@ private:
     template <typename AT, typename E, typename... As>
     static consteval auto fallback(basic_simd_mask<E, As>... args) noexcept {
         bool buffer[AT::size]{};
-#if __cpp_expansion_statements >= 202506L && DPL_HAS_CXX26_EXTENSIONS
+#if (DPL_HAS_CXX26_EXTENSIONS || DPL_CXX26) && \
+    __cpp_expansion_statements >= 202506L
         template for (auto* ptr = buffer; auto const& arg : {args...}) {
             template for (auto const idx : iota_sequence<E, A>) {
                 ptr[idx] = arg[idx];

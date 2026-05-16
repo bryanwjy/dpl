@@ -37,6 +37,7 @@ export import :std.stddef;
 #include "dpl/std/type_traits/is_destructible.h"
 #include "dpl/std/type_traits/is_empty.h"
 #include "dpl/std/type_traits/is_enum.h"
+#include "dpl/std/type_traits/is_explicitly_constructible.h"
 #include "dpl/std/type_traits/is_final.h"
 #include "dpl/std/type_traits/is_floating_point.h"
 #include "dpl/std/type_traits/is_function.h"

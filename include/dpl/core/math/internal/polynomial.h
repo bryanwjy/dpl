@@ -103,7 +103,7 @@ private:
 
         template <int I>
         static consteval T operator[](immediate<I>) noexcept {
-#if __cpp_pack_indexing >= 202311L && DPL_HAS_CXX26_EXTENSIONS
+#if (DPL_HAS_CXX26_EXTENSIONS || DPL_CXX26) && __cpp_pack_indexing >= 202311L
             static_assert(digits_v<T> <=
                 digits_v<remove_const_t<decltype(Vs...[I - 1])>>);
             return static_cast<T>(Vs...[I - 1]);

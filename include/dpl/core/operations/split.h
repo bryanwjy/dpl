@@ -3,11 +3,12 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/operations/split_result.h"
+
 #if !DPL_MODULES
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_class.h"
 #  include "dpl/core/type_traits/promote_abi.h"
-#  include "dpl/core/utility/split_result.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -68,8 +69,8 @@ namespace datapar::internal {
  * @see split_result
  * @see concat
  */
-template <typename>
-struct split_t {};
+template <size_t N>
+struct split_t;
 
 template <typename>
 void split(...) noexcept = delete;
@@ -79,7 +80,7 @@ template <typename T, typename U>
 inline constexpr bool equivalent_split_result = false;
 
 template <size_t N, fixed_width_class T, fixed_width_class U>
-inline constexpr bool equivalent_split_result<split_result<T, N>, U> =
+inline constexpr bool equivalent_split_result<dx::split_result<T, N>, U> =
     equivalent_class_as<T, U> && (N * T::abi_type::size == U::abi_type::size);
 
 template <typename T, typename U>
@@ -98,31 +99,32 @@ template <size_t Target, typename C>
 requires (Target < C::size) && requires { typename demote_abi_t<C>; }
 struct split_target<Target, C> : split_target<Target, demote_abi_t<C>> {};
 
-template <typename Source>
+template <size_t N, typename Source>
 using split_target_t DPL_NODEBUG =
-    typename demote<Source::size / N, demote_abi_t<Source>>::type;
+    typename split_target<Source::size / N, demote_abi_t<Source>>::type;
 
-template <typename T>
+template <typename T, size_t N>
 concept unqualified_split_into = requires(T arg) {
     {
-        split<split_target_t<typename T::abi_type>>(internal::abi<T>, arg)
+        split<split_target_t<N, typename T::abi_type>>(internal::abi<T>, arg)
     } -> equivalent_split_result_as<rebind_simd_t<T, simd_lane_type_t<T>,
-        split_target_t<typename T::abi_type>>>;
-};
-
-template <typename T>
-concept unqualified_split_outof = requires(T arg) {
-    {
-        split(internal::abi<split_target_t<typename T::abi_type>>, arg)
-    } -> equivalent_split_result_as<rebind_simd_t<T, simd_lane_type_t<T>,
-        split_target_t<typename T::abi_type>>>;
+        split_target_t<N, typename T::abi_type>>>;
 };
 
 template <typename T, size_t N>
-concept splittable = fixed_width_class<T> && requires {
-    typename demote_abi_t<typename T::abi_type>;
-    typename split_target_t<typename T::abi_type>;
-} && (split_target_t<typename T::abi_type>::size * N) == T::abi_type::size;
+concept unqualified_split_outof = requires(T arg) {
+    {
+        split(internal::abi<split_target_t<N, typename T::abi_type>>, arg)
+    } -> equivalent_split_result_as<rebind_simd_t<T, simd_lane_type_t<T>,
+        split_target_t<N, typename T::abi_type>>>;
+};
+
+template <typename T, size_t N>
+concept splittable =
+    fixed_width_class<T> && ((T::abi_type::size % N) == 0) && requires {
+        typename demote_abi_t<typename T::abi_type>;
+        typename split_target_t<N, typename T::abi_type>;
+    };
 
 template <size_t N>
 struct split_t {
@@ -130,39 +132,61 @@ private:
     template <typename E, typename A0>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static consteval auto fallback(basic_simd<E, A0> src) noexcept {
-        constexpr make_index_sequence<A0::size / A::size> seq{};
+        using A = split_target_t<N, A0>;
         array_for<E, A0> buffer{};
         dx::store(src, buffer.data);
+#if DPL_CXX26
+        constexpr auto [... is] = make_index_sequence<N>{};
+        constexpr auto S = simd_abi_traits<A, E>::size;
+        return dx::make_split_result(dx::load<A>(buffer.data + is * S)...);
+#else
+        constexpr make_index_sequence<N> iseq{};
         return [&]<size_t... Is>(index_sequence<Is...>) {
-            constexpr auto stride = simd_abi_traits<A, E>::size;
-            return dx::make_split_result(
-                dx::load<A>(buffer.data + Is * stride)...);
-        }(seq);
+            constexpr auto S = simd_abi_traits<A, E>::size;
+            return dx::make_split_result(dx::load<A>(buffer.data + Is * S)...);
+        }(iseq);
+#endif
     }
 
     template <typename E, typename A0>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static consteval auto fallback(basic_mask<E, A0> src) noexcept {
-        constexpr make_index_sequence<N> iseq{};
-        return [&]<size_t... Is>(index_sequence<Is...>) {
-            constexpr auto S = simd_abi_traits<A, E>::size;
-            constexpr make_index_sequence<S> jseq{};
-            return dx::make_split_result(
-                [&]<size_t O, size_t... Js>(
-                    immediate<O>, index_sequence<Js...>) {
-                    return dx::initialize<A>(src[O + Js]...);
-                }(imm<(Is * S)>, jseq)...);
+    static consteval auto fallback(basic_simd_mask<E, A0> src) noexcept {
+        using A = split_target_t<N, A0>;
+#if DPL_CXX26
+        constexpr auto S = simd_abi_traits<A, E>::size;
+        constexpr auto [... is] = make_index_sequence<N>{};
+        constexpr auto [... js] = index_sequence<(is * S)...>{};
+        constexpr auto [... ks] = make_index_sequence<S>{};
+
+        return dx::make_split_result([&](auto j) { //
+            return dx::initialize<A>(src[j + ks]...);
+        }(js)...);
+#else
+        static constexpr auto S = simd_abi_traits<A, E>::size;
+        static constexpr make_index_sequence<S> kseq{};
+        static constexpr make_index_sequence<N> iseq{};
+        constexpr auto jseq = []<size_t... Is>(index_sequence<Is...>) {
+            return index_sequence<(Is * S)...>{};
         }(iseq);
+
+        return [&]<size_t... Js>(index_sequence<Js...>) {
+            return dx::make_split_result([&](size_t j) {
+                return [&]<size_t... Ks>(index_sequence<Ks...>) {
+                    return dx::initialize<A>(src[j + Ks]...);
+                }(kseq);
+            }(Js)...);
+        }(jseq);
+#endif
     }
 
 public:
     template <splittable<N> T>
-    requires (
-        unqualified_split_into<T> || unqualified_split_into<basic_type_t<T>>)
+    requires (unqualified_split_into<T, N> ||
+        unqualified_split_into<basic_type_t<T>, N>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto operator()(T src) noexcept {
-        if constexpr (unqualified_split_into<T>) {
-            using A = split_target_t<typename T::abi_type>;
+        if constexpr (unqualified_split_into<T, N>) {
+            using A = split_target_t<N, typename T::abi_type>;
             if constexpr (basic_simd_class<T>) {
                 if consteval {
                     return fallback(src);
@@ -178,13 +202,14 @@ public:
     }
 
     template <splittable<N> T>
-    requires (!unqualified_split_into<T> &&
-                 !unqualified_split_into<basic_type_t<T>>) &&
-        (unqualified_split_outof<T> || unqualified_split_outof<basic_type_t<T>>)
+    requires (!unqualified_split_into<T, N> &&
+                 !unqualified_split_into<basic_type_t<T>, N>) &&
+        (unqualified_split_outof<T, N> ||
+            unqualified_split_outof<basic_type_t<T>, N>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto operator()(T src) noexcept {
-        if constexpr (unqualified_split_outof<T>) {
-            using A = split_target_t<typename T::abi_type>;
+        if constexpr (unqualified_split_outof<T, N>) {
+            using A = split_target_t<N, typename T::abi_type>;
             if constexpr (basic_simd_class<T>) {
                 if consteval {
                     return fallback(src);
@@ -205,7 +230,7 @@ public:
 namespace datapar {
 inline namespace cpo {
 DPL_EXPORT template <size_t N>
-inline constexpr split_t<N> split{};
+inline constexpr internal::split_t<N> split{};
 }
 } // namespace datapar
 DPL_DEFAULT_NAMESPACE_END

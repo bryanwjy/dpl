@@ -28,4 +28,5 @@ import :core.constants;
 #include "dpl/core/operations/minmax.h"
 #include "dpl/core/operations/negate.h"
 #include "dpl/core/operations/select.h"
+#include "dpl/core/operations/split.h"
 // IWYU pragma: end_exports
