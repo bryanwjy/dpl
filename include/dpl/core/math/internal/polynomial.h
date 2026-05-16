@@ -12,6 +12,11 @@
 #  include "dpl/std/type_traits/remove_const.h"
 #endif
 
+#if DPL_HAS_CXX26_EXTENSIONS
+DPL_DISABLE_WARNING_PUSH()
+DPL_DISABLE_WARNING("-Wc++26-extensions")
+#endif
+
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::fmath {
 namespace dx = __DPL datapar;
@@ -98,18 +103,10 @@ private:
 
         template <int I>
         static consteval T operator[](immediate<I>) noexcept {
-#if __cpp_pack_indexing >= 202311L & \
-    (DPL_CXX26 | DPL_COMPILER_CLANG | DPL_COMPILER_GCC)
-#  if !DPL_CXX26
-            DPL_DISABLE_WARNING_PUSH()
-            DPL_DISABLE_WARNING("-Wc++26-extensions")
-#  endif
+#if __cpp_pack_indexing >= 202311L && DPL_HAS_CXX26_EXTENSIONS
             static_assert(digits_v<T> <=
                 digits_v<remove_const_t<decltype(Vs...[I - 1])>>);
             return static_cast<T>(Vs...[I - 1]);
-#  if !DPL_CXX26
-            DPL_DISABLE_WARNING_POP()
-#  endif
 #else
             static_assert((... &&
                 (digits_v<T> <= digits_v<remove_const_t<decltype(Vs)>>)));
@@ -215,3 +212,7 @@ public:
 };
 } // namespace datapar::fmath
 DPL_DEFAULT_NAMESPACE_END
+
+#if DPL_HAS_CXX26_EXTENSIONS
+DPL_DISABLE_WARNING_POP()
+#endif

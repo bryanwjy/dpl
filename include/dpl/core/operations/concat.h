@@ -12,6 +12,11 @@
 #  include "dpl/core/type_traits/promote_abi.h"
 #endif
 
+#if DPL_HAS_CXX26_EXTENSIONS
+DPL_DISABLE_WARNING_PUSH()
+DPL_DISABLE_WARNING("-Wc++26-extensions")
+#endif
+
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 
@@ -144,19 +149,11 @@ private:
     static consteval auto fallback(basic_simd<E, As>... args) noexcept {
         array_for<E, AT> buffer{};
         auto* ptr = buffer.data;
-#if __cpp_expansion_statements >= 202506L & \
-    (DPL_CXX26 | DPL_COMPILER_CLANG | DPL_COMPILER_GCC)
-#  if !DPL_CXX26
-        DPL_DISABLE_WARNING_PUSH()
-        DPL_DISABLE_WARNING("-Wc++26-extensions")
-#  endif
+#if __cpp_expansion_statements >= 202506L && DPL_HAS_CXX26_EXTENSIONS
         template for (auto const& arg : {args...}) {
             dx::store(arg, ptr);
             ptr += arg.size();
         }
-#  if !DPL_CXX26
-        DPL_DISABLE_WARNING_POP()
-#  endif
 #else
         (..., [&ptr]<typename A>(basic_simd<E, A> arg) {
             dx::store(arg, ptr);
@@ -169,21 +166,13 @@ private:
     template <typename AT, typename E, typename... As>
     static consteval auto fallback(basic_simd_mask<E, As>... args) noexcept {
         bool buffer[AT::size]{};
-#if __cpp_expansion_statements >= 202506L & \
-    (DPL_CXX26 | DPL_COMPILER_CLANG | DPL_COMPILER_GCC)
-#  if !DPL_CXX26
-        DPL_DISABLE_WARNING_PUSH()
-        DPL_DISABLE_WARNING("-Wc++26-extensions")
-#  endif
+#if __cpp_expansion_statements >= 202506L && DPL_HAS_CXX26_EXTENSIONS
         template for (auto* ptr = buffer; auto const& arg : {args...}) {
             template for (auto const idx : iota_sequence<E, A>) {
                 ptr[idx] = arg[idx];
             }
             ptr += arg.size();
         }
-#  if !DPL_CXX26
-        DPL_DISABLE_WARNING_POP()
-#  endif
 #else
         (..., [ptr = buffer]<typename A>(basic_simd_mask<E, A> arg) {
             [&]<size_t I = 0>(this auto self, immediate<I> idx = {}) {
@@ -267,3 +256,7 @@ DPL_EXPORT inline constexpr internal::concat_t concat{};
 }
 } // namespace datapar
 DPL_DEFAULT_NAMESPACE_END
+
+#if DPL_HAS_CXX26_EXTENSIONS
+DPL_DISABLE_WARNING_POP()
+#endif

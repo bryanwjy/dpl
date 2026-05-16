@@ -10,6 +10,11 @@
 #  include "dpl/std/stddef/types.h"
 #endif
 
+#if DPL_HAS_CXX26_EXTENSIONS
+DPL_DISABLE_WARNING_PUSH()
+DPL_DISABLE_WARNING("-Wc++26-extensions")
+#endif
+
 DPL_DEFAULT_NAMESPACE_BEGIN
 
 DPL_EXPORT template <typename T, T... Is>
@@ -24,16 +29,8 @@ struct tuple_size<integer_sequence<T, Is...>> : size_constant<sizeof...(Is)> {};
 DPL_EXPORT template <size_t I, typename T, T... Is>
 requires (I < sizeof...(Is))
 struct tuple_element<I, integer_sequence<T, Is...>> {
-#if __cpp_pack_indexing >= 202311L & \
-    (DPL_CXX26 | DPL_COMPILER_CLANG | DPL_COMPILER_GCC)
-#  if !DPL_CXX26
-    DPL_DISABLE_WARNING_PUSH()
-    DPL_DISABLE_WARNING("-Wc++26-extensions")
-#  endif
+#if __cpp_pack_indexing >= 202311L && DPL_HAS_CXX26_EXTENSIONS
     using type = integral_constant<T, Is...[I]>;
-#  if !DPL_CXX26
-    DPL_DISABLE_WARNING_POP()
-#  endif
 #else
 private:
     static consteval auto get_type() noexcept {
@@ -117,3 +114,7 @@ DPL_EXPORT template <typename... Ts>
 using index_sequence_for = make_index_sequence<sizeof...(Ts)>;
 
 DPL_DEFAULT_NAMESPACE_END
+
+#if DPL_HAS_CXX26_EXTENSIONS
+DPL_DISABLE_WARNING_POP()
+#endif

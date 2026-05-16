@@ -89,3 +89,8 @@ DPL_DISABLE_WARNING_POP()
                              [](__VA_ARGS__) -> void {}))
 
 #endif
+
+#define DPL_HAS_CXX26_EXTENSIONS                   \
+    (((DPL_COMPILER_CLANG_AT_LEAST(18, 0, 0)) |    \
+         (DPL_COMPILER_GCC_AT_LEAST(14, 0, 0))) && \
+        !DPL_CXX26)
