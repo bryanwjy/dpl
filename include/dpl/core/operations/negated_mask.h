@@ -18,6 +18,7 @@
 #  include "dpl/core/concepts/simd_element.h"
 #  include "dpl/core/concepts/simd_mask_type.h"
 #  include "dpl/core/type_traits/basic_type.h"
+#  include "dpl/core/type_traits/simd_traits.h"
 #  include "dpl/std/concepts/same_as.h"
 #endif
 
@@ -35,6 +36,7 @@ public:
     using simd_type = basic_simd<element_type, typename T::abi_type>;
     using abi_type = typename T::abi_type;
     using value_type = bool;
+    static constexpr auto decay_policy = simd_traits<T>::decay_policy;
 
 private:
     using mask_type DPL_NODEBUG =

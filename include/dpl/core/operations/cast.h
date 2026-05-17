@@ -36,6 +36,76 @@ concept unqualified_element_castable_to =
         } -> simd_with<To, typename From::abi_type>;
     };
 
+template <typename To>
+struct cast_base {
+protected:
+    template <typename From>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr To safe_cast(From val) noexcept {
+        if consteval {
+            // Do we need this?
+            if constexpr (floating_point<From> && integral<To>) {
+                auto const min = static_cast<From>(min_value_v<To>);
+                auto const max = static_cast<From>(max_value_v<To>);
+                auto const lt = val < min;
+                auto const gt = val > max;
+                if (lt || gt || !(val <= max && val >= min)) {
+                    return dx::msb;
+                }
+            }
+        }
+
+        if constexpr (convertible_to<From, To>) {
+            return static_cast<To>(val);
+        } else {
+            static_assert(floating_point<To> && floating_point<From>);
+            static_assert(dx::digits_v<float> >= dx::digits_v<From>);
+            return static_cast<To>(static_cast<float>(val));
+        }
+    }
+};
+
+template <simd_element To>
+struct widen_t : cast_base<To> {
+    template <typename From, typename A>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr basic_simd<To, A> DPL_VECTORCALL
+        fallback(basic_simd<From, A> arg) noexcept
+    requires (sizeof(From) < sizeof(To))
+    {
+        using src_t = basic_simd<From, A>;
+        using dst_t = basic_simd<To, A>;
+        return []<size_t... Is>(src_t arg, index_sequence<Is...>) {
+            constexpr auto extent = simd_abi_traits<dst_t>::size;
+            array_for<dst_t> buffer{
+                (Is < extent ? safe_cast(arg[Is]) : dx::zero_v<To>)...};
+            return dx::load<dst_t>(aligned, buffer.data);
+        }(arg, iota_sequence<To, A>);
+    }
+};
+
+template <simd_element To>
+struct narrow_t : cast_base<To> {
+    template <typename From, typename A>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr basic_simd<To, A> DPL_VECTORCALL
+        fallback(basic_simd<From, A> arg) noexcept
+    requires (sizeof(From) > sizeof(To))
+    {
+        using src_t = basic_simd<From, A>;
+        using dst_t = basic_simd<To, A>;
+        return []<size_t... Is>(src_t arg, index_sequence<Is...>) {
+            constexpr auto extent =
+                simd_abi_traits<src_t>::size < simd_abi_traits<dst_t>::size
+                ? simd_abi_traits<src_t>::size
+                : simd_abi_traits<dst_t>::size;
+            array_for<dst_t> buffer{
+                (Is < extent ? safe_cast(arg[Is]) : dx::zero_v<To>)...};
+            return dx::load<dst_t>(aligned, buffer.data);
+        }(arg, iota_sequence<To, A>);
+    }
+};
+
 template <simd_element To>
 struct cast_t<To> {
 private:

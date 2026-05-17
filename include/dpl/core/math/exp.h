@@ -5,6 +5,7 @@
 
 #include "dpl/core/math/fma.h"
 #include "dpl/core/math/internal/constants.h"
+#include "dpl/core/math/internal/floating_point_simd.h"
 #include "dpl/core/math/internal/ldexp.h"
 #include "dpl/core/math/internal/pair.h"
 #include "dpl/core/math/internal/polynomial.h"

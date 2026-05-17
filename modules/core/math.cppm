@@ -22,6 +22,7 @@ import :core.utility;
 #include "dpl/core/math/addsub.h"
 #include "dpl/core/math/ceil.h"
 #include "dpl/core/math/copysign.h"
+#include "dpl/core/math/dot.h"
 #include "dpl/core/math/exp.h"
 #include "dpl/core/math/fixup.h"
 #include "dpl/core/math/floor.h"

@@ -3,7 +3,7 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/math/internal/floating_point_simd_with_abi.h"
+#include "dpl/core/math/internal/floating_point_simd.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/simd_abi.h"
@@ -22,6 +22,10 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void ldexp(...) noexcept = delete;
+
+template <typename T>
+concept ldexp_integral =
+    integral_simd<T> && signed_integral<typename T::value_type>;
 
 struct ldexp_t : binary_operation_base<ldexp_t> {
     friend binary_operation_base<ldexp_t>;
@@ -81,7 +85,7 @@ struct ldexp_t : binary_operation_base<ldexp_t> {
         rebind_simd_t<T, signed_representation_t<typename T::value_type>>;
 
 public:
-    template <floating_point_simd T, signed_integral_simd I>
+    template <floating_point_simd T, ldexp_integral I>
     requires common_size_simd_with<T, I> && same_abi_simd_as<T, I>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T num, I exp) noexcept {

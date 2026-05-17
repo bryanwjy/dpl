@@ -7,6 +7,7 @@
 #  include "dpl/core/basic/immediate.h"
 #  include "dpl/core/basic/initialize.h"
 #  include "dpl/core/basic/to_basic_type.h"
+#  include "dpl/core/concepts/integral_simd.h"
 #  include "dpl/core/concepts/simd_class.h"
 #  include "dpl/core/concepts/simd_equivalence.h"
 #  include "dpl/core/concepts/simd_traits.h"

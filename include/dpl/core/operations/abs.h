@@ -57,7 +57,7 @@ private:
         using T = negated_type<E>;
         if constexpr (enumeration<E>) {
             return operator()(dx::reinterpret<underlying_type_t<E>>(val));
-        } else if constexpr (unsigned_integral_simd<E>) {
+        } else if constexpr (unsigned_integral<E>) {
             return val;
         } else {
             return dx::max(dx::reinterpret<T>(val), dx::negate(val));

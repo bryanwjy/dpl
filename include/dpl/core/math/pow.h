@@ -5,7 +5,7 @@
 
 #include "dpl/core/math/fixup.h"
 #include "dpl/core/math/frexp.h"
-#include "dpl/core/math/internal/floating_point_simd_with_abi.h"
+#include "dpl/core/math/internal/floating_point_simd.h"
 #include "dpl/core/math/internal/pair.h"
 #include "dpl/core/math/internal/polynomial.h"
 #include "dpl/core/math/round.h"

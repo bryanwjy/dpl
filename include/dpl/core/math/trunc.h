@@ -4,6 +4,7 @@
 #include "dpl/config.h"
 
 #include "dpl/core/math/internal/compliance.h"
+#include "dpl/core/math/internal/floating_point_simd.h"
 #include "dpl/core/math/internal/ilogb.h"
 
 #if !DPL_MODULES

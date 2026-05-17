@@ -7,6 +7,7 @@
 #include "dpl/core/math/copysign.h"
 #include "dpl/core/math/floor.h"
 #include "dpl/core/math/internal/constants.h"
+#include "dpl/core/math/internal/floating_point_simd.h"
 #include "dpl/core/math/isfinite.h"
 #include "dpl/core/math/trunc.h"
 

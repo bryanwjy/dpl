@@ -5,6 +5,7 @@
 
 #include "dpl/core/math/frexp.h"
 #include "dpl/core/math/internal/accuracy.h"
+#include "dpl/core/math/internal/floating_point_simd.h"
 #include "dpl/core/math/internal/ldexp.h"
 #include "dpl/core/math/internal/rsqrt2.h"
 #include "dpl/core/math/isfinite.h"

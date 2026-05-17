@@ -4,5 +4,5 @@
 #include "dpl/config.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/concepts/simd_abi_traits.h" // IWYU pragma: export
+#  include "dpl/core/concepts/simd_traits.h" // IWYU pragma: export
 #endif

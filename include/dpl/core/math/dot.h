@@ -3,6 +3,7 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/math/internal/floating_point_simd.h"
 #if !DPL_MODULES
 #  include "dpl/core/basic/reinterpret.h"
 #  include "dpl/core/basic/to_basic_type.h"

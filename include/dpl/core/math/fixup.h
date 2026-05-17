@@ -3,6 +3,7 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/math/internal/floating_point_simd.h"
 #include "dpl/core/math/isfinite.h"
 #include "dpl/core/math/isinf.h"
 #include "dpl/core/math/isnan.h"
