@@ -202,7 +202,7 @@ protected:
         auto y = dx::round(arg * four, opt);
         return {
             .f = dx::fnmadd(y, inv_four, arg),
-            .i = dx::cast<sint>(y - dx::round(arg, opt) * four),
+            .i = dx::element_cast<sint>(y - dx::round(arg, opt) * four),
         };
     }
 
@@ -303,7 +303,7 @@ protected:
             }
         }(arg);
 
-        auto q = dx::cast<sint>(qf);
+        auto q = dx::element_cast<sint>(qf);
         auto rem = rempi_low<V>(qf, arg);
         // Pray to the branch prediction gods
         if (auto is_below = dx::abs(arg) < threshold_low<E>;
@@ -385,7 +385,8 @@ protected:
     requires (dx::digits_v<E><dx::digits_v<float> || dx::digits_v<E>>
                      dx::digits_v<double>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_simd<E, A> fallback(basic_simd<E, A>) = delete;
+    static constexpr basic_simd<E, A>
+        fallback(basic_simd<E, A>) = delete;
 };
 
 void sin(...) noexcept = delete;

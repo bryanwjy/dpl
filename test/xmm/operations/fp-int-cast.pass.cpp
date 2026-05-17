@@ -78,7 +78,7 @@ constexpr void general_int_to_fp() noexcept {
     for (auto const val : inputs) {
         auto const in = dpp::broadcast<I, xmm::abi_tag>(val);
         auto const expected = make_expected(val);
-        auto const actual = dpp::cast<F>(in);
+        auto const actual = dpp::element_cast<F>(in);
         assert(bit_equality(actual, expected));
     }
 }
@@ -108,7 +108,7 @@ constexpr void parallel_int_to_fp() noexcept {
         auto const* ptr = inputs.data + i;
         auto const in = dpp::load<xmm::abi_tag>(ptr);
         auto const expected = make_expected(ptr);
-        auto const actual = dpp::cast<F>(in);
+        auto const actual = dpp::element_cast<F>(in);
         assert(bit_equality(actual, expected));
     }
 }
@@ -139,7 +139,7 @@ constexpr bool large_int_to_sp() noexcept {
         for (auto const val : src) {
             auto const input = dpp::broadcast<T, xmm::abi_tag>(val);
             auto const expected = make_expected(val);
-            assert(bit_equality(dpp::cast<float>(input), expected));
+            assert(bit_equality(dpp::element_cast<float>(input), expected));
         }
 
         if constexpr (dpl::signed_integral<T>) {
@@ -147,7 +147,7 @@ constexpr bool large_int_to_sp() noexcept {
                 auto const val = -pval;
                 auto const input = dpp::broadcast<T, xmm::abi_tag>(val);
                 auto const expected = make_expected(val);
-                assert(bit_equality(dpp::cast<float>(input), expected));
+                assert(bit_equality(dpp::element_cast<float>(input), expected));
             }
         }
     };
@@ -164,7 +164,7 @@ constexpr bool large_int_to_sp() noexcept {
         for (auto const val : src) {
             auto const input = dpp::broadcast<T, xmm::abi_tag>(val);
             auto const expected = make_expected(val);
-            assert(bit_equality(dpp::cast<float>(input), expected));
+            assert(bit_equality(dpp::element_cast<float>(input), expected));
         }
 
         if constexpr (dpl::signed_integral<T>) {
@@ -172,7 +172,7 @@ constexpr bool large_int_to_sp() noexcept {
                 auto const val = -pval;
                 auto const input = dpp::broadcast<T, xmm::abi_tag>(val);
                 auto const expected = make_expected(val);
-                assert(bit_equality(dpp::cast<float>(input), expected));
+                assert(bit_equality(dpp::element_cast<float>(input), expected));
             }
         }
     };
@@ -277,7 +277,7 @@ constexpr void general_fp_to_int() noexcept {
     for (auto const val : inputs) {
         auto const in = dpp::broadcast<F, xmm::abi_tag>(val);
         auto const expected = make_expected(val);
-        auto const actual = dpp::cast<I>(in);
+        auto const actual = dpp::element_cast<I>(in);
         assert(dpp::all_of(expected == actual));
     }
 }
@@ -315,7 +315,7 @@ constexpr void large_sp_to_int() noexcept {
     for (auto const val : inputs) {
         auto const in = dpp::broadcast<F, xmm::abi_tag>(val);
         auto const expected = make_expected(val);
-        auto const actual = dpp::cast<I>(in);
+        auto const actual = dpp::element_cast<I>(in);
         assert(dpp::all_of(expected == actual));
     }
 }
@@ -360,7 +360,7 @@ constexpr void large_fp_to_long() noexcept {
     for (auto const val : inputs) {
         auto const in = dpp::broadcast<F, xmm::abi_tag>(val);
         auto const expected = make_expected(val);
-        auto const actual = dpp::cast<I>(in);
+        auto const actual = dpp::element_cast<I>(in);
         assert(dpp::all_of(expected == actual));
     }
 }
@@ -393,7 +393,7 @@ constexpr void parallel_fp_to_int() noexcept {
         auto const* ptr = inputs.data + i;
         auto const in = dpp::load<xmm::abi_tag>(ptr);
         auto const expected = make_expected(ptr);
-        auto const actual = dpp::cast<I>(in);
+        auto const actual = dpp::element_cast<I>(in);
         assert(dpp::all_of(expected == actual));
     }
 }

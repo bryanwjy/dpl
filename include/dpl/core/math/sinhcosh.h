@@ -63,8 +63,8 @@ private:
 
     template <floating_point E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr fmath::pair<E, A> DPL_VECTORCALL
-        exp(basic_simd<E, A> arg) noexcept {
+    static constexpr fmath::pair<E, A>
+        DPL_VECTORCALL exp(basic_simd<E, A> arg) noexcept {
         using simdf = basic_simd<E, A>;
         auto const u = arg * fmath::inv_ln2;
         auto const qf =
@@ -92,7 +92,7 @@ private:
             }
         }();
 
-        auto const q = dx::cast<signed_representation_t<E>>(qf);
+        auto const q = dx::element_cast<signed_representation_t<E>>(qf);
         t.upper = fmath::ldexp(fmath::compliance::speed, t.upper, q);
         t.lower = fmath::ldexp(fmath::compliance::speed, t.lower, q);
         auto const underflow = is_exp_underflow(arg);
@@ -106,8 +106,8 @@ public:
 
     template <integral auto V, floating_point E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_simd<E, A> DPL_VECTORCALL
-        fallback(basic_simd<E, A> const arg) noexcept {
+    static constexpr basic_simd<E, A>
+        DPL_VECTORCALL fallback(basic_simd<E, A> const arg) noexcept {
         using simdf = basic_simd<E, A>;
         static constexpr make_immediate_mask_t<simdf, V> mask;
 
@@ -149,7 +149,8 @@ public:
     requires (dx::digits_v<E><dx::digits_v<float> || dx::digits_v<E>>
                      dx::digits_v<double>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
-    static constexpr basic_simd<E, A> fallback(basic_simd<E, A>) = delete;
+    static constexpr basic_simd<E, A>
+        fallback(basic_simd<E, A>) = delete;
 };
 
 void sinh(...) noexcept = delete;

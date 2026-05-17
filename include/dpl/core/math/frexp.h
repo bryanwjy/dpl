@@ -265,8 +265,8 @@ private:
 
     template <floating_point E, simd_abi A, frexp_options Opt>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallback(basic_simd<E, A> val, Opt) noexcept
+    static constexpr auto DPL_VECTORCALL fallback(
+        basic_simd<E, A> val, Opt) noexcept
     requires (Opt::has(frexp_reduced))
     {
         using result_type = make_frexp_t<basic_simd<E, A>, Opt>;
@@ -308,15 +308,15 @@ private:
         } else {
             return result_type{
                 .fr = fr,
-                .exp = dx::cast<E>(exp),
+                .exp = dx::element_cast<E>(exp),
             };
         }
     }
 
     template <floating_point E, simd_abi A, frexp_options Opt>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallback(basic_simd<E, A> val, Opt) noexcept
+    static constexpr auto DPL_VECTORCALL fallback(
+        basic_simd<E, A> val, Opt) noexcept
     requires (Opt::has(frexp_cmath))
     {
         using result_type = make_frexp_t<basic_simd<E, A>, Opt>;
@@ -360,7 +360,7 @@ private:
         } else {
             return result_type{
                 .fr = fr,
-                .exp = dx::cast<E>(exp),
+                .exp = dx::element_cast<E>(exp),
             };
         }
     }

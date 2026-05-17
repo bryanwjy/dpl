@@ -37,12 +37,12 @@ private:
     template <floating_point E, simd_abi A>
     requires (dx::digits_v<E> < dx::digits_v<float>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallback(basic_simd<E, A> val) noexcept {
+    static constexpr auto DPL_VECTORCALL fallback(
+        basic_simd<E, A> val) noexcept {
         using sint = signed_representation_t<float>;
         auto const qf = dx::round(
             val * fmath::inv_ln2, rounding::no_exc | rounding::to_nearest_int);
-        auto const q = dx::cast<sint>(qf);
+        auto const q = dx::element_cast<sint>(qf);
         using fpair = fmath::pair<float, A>;
         constexpr auto ln2 = fmath::ln2_v<fpair>;
         auto const s =
@@ -69,12 +69,12 @@ private:
 
     template <simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallback(basic_simd<float, A> val) noexcept {
+    static constexpr auto DPL_VECTORCALL fallback(
+        basic_simd<float, A> val) noexcept {
         using sint = signed_representation_t<float>;
         auto const qf = dx::round(
             val * fmath::inv_ln2, rounding::no_exc | rounding::to_nearest_int);
-        auto const q = dx::cast<sint>(qf);
+        auto const q = dx::element_cast<sint>(qf);
         using fpair = fmath::pair<float, A>;
         constexpr auto ln2 = fmath::ln2_v<fpair>;
         auto const s =
@@ -95,11 +95,11 @@ private:
 
     template <simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallback(basic_simd<double, A> val) noexcept {
+    static constexpr auto DPL_VECTORCALL fallback(
+        basic_simd<double, A> val) noexcept {
         using sint = signed_representation_t<double>;
-        auto const q = dx::cast<sint>(val * fmath::inv_ln2);
-        auto const qf = dx::cast<double>(q);
+        auto const q = dx::element_cast<sint>(val * fmath::inv_ln2);
+        auto const qf = dx::element_cast<double>(q);
         using fpair = fmath::pair<double, A>;
         constexpr auto ln2 = fmath::ln2_v<fpair>;
         auto const s =

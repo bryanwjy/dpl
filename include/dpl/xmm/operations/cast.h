@@ -51,7 +51,8 @@ struct convert_t<To> {
     template <arithmetic_type E>
     requires integral<E> || unscoped_enumeration<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To> DPL_VECTORCALL operator()(simd<E> src) noexcept {
+    static inline simd<To>
+        DPL_VECTORCALL operator()(simd<E> src) noexcept {
         if constexpr (dx::common_arithmetic_with<To, E>) {
             return +src;
         } else if constexpr (dx::common_arithmetic_with<int32, E>) {
@@ -78,7 +79,8 @@ struct convert_t<To> {
 
     template <floating_point E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To> DPL_VECTORCALL operator()(simd<E> src) noexcept {
+    static inline simd<To>
+        DPL_VECTORCALL operator()(simd<E> src) noexcept {
         if constexpr (common_float_with<double, E>) {
 #if DPL_SIMD_X86_AVX512DQ & DPL_SIMD_X86_AVX512VL
             if constexpr (unsigned_integral<To>) {
@@ -108,7 +110,8 @@ struct convert_t<To> {
 
     template <float16_like E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To> DPL_VECTORCALL operator()(simd<E> src) noexcept {
+    static inline simd<To>
+        DPL_VECTORCALL operator()(simd<E> src) noexcept {
 #if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
         if constexpr (unsigned_integral<To>) {
             return _mm_cvttph_epu64(+src);
@@ -123,7 +126,8 @@ struct convert_t<To> {
 
     template <bfloat16_like E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To> DPL_VECTORCALL operator()(simd<E> src) noexcept {
+    static inline simd<To>
+        DPL_VECTORCALL operator()(simd<E> src) noexcept {
         constexpr convert_t<front_t<float, E>> convert{};
         return operator()(convert(src));
     }
@@ -134,7 +138,8 @@ struct convert_t<To> {
     template <arithmetic_type E>
     requires integral<E> || unscoped_enumeration<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To> DPL_VECTORCALL operator()(simd<E> src) noexcept {
+    static inline simd<To>
+        DPL_VECTORCALL operator()(simd<E> src) noexcept {
         if constexpr (dx::common_arithmetic_with<int64, E>) {
 #if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
             return _mm_cvtepi64_epi32(+src);
@@ -162,7 +167,8 @@ struct convert_t<To> {
 
     template <floating_point E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To> DPL_VECTORCALL operator()(simd<E> src) noexcept {
+    static inline simd<To>
+        DPL_VECTORCALL operator()(simd<E> src) noexcept {
         if constexpr (common_float_with<double, E>) {
             if constexpr (unsigned_integral<To>) {
 #if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
@@ -199,7 +205,8 @@ struct convert_t<To> {
 
     template <float16_like E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To> DPL_VECTORCALL operator()(simd<E> src) noexcept {
+    static inline simd<To>
+        DPL_VECTORCALL operator()(simd<E> src) noexcept {
 #if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
         if constexpr (signed_integral<To>) {
             return _mm_cvttph_epi32(+src);
@@ -230,7 +237,8 @@ struct convert_t<To> {
 
     template <bfloat16_like E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To> DPL_VECTORCALL operator()(simd<E> src) noexcept {
+    static inline simd<To>
+        DPL_VECTORCALL operator()(simd<E> src) noexcept {
         constexpr convert_t<front_t<float, E>> convert{};
         return operator()(convert(src));
     }
@@ -241,7 +249,8 @@ struct convert_t<To> {
     template <arithmetic_type E>
     requires integral<E> || unscoped_enumeration<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To> DPL_VECTORCALL operator()(simd<E> src) noexcept {
+    static inline simd<To>
+        DPL_VECTORCALL operator()(simd<E> src) noexcept {
         if constexpr (dx::common_arithmetic_with<int64, E>) {
 #if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
             return _mm_cvtepi64_epi16(+src);
@@ -273,7 +282,8 @@ struct convert_t<To> {
 
     template <floating_point E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To> DPL_VECTORCALL operator()(simd<E> src) noexcept
+    static inline simd<To>
+        DPL_VECTORCALL operator()(simd<E> src) noexcept
     requires requires(convert_t<int32> cvtepi32) { cvtepi32(src); }
     {
         constexpr convert_t<int32> to_int;
@@ -282,7 +292,8 @@ struct convert_t<To> {
 
     template <float16_like E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To> DPL_VECTORCALL operator()(simd<E> src) noexcept {
+    static inline simd<To>
+        DPL_VECTORCALL operator()(simd<E> src) noexcept {
 #if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
         if constexpr (unsigned_integral<To>) {
             cosntexpr auto cmp_lt_oq = 17; // lessthan, ordered, quiet
@@ -313,7 +324,8 @@ struct convert_t<To> {
 
     template <bfloat16_like E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To> DPL_VECTORCALL operator()(simd<E> src) noexcept {
+    static inline simd<To>
+        DPL_VECTORCALL operator()(simd<E> src) noexcept {
         constexpr convert_t<int32> to_int32;
         auto const hi = simd<E>(__DPL bit_cast<__m128bh>(_mm_unpackhi_epi64(
             __DPL bit_cast<__m128i>(+src), _mm_setzero_si128())));
@@ -337,7 +349,8 @@ struct convert_t<To> {
     template <arithmetic_type E>
     requires integral<E> || unscoped_enumeration<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To> DPL_VECTORCALL operator()(simd<E> src) noexcept {
+    static inline simd<To>
+        DPL_VECTORCALL operator()(simd<E> src) noexcept {
         if constexpr (dx::common_arithmetic_with<int64, E>) {
 #if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
             return _mm_cvtepi64_epi8(+src);
@@ -373,7 +386,8 @@ struct convert_t<To> {
     template <floating_point E>
     requires (sizeof(E) > sizeof(int16))
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To> DPL_VECTORCALL operator()(simd<E> src) noexcept
+    static inline simd<To>
+        DPL_VECTORCALL operator()(simd<E> src) noexcept
     requires requires(convert_t<int32> cvtepi32) { cvtepi32(src); }
     {
         // AVX10.X supports fp8
@@ -385,7 +399,8 @@ struct convert_t<To> {
     template <floating_point E>
     requires (sizeof(E) == sizeof(int16))
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To> DPL_VECTORCALL operator()(simd<E> src) noexcept
+    static inline simd<To>
+        DPL_VECTORCALL operator()(simd<E> src) noexcept
     requires requires(convert_t<int16> cvtepi16) { cvtepi16(src); }
     {
         constexpr convert_t<int16> cvtepi16;
@@ -398,7 +413,8 @@ struct convert_t<To> {
     template <arithmetic_type E>
     requires integral<E> || unscoped_enumeration<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To> DPL_VECTORCALL operator()(simd<E> src) noexcept {
+    static inline simd<To>
+        DPL_VECTORCALL operator()(simd<E> src) noexcept {
         if constexpr (dx::common_arithmetic_with<int64, E>) {
 #if DPL_SIMD_X86_AVX512DQ & DPL_SIMD_X86_AVX512VL
             return _mm_cvtepi64_pd(+src);
@@ -447,7 +463,8 @@ struct convert_t<To> {
 
     template <floating_point E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To> DPL_VECTORCALL operator()(simd<E> src) noexcept {
+    static inline simd<To>
+        DPL_VECTORCALL operator()(simd<E> src) noexcept {
         if constexpr (common_float_with<E, To>) {
             return +src;
         } else {
@@ -458,7 +475,8 @@ struct convert_t<To> {
 
     template <float16_like E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To> DPL_VECTORCALL operator()(simd<E> src) noexcept {
+    static inline simd<To>
+        DPL_VECTORCALL operator()(simd<E> src) noexcept {
 #if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
         return _mm_cvtph_pd(+src);
 #else
@@ -486,7 +504,8 @@ struct convert_t<To> {
 
     template <bfloat16_like E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To> DPL_VECTORCALL operator()(simd<E> src) noexcept {
+    static inline simd<To>
+        DPL_VECTORCALL operator()(simd<E> src) noexcept {
         constexpr convert_t<front_t<float, E>> to_float32;
         return operator()(to_float32(src));
     }
@@ -497,7 +516,8 @@ struct convert_t<To> {
     template <arithmetic_type E>
     requires integral<E> || unscoped_enumeration<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To> DPL_VECTORCALL operator()(simd<E> src) noexcept {
+    static inline simd<To>
+        DPL_VECTORCALL operator()(simd<E> src) noexcept {
         if constexpr (dx::common_arithmetic_with<int64, E>) {
 #if DPL_SIMD_X86_AVX512DQ & DPL_SIMD_X86_AVX512VL
             if constexpr (unsigned_integral<E>) {
@@ -581,7 +601,8 @@ struct convert_t<To> {
 
     template <floating_point E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To> DPL_VECTORCALL operator()(simd<E> src) noexcept {
+    static inline simd<To>
+        DPL_VECTORCALL operator()(simd<E> src) noexcept {
         if constexpr (common_float_with<double, E>) {
             return _mm_cvtpd_ps(+src);
         } else {
@@ -592,7 +613,8 @@ struct convert_t<To> {
 
     template <float16_like E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To> DPL_VECTORCALL operator()(simd<E> src) noexcept {
+    static inline simd<To>
+        DPL_VECTORCALL operator()(simd<E> src) noexcept {
 #if DPL_SIMD_X86_F16C
         return _mm_cvtph_ps(+src);
 #else
@@ -620,7 +642,8 @@ struct convert_t<To> {
 
     template <bfloat16_like E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To> DPL_VECTORCALL operator()(simd<E> src) noexcept {
+    static inline simd<To>
+        DPL_VECTORCALL operator()(simd<E> src) noexcept {
 #if DPL_SIMD_X86_AVX512BF16 & DPL_SIMD_X86_AVX512VL
         return _mm_cvtpbh_ps(+src);
 #else
@@ -635,8 +658,8 @@ struct convert_t<To> {
 private:
     template <common_float_with<float> E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To> DPL_VECTORCALL
-        to_postive_inthalf(simd<E> f32) noexcept {
+    static inline simd<To>
+        DPL_VECTORCALL to_postive_inthalf(simd<E> f32) noexcept {
         using u32 = unsigned_representation_t<E>;
         auto const bits = xmm::reinterpret<u32>(f32);
         auto const mantissa = xmm::bwand(
@@ -653,7 +676,8 @@ public:
     template <arithmetic_type E>
     requires integral<E> || unscoped_enumeration<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To> DPL_VECTORCALL operator()(simd<E> src) noexcept {
+    static inline simd<To>
+        DPL_VECTORCALL operator()(simd<E> src) noexcept {
         constexpr convert_t<float> to_fp32;
         if constexpr (dx::common_arithmetic_with<int64, E>) {
 #if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
@@ -769,7 +793,8 @@ public:
 
     template <floating_point E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To> DPL_VECTORCALL operator()(simd<E> src) noexcept {
+    static inline simd<To>
+        DPL_VECTORCALL operator()(simd<E> src) noexcept {
         if constexpr (common_float_with<double, E>) {
 #if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
             return _mm_cvtpd_ph(+src);
@@ -872,7 +897,8 @@ struct convert_t<To> {
     template <arithmetic_type E>
     requires integral<E> || unscoped_enumeration<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To> DPL_VECTORCALL operator()(simd<E> src) noexcept {
+    static inline simd<To>
+        DPL_VECTORCALL operator()(simd<E> src) noexcept {
         constexpr convert_t<float> to_fp32;
         if constexpr (dx::common_arithmetic_with<int64, E>) {
             return operator()(to_fp32(src));
@@ -895,7 +921,8 @@ struct convert_t<To> {
 
     template <floating_point E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To> DPL_VECTORCALL operator()(simd<E> src) noexcept {
+    static inline simd<To>
+        DPL_VECTORCALL operator()(simd<E> src) noexcept {
         if constexpr (common_float_with<double, E>) {
             constexpr convert_t<float> to_fp32;
             return operator()(to_fp32(src));
@@ -940,18 +967,20 @@ struct convert_t {};
 
 } // namespace details
 
-DPL_EXPORT template <simd_element To, simd_element E>
+DPL_EXPORT template <simd_element_for<xmm::abi_tag> To,
+    simd_element_for<xmm::abi_tag> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-inline simd<To> cast(simd<E> src) noexcept
+inline simd<To> element_cast(simd<E> src) noexcept
 requires requires(xmm::details::convert_t<To> cvt) { cvt(src); }
 {
     constexpr xmm::details::convert_t<To> cvt;
     return cvt(src);
 }
 
-DPL_EXPORT template <simd_element To, simd_element E>
+DPL_EXPORT template <simd_element_for<xmm::abi_tag> To,
+    simd_element_for<xmm::abi_tag> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-inline simd<To> cast(abi_tag, simd<E> src) noexcept
+inline simd<To> element_cast(abi_tag, simd<E> src) noexcept
 requires requires(xmm::details::convert_t<To> cvt) { cvt(src); }
 {
     constexpr xmm::details::convert_t<To> cvt;

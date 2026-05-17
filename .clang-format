@@ -103,3 +103,6 @@ Macros:
 - 'DPL_CATCH(X)=else if ([](X){ return true; }())'
 - 'DPL_LIFETIMEBOUND=[[clang::lifetimebound]]'
 - 'DPL_EXPORT=export'
+- 'DPL_ATTRIBUTES(X,Y,Z,W)=[[X,Y,Z,W]]'
+- 'DPL_ATTRIBUTES(X,Y,Z)=[[X,Y,Z]]'
+- 'DPL_ATTRIBUTES(X,Y)=[[X,Y]]'

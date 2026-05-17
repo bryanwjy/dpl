@@ -45,8 +45,8 @@ struct round_t {
 private:
     template <floating_point E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallback(basic_simd<E, A> val) noexcept {
+    static constexpr auto DPL_VECTORCALL fallback(
+        basic_simd<E, A> val) noexcept {
         auto const isfinite = dx::isfinite(val);
         auto const finite = dx::bit_keep(isfinite, val);
         auto x = finite + mx::half;
@@ -62,8 +62,8 @@ private:
 
     template <floating_point E, simd_abi A, rounding_flags R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallback(basic_simd<E, A> val, rounding_t<R>) noexcept {
+    static constexpr auto DPL_VECTORCALL fallback(
+        basic_simd<E, A> val, rounding_t<R>) noexcept {
         constexpr auto opt = rounding_v<R>;
         static_assert(opt);
         if constexpr (opt.has(rounding::to_zero | rounding::no_exc)) {
@@ -89,7 +89,8 @@ private:
             // there are bit tricks alternatives to casting available but
             // they usually just add more instructions
             using sint = signed_representation_t<E>;
-            auto const iseven = (dx::cast<sint>(i) & dx::one) == dx::zero;
+            auto const iseven =
+                (dx::element_cast<sint>(i) & dx::one) == dx::zero;
             i += dx::bit_drop(iseven, dx::one_v<decltype(val)>);
 
             return dx::select(isfinite && dx::abs(val) < mx::maxint,

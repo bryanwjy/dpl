@@ -49,8 +49,8 @@ private:
 
     template <simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_simd<float, A> DPL_VECTORCALL
-        exp2(fmath::pair<float, A> arg) noexcept {
+    static constexpr basic_simd<float, A>
+        DPL_VECTORCALL exp2(fmath::pair<float, A> arg) noexcept {
         // A little more expensive than dx::exp2 but results in
         // better precision for this use-case
         using fpair = fmath::pair<float, A>;
@@ -58,7 +58,7 @@ private:
         auto u = arg.upper + arg.lower;
         auto const qf =
             dx::round(u, rounding::to_nearest_int | rounding::no_exc);
-        auto const q = dx::cast<signed_representation_t<float>>(qf);
+        auto const q = dx::element_cast<signed_representation_t<float>>(qf);
         auto s = fmath::normalize(arg - qf);
         // polynomial for f(x) = (pow(2,x) - 1 - x ln(2)) / pow(x,2)
         static constexpr fmath::polynomial<0.24022650718688965f, //
@@ -84,8 +84,8 @@ private:
 
     template <simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_simd<double, A> DPL_VECTORCALL
-        exp2(fmath::pair<double, A> arg) noexcept {
+    static constexpr basic_simd<double, A>
+        DPL_VECTORCALL exp2(fmath::pair<double, A> arg) noexcept {
         // A little more expensive than dx::exp2 but results in
         // better precision for this use-case
         using fpair = fmath::pair<double, A>;
@@ -93,7 +93,7 @@ private:
         auto u = arg.upper + arg.lower;
         auto const qf =
             dx::round(u, rounding::to_nearest_int | rounding::no_exc);
-        auto const q = dx::cast<signed_representation_t<double>>(qf);
+        auto const q = dx::element_cast<signed_representation_t<double>>(qf);
         auto s = fmath::normalize(arg - qf);
         // polynomial for f(x) = (pow(2,x) - 1 - x ln(2)) / pow(x,2)
         static constexpr fmath::polynomial<0.24069579622573783,
@@ -119,8 +119,8 @@ private:
 
     template <simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr fmath::pair<float, A> DPL_VECTORCALL
-        log2(basic_simd<float, A> arg) noexcept {
+    static constexpr fmath::pair<float, A>
+        DPL_VECTORCALL log2(basic_simd<float, A> arg) noexcept {
         // takes a decomposed significand; only valid in interval [0.75,1.5)
 
         constexpr auto n_one = fmath::single(dx::broadcast<A>(-1.0f));
@@ -146,8 +146,8 @@ private:
 
     template <simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr fmath::pair<double, A> DPL_VECTORCALL
-        log2(basic_simd<double, A> arg) noexcept {
+    static constexpr fmath::pair<double, A>
+        DPL_VECTORCALL log2(basic_simd<double, A> arg) noexcept {
         // takes a decomposed significand; only valid in interval [0.75,1.5)
 
         constexpr auto n_one = fmath::single(dx::broadcast<A>(-1.0));
@@ -175,8 +175,8 @@ private:
 
     template <floating_point E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallback(basic_simd<E, A> lhs, basic_simd<E, A> rhs) noexcept {
+    static constexpr auto DPL_VECTORCALL fallback(
+        basic_simd<E, A> lhs, basic_simd<E, A> rhs) noexcept {
         auto const absl = dx::abs(lhs);
         auto const [fr, exp] =
             dx::frexp(absl, frexp_reduced | frexp_floating_point);
@@ -193,7 +193,7 @@ private:
         auto const islhs_zero = lhs == dx::zero;
         constexpr auto is_odd = [](auto rhs) {
             using sint = signed_representation_t<E>;
-            return (dx::cast<sint>(rhs) & dx::one) == dx::one &&
+            return (dx::element_cast<sint>(rhs) & dx::one) == dx::one &&
                 dx::trunc(rhs) == rhs && dx::abs(rhs) < fmath::maxint;
         };
 

@@ -46,9 +46,9 @@ constexpr bool round_trip(From val, Pred pred = dpp::cmpeq) noexcept {
         typename dpl::remove_const_t<decltype(src)>::value_type>);
     auto const dst =
         dpp::bit_keep(keep_mask, dpp::broadcast<To, abi>(float_cast<To>(val)));
-    auto const actual_dst = dpp::cast<To>(src);
+    auto const actual_dst = dpp::element_cast<To>(src);
     auto const dstequal = pred(actual_dst, dst);
-    auto const actual_castback = dpp::cast<From>(actual_dst);
+    auto const actual_castback = dpp::element_cast<From>(actual_dst);
     auto const isequal = pred(actual_castback, src);
     return dpp::all_of(isequal) && dpp::all_of(dstequal);
 }
@@ -90,9 +90,9 @@ constexpr bool one_way(From val, Pred pred = dpp::cmpeq) noexcept {
     auto const src = dpp::bit_keep(keep_mask, dpp::broadcast<From, abi>(val));
     auto const dst =
         dpp::bit_keep(keep_mask, dpp::broadcast<To, abi>(float_cast<To>(val)));
-    auto const actual_dst = dpp::cast<To>(src);
+    auto const actual_dst = dpp::element_cast<To>(src);
     auto const dstequal = pred(actual_dst, dst);
-    auto const actual_castback = dpp::cast<From>(actual_dst);
+    auto const actual_castback = dpp::element_cast<From>(actual_dst);
     auto const isequal = pred(actual_castback, src);
     return dpp::all_of(dstequal) && dpp::none_of(isequal);
 }

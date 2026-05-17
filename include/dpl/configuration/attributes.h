@@ -349,3 +349,11 @@
 #  define __DPL_ATTRIBUTE_EMPTY_BASES empty_bases
 #  define __DPL_ATTRIBUTE_TYPE_DECLSPEC_EMPTY_BASES
 #endif
+
+#if DPL_HAS_CPP_ATTRIBUTE(indeterminate) && DPL_CXX26
+#  define DPL_INDETERMINATE [[indeterminate]]
+#  define __DPL_ATTRIBUTE_INDETERMINATE indeterminate
+#  define __DPL_ATTRIBUTE_TYPE_CPP_INDETERMINATE
+#else
+#  define DPL_INDETERMINATE
+#endif /* DPL_HAS_CPP_ATTRIBUTE(nodiscard) */

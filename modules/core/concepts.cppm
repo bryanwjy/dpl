@@ -24,6 +24,7 @@ import :std.utility;
 #include "dpl/core/concepts/common_order_with.h"
 #include "dpl/core/concepts/common_size_with.h"
 #include "dpl/core/concepts/compatible_mask_with.h"
+#include "dpl/core/concepts/decayable.h"
 #include "dpl/core/concepts/immediate_like.h"
 #include "dpl/core/concepts/immediate_mask_like.h"
 #include "dpl/core/concepts/integral_simd.h"
