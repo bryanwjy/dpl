@@ -55,13 +55,13 @@ DPL_EXPORT template <typename T>
 concept basic_simd_mask_type = basic_simd_class<T> && atom::simd_mask_type<T>;
 
 DPL_EXPORT template <typename T>
-concept extended_simd_class = simd_class<T> && !atom::basic_simd_class<T>;
+concept extended_class = simd_class<T> && !atom::basic_simd_class<T>;
 
 DPL_EXPORT template <typename T>
-concept extended_simd = extended_simd_class<T> && atom::simd_type<T>;
+concept extended_simd = extended_class<T> && atom::simd_type<T>;
 
 DPL_EXPORT template <typename T>
-concept extended_mask = extended_simd_class<T> && atom::simd_mask_type<T>;
+concept extended_mask = extended_class<T> && atom::simd_mask_type<T>;
 
 } // namespace datapar
 

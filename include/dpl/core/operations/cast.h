@@ -107,7 +107,9 @@ public:
     static constexpr basic_simd<To, A> operator()(
         basic_simd<FromE, A> val) noexcept {
         using src_t = basic_simd<FromE, A>;
-        if constexpr (unqualified_element_castable_to<src_t, To>) {
+        if constexpr (same_as<To, FromE>) {
+            return val;
+        } else if constexpr (unqualified_element_castable_to<src_t, To>) {
             if consteval {
                 return fallback(val);
             } else {
@@ -119,11 +121,16 @@ public:
     }
 
     template <simd_element FromE, scalable_simd A>
-    requires unqualified_element_castable_to<basic_simd<FromE, A>, To>
+    requires same_as<To, FromE> ||
+        unqualified_element_castable_to<basic_simd<FromE, A>, To>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_simd<To, A> operator()(
         basic_simd<FromE, A> val) noexcept {
-        return element_cast<To>(internal::abi<A>, val);
+        if constexpr (same_as<To, FromE>) {
+            return val;
+        } else {
+            return element_cast<To>(internal::abi<A>, val);
+        }
     }
 
     template <extended_simd From>
@@ -169,7 +176,7 @@ struct abi_cast_t<To> {
 private:
     template <simd_abi A>
     static constexpr auto policy = []() {
-        if constexpr (simd_abi_traits<A>::size != simd_abi_traits<A>::size) {
+        if constexpr (simd_abi_traits<A>::size == simd_abi_traits<A>::size) {
             return operation_category::lane_agnostic;
         } else {
             return operation_category::structural_transformation;
@@ -225,7 +232,9 @@ public:
     requires fixed_width_abi<To> && common_abi_with<To, FromA>
     {
         using src_type = basic_simd<E, FromA>;
-        if constexpr (unqualified_abi_target_castable<src_type, To>) {
+        if constexpr (same_as<To, FromA>) {
+            return val;
+        } else if constexpr (unqualified_abi_target_castable<src_type, To>) {
             if consteval {
                 return fallback(val);
             } else {
@@ -291,7 +300,9 @@ public:
     requires fixed_width_abi<To> && common_abi_with<To, FromA>
     {
         using src_type = basic_simd_mask<E, FromA>;
-        if constexpr (unqualified_abi_target_castable<src_type, To>) {
+        if constexpr (same_as<FromA, To>) {
+            return val;
+        } else if constexpr (unqualified_abi_target_castable<src_type, To>) {
             if consteval {
                 return fallback(val);
             } else {

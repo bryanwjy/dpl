@@ -19,7 +19,7 @@ concept decayable_mask_for =
     extended_mask<T> && ((simd_traits<T>::decay_policy & C) == C);
 template <typename T, operation_category C>
 concept decayable_simd_for =
-    extended_simd_class<T> && ((simd_traits<T>::decay_policy & C) == C);
+    extended_class<T> && ((simd_traits<T>::decay_policy & C) == C);
 
 } // namespace datapar
 
