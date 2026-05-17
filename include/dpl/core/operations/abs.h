@@ -6,10 +6,10 @@
 #include "dpl/core/operations/bitwise.h"
 #include "dpl/core/operations/minmax.h"
 #include "dpl/core/operations/negate.h"
+#include "dpl/core/operations/reinterpret.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/immediate_mask.h"
-#  include "dpl/core/basic/reinterpret.h"
 #  include "dpl/core/concepts/arithmetic_type.h"
 #  include "dpl/core/concepts/simd_traits.h"
 #  include "dpl/core/type_traits/common_arithmetic_type.h"
@@ -52,8 +52,8 @@ private:
 
     template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallback(basic_simd<E, A> val) noexcept {
+    static constexpr auto DPL_VECTORCALL fallback(
+        basic_simd<E, A> val) noexcept {
         using T = negated_type<E>;
         if constexpr (enumeration<E>) {
             return operator()(dx::reinterpret<underlying_type_t<E>>(val));
@@ -66,16 +66,16 @@ private:
 
     template <typename C, typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallback(basic_simd_mask<C, A> mask, basic_simd<E, A> val) noexcept {
+    static constexpr auto DPL_VECTORCALL fallback(
+        basic_simd_mask<C, A> mask, basic_simd<E, A> val) noexcept {
         using T = negated_type<E>;
         return dx::max(dx::reinterpret<T>(val), dx::negate(mask, val));
     }
 
     template <integral auto V, typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_simd<E, A> DPL_VECTORCALL
-        fallbacki(basic_simd<E, A> val) noexcept {
+    static constexpr basic_simd<E, A>
+        DPL_VECTORCALL fallbacki(basic_simd<E, A> val) noexcept {
         static constexpr immediate_mask<simd_abi_traits<E, A>::size, V> mask{};
         if constexpr (all_of(mask)) {
             return fallback(val);

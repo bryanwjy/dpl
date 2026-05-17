@@ -4,8 +4,8 @@
 #include "dpl/config.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/basic/reinterpret.h"
 #  include "dpl/core/concepts/simd_class.h"
+#  include "dpl/core/operations/reinterpret.h"
 #  include "dpl/std/concepts/integral.h"
 #  include "dpl/std/type_traits/make_unsigned.h"
 #endif

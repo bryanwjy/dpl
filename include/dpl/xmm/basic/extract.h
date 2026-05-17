@@ -29,7 +29,7 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::xmm {
 
-DPL_EXPORT template <simd_element E>
+DPL_EXPORT template <simd_element_for<abi_tag> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr E extract(abi_tag, simd<E> src, size_t idx) noexcept {
 #if !DPL_COMPILER_MSVC
@@ -80,7 +80,7 @@ template <typename T>
 using int_type_t DPL_NODEBUG = decltype(int_type<T>());
 } // namespace internal
 
-DPL_EXPORT template <simd_element E>
+DPL_EXPORT template <simd_element_for<abi_tag> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr E extract(
     abi_tag tag, simd<E> src, integral_constant_like auto idx) noexcept {
@@ -155,38 +155,38 @@ constexpr bool is_true(T val) noexcept {
     return dx::xmm::is_true(__DPL to_underlying(val));
 }
 
-DPL_EXPORT template <simd_element E>
+DPL_EXPORT template <simd_element_for<abi_tag> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr bool extract(abi_tag tag, mask<E> src, size_t idx) noexcept {
-    return dx::xmm::is_true(extract(tag, simd<E>(+src), idx));
+    return dx::xmm::is_true(xmm::extract(tag, simd<E>(+src), idx));
 }
 
-DPL_EXPORT template <simd_element E>
+DPL_EXPORT template <simd_element_for<abi_tag> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr bool extract(
     abi_tag tag, mask<E> src, integral_constant_like auto idx) noexcept {
-    return dx::xmm::is_true(extract(tag, simd<E>(+src), idx));
+    return dx::xmm::is_true(xmm::extract(tag, simd<E>(+src), idx));
 }
 
-DPL_EXPORT template <simd_element E>
+DPL_EXPORT template <simd_element_for<abi_tag> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr E extract(simd<E> src, size_t idx) noexcept {
     return xmm::extract(xmm::abi, src, idx);
 }
 
-DPL_EXPORT template <simd_element E>
+DPL_EXPORT template <simd_element_for<abi_tag> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr E extract(simd<E> src, integral_constant_like auto idx) noexcept {
     return xmm::extract(xmm::abi, src, idx);
 }
 
-DPL_EXPORT template <simd_element E>
+DPL_EXPORT template <simd_element_for<abi_tag> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr bool extract(mask<E> src, size_t idx) noexcept {
     return xmm::extract(xmm::abi, src, idx);
 }
 
-DPL_EXPORT template <simd_element E>
+DPL_EXPORT template <simd_element_for<abi_tag> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr bool extract(mask<E> src, integral_constant_like auto idx) noexcept {
     return xmm::extract(xmm::abi, src, idx);

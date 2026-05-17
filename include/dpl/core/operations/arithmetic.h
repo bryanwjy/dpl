@@ -6,10 +6,10 @@
 // IWYU pragma: always_keep
 
 #include "dpl/core/operations/operation_base.h"
+#include "dpl/core/operations/reinterpret.h"
 #include "dpl/core/operations/transform.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/basic/reinterpret.h"
 #  include "dpl/core/concepts/arithmetic_type.h"
 #  include "dpl/core/concepts/common_arithmetic_with.h"
 #  include "dpl/core/concepts/simd_abi.h"
@@ -78,8 +78,8 @@ private:
 
     template <typename L, typename R, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallback(basic_simd<L, A> lhs, basic_simd<R, A> rhs) noexcept {
+    static constexpr auto DPL_VECTORCALL fallback(
+        basic_simd<L, A> lhs, basic_simd<R, A> rhs) noexcept {
         using T = common_arithmetic_type_t<L, R>;
         return internal::transform<basic_simd<T, A>>(
             [](L lhs, R rhs) { return static_cast<T>(lhs + rhs); }, lhs, rhs);
@@ -148,8 +148,8 @@ private:
 
     template <typename L, typename R, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallback(basic_simd<L, A> lhs, basic_simd<R, A> rhs) noexcept {
+    static constexpr auto DPL_VECTORCALL fallback(
+        basic_simd<L, A> lhs, basic_simd<R, A> rhs) noexcept {
         using T = common_arithmetic_type_t<L, R>;
         return internal::transform<basic_simd<T, A>>(
             [](L lhs, R rhs) { return static_cast<T>(lhs - rhs); }, lhs, rhs);
@@ -218,8 +218,8 @@ private:
 
     template <typename L, typename R, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallback(basic_simd<L, A> lhs, basic_simd<R, A> rhs) noexcept {
+    static constexpr auto DPL_VECTORCALL fallback(
+        basic_simd<L, A> lhs, basic_simd<R, A> rhs) noexcept {
         using T = common_arithmetic_type_t<L, R>;
         return internal::transform<basic_simd<T, A>>(
             [](L lhs, R rhs) { return static_cast<T>(lhs - rhs); }, lhs, rhs);
@@ -291,8 +291,9 @@ private:
 
     template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_simd<E, A> DPL_VECTORCALL
-        fallback(basic_simd<E, A> lhs, basic_simd<E, A> rhs) noexcept {
+    static constexpr basic_simd<E, A>
+        DPL_VECTORCALL fallback(
+            basic_simd<E, A> lhs, basic_simd<E, A> rhs) noexcept {
         return dx::internal::transform<basic_simd<E, A>>(lhs, rhs,
             [](auto lhs, auto rhs) { return static_cast<E>(lhs / rhs); });
     }
@@ -354,8 +355,8 @@ private:
 
     template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallback(basic_simd<E, A> val) noexcept {
+    static constexpr auto DPL_VECTORCALL fallback(
+        basic_simd<E, A> val) noexcept {
         if constexpr (enumeration<E>) {
             return dx::reinterpret<result<E>>(val);
         } else {

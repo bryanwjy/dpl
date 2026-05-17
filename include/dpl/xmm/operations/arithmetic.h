@@ -8,6 +8,8 @@
 #  error "Unsupported platform"
 #endif
 
+#include "dpl/xmm/operations/reinterpret.h"
+
 #if !DPL_MODULES
 #  include "dpl/core/fwd.h"
 
@@ -15,7 +17,6 @@
 #  include "dpl/core/concepts/common_float_with.h"
 #  include "dpl/core/type_traits/common_arithmetic_type.h"
 #  include "dpl/xmm/basic/abi.h"
-#  include "dpl/xmm/basic/reinterpret.h"
 
 #  include <immintrin.h>
 #endif

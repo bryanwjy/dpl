@@ -8,9 +8,7 @@
 #  error "Unsupported platform"
 #endif
 
-#include "dpl/xmm/basic/abi.h"
-#include "dpl/xmm/basic/extract.h"
-#include "dpl/xmm/basic/reinterpret.h"
+#include "dpl/xmm/operations/reinterpret.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/immediate.h"
@@ -19,6 +17,8 @@
 #  include "dpl/core/concepts/common_size_with.h"
 #  include "dpl/core/concepts/simd_element.h"
 #  include "dpl/core/type_traits/iota_sequence.h"
+#  include "dpl/xmm/basic/abi.h"
+#  include "dpl/xmm/basic/extract.h"
 
 #  include <immintrin.h>
 #endif
@@ -29,8 +29,8 @@ namespace datapar::xmm {
 
 DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr mask<E> DPL_VECTORCALL
-    to_simd_mask(abi_tag tag, simd<E> src) noexcept {
+constexpr mask<E>
+    DPL_VECTORCALL to_simd_mask(abi_tag tag, simd<E> src) noexcept {
     if consteval {
         []<size_t... Is>(abi_tag tag, simd<E> src, index_sequence<Is...>) {
             using bit = signed_representation_t<E>;
@@ -74,21 +74,24 @@ constexpr mask<E> DPL_VECTORCALL
 
 DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr mask<E> DPL_VECTORCALL
-    to_simd_mask(abi_tag tag, assume_normalized_mask_t, simd<E> src) noexcept {
+constexpr mask<E>
+    DPL_VECTORCALL to_simd_mask(
+        abi_tag tag, assume_normalized_mask_t, simd<E> src) noexcept {
     return +src;
 }
 
 DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr mask<E> DPL_VECTORCALL to_simd_mask(simd<E> src) noexcept {
+constexpr mask<E>
+    DPL_VECTORCALL to_simd_mask(simd<E> src) noexcept {
     return xmm::to_simd_mask(xmm::abi, src);
 }
 
 DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr mask<E> DPL_VECTORCALL
-    to_simd_mask(assume_normalized_mask_t tag, simd<E> src) noexcept {
+constexpr mask<E>
+    DPL_VECTORCALL to_simd_mask(
+        assume_normalized_mask_t tag, simd<E> src) noexcept {
     return xmm::to_simd_mask(xmm::abi, tag, src);
 }
 

@@ -5,10 +5,10 @@
 
 #include "dpl/core/math/internal/floating_point_simd.h"
 #if !DPL_MODULES
-#  include "dpl/core/basic/reinterpret.h"
 #  include "dpl/core/basic/to_basic_type.h"
 #  include "dpl/core/concepts/simd_traits.h"
 #  include "dpl/core/constants/digits.h"
+#  include "dpl/core/operations/reinterpret.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN

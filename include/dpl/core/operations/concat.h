@@ -3,8 +3,9 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/operations/reinterpret.h"
+
 #if !DPL_MODULES
-#  include "dpl/core/basic/reinterpret.h"
 #  include "dpl/core/concepts/basic_element.h"
 #  include "dpl/core/concepts/simd_mask_type.h"
 #  include "dpl/core/concepts/simd_type.h"

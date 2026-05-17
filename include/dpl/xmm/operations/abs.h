@@ -8,6 +8,8 @@
 #  error "Unsupported platform"
 #endif
 
+#include "dpl/xmm/operations/reinterpret.h"
+
 #if !DPL_MODULES
 #  include "dpl/core/fwd.h"
 
@@ -18,7 +20,6 @@
 #  include "dpl/core/type_traits/common_arithmetic_type.h"
 #  include "dpl/std/concepts/enumeration.h"
 #  include "dpl/xmm/basic/abi.h"
-#  include "dpl/xmm/basic/reinterpret.h"
 
 #  include <immintrin.h>
 #endif
@@ -32,8 +33,8 @@ using negated_type DPL_NODEBUG = common_arithmetic_type_t<E, E>;
 
 DPL_EXPORT template <arithmetic_type E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<negated_type<E>> DPL_VECTORCALL
-    abs(abi_tag tag, simd<E> val) noexcept {
+inline simd<negated_type<E>>
+    DPL_VECTORCALL abs(abi_tag tag, simd<E> val) noexcept {
     if constexpr (unsigned_integral<E> || requires {
                       requires enumeration<E> &&
                           unsigned_integral<underlying_type_t<E>>;
@@ -61,7 +62,8 @@ inline simd<negated_type<E>> DPL_VECTORCALL
 DPL_EXPORT template <arithmetic_type E>
 requires floating_point<E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<negated_type<E>> DPL_VECTORCALL abs(abi_tag, simd<E> val) noexcept {
+inline simd<negated_type<E>>
+    DPL_VECTORCALL abs(abi_tag, simd<E> val) noexcept {
     if constexpr (common_float_with<E, float>) {
         return _mm_andnot_ps(_mm_set1_ps(-0.0f), +val);
     } else if constexpr (common_float_with<E, double>) {

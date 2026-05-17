@@ -3,11 +3,14 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/basic/to_basic_type.h"
+#include "dpl/core/operations/compare.h"
+#include "dpl/core/operations/reinterpret.h"
 
 #if !DPL_MODULES
+#  include "dpl/core/basic/to_basic_type.h"
 #  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/simd_equivalence.h"
+#  include "dpl/core/constants/zero.h"
 #  include "dpl/core/type_traits/make_simd_mask_type.h"
 #endif
 
@@ -74,17 +77,31 @@ namespace datapar::internal {
 void to_simd_mask(...) noexcept = delete;
 
 struct to_simd_mask_t {
-public:
-    template <basic_simd_type T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr make_simd_mask_type_t<T> operator()(T src) noexcept
-    requires requires { to_simd_mask(internal::abi<T>, src); }
-    {
-        return to_simd_mask(internal::abi<T>, src);
+private:
+    template <simd_abi A, simd_element_for<A> E>
+    static constexpr basic_simd_mask<E, A> fallback(
+        basic_simd<E, A> src) noexcept {
+        return dx::cmpneq(src, dx::zero_v<basic_simd<E, A>>);
     }
 
-    template <simd_type T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+public:
+    template <simd_abi A, simd_element_for<A> E>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr basic_simd_mask<E, A> operator()(
+        basic_simd<E, A> src) noexcept {
+        if constexpr (requires { to_simd_mask(internal::abi<A>, src); }) {
+            if consteval {
+                return fallback(src);
+            } else {
+                return to_simd_mask(internal::abi<A>, src);
+            }
+        } else {
+            return fallback(src);
+        }
+    }
+
+    template <extended_simd T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T src) noexcept
         -> equivalent_mask_as<make_simd_mask_type_t<T>> auto {
         if constexpr (requires { to_simd_mask(internal::abi<T>, src); }) {
@@ -94,23 +111,23 @@ public:
         }
     }
 
-    template <basic_simd_type T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr make_simd_mask_type_t<T> operator()(
-        assume_normalized_mask_t tag, T src) noexcept {
-        if constexpr (requires { to_simd_mask(internal::abi<T>, tag, src); }) {
+    template <simd_abi A, simd_element_for<A> E>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr basic_simd_mask<E, A> operator()(
+        assume_normalized_mask_t tag, basic_simd<E, A> src) noexcept {
+        if constexpr (requires { to_simd_mask(internal::abi<A>, tag, src); }) {
             if consteval {
                 return operator()(src);
             } else {
-                return to_simd_mask(internal::abi<T>, tag, src);
+                return to_simd_mask(internal::abi<A>, tag, src);
             }
         } else {
             return operator()(src);
         }
     }
 
-    template <simd_type T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    template <extended_simd T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(assume_normalized_mask_t tag,
         T src) noexcept -> equivalent_mask_as<make_simd_mask_type_t<T>> auto {
         if constexpr (requires { to_simd_mask(internal::abi<T>, tag, src); }) {

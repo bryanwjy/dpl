@@ -58,7 +58,7 @@ constexpr simd<E> initialize(abi_tag tag, Args&&... args) noexcept {
                     static_cast<E>( __DPL forward<Args>(args)))...},
             };
         } else if constexpr (enumeration<E>) {
-            return dx::xmm::initialize(
+            return xmm::initialize(
                 tag, __DPL to_underlying(static_cast<E>(args))...);
         } else if constexpr (common_order_with<E, int32>) {
             return native_vector_t<E>{
@@ -141,21 +141,23 @@ DPL_EXPORT template <simd_element E, same_as<bool>... Args>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr mask<E> initialize(abi_tag tag, Args... scalars) noexcept {
     static_assert(!is_const_v<E> && !is_volatile_v<E>);
-    return +dx::xmm::initialize<E>(
+    return +xmm::initialize<E>(
         tag, (scalars ? dx::all_bits_v<E> : dx::zero_v<E>)...);
 }
 
-DPL_EXPORT template <vectorizable E, core_convertible_to<E>... Args>
-requires (... && !same_as<Args, bool>)
+DPL_EXPORT template <vectorizable E, different_from<abi_tag> Arg,
+    core_convertible_to<E>... Args>
+requires core_convertible_to<Arg, E> && (... && !same_as<Args, bool>)
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr simd<E> initialize(Args&&... args) noexcept {
-    return xmm::initialize(xmm::abi, __DPL forward<Args>(args)...);
+constexpr simd<E> initialize(Arg&& arg, Args&&... args) noexcept {
+    return xmm::initialize<E>(
+        xmm::abi, __DPL forward<Arg>(arg), __DPL forward<Args>(args)...);
 }
 
 DPL_EXPORT template <simd_element E, same_as<bool>... Args>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr mask<E> initialize(Args&&... args) noexcept {
-    return +dx::xmm::initialize<E>(
+    return +xmm::initialize<E>(
         xmm::abi, (args ? dx::all_bits_v<E> : dx::zero_v<E>)...);
 }
 

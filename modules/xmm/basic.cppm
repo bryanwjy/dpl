@@ -15,7 +15,5 @@ export import dpl;
 #include "dpl/xmm/basic/extract.h"
 #include "dpl/xmm/basic/initialize.h"
 #include "dpl/xmm/basic/load.h"
-#include "dpl/xmm/basic/reinterpret.h"
 #include "dpl/xmm/basic/store.h"
-#include "dpl/xmm/basic/to_simd_mask.h"
 // IWYU pragma: end_exports

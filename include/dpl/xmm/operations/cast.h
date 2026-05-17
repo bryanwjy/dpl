@@ -14,6 +14,7 @@
 #include "dpl/xmm/operations/arithmetic.h"
 #include "dpl/xmm/operations/bit.h"
 #include "dpl/xmm/operations/bitwise.h"
+#include "dpl/xmm/operations/reinterpret.h"
 #include "dpl/xmm/operations/select.h"
 
 #if !DPL_MODULES
@@ -29,7 +30,6 @@
 #  include "dpl/std/utility/to_unsigned.h"
 #  include "dpl/xmm/basic/abi.h"
 #  include "dpl/xmm/basic/broadcast.h"
-#  include "dpl/xmm/basic/reinterpret.h"
 
 #  include <immintrin.h>
 #endif

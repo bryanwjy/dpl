@@ -5,12 +5,12 @@
 
 #include "dpl/core/operations/bitwise.h"
 #include "dpl/core/operations/operation_base.h"
+#include "dpl/core/operations/reinterpret.h"
 #include "dpl/core/operations/select.h"
 #include "dpl/core/operations/transform.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/immediate_mask.h"
-#  include "dpl/core/basic/reinterpret.h"
 #  include "dpl/core/concepts/common_bits_with.h"
 #  include "dpl/core/concepts/compatible_mask_with.h"
 #  include "dpl/core/concepts/immediate_mask_like.h"
@@ -641,8 +641,8 @@ struct bit_stencil_t {
 private:
     template <typename M, typename T, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallback(basic_simd<M, A> mask, basic_simd<T, A> arg) noexcept {
+    static constexpr auto DPL_VECTORCALL fallback(
+        basic_simd<M, A> mask, basic_simd<T, A> arg) noexcept {
         return dx::bwornot(arg, mask);
     }
 
@@ -814,8 +814,8 @@ struct bit_select_t {
 private:
     template <auto V, typename ET, typename EF, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallbacki(basic_simd<ET, A> tval, basic_simd<EF, A> fval) noexcept {
+    static constexpr auto DPL_VECTORCALL fallbacki(
+        basic_simd<ET, A> tval, basic_simd<EF, A> fval) noexcept {
         using ER = common_bits_type_t<ET, EF>;
         return dx::selecti<V>(
             dx::reinterpret<ER>(tval), dx::reinterpret<ER>(fval));
@@ -968,8 +968,8 @@ private:
     requires unqualified_bit_selecti<mask_type<L>, L, R, A> ||
         unqualified_mbit_selecti<mask_type<L>, L, R, A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        native(A abi, L left, R right) noexcept {
+    static constexpr auto DPL_VECTORCALL native(
+        A abi, L left, R right) noexcept {
         return bit_select<V>(internal::abi<A>, left, right);
     }
 
@@ -977,8 +977,8 @@ private:
     requires unqualified_bit_selecti<mask_type<R>, L, R, A> ||
         unqualified_mbit_selecti<mask_type<R>, L, R, A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        native(A abi, L left, R right) noexcept {
+    static constexpr auto DPL_VECTORCALL native(
+        A abi, L left, R right) noexcept {
         return bit_select<V>(internal::abi<A>, left, right);
     }
 
@@ -1014,8 +1014,8 @@ struct popcount_t {
 private:
     template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallback(basic_simd<E, A> arg) noexcept {
+    static constexpr auto DPL_VECTORCALL fallback(
+        basic_simd<E, A> arg) noexcept {
         static_assert(
             fixed_width_abi<A>, "Scalable ABIs have no viable fallback");
         return internal::transform<basic_simd<E, A>>(
@@ -1028,8 +1028,8 @@ private:
 
     template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr size_t DPL_VECTORCALL
-        fallback(basic_simd_mask<E, A> arg) noexcept {
+    static constexpr size_t DPL_VECTORCALL fallback(
+        basic_simd_mask<E, A> arg) noexcept {
         return []<size_t I>(this auto self, auto arg, immediate<I>) {
             if constexpr (I > 0) {
                 return arg[I] + self(arg, imm<I - 1>);
@@ -1525,8 +1525,8 @@ struct countr_one_t {
 private:
     template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallback(basic_simd<E, A> arg) noexcept {
+    static constexpr auto DPL_VECTORCALL fallback(
+        basic_simd<E, A> arg) noexcept {
         return internal::transform<basic_simd<E, A>>(arg, [](auto val) {
             auto const count = __DPL countr_one(__DPL to_unsigned(val));
             return static_cast<E>(count);
@@ -1535,8 +1535,8 @@ private:
 
     template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallback(basic_simd_mask<E, A> arg) noexcept {
+    static constexpr auto DPL_VECTORCALL fallback(
+        basic_simd_mask<E, A> arg) noexcept {
         return []<size_t I>(this auto self, auto arg, immediate<I>) {
             auto val = arg[I];
             if constexpr (I < simd_abi_traits<E, A>::size) {
@@ -1645,8 +1645,8 @@ struct byteswap_t {
 private:
     template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallback(basic_simd<E, A> arg) noexcept {
+    static constexpr auto DPL_VECTORCALL fallback(
+        basic_simd<E, A> arg) noexcept {
         static_assert(
             fixed_width_abi<A>, "Scalable ABIs have no viable fallback");
         return internal::transform<basic_simd<E, A>>(

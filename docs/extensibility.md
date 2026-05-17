@@ -76,18 +76,6 @@ The following operations must be defined:
 - `store(abi_type, simd, dst_ptr)`  
   Stores a SIMD object into memory.
 
-- `reinterpret<E>(abi_type, simd)`  
-  Reinterprets a SIMD object as another element type.
-
-- `reinterpret<E>(abi_type, mask)`  
-  Reinterprets a SIMD mask. The source and destination must have the same size.
-
-- `to_simd_mask(abi_type, simd)`  
-  Converts a SIMD object to a SIMD mask.
-
-- `to_simd_mask(abi_type, assume_canonical_t, simd)`  
-  Converts a SIMD object to a SIMD mask using a fast path under the assumption of canonical representation.
-
 All of these functions are discovered via argument-dependent lookup (ADL). See the [*Customization Point Objects*](#customization-point-objects) section for details on how dispatch is performed.
 
 Fallback implementations are provided for higher-level operations, ranging from arithmetic to algorithmic primitives. Many of these do not directly use hardware intrinsics; instead, they are expressed in terms of the basic operations listed above and rely on the compiler to generate efficient code. As a result, performance may be suboptimal depending on the operation and target architecture.

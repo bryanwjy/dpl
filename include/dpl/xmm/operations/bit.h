@@ -9,6 +9,7 @@
 #endif
 
 #include "dpl/xmm/operations/arithmetic.h"
+#include "dpl/xmm/operations/reinterpret.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/fwd.h"
@@ -18,7 +19,6 @@
 #  include "dpl/std/bit/countl.h"
 #  include "dpl/xmm/basic/abi.h"
 #  include "dpl/xmm/basic/broadcast.h"
-#  include "dpl/xmm/basic/reinterpret.h"
 
 #  include <immintrin.h>
 #endif
@@ -29,8 +29,8 @@ namespace datapar::xmm {
 
 template <simd_element L, common_bits_with<L> R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<common_bits_type_t<L, R>> DPL_VECTORCALL
-    bit_drop(simd<L> lhs, simd<R> rhs) noexcept {
+inline simd<common_bits_type_t<L, R>>
+    DPL_VECTORCALL bit_drop(simd<L> lhs, simd<R> rhs) noexcept {
     using bit = unsigned_representation_t<L>;
     auto const result = _mm_andnot_si128(
         +xmm::reinterpret<bit>(lhs), +xmm::reinterpret<bit>(rhs));
@@ -39,8 +39,8 @@ inline simd<common_bits_type_t<L, R>> DPL_VECTORCALL
 
 template <simd_element L, common_bits_with<L> R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline mask<common_bits_type_t<L, R>> DPL_VECTORCALL
-    bit_drop(mask<L> lhs, mask<R> rhs) noexcept {
+inline mask<common_bits_type_t<L, R>>
+    DPL_VECTORCALL bit_drop(mask<L> lhs, mask<R> rhs) noexcept {
     using bit = unsigned_representation_t<L>;
     auto const result = _mm_andnot_si128(
         +xmm::reinterpret<bit>(lhs), +xmm::reinterpret<bit>(rhs));
@@ -49,7 +49,8 @@ inline mask<common_bits_type_t<L, R>> DPL_VECTORCALL
 
 template <simd_element L, common_bits_with<L> R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<R> DPL_VECTORCALL bit_drop(mask<L> lhs, simd<R> rhs) noexcept {
+inline simd<R>
+    DPL_VECTORCALL bit_drop(mask<L> lhs, simd<R> rhs) noexcept {
     using bit = unsigned_representation_t<L>;
     auto const result = _mm_andnot_si128(
         +xmm::reinterpret<bit>(lhs), +xmm::reinterpret<bit>(rhs));
@@ -58,8 +59,8 @@ inline simd<R> DPL_VECTORCALL bit_drop(mask<L> lhs, simd<R> rhs) noexcept {
 
 template <simd_element L, common_bits_with<L> R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<common_bits_type_t<L, R>> DPL_VECTORCALL
-    bit_keep(simd<L> lhs, simd<R> rhs) noexcept {
+inline simd<common_bits_type_t<L, R>>
+    DPL_VECTORCALL bit_keep(simd<L> lhs, simd<R> rhs) noexcept {
     using bit = unsigned_representation_t<L>;
     auto const result =
         _mm_and_si128(+xmm::reinterpret<bit>(lhs), +xmm::reinterpret<bit>(rhs));
@@ -68,8 +69,8 @@ inline simd<common_bits_type_t<L, R>> DPL_VECTORCALL
 
 template <simd_element L, common_bits_with<L> R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline mask<common_bits_type_t<L, R>> DPL_VECTORCALL
-    bit_keep(mask<L> lhs, mask<R> rhs) noexcept {
+inline mask<common_bits_type_t<L, R>>
+    DPL_VECTORCALL bit_keep(mask<L> lhs, mask<R> rhs) noexcept {
     using bit = unsigned_representation_t<L>;
     auto const result =
         _mm_and_si128(+xmm::reinterpret<bit>(lhs), +xmm::reinterpret<bit>(rhs));
@@ -78,7 +79,8 @@ inline mask<common_bits_type_t<L, R>> DPL_VECTORCALL
 
 template <simd_element L, common_bits_with<L> R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<R> DPL_VECTORCALL bit_keep(mask<L> lhs, simd<R> rhs) noexcept {
+inline simd<R>
+    DPL_VECTORCALL bit_keep(mask<L> lhs, simd<R> rhs) noexcept {
     using bit = unsigned_representation_t<L>;
     auto const result =
         _mm_and_si128(+xmm::reinterpret<bit>(lhs), +xmm::reinterpret<bit>(rhs));
@@ -87,8 +89,8 @@ inline simd<R> DPL_VECTORCALL bit_keep(mask<L> lhs, simd<R> rhs) noexcept {
 
 template <simd_element L, common_bits_with<L> R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<common_bits_type_t<L, R>> DPL_VECTORCALL
-    bit_fill(simd<L> lhs, simd<R> rhs) noexcept {
+inline simd<common_bits_type_t<L, R>>
+    DPL_VECTORCALL bit_fill(simd<L> lhs, simd<R> rhs) noexcept {
     using bit = unsigned_representation_t<L>;
     auto const result =
         _mm_or_si128(+xmm::reinterpret<bit>(lhs), +xmm::reinterpret<bit>(rhs));
@@ -97,8 +99,8 @@ inline simd<common_bits_type_t<L, R>> DPL_VECTORCALL
 
 template <simd_element L, common_bits_with<L> R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline mask<common_bits_type_t<L, R>> DPL_VECTORCALL
-    bit_fill(mask<L> lhs, mask<R> rhs) noexcept {
+inline mask<common_bits_type_t<L, R>>
+    DPL_VECTORCALL bit_fill(mask<L> lhs, mask<R> rhs) noexcept {
     using bit = unsigned_representation_t<L>;
     auto const result =
         _mm_or_si128(+xmm::reinterpret<bit>(lhs), +xmm::reinterpret<bit>(rhs));
@@ -107,7 +109,8 @@ inline mask<common_bits_type_t<L, R>> DPL_VECTORCALL
 
 template <simd_element L, common_bits_with<L> R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<R> DPL_VECTORCALL bit_fill(mask<L> lhs, simd<R> rhs) noexcept {
+inline simd<R>
+    DPL_VECTORCALL bit_fill(mask<L> lhs, simd<R> rhs) noexcept {
     using bit = unsigned_representation_t<L>;
     auto const result =
         _mm_or_si128(+xmm::reinterpret<bit>(lhs), +xmm::reinterpret<bit>(rhs));
@@ -116,8 +119,8 @@ inline simd<R> DPL_VECTORCALL bit_fill(mask<L> lhs, simd<R> rhs) noexcept {
 
 template <simd_element L, common_bits_with<L> R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<common_bits_type_t<L, R>> DPL_VECTORCALL
-    bit_stencil(simd<L> lhs, simd<R> rhs) noexcept {
+inline simd<common_bits_type_t<L, R>>
+    DPL_VECTORCALL bit_stencil(simd<L> lhs, simd<R> rhs) noexcept {
     using bit = unsigned_representation_t<L>;
     auto const all = _mm_set1_epi32(-1);
     auto const result =
@@ -128,8 +131,8 @@ inline simd<common_bits_type_t<L, R>> DPL_VECTORCALL
 
 template <simd_element L, common_bits_with<L> R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline mask<common_bits_type_t<L, R>> DPL_VECTORCALL
-    bit_stencil(mask<L> lhs, mask<R> rhs) noexcept {
+inline mask<common_bits_type_t<L, R>>
+    DPL_VECTORCALL bit_stencil(mask<L> lhs, mask<R> rhs) noexcept {
     using bit = unsigned_representation_t<L>;
     auto const all = _mm_set1_epi32(-1);
     auto const result =
@@ -140,7 +143,8 @@ inline mask<common_bits_type_t<L, R>> DPL_VECTORCALL
 
 template <simd_element L, common_bits_with<L> R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<R> DPL_VECTORCALL bit_stencil(mask<L> lhs, simd<R> rhs) noexcept {
+inline simd<R>
+    DPL_VECTORCALL bit_stencil(mask<L> lhs, simd<R> rhs) noexcept {
     using bit = unsigned_representation_t<L>;
     auto const all = [](__m128i val) { return _mm_cmpeq_epi32(val, val); }(
                          _mm_undefined_si128());
@@ -176,8 +180,8 @@ requires requires { xmm::bit_fill(lhs, rhs); }
 
 template <simd_element L, simd_element R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-inline auto DPL_VECTORCALL
-    bit_stencil(abi_tag, simd<L> lhs, simd<R> rhs) noexcept
+inline auto DPL_VECTORCALL bit_stencil(
+    abi_tag, simd<L> lhs, simd<R> rhs) noexcept
 requires requires { xmm::bit_stencil(lhs, rhs); }
 {
     return xmm::bit_stencil(lhs, rhs);
@@ -190,8 +194,8 @@ namespace details {
 
 template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<signed_representation_t<E>> DPL_VECTORCALL
-    popcount(simd<E> val) noexcept {
+inline simd<signed_representation_t<E>>
+    DPL_VECTORCALL popcount(simd<E> val) noexcept {
     if constexpr (sizeof(E) == 1) {
 #if DPL_SIMD_X86_AVX512BITALG && DPL_SIMD_X86_AVX512VL
         return _mm_popcnt_epi8(
@@ -239,8 +243,8 @@ inline simd<signed_representation_t<E>> DPL_VECTORCALL
 template <simd_element E>
 requires (sizeof(E) == 8)
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<signed_representation_t<E>> DPL_VECTORCALL
-    countl_zero(simd<E> val) noexcept {
+inline simd<signed_representation_t<E>>
+    DPL_VECTORCALL countl_zero(simd<E> val) noexcept {
 #if DPL_SIMD_X86_AVX512CD && DPL_SIMD_X86_AVX512VL
     return _mm_lzcnt_epi64(+xmm::reinterpret<signed_representation_t<E>>(val));
 #else
@@ -254,8 +258,8 @@ inline simd<signed_representation_t<E>> DPL_VECTORCALL
 template <simd_element E>
 requires (sizeof(E) == 4)
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<signed_representation_t<E>> DPL_VECTORCALL
-    countl_zero(simd<E> val) noexcept {
+inline simd<signed_representation_t<E>>
+    DPL_VECTORCALL countl_zero(simd<E> val) noexcept {
 #if DPL_SIMD_X86_AVX512CD && DPL_SIMD_X86_AVX512VL
     return _mm_lzcnt_epi32(+xmm::reinterpret<signed_representation_t<E>>(val));
 #else
@@ -271,8 +275,8 @@ inline simd<signed_representation_t<E>> DPL_VECTORCALL
 template <simd_element E>
 requires (sizeof(E) == 2)
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<signed_representation_t<E>> DPL_VECTORCALL
-    countl_zero(simd<E> val) noexcept {
+inline simd<signed_representation_t<E>>
+    DPL_VECTORCALL countl_zero(simd<E> val) noexcept {
     auto vval = +xmm::reinterpret<signed_representation_t<E>>(val);
     vval = _mm_or_si128(vval, _mm_srli_epi16(vval, 1));
     vval = _mm_or_si128(vval, _mm_srli_epi16(vval, 2));
@@ -284,8 +288,8 @@ inline simd<signed_representation_t<E>> DPL_VECTORCALL
 template <simd_element E>
 requires (sizeof(E) == 1)
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<signed_representation_t<E>> DPL_VECTORCALL
-    countl_zero(simd<E> val) noexcept {
+inline simd<signed_representation_t<E>>
+    DPL_VECTORCALL countl_zero(simd<E> val) noexcept {
     auto vval = +xmm::reinterpret<signed_representation_t<E>>(val);
     vval = _mm_or_si128(vval, _mm_srli_epi16(vval, 1));
     vval = _mm_or_si128(vval, _mm_srli_epi16(vval, 2));
@@ -295,8 +299,8 @@ inline simd<signed_representation_t<E>> DPL_VECTORCALL
 
 template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<signed_representation_t<E>> DPL_VECTORCALL
-    countl_one(simd<E> val) noexcept {
+inline simd<signed_representation_t<E>>
+    DPL_VECTORCALL countl_one(simd<E> val) noexcept {
     using sbit = signed_representation_t<E>;
     auto vval = +xmm::reinterpret<sbit>(val);
     return xmm::countl_zero(
@@ -305,8 +309,8 @@ inline simd<signed_representation_t<E>> DPL_VECTORCALL
 
 template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<signed_representation_t<E>> DPL_VECTORCALL
-    countr_zero(simd<E> val) noexcept {
+inline simd<signed_representation_t<E>>
+    DPL_VECTORCALL countr_zero(simd<E> val) noexcept {
     if constexpr (!unsigned_integral<E>) {
         using bit = unsigned_representation_t<E>;
         return xmm::countr_zero(xmm::reinterpret<bit>(val));
@@ -319,8 +323,8 @@ inline simd<signed_representation_t<E>> DPL_VECTORCALL
 
 template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<signed_representation_t<E>> DPL_VECTORCALL
-    countr_one(simd<E> val) noexcept {
+inline simd<signed_representation_t<E>>
+    DPL_VECTORCALL countr_one(simd<E> val) noexcept {
     using bit = unsigned_representation_t<E>;
     auto vval = +xmm::reinterpret<bit>(val);
     return xmm::countr_zero(
@@ -342,7 +346,8 @@ alignas(16) inline constexpr char byteswap_lut_epi16[]{
 
 template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
-inline simd<E> DPL_VECTORCALL byteswap(simd<E> val) noexcept {
+inline simd<E>
+    DPL_VECTORCALL byteswap(simd<E> val) noexcept {
     if constexpr (!same_as<native_vector_t<E>, __m128i>) {
         using bit = unsigned_representation_t<E>;
         return xmm::reinterpret<E>(xmm::byteswap(xmm::reinterpret<bit>(val)));

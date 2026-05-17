@@ -5,6 +5,9 @@
 
 #include "dpl/core/concepts/basic_element.h"
 #include "dpl/core/concepts/simd_abi.h"
+#if !DPL_MODULES
+#  include "dpl/std/type_traits/underlying_type.h"
+#endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 
@@ -21,6 +24,11 @@ DPL_EXPORT template <simd_abi A, basic_element E>
 struct simd_element_representation<A, E> {
     using type = E;
 };
+
+DPL_EXPORT template <simd_abi A, basic_element E>
+requires enumeration<E>
+struct simd_element_representation<A, E> :
+    simd_element_representation<A, underlying_type_t<E>> {};
 
 } // namespace datapar
 

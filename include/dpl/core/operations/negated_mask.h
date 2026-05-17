@@ -6,13 +6,13 @@
 #include "dpl/core/operations/bit.h"
 #include "dpl/core/operations/bitwise.h"
 #include "dpl/core/operations/logic_reduction.h"
+#include "dpl/core/operations/reinterpret.h"
 #include "dpl/core/operations/select.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/fwd.h"
 
 #  include "dpl/core/basic/extract.h"
-#  include "dpl/core/basic/reinterpret.h"
 #  include "dpl/core/basic/to_native_type.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_element.h"
@@ -44,7 +44,9 @@ private:
 
 public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr size_t size() noexcept { return simd_abi_traits<T>::size; }
+    static constexpr size_t size() noexcept {
+        return simd_abi_traits<T>::size;
+    }
 
     __DPL_HIDE_FROM_ABI constexpr negated_mask() noexcept
         : negated_mask(dx::to_native_type(basic_type_t<T>())) {}

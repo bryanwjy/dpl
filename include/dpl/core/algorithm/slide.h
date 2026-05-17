@@ -6,11 +6,11 @@
 #include "dpl/core/algorithm/shift.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/basic/reinterpret.h"
 #  include "dpl/core/concepts/common_order_with.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_equivalence.h"
 #  include "dpl/core/operations/operation_base.h"
+#  include "dpl/core/operations/reinterpret.h"
 #  include "dpl/core/operations/select.h"
 #  include "dpl/core/type_traits/common_order_type.h"
 #endif
@@ -64,8 +64,8 @@ private:
 
     template <size_t N, typename E, fixed_width_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallback(basic_simd<E, A> lhs, basic_simd<E, A> rhs) noexcept {
+    static constexpr auto DPL_VECTORCALL fallback(
+        basic_simd<E, A> lhs, basic_simd<E, A> rhs) noexcept {
         static_assert(N <= simd_abi_traits<E, A>::size);
         constexpr auto size = 2 * simd_abi_traits<E, A>::size;
         auto const low = dx::shift_left(lhs, imm<N>);
@@ -172,8 +172,8 @@ private:
 
     template <size_t N, typename E, fixed_width_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallbacki(basic_simd<E, A> lhs, basic_simd<E, A> rhs) noexcept {
+    static constexpr auto DPL_VECTORCALL fallbacki(
+        basic_simd<E, A> lhs, basic_simd<E, A> rhs) noexcept {
         constexpr auto num = simd_abi_traits<E, A>::size - N;
         return slide_left_t::operator()(lhs, rhs, imm<num>);
     }

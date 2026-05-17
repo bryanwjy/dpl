@@ -7,7 +7,6 @@
 #include "dpl/core/basic/broadcastable_base.h"
 #include "dpl/core/basic/extract.h"
 #include "dpl/core/basic/initialize.h"
-#include "dpl/core/basic/reinterpret.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/common_arithmetic_with.h"
@@ -44,26 +43,6 @@ public:
 
     __DPL_HIDE_FROM_ABI constexpr basic_simd(vector_type vec) noexcept
         : data_(vec) {}
-
-    template <different_from<E> E2>
-    requires (!enumeration<E2> && !enumeration<E>) &&
-        common_arithmetic_with<E2, E>
-    __DPL_HIDE_FROM_ABI explicit(!is_convertible_v<E2, E> ||
-        !common_order_with<E2, E>) constexpr basic_simd(basic_simd<E2, abi_type>
-            other) noexcept
-        : basic_simd(datapar::reinterpret<basic_simd>(other)) {}
-
-    template <integral E2>
-    requires enumeration<E> && same_as<underlying_type_t<E>, E2>
-    __DPL_HIDE_FROM_ABI explicit constexpr basic_simd(
-        basic_simd<E2, abi_type> other) noexcept
-        : basic_simd(datapar::reinterpret<basic_simd>(other)) {}
-
-    template <enumeration E2>
-    requires same_as<underlying_type_t<E2>, E>
-    __DPL_HIDE_FROM_ABI explicit(scoped_enumeration<E2>) constexpr basic_simd(
-        basic_simd<E2, abi_type> other) noexcept
-        : basic_simd(datapar::reinterpret<basic_simd>(other)) {}
 
     template <different_from<basic_simd> B>
     requires broadcastable_constant<B, value_type>

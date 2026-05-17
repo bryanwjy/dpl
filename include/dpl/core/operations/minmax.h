@@ -4,10 +4,10 @@
 #include "dpl/config.h"
 
 #include "dpl/core/operations/operation_base.h"
+#include "dpl/core/operations/reinterpret.h"
 #include "dpl/core/operations/select.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/basic/reinterpret.h"
 #  include "dpl/core/concepts/common_order_with.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_element.h"
@@ -47,8 +47,8 @@ private:
 
     template <typename L, typename R, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallback(basic_simd<L, A> lhs, basic_simd<R, A> rhs) noexcept {
+    static constexpr auto DPL_VECTORCALL fallback(
+        basic_simd<L, A> lhs, basic_simd<R, A> rhs) noexcept {
         using T = common_order_type_t<L, R>;
         return dx::reinterpret<T>(dx::select(lhs < rhs, lhs, rhs));
     }
@@ -114,8 +114,8 @@ private:
 
     template <typename L, typename R, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallback(basic_simd<L, A> lhs, basic_simd<R, A> rhs) noexcept {
+    static constexpr auto DPL_VECTORCALL fallback(
+        basic_simd<L, A> lhs, basic_simd<R, A> rhs) noexcept {
         using T = common_order_type_t<L, R>;
         return dx::reinterpret<T>(dx::select(rhs < lhs, lhs, rhs));
     }

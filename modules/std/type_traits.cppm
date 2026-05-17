@@ -73,6 +73,7 @@ export import :std.stddef;
 #include "dpl/std/type_traits/is_volatile.h"
 #include "dpl/std/type_traits/make_signed.h"
 #include "dpl/std/type_traits/make_unsigned.h"
+#include "dpl/std/type_traits/remove_all_extents.h"
 #include "dpl/std/type_traits/remove_const.h"
 #include "dpl/std/type_traits/remove_cvref.h"
 #include "dpl/std/type_traits/remove_extent.h"

@@ -5,18 +5,20 @@
 
 #include "dpl/core/basic/broadcast.h"
 #include "dpl/core/basic/extract.h"
+#include "dpl/core/basic/immediate.h"
 #include "dpl/core/basic/initialize.h"
-#include "dpl/core/basic/reinterpret.h"
-#include "dpl/core/basic/to_simd_mask.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/fwd.h"
 
-#  include "dpl/core/concepts/common_bits_with.h"
+#  include "dpl/core/concepts/common_size_with.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_element_for.h"
 #  include "dpl/core/type_traits/simd_abi_traits.h"
 #  include "dpl/std/concepts/different_from.h"
+#  include "dpl/std/type_traits/is_class.h"
+#  include "dpl/std/type_traits/is_union.h"
+#  include "dpl/std/type_traits/remove_all_extents.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -28,6 +30,26 @@ class basic_simd_mask<E, A> {
     using traits DPL_NODEBUG = simd_abi_traits<E, A>;
     using mask_type DPL_NODEBUG = typename traits::native_mask;
     using vector_type DPL_NODEBUG = typename traits::native_type;
+
+    template <typename E2>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr basic_simd_mask reinterpret(
+        basic_simd_mask<E2, A> other) noexcept {
+        // Implement using bit_cast to avoid making reinterpret a
+        // basic-operation
+        using other_mask = typename simd_abi_traits<E2, A>::native_mask;
+        if constexpr (same_as<mask_type, other_mask>) {
+            return basic_simd_mask(+other);
+        } else if consteval {
+            if constexpr (fixed_width_abi<A>) {
+                return [&]<size_t... Is>(index_sequence<Is...>) {
+                    return datapar::initialize<E, A>(other[imm<Is>]...);
+                }(iota_sequence<E, A>);
+            }
+        }
+
+        return __DPL bit_cast<mask_type>(+other);
+    }
 
 public:
     using simd_type = basic_simd<E, A>;
@@ -56,22 +78,10 @@ public:
               static_cast<bool>(__DPL forward<Bs>(args))...)) {}
 
     template <different_from<E> E2>
-    requires simd_element<E2> && common_bits_with<E, E2>
+    requires simd_element_for<E2, A> && common_size_with<E, E2>
     __DPL_HIDE_FROM_ABI constexpr basic_simd_mask(
         basic_simd_mask<E2, A> other) noexcept
-        : basic_simd_mask(datapar::reinterpret<basic_simd_mask>(other)) {}
-
-    template <common_bits_simd_with<simd_type> T>
-    __DPL_HIDE_FROM_ABI explicit constexpr basic_simd_mask(
-        assume_normalized_mask_t tag, T simd) noexcept
-        : basic_simd_mask(datapar::to_simd_mask(
-              tag, datapar::reinterpret<simd_type>(simd))) {}
-
-    template <different_from<basic_simd_mask> T>
-    requires common_bits_simd_with<T, simd_type>
-    __DPL_HIDE_FROM_ABI explicit constexpr basic_simd_mask(T simd) noexcept
-        : basic_simd_mask(
-              datapar::to_simd_mask(datapar::reinterpret<simd_type>(simd))) {}
+        : basic_simd_mask(reinterpret(other)) {}
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     constexpr mask_type operator+(this basic_simd_mask self) noexcept {
@@ -93,12 +103,6 @@ public:
 private:
     mask_type mask_;
 };
-
-template <simd_element E, simd_abi A>
-explicit basic_simd_mask(basic_simd<E, A>) -> basic_simd_mask<E, A>;
-template <simd_element E, simd_abi A>
-explicit basic_simd_mask(assume_normalized_mask_t, basic_simd<E, A>)
-    -> basic_simd_mask<E, A>;
 
 } // namespace datapar
 DPL_DEFAULT_NAMESPACE_END

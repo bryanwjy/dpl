@@ -3,10 +3,9 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/basic/to_basic_type.h"
-
 #if !DPL_MODULES
 
+#  include "dpl/core/basic/to_basic_type.h"
 #  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/common_abi_with.h"
 #  include "dpl/core/concepts/common_size_with.h"
@@ -52,17 +51,57 @@ private:
         }
     }();
 
+    template <fixed_width_abi A, simd_element_for<A> FromE>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr basic_simd<ToE, A> fallback(
+        basic_simd<FromE, A> from) noexcept {
+        using to_vector = typename simd_abi_traits<ToE, A>::native_type;
+        using from_vector = typename simd_abi_traits<FromE, A>::native_type;
+        if constexpr (same_as<to_vector, from_vector>) {
+            return +from;
+        } else if consteval {
+            // Workaround MSVC's unions
+            array_for<FromE, A> buffer;
+            dx::store(from, buffer.data);
+            return dx::load<A>(__DPL bit_cast<array_for<ToE, A>>(buffer).data);
+        } else {
+            return __DPL bit_cast<basic_simd<ToE, A>>(from);
+        }
+    }
+
+    template <fixed_width_abi A, simd_element_for<A> FromE>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr basic_simd_mask<ToE, A> fallback(
+        basic_simd_mask<FromE, A> from) noexcept {
+        using to_mask = typename simd_abi_traits<ToE, A>::native_mask;
+        using from_mask = typename simd_abi_traits<FromE, A>::native_mask;
+        if constexpr (same_as<to_mask, from_mask>) {
+            return +from;
+        } else if consteval {
+            return [&]<size_t... Is>(index_sequence<Is...>) {
+                return dx::initialize<ToE, A>(from[Is]...);
+            }(iota_sequence<FromE, A>);
+        } else {
+            return __DPL bit_cast<basic_simd_mask<ToE, A>>(from);
+        }
+    }
+
 public:
     template <simd_abi A, simd_element_for<A> FromE>
-    requires same_as<FromE, A> ||
-        unqualified_reinterpretable_to<basic_simd<FromE, A>, ToE>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_simd<ToE, A> operator()(
         basic_simd<FromE, A> val) noexcept {
-        if constexpr (same_as<FromE, A>) {
+        if constexpr (same_as<FromE, ToE>) {
             return val;
+        } else if constexpr (unqualified_reinterpretable_to<
+                                 basic_simd<FromE, A>, ToE>) {
+            if consteval {
+                return fallback(val);
+            } else {
+                return reinterpret<ToE>(internal::abi<A>, val);
+            }
         } else {
-            return reinterpret<ToE>(internal::abi<A>, val);
+            return fallback(val);
         }
     }
 
@@ -83,15 +122,20 @@ public:
     }
 
     template <simd_abi A, simd_element_for<A> FromE>
-    requires same_as<FromE, A> ||
-        unqualified_mreinterpretable_to<basic_simd_mask<FromE, A>, ToE>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_simd_mask<ToE, A> operator()(
         basic_simd_mask<FromE, A> val) noexcept {
-        if constexpr (same_as<FromE, A>) {
+        if constexpr (same_as<FromE, ToE>) {
             return val;
+        } else if constexpr (unqualified_mreinterpretable_to<
+                                 basic_simd_mask<FromE, A>, ToE>) {
+            if consteval {
+                return fallback(val);
+            } else {
+                return reinterpret<ToE>(internal::abi<A>, val);
+            }
         } else {
-            return reinterpret<ToE>(internal::abi<A>, val);
+            return fallback(val);
         }
     }
 

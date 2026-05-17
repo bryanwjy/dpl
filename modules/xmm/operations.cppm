@@ -16,5 +16,7 @@ import :basic;
 #include "dpl/xmm/operations/bit.h"
 #include "dpl/xmm/operations/bitwise.h"
 #include "dpl/xmm/operations/cast.h"
+#include "dpl/xmm/operations/reinterpret.h"
 #include "dpl/xmm/operations/select.h"
+#include "dpl/xmm/operations/to_simd_mask.h"
 // IWYU pragma: end_exports

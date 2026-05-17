@@ -6,11 +6,11 @@
 #include "dpl/core/algorithm/slide.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/basic/reinterpret.h"
 #  include "dpl/core/concepts/common_order_with.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_equivalence.h"
 #  include "dpl/core/operations/operation_base.h"
+#  include "dpl/core/operations/reinterpret.h"
 #  include "dpl/core/operations/select.h"
 #  include "dpl/core/type_traits/common_order_type.h"
 #endif
@@ -48,24 +48,24 @@ struct rotate_right_t {
 private:
     template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallback(basic_simd<E, A> val, size_t lanes) noexcept {
+    static constexpr auto DPL_VECTORCALL fallback(
+        basic_simd<E, A> val, size_t lanes) noexcept {
         lanes %= val.size();
         return dx::slide_right(val, val, lanes);
     }
 
     template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallback(basic_simd_mask<E, A> val, size_t lanes) noexcept {
+    static constexpr auto DPL_VECTORCALL fallback(
+        basic_simd_mask<E, A> val, size_t lanes) noexcept {
         lanes %= val.size();
         return dx::slide_right(val, val, lanes);
     }
 
     template <size_t V, typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallbacki(basic_simd<E, A> val) noexcept {
+    static constexpr auto DPL_VECTORCALL fallbacki(
+        basic_simd<E, A> val) noexcept {
         return dx::slide_righti<V>(val, val);
     }
 
@@ -146,24 +146,24 @@ struct rotate_left_t {
 private:
     template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallback(basic_simd<E, A> val, size_t lanes) noexcept {
+    static constexpr auto DPL_VECTORCALL fallback(
+        basic_simd<E, A> val, size_t lanes) noexcept {
         lanes %= simd_abi_traits<E, A>::size;
         return dx::slide_left(val, val, lanes);
     }
 
     template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallback(basic_simd_mask<E, A> val, size_t lanes) noexcept {
+    static constexpr auto DPL_VECTORCALL fallback(
+        basic_simd_mask<E, A> val, size_t lanes) noexcept {
         lanes %= simd_abi_traits<E, A>::size;
         return dx::slide_left(val, val, lanes);
     }
 
     template <size_t V, typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallbacki(basic_simd<E, A> val) noexcept {
+    static constexpr auto DPL_VECTORCALL fallbacki(
+        basic_simd<E, A> val) noexcept {
         return dx::slide_lefti<V>(val, val);
     }
 

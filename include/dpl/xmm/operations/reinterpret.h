@@ -8,14 +8,13 @@
 #  error "Unsupported platform"
 #endif
 
-#include "dpl/xmm/basic/abi.h"
-#include "dpl/xmm/basic/load.h"
-#include "dpl/xmm/basic/store.h"
-
 #if !DPL_MODULES
 #  include "dpl/core/concepts/common_float_with.h"
 #  include "dpl/core/concepts/simd_element.h"
 #  include "dpl/std/bit/bit_cast.h"
+#  include "dpl/xmm/basic/abi.h"
+#  include "dpl/xmm/basic/load.h"
+#  include "dpl/xmm/basic/store.h"
 
 #  include <immintrin.h>
 #endif

@@ -6,12 +6,12 @@
 #include "dpl/core/algorithm/shift.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/basic/reinterpret.h"
 #  include "dpl/core/concepts/common_order_with.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_equivalence.h"
 #  include "dpl/core/operations/bitwise.h"
 #  include "dpl/core/operations/operation_base.h"
+#  include "dpl/core/operations/reinterpret.h"
 #  include "dpl/core/operations/select.h"
 #  include "dpl/core/type_traits/common_order_type.h"
 #endif
@@ -50,8 +50,8 @@ private:
 
     template <auto V, typename EL, typename ER, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallbacki(basic_simd<EL, A> lhs, basic_simd<ER, A> rhs) noexcept {
+    static constexpr auto DPL_VECTORCALL fallbacki(
+        basic_simd<EL, A> lhs, basic_simd<ER, A> rhs) noexcept {
         constexpr immediate_mask<simd_abi_traits<EL, A>::size, V> inmask{};
         constexpr auto low = dx::countr_zero(inmask);
         constexpr auto high = dx::countr_zero(inmask);

@@ -8,6 +8,8 @@
 #  error "Unsupported platform"
 #endif
 
+#include "dpl/xmm/operations/reinterpret.h"
+
 #if !DPL_MODULES
 #  include "dpl/core/fwd.h"
 
@@ -18,7 +20,6 @@
 #  include "dpl/core/type_traits/common_size_type.h"
 #  include "dpl/std/utility/template_barrier.h"
 #  include "dpl/xmm/basic/abi.h"
-#  include "dpl/xmm/basic/reinterpret.h"
 
 #  include <immintrin.h>
 #endif
@@ -62,8 +63,9 @@ requires common_size_with<T, F> && common_size_with<T, C> &&
     common_size_with<F, C> &&
     common_size_with<ternary_type_t<T, F>, common_size_type_t<T, F>>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<ternary_type_t<T, F>> DPL_VECTORCALL
-    select(mask<C> condition, simd<T> if_true, simd<F> or_else) noexcept {
+inline simd<ternary_type_t<T, F>>
+    DPL_VECTORCALL select(
+        mask<C> condition, simd<T> if_true, simd<F> or_else) noexcept {
     using V = ternary_type_t<T, F>;
     if constexpr (common_float_with<float, V>) {
         return _mm_blendv_ps(
@@ -97,8 +99,9 @@ DPL_EXPORT template <template_barrier_t = __DPL template_barrier, simd_element C
 requires common_size_with<T, F> && common_size_with<T, C> &&
     common_size_with<F, C>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline mask<common_size_type_t<T, F>> DPL_VECTORCALL
-    select(mask<C> condition, mask<T> if_true, mask<F> or_else) noexcept {
+inline mask<common_size_type_t<T, F>>
+    DPL_VECTORCALL select(
+        mask<C> condition, mask<T> if_true, mask<F> or_else) noexcept {
     using V = common_size_type_t<T, F>;
     return +xmm::select(condition, simd<V>(+xmm::reinterpret<V>(if_true)),
         simd<V>(+xmm::reinterpret<V>(or_else)));
