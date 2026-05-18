@@ -514,7 +514,7 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(basic_vector<E, A> a,
         basic_vector<E, A> b, basic_vector<E, A> c) noexcept {
-        return fmadd_t::operator()(a, b, dx::negatei<0b0101>(c));
+        return fmadd_t::operator()(a, b, dx::negate(c, imm<0b1010>, c));
     }
 
 public:
@@ -584,7 +584,7 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(basic_vector<E, A> a,
         basic_vector<E, A> b, basic_vector<E, A> c) noexcept {
-        return fmadd_t::operator()(a, b, dx::negatei<0b1010>(c));
+        return fmadd_t::operator()(a, b, dx::negate(c, imm<0b0101>, c));
     }
 
 public:

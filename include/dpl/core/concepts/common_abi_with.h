@@ -178,6 +178,27 @@ concept common_abi_simd_with = simd_class<A> && simd_class<B> &&
 DPL_EXPORT template <typename A, typename B>
 concept same_abi_simd_as = simd_class<A> && simd_class<B> &&
     same_abi_as<typename A::abi_type, typename B::abi_type>;
+
+namespace internal {
+
+template <typename... Ts>
+inline constexpr bool is_common_abi_with = false;
+
+template <typename A>
+inline constexpr bool is_common_abi_with<A> = true;
+
+template <typename A, typename B>
+inline constexpr bool is_common_abi_with<A, B> = common_abi_with<A, B>;
+
+template <typename A, typename B, typename... Cs>
+requires common_abi_with<A, B>
+inline constexpr bool is_common_abi_with<A, B, Cs...> =
+    is_common_abi_with<common_abi_t<A, B>, Cs...>;
+
+template <typename... Ts>
+concept all_common_abi = is_common_abi_with<Ts...>;
+
+} // namespace internal
 } // namespace datapar
 
 DPL_DEFAULT_NAMESPACE_END

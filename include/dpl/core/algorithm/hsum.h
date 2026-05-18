@@ -46,7 +46,7 @@ private:
     }
 
 public:
-    template <arithmetic_simd T>
+    template <arithmetic_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T arg) noexcept {
         if constexpr (unqualified_hsum<T>) {
@@ -79,7 +79,7 @@ public:
         }
     }
 
-    template <arithmetic_simd T, immediate_mask_for<T> M>
+    template <arithmetic_vector T, immediate_mask_for<T> M>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, T arg) noexcept {
         constexpr auto V = immediate_mask_v<T, M>;
@@ -112,7 +112,7 @@ private:
     using mask_type DPL_NODEBUG = make_immediate_mask_t<T, V>;
 
 public:
-    template <arithmetic_simd T>
+    template <arithmetic_vector T>
     requires fixed_width_vector<T> && requires {
         typename mask_type<T>;
         requires regular_invocable<hsum_t, mask_type<T>, T>;

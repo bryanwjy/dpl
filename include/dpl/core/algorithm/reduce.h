@@ -218,7 +218,7 @@ private:
     using mask_type DPL_NODEBUG = make_immediate_mask_t<T, V>;
 
 public:
-    template <arithmetic_simd T>
+    template <arithmetic_vector T>
     requires fixed_width_vector<T> && requires {
         typename mask_type<T>;
         requires regular_invocable<reduce_t, mask_type<T>, T>;

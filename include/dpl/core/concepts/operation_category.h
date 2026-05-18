@@ -6,11 +6,6 @@
 #if !DPL_MODULES
 #  include "dpl/core/fwd.h"
 
-#  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/concepts/simd_class.h"
-#  include "dpl/core/concepts/simd_element.h"
-#  include "dpl/std/bit/popcount.h"
-#  include "dpl/std/type_traits/constants.h"
 #  include "dpl/std/utility/to_underlying.h"
 #endif
 
@@ -25,6 +20,7 @@ DPL_EXPORT enum class operation_category : unsigned {
     structural_transformation = 1u << 4,
     all = ((1u << 5) - 1),
     none = 0u,
+    default_category = lane_agnostic,
 };
 
 DPL_EXPORT consteval operation_category operator|(

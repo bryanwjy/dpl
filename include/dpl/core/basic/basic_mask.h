@@ -26,9 +26,8 @@ namespace datapar {
 DPL_EXPORT template <typename E, simd_abi A>
 requires simd_element_for<E, A>
 class basic_mask<E, A> {
-    using traits DPL_NODEBUG = simd_abi_traits<E, A>;
-    using mask_type DPL_NODEBUG = typename traits::native_mask;
-    using vector_type DPL_NODEBUG = typename traits::native_vector;
+    using abi_traits DPL_NODEBUG = simd_abi_traits<E, A>;
+    using mask_type DPL_NODEBUG = typename abi_traits::native_mask;
 
     template <typename E2>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
@@ -50,16 +49,16 @@ class basic_mask<E, A> {
     }
 
 public:
-    using simd_vector = basic_vector<E, A>;
+    using vector_type = basic_vector<E, A>;
     using value_type = bool;
     using abi_type = A;
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr size_t size() noexcept {
         if constexpr (fixed_width_abi<A>) {
-            return traits::size;
+            return abi_traits::size;
         } else {
-            return traits::size();
+            return abi_traits::size();
         }
     }
 
@@ -70,7 +69,7 @@ public:
         : mask_{data} {}
 
     template <core_convertible_to<bool>... Bs>
-    requires fixed_width_abi<A> && (sizeof...(Bs) == traits::size)
+    requires fixed_width_abi<A> && (sizeof...(Bs) == abi_traits::size)
     __DPL_HIDE_FROM_ABI constexpr basic_mask(Bs&&... args) noexcept
         : basic_mask(datapar::initialize<A>(
               static_cast<bool>(__DPL forward<Bs>(args))...)) {}

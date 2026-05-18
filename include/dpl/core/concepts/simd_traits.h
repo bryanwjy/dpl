@@ -38,7 +38,7 @@ struct simd_traits<T> {
 
             return T::decay_policy;
         } else {
-            return operation_category::lane_agnostic;
+            return operation_category::default_category;
         }
     }();
 };

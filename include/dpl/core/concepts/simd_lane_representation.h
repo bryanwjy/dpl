@@ -24,7 +24,7 @@ struct simd_lane_representation<T> :
 
 DPL_EXPORT template <simd_mask T>
 struct simd_lane_representation<T> :
-    simd_lane_representation<typename T::simd_vector> {};
+    simd_lane_representation<typename T::vector_type> {};
 
 } // namespace datapar
 

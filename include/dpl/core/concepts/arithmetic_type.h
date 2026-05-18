@@ -35,12 +35,16 @@ concept naturally_arithmetic_enum = unscoped_enumeration<T> && requires(T val) {
 };
 } // namespace atom
 DPL_EXPORT template <typename T>
-concept arithmetic_type = !same_as<T, bool> &&
-    (integral<T> || floating_point<T> || atom::naturally_arithmetic_enum<T>);
+concept arithmetic_type =
+    !same_as<T, bool> && (integral<T> || floating_point<T>);
+
+DPL_EXPORT template <typename E, typename A>
+concept arithmetic_type_for =
+    simd_abi<A> && arithmetic_type<E> && simd_element_for<E, A>;
 
 DPL_EXPORT template <typename T>
-concept arithmetic_simd =
-    simd_vector<T> && arithmetic_type<typename T::value_type>;
+concept arithmetic_vector = simd_vector<T> &&
+    arithmetic_type_for<typename T::value_type, typename T::abi_type>;
 
 } // namespace datapar
 

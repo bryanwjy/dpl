@@ -22,12 +22,12 @@ inline constexpr bool enable_simd_mask<basic_mask<E, A>> = true;
 namespace atom {
 template <typename M>
 concept simd_mask = enable_simd_mask<M> && requires(M const mask) {
-    typename M::simd_vector;
+    typename M::vector_type;
     requires same_as<typename M::value_type, bool> &&
-        simd_vector<typename M::simd_vector>;
+        simd_vector<typename M::vector_type>;
     requires explicitly_convertible_to<M,
         typename M::abi_type::template native_mask<
-            typename M::simd_vector::value_type>>;
+            typename M::vector_type::value_type>>;
 };
 } // namespace atom
 

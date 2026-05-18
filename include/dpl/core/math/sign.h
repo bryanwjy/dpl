@@ -65,7 +65,7 @@ private:
 
 public:
     template <canonical_vector T>
-    requires arithmetic_simd<T>
+    requires arithmetic_vector<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T left, T right) noexcept {
         if constexpr (unqualified_sign<T, T, T>) {
@@ -80,7 +80,7 @@ public:
     }
 
     template <simd_vector L, common_arithmetic_simd_with<L> R>
-    requires arithmetic_simd<L> && arithmetic_simd<R> &&
+    requires arithmetic_vector<L> && arithmetic_vector<R> &&
         common_order_simd_with<L, R> && only_unqualified<L, R> &&
         unqualified_sign<common_abi_t<L, R>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -91,7 +91,7 @@ public:
     }
 
     template <simd_vector L, common_arithmetic_simd_with<L> R>
-    requires arithmetic_simd<L> && arithmetic_simd<R> &&
+    requires arithmetic_vector<L> && arithmetic_vector<R> &&
         common_order_simd_with<L, R> &&
         (!canonical_vector<L> || !canonical_vector<R>) &&
         (!unqualified_sign<common_abi_t<L, R>, L, R>)

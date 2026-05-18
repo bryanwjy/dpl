@@ -18,6 +18,75 @@
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
+/**
+ * @brief Performs a fused SIMD add-sub operation using a fixed lane-parity sign
+ * mask.
+ *
+ * Computes a packed addition where the second operand is sign-modified on a
+ * per-lane basis according to lane index parity.
+ *
+ * Formally, for lane index i:
+ *
+ * CODE_BLOCK_BEGIN
+ * result[i] = a[i] + s[i] * b[i]
+ * CODE_BLOCK_END
+ *
+ * where the sign pattern is fixed as:
+ *
+ * CODE_BLOCK_BEGIN
+ * s[i] = (i % 2 == 0) ? -1 : +1
+ * CODE_BLOCK_END
+ *
+ * This yields the following lane-wise behavior:
+ *
+ * CODE_BLOCK_BEGIN
+ * [a0 - b0, a1 + b1, a2 - b2, a3 + b3, ...]
+ * CODE_BLOCK_END
+ *
+ * This operation is NOT a sequence of alternating addition and subtraction
+ * operations. It is a single SIMD addition with a compile-time sign mask
+ * applied to the second operand.
+ *
+ * @note This definition is intentionally fixed and does not depend on operand
+ * evaluation order.
+ *
+ * @note This convention differs from some SIMD ISA definitions where the
+ * "addsub" family uses the opposite lane-parity sign pattern:
+ *
+ *       CODE_BLOCK_BEGIN
+ *       [a0 + b0, a1 - b1, a2 + b2, a3 - b3, ...]
+ *       CODE_BLOCK_END
+ *
+ *       In those ISAs, the opposite polarity is exposed either via a separate
+ * instruction (e.g. subadd) or as a distinct encoding choice.
+ *
+ *       DPL standardizes a single fixed convention to avoid ambiguity in
+ * cross-ABI behavior, and to align with reading-order lane parity (even = first
+ * lane, odd = second lane).
+ *
+ * @param a First SIMD operand.
+ * @param b Second SIMD operand.
+ * @return SIMD value containing the fused add-sub result.
+ *
+ * @warning This operation is layout-sensitive: lane ordering directly
+ * determines the sign mask.
+ */
+struct addsub_t;
+
+/**
+ * @brief Fused SIMD sub-add operation using a fixed lane-parity sign mask.
+ *
+ * Computes:
+ *
+ * CODE_BLOCK_BEGIN
+ * result[i] = a[i] + ((i % 2 == 0) ? +b[i] : -b[i])
+ * CODE_BLOCK_END
+ *
+ * This is the inverse lane-parity convention of @c addsub.
+ *
+ * @see addsub
+ */
+struct subadd_t;
 void addsub(...) noexcept = delete;
 void subadd(...) noexcept = delete;
 
@@ -45,7 +114,7 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(
         basic_vector<E, A> left, basic_vector<E, A> right) noexcept {
-        return dx::add(left, dx::negatei<0b0101>(right));
+        return dx::add(left, dx::negate(right, imm<0b1010>, right));
     }
 
 public:
@@ -104,7 +173,7 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(
         basic_vector<E, A> left, basic_vector<E, A> right) noexcept {
-        return dx::add(left, dx::negatei<0b1010>(right));
+        return dx::add(left, dx::negate(right, imm<0b0101>, right));
     }
 
     template <simd_vector L, simd_vector R>

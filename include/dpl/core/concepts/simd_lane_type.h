@@ -23,7 +23,7 @@ struct simd_lane_type<T> {
 };
 
 DPL_EXPORT template <simd_mask T>
-struct simd_lane_type<T> : simd_lane_type<typename T::simd_vector> {};
+struct simd_lane_type<T> : simd_lane_type<typename T::vector_type> {};
 
 DPL_EXPORT template <simd_element T>
 struct simd_lane_type<T> {

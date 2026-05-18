@@ -83,7 +83,7 @@ private:
     }
 
 public:
-    template <arithmetic_simd T>
+    template <arithmetic_vector T>
     requires fixed_width_vector<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr negated_simd<T> operator()(T val) noexcept {
@@ -104,7 +104,7 @@ public:
         }
     }
 
-    template <arithmetic_simd T>
+    template <arithmetic_vector T>
     requires scalable_vector<T> &&
         (unqualified_negate<T> || unqualified_negate<canonical_type_t<T>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -116,7 +116,7 @@ public:
         }
     }
 
-    template <arithmetic_simd T, compatible_mask_with<T> M>
+    template <arithmetic_vector T, compatible_mask_with<T> M>
     requires same_abi_simd_as<T, M>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr negated_simd<T> operator()(M mask, T val) noexcept {
@@ -138,7 +138,7 @@ public:
         }
     }
 
-    template <arithmetic_simd T, compatible_mask_with<T> M>
+    template <arithmetic_vector T, compatible_mask_with<T> M>
     requires (!same_abi_simd_as<T, M> &&
         (unqualified_mnegate<M, T> ||
             unqualified_mnegate<canonical_type_t<M>, canonical_type_t<T>>))
@@ -153,7 +153,7 @@ public:
         }
     }
 
-    template <arithmetic_simd T, immediate_mask_for<T> M>
+    template <arithmetic_vector T, immediate_mask_for<T> M>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr negated_simd<T> operator()(M mask, T val) noexcept {
         constexpr auto V = decltype(dx::to_immediate_mask<T>(mask))::value;

@@ -350,7 +350,7 @@ private:
     template <arithmetic_type E>
     using result DPL_NODEBUG = common_arithmetic_type_t<E, E>;
 
-    template <arithmetic_simd T>
+    template <arithmetic_vector T>
     using result_simd DPL_NODEBUG = common_arithmetic_simd_t<T, T>;
 
     template <typename E, typename A>
@@ -366,7 +366,7 @@ private:
     }
 
 public:
-    template <arithmetic_simd T>
+    template <arithmetic_vector T>
     requires fixed_width_vector<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr result_simd<T> operator()(T val) noexcept {
@@ -389,7 +389,7 @@ public:
         }
     }
 
-    template <arithmetic_simd T>
+    template <arithmetic_vector T>
     requires scalable_vector<T> &&
         (unqualified_negate<T> || unqualified_negate<canonical_type_t<T>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -445,7 +445,7 @@ DPL_EXPORT inline constexpr internal::divide_t divide{};
 } // namespace cpo
 
 DPL_EXPORT template <typename D>
-class arithmetic_simd_interface {
+class arithmetic_vector_interface {
 public:
     template <typename R>
     requires regular_invocable<internal::add_t, D, R>

@@ -152,12 +152,12 @@ concept simd_vector = /*simd-basics*/<T> && enable_simd_type<T> &&
 
 template <typename M>
 concept simd_mask = /*simd-basics*/<T> && enable_simd_mask<M> && requires {
-    typename M::simd_vector;
+    typename M::vector_type;
     requires same_as<typename M::value_type, bool> &&
-        simd_vector<typename M::simd_vector>;
+        simd_vector<typename M::vector_type>;
     requires explicitly_convertible_to<M,
         typename M::abi_type::template native_mask<
-            typename M::simd_vector::value_type>>;
+            typename Mvector_type::value_type>>;
 };
 ```
 

@@ -15,7 +15,6 @@
 #  include "dpl/core/basic/extract.h"
 #  include "dpl/core/basic/to_native_type.h"
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/concepts/simd_element.h"
 #  include "dpl/core/concepts/simd_mask.h"
 #  include "dpl/core/type_traits/basic_type.h"
 #  include "dpl/core/type_traits/simd_traits.h"
@@ -33,7 +32,7 @@ class negated_mask {
     using element_type = simd_lane_type_t<T>;
 
 public:
-    using simd_vector = basic_vector<element_type, typename T::abi_type>;
+    using vector_type = typename T::vector_type;
     using abi_type = typename T::abi_type;
     using value_type = bool;
     static constexpr auto decay_policy = simd_traits<T>::decay_policy;
@@ -95,7 +94,7 @@ public:
         return self.mask_;
     }
 
-    template <dx::simd_vector L, dx::simd_vector R>
+    template <simd_vector L, simd_vector R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     friend constexpr auto select(common_abi_with<abi_type> auto,
         negated_mask self, L lhs, R rhs) noexcept {

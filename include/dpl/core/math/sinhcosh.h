@@ -121,8 +121,8 @@ public:
                 return p - inv_p;
             } else {
                 return p -
-                    fmath::make_pair(dx::negatei<V>(inv_p.upper),
-                        dx::negatei<V>(inv_p.lower));
+                    fmath::make_pair(dx::negate(inv_p.upper, mask, inv_p.upper),
+                        dx::negate(inv_p.lower, mask, inv_p.lower));
             }
         }(exp(absarg));
 
