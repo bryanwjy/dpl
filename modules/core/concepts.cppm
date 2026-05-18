@@ -35,7 +35,7 @@ import :std.utility;
 #include "dpl/core/concepts/simd_equivalence.h"
 #include "dpl/core/concepts/simd_lane_representation.h"
 #include "dpl/core/concepts/simd_lane_type.h"
-#include "dpl/core/concepts/simd_mask_type.h"
+#include "dpl/core/concepts/simd_mask.h"
 #include "dpl/core/concepts/simd_traits.h"
-#include "dpl/core/concepts/simd_type.h"
+#include "dpl/core/concepts/simd_vector.h"
 // IWYU pragma: end_exports

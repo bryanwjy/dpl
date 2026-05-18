@@ -4,12 +4,13 @@
 #include "dpl/config.h"
 
 #include "dpl/core/basic/aligned.h"
-#include "dpl/core/basic/to_basic_type.h"
+#include "dpl/core/basic/to_canonical.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/fwd.h"
 
 #  include "dpl/core/concepts/basic_type.h"
+#  include "dpl/core/concepts/simd_equivalence.h"
 #  include "dpl/core/type_traits/array_for.h"
 #  include "dpl/core/type_traits/basic_type.h"
 #  include "dpl/std/concepts/invocable.h"
@@ -23,23 +24,23 @@ void aligned_store(...) noexcept = delete;
 
 template <typename T>
 concept storable_simd =
-    basic_simd_type<T> && requires(T src, typename T::value_type* dst) {
+    canonical_vector<T> && requires(T src, typename T::value_type* dst) {
         store(internal::abi<T>, src, dst);
     };
 
 template <typename S>
 concept aligned_storable_simd =
-    basic_simd_type<S> && requires(S src, typename S::value_type* dst) {
+    canonical_vector<S> && requires(S src, typename S::value_type* dst) {
         aligned_store(internal::abi<S>, src, dst);
     };
 
 struct store_t {
-    template <basic_simd_type T>
+    template <canonical_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
     static constexpr void operator()(
         T src, typename T::value_type* dst) noexcept = delete;
 
-    template <basic_simd_type T>
+    template <canonical_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
     static constexpr void operator()(
         T src, typename T::value_type* dst) noexcept
@@ -48,7 +49,7 @@ struct store_t {
         store(internal::abi<T>, src, dst);
     }
 
-    template <basic_simd_type T>
+    template <canonical_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
     static constexpr void operator()(
         aligned_t, T src, typename T::value_type* dst) noexcept {
@@ -65,39 +66,39 @@ struct store_t {
         }
     }
 
-    template <simd_type T>
+    template <simd_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
     static constexpr void operator()(
         T src, typename T::value_type* dst) noexcept {
         if constexpr (requires { store(internal::abi<T>, src, dst); }) {
             store(internal::abi<T>, src, dst);
-        } else if constexpr (equivalent_simd_as<basic_type_t<T>, T>) {
-            operator()(dx::to_basic_type(src), dst);
+        } else if constexpr (equivalent_simd_as<canonical_type_t<T>, T>) {
+            operator()(dx::to_canonical(src), dst);
         } else {
-            array_for<basic_type_t<T>> array{};
-            operator()(dx::to_basic_type(src), array.data);
+            array_for<canonical_type_t<T>> array{};
+            operator()(dx::to_canonical(src), array.data);
             __DPL_MEMCPY(dst, array.data, sizeof(array));
         }
     }
 
-    template <simd_type T>
+    template <simd_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
     static constexpr void operator()(
         aligned_t tag, T src, typename T::value_type* dst) noexcept {
         if constexpr (requires { aligned_store(internal::abi<T>, src, dst); }) {
             aligned_store(internal::abi<T>, src, dst);
-        } else if constexpr (equivalent_simd_as<basic_type_t<T>, T>) {
-            operator()(tag, dx::to_basic_type(src), dst);
+        } else if constexpr (equivalent_simd_as<canonical_type_t<T>, T>) {
+            operator()(tag, dx::to_canonical(src), dst);
         } else {
-            array_for<basic_type_t<T>> array{};
-            operator()(tag, dx::to_basic_type(src), array.data);
+            array_for<canonical_type_t<T>> array{};
+            operator()(tag, dx::to_canonical(src), array.data);
             __DPL_MEMCPY(dst, array.data, sizeof(array));
         }
     }
 };
 
 struct aligned_store_t : private store_t {
-    template <simd_type T>
+    template <simd_vector T>
     requires invocable<store_t, aligned_t, T, typename T::value_type*>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
     static constexpr void operator()(

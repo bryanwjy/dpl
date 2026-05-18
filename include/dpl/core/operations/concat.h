@@ -7,8 +7,8 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/basic_element.h"
-#  include "dpl/core/concepts/simd_mask_type.h"
-#  include "dpl/core/concepts/simd_type.h"
+#  include "dpl/core/concepts/simd_mask.h"
+#  include "dpl/core/concepts/simd_vector.h"
 #  include "dpl/core/type_traits/common_abi.h"
 #  include "dpl/core/type_traits/promote_abi.h"
 #endif
@@ -147,7 +147,7 @@ concept unqualified_concat_from = requires(T arg, Ts... args) {
 struct concat_t {
 private:
     template <typename AT, typename E, typename... As>
-    static consteval auto fallback(basic_simd<E, As>... args) noexcept {
+    static consteval auto fallback(basic_vector<E, As>... args) noexcept {
         array_for<E, AT> buffer{};
         auto* ptr = buffer.data;
 #if (DPL_HAS_CXX26_EXTENSIONS || DPL_CXX26) && \
@@ -157,7 +157,7 @@ private:
             ptr += arg.size();
         }
 #else
-        (..., [&ptr]<typename A>(basic_simd<E, A> arg) {
+        (..., [&ptr]<typename A>(basic_vector<E, A> arg) {
             dx::store(arg, ptr);
             ptr += arg.size();
         }(args));
@@ -166,7 +166,7 @@ private:
     }
 
     template <typename AT, typename E, typename... As>
-    static consteval auto fallback(basic_simd_mask<E, As>... args) noexcept {
+    static consteval auto fallback(basic_mask<E, As>... args) noexcept {
         bool buffer[AT::size]{};
 #if (DPL_HAS_CXX26_EXTENSIONS || DPL_CXX26) && \
     __cpp_expansion_statements >= 202506L
@@ -177,7 +177,7 @@ private:
             ptr += arg.size();
         }
 #else
-        (..., [ptr = buffer]<typename A>(basic_simd_mask<E, A> arg) {
+        (..., [ptr = buffer]<typename A>(basic_mask<E, A> arg) {
             [&]<size_t I = 0>(this auto self, immediate<I> idx = {}) {
                 if constexpr (I < simd_abi_traits<E, A>::size) {
                     ptr[idx] = arg[idx];
@@ -197,7 +197,7 @@ public:
     template <fixed_width_class T, fixed_width_class... Ts>
     requires concatable<T, Ts...> &&
         (unqualified_concat_to<T, Ts...> ||
-            unqualified_concat_to<basic_type_t<T>, basic_type_t<Ts>...>)
+            unqualified_concat_to<canonical_type_t<T>, canonical_type_t<Ts>...>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(
         T arg, Ts... args) noexcept {
@@ -206,7 +206,8 @@ public:
                 concat_target_t<typename T::abi_type, typename Ts::abi_type...>;
             using From =
                 common_abi_t<typename T::abi_type, typename Ts::abi_type...>;
-            if constexpr ((basic_simd_type<T> && ... && basic_simd_type<Ts>)) {
+            if constexpr ((canonical_vector<T> && ... &&
+                              canonical_vector<Ts>)) {
                 if consteval {
                     return fallback<To>(arg, args...);
                 } else {
@@ -216,17 +217,18 @@ public:
                 return concat<To>(internal::abi<From>, arg, args...);
             }
         } else {
-            return operator()(
-                dx::to_basic_type(arg), dx::to_basic_type(args)...);
+            return operator()(dx::to_canonical(arg), dx::to_canonical(args)...);
         }
     }
 
     template <fixed_width_class T, fixed_width_class... Ts>
     requires concatable<T, Ts...> &&
         (!unqualified_concat_to<T, Ts...> &&
-            !unqualified_concat_to<basic_type_t<T>, basic_type_t<Ts>...>) &&
+            !unqualified_concat_to<canonical_type_t<T>,
+                canonical_type_t<Ts>...>) &&
         (unqualified_concat_from<T, Ts...> ||
-            unqualified_concat_from<basic_type_t<T>, basic_type_t<Ts>...>)
+            unqualified_concat_from<canonical_type_t<T>,
+                canonical_type_t<Ts>...>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(
         T arg, Ts... args) noexcept {
@@ -235,7 +237,7 @@ public:
                 concat_target_t<typename T::abi_type, typename Ts::abi_type...>;
             using From =
                 common_abi_t<typename T::abi_type, typename Ts::abi_type...>;
-            if constexpr ((... && basic_simd_type<Ts>)) {
+            if constexpr ((... && canonical_vector<Ts>)) {
                 if consteval {
                     return fallback<To>(arg, args...);
                 } else {
@@ -245,8 +247,7 @@ public:
                 return concat<From>(internal::abi<To>, arg, args...);
             }
         } else {
-            return operator()(
-                dx::to_basic_type(arg), dx::to_basic_type(args)...);
+            return operator()(dx::to_canonical(arg), dx::to_canonical(args)...);
         }
     }
 };

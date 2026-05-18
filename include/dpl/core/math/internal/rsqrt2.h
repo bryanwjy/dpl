@@ -8,7 +8,7 @@
 #include "dpl/core/math/internal/polynomial.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/basic/basic_simd.h" // IWYU pragma: keep
+#  include "dpl/core/basic/basic_vector.h" // IWYU pragma: keep
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/constants/one.h"
 #  include "dpl/core/operations/arithmetic.h"
@@ -32,15 +32,15 @@ private:
 
     template <floating_point E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto refine(
-        basic_simd<E, A> poly, basic_simd<E, A> half_x, immediate<0>) noexcept {
+    static constexpr auto refine(basic_vector<E, A> poly,
+        basic_vector<E, A> half_x, immediate<0>) noexcept {
         return poly;
     }
 
     template <floating_point E, simd_abi A, int N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL refine(
-        basic_simd<E, A> poly, basic_simd<E, A> half_x, immediate<N>) noexcept {
+    static constexpr auto DPL_VECTORCALL refine(basic_vector<E, A> poly,
+        basic_vector<E, A> half_x, immediate<N>) noexcept {
         static_assert(N >= 1);
         constexpr E threehalves = 1.5;
         auto const result = poly * dx::fnmadd(poly * poly, half_x, threehalves);
@@ -60,8 +60,8 @@ private:
 public:
     template <floating_point E, simd_abi A, accuracy_tag Tag>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_simd<E, A> DPL_VECTORCALL operator()(
-        Tag, basic_simd<E, A> val) noexcept {
+    static constexpr basic_vector<E, A>
+        DPL_VECTORCALL operator()(Tag, basic_vector<E, A> val) noexcept {
         constexpr E two = 2.0;
         auto poly = polynomial(dx::fmsub(dx::broadcast<A>(two), val, dx::one));
         if constexpr (same_as<accuracy::speed_t, Tag>) {

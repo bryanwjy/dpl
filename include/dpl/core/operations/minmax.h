@@ -48,23 +48,24 @@ private:
     template <typename L, typename R, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(
-        basic_simd<L, A> lhs, basic_simd<R, A> rhs) noexcept {
+        basic_vector<L, A> lhs, basic_vector<R, A> rhs) noexcept {
         using T = common_order_type_t<L, R>;
         return dx::reinterpret<T>(dx::select(lhs < rhs, lhs, rhs));
     }
 
-    template <simd_type L, simd_type R>
-    using result_for = common_order_simd_t<basic_type_t<L>, basic_type_t<R>>;
+    template <simd_vector L, simd_vector R>
+    using result_for =
+        common_order_simd_t<canonical_type_t<L>, canonical_type_t<R>>;
 
 public:
-    template <simd_type L, common_order_simd_with<L> R>
+    template <simd_vector L, common_order_simd_with<L> R>
     requires same_abi_simd_as<L, R> && fixed_width_abi<common_abi_t<L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L left, R right) noexcept {
         using T = common_order_simd_t<L, R>;
         using A = typename T::abi_type;
         if constexpr (unqualified_min<L, R, A>) {
-            if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
+            if constexpr (canonical_vector<L> && canonical_vector<R>) {
                 if consteval {
                     using E = typename decltype(min(
                         internal::abi<T>, left, right))::value_type;
@@ -75,26 +76,25 @@ public:
             } else {
                 return min(internal::abi<T>, left, right);
             }
-        } else if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
+        } else if constexpr (canonical_vector<L> && canonical_vector<R>) {
             return fallback(left, right);
         } else {
-            return operator()(
-                dx::to_basic_type(left), dx::to_basic_type(right));
+            return operator()(dx::to_canonical(left), dx::to_canonical(right));
         }
     }
 
-    template <simd_type L, common_order_simd_with<L> R>
+    template <simd_vector L, common_order_simd_with<L> R>
     requires (!same_abi_simd_as<L, R> || scalable_abi<common_abi_t<L, R>>) &&
         (unqualified_min<L, R> ||
-            unqualified_min<basic_type_t<L>, basic_type_t<R>>)
+            unqualified_min<canonical_type_t<L>, canonical_type_t<R>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs) noexcept {
         using A = common_abi_t<L, R>;
         if constexpr (unqualified_min<L, R>) {
             return min(internal::abi<A>, lhs, rhs);
         } else {
-            return min(internal::abi<A>, dx::to_basic_type(lhs),
-                dx::to_basic_type(rhs));
+            return min(
+                internal::abi<A>, dx::to_canonical(lhs), dx::to_canonical(rhs));
         }
     }
 
@@ -115,23 +115,24 @@ private:
     template <typename L, typename R, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(
-        basic_simd<L, A> lhs, basic_simd<R, A> rhs) noexcept {
+        basic_vector<L, A> lhs, basic_vector<R, A> rhs) noexcept {
         using T = common_order_type_t<L, R>;
         return dx::reinterpret<T>(dx::select(rhs < lhs, lhs, rhs));
     }
 
-    template <simd_type L, simd_type R>
-    using result_for = common_order_simd_t<basic_type_t<L>, basic_type_t<R>>;
+    template <simd_vector L, simd_vector R>
+    using result_for =
+        common_order_simd_t<canonical_type_t<L>, canonical_type_t<R>>;
 
 public:
-    template <simd_type L, common_order_simd_with<L> R>
-    requires same_abi_simd_as<L, R> && fixed_width_simd<L>
+    template <simd_vector L, common_order_simd_with<L> R>
+    requires same_abi_simd_as<L, R> && fixed_width_vector<L>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L left, R right) noexcept {
         using T = common_order_simd_t<L, R>;
         using A = typename T::abi_type;
         if constexpr (unqualified_max<L, R, A>) {
-            if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
+            if constexpr (canonical_vector<L> && canonical_vector<R>) {
                 if consteval {
                     using E = typename decltype(max(
                         internal::abi<T>, left, right))::value_type;
@@ -142,26 +143,25 @@ public:
             } else {
                 return max(internal::abi<T>, left, right);
             }
-        } else if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
+        } else if constexpr (canonical_vector<L> && canonical_vector<R>) {
             return fallback(left, right);
         } else {
-            return operator()(
-                dx::to_basic_type(left), dx::to_basic_type(right));
+            return operator()(dx::to_canonical(left), dx::to_canonical(right));
         }
     }
 
-    template <simd_type L, common_order_simd_with<L> R>
+    template <simd_vector L, common_order_simd_with<L> R>
     requires (!same_abi_simd_as<L, R> || scalable_abi<common_abi_t<L, R>>) &&
         (unqualified_max<L, R> ||
-            unqualified_max<basic_type_t<L>, basic_type_t<R>>)
+            unqualified_max<canonical_type_t<L>, canonical_type_t<R>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs) noexcept {
         using A = common_abi_t<L, R>;
         if constexpr (unqualified_max<L, R>) {
             return max(internal::abi<A>, lhs, rhs);
         } else {
-            return max(internal::abi<A>, dx::to_basic_type(lhs),
-                dx::to_basic_type(rhs));
+            return max(
+                internal::abi<A>, dx::to_canonical(lhs), dx::to_canonical(rhs));
         }
     }
 

@@ -14,7 +14,7 @@
 #  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_traits.h"
-#  include "dpl/core/concepts/simd_type.h"
+#  include "dpl/core/concepts/simd_vector.h"
 #  include "dpl/core/operations/arithmetic.h" // IWYU pragma: keep
 #  include "dpl/core/operations/bitwise.h"    // IWYU pragma: keep
 #  include "dpl/core/operations/compare.h"    // IWYU pragma: keep
@@ -31,8 +31,8 @@ struct rsqrt_t {
 private:
     template <floating_point E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallback(basic_simd<E, A> val) noexcept {
+    static constexpr auto DPL_VECTORCALL fallback(
+        basic_vector<E, A> val) noexcept {
         constexpr auto inv_sqrt2 = dx::broadcast<E, A>(mx::rsqrt2(dx::one));
 
         auto const decomp = dx::frexp(val);
@@ -57,7 +57,7 @@ public:
                               rsqrt(internal::abi<T>, val)
                           } -> equivalent_simd_as<T>;
                       }) {
-            if constexpr (basic_simd_type<T>) {
+            if constexpr (canonical_vector<T>) {
                 if not consteval {
                     return rsqrt(internal::abi<T>, val);
                 } else {
@@ -66,10 +66,10 @@ public:
             } else {
                 return rsqrt(internal::abi<T>, val);
             }
-        } else if constexpr (basic_simd_type<T>) {
+        } else if constexpr (canonical_vector<T>) {
             return fallback(val);
         } else {
-            return operator()(dx::to_basic_type(val));
+            return operator()(dx::to_canonical(val));
         }
     }
 };

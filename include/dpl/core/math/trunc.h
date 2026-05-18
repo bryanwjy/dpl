@@ -11,7 +11,7 @@
 #  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_traits.h"
-#  include "dpl/core/concepts/simd_type.h"
+#  include "dpl/core/concepts/simd_vector.h"
 #  include "dpl/core/constants/one.h"
 #  include "dpl/core/operations/arithmetic.h"
 #  include "dpl/core/operations/bit.h"
@@ -37,8 +37,8 @@ struct trunc_t {
 private:
     template <floating_point E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallback(basic_simd<E, A> val) noexcept {
+    static constexpr auto DPL_VECTORCALL fallback(
+        basic_vector<E, A> val) noexcept {
         // Based on musl libm
         using sint = signed_representation_t<E>;
         using uint = unsigned_representation_t<E>;
@@ -61,7 +61,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(T val) noexcept {
         if constexpr (unqualified_trunc<T>) {
-            if constexpr (basic_simd_type<T>) {
+            if constexpr (canonical_vector<T>) {
                 if not consteval {
                     return round(internal::abi<T>, val, rounding::to_zero);
                 } else {
@@ -70,10 +70,10 @@ public:
             } else {
                 return round(internal::abi<T>, val, rounding::to_zero);
             }
-        } else if constexpr (basic_simd_type<T>) {
+        } else if constexpr (canonical_vector<T>) {
             return fallback(val);
         } else {
-            return operator()(dx::to_basic_type(val));
+            return operator()(dx::to_canonical(val));
         }
     }
 
@@ -82,7 +82,7 @@ public:
     static constexpr T operator()(
         T val, rounding::no_exc_t tag [[maybe_unused]]) noexcept {
         if constexpr (unqualified_trunc_noexc<T>) {
-            if constexpr (basic_simd_type<T>) {
+            if constexpr (canonical_vector<T>) {
                 if not consteval {
                     return round(internal::abi<T>, val,
                         rounding::to_zero | rounding::no_exc);
@@ -93,10 +93,10 @@ public:
                 return round(internal::abi<T>, val,
                     rounding::to_zero | rounding::no_exc);
             }
-        } else if constexpr (basic_simd_type<T>) {
+        } else if constexpr (canonical_vector<T>) {
             return fallback(val);
         } else {
-            return operator()(dx::to_basic_type(val), tag);
+            return operator()(dx::to_canonical(val), tag);
         }
     }
 };

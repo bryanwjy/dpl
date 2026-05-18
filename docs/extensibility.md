@@ -14,7 +14,7 @@ In this section, we will walk through how to define custom backends, enabling DP
 
 SIMD backends (also referred to as `abi_type` or `abi_tag` in the library) are used by DPL to select and bind a concrete ABI-specific implementation to a SIMD type. They act as the mechanism through which the library maps high-level SIMD abstractions onto hardware-specific vector and mask representations.
 
-The primary templates, `basic_simd<E, A>` and `basic_simd_mask<E, A>` (where `E` is the element type), take the backend `A` as their second template parameter. This parameter is used to specialize the SIMD types so that they encapsulate the underlying vector and mask types expected by the target hardware intrinsics.
+The primary templates, `basic_vector<E, A>` and `basic_mask<E, A>` (where `E` is the element type), take the backend `A` as their second template parameter. This parameter is used to specialize the SIMD types so that they encapsulate the underlying vector and mask types expected by the target hardware intrinsics.
 
 In DPL, SIMD ABIs are required to satisfy a **base** set of constraints:
 
@@ -22,7 +22,7 @@ In DPL, SIMD ABIs are required to satisfy a **base** set of constraints:
 template<typename A>
 concept simd_abi = enable_simd_abi<A> && is_empty_v<A> && semiregular<A> && requires {
     typename integral_constant<A, A{}>;
-    requires /*is-unary-template*/<A::template native_type>;
+    requires /*is-unary-template*/<A::template native_vector>;
     requires /*is-unary-template*/<A::template native_mask>;
 };
 ```
@@ -108,7 +108,7 @@ When invoking a DPL operation, dispatch follows this pattern:
 
 ```c++
 struct foo_t { // simplified CPO
-template<simd_type T>
+template<simd_vector T>
 static auto operator()(T lhs, T rhs) noexcept {
     constexpr typename T::abi_type abi{};
     if constexpr (requires { foo(abi, lhs, rhs); }) {
@@ -124,7 +124,7 @@ Because ADL considers the namespaces of the argument types, passing `abi_type` a
 
 The trade-off is that users must design their overloads carefully: since lookup is driven by ADL, poorly constrained or conflicting overloads can lead to ambiguity.
 
-> **Caveat:** When providing custom implementations of any operation for a backend, if all argument types are the primary DPL SIMD types (`basic_simd` or `basic_simd_mask`), the return type must also be the corresponding primary DPL type. Many parts of DPL rely on this invariant, and returning non-primary types (e.g., expression templates) in these cases may lead to incorrect behavior or ill-formed programs.
+> **Caveat:** When providing custom implementations of any operation for a backend, if all argument types are the primary DPL SIMD types (`basic_vector` or `basic_mask`), the return type must also be the corresponding primary DPL type. Many parts of DPL rely on this invariant, and returning non-primary types (e.g., expression templates) in these cases may lead to incorrect behavior or ill-formed programs.
 
 ## Custom Simd Types
 
@@ -142,22 +142,22 @@ concept simd_basics = /*exposition-only*/
     };
 
 template <typename T>
-concept simd_type = /*simd-basics*/<T> && enable_simd_type<T> &&
+concept simd_vector = /*simd-basics*/<T> && enable_simd_type<T> &&
     requires {
         requires simd_element_for<typename T::value_type, typename T::abi_type>;
         requires sizeof(typename T::value_type) <= T::abi_type::size;
     } &&
     explicitly_convertible_to<T,
-        typename T::abi_type::template native_type<typename T::value_type>>;
+        typename T::abi_type::template native_vector<typename T::value_type>>;
 
 template <typename M>
-concept simd_mask_type = /*simd-basics*/<T> && enable_simd_mask<M> && requires {
-    typename M::simd_type;
+concept simd_mask = /*simd-basics*/<T> && enable_simd_mask<M> && requires {
+    typename M::simd_vector;
     requires same_as<typename M::value_type, bool> &&
-        simd_type<typename M::simd_type>;
+        simd_vector<typename M::simd_vector>;
     requires explicitly_convertible_to<M,
         typename M::abi_type::template native_mask<
-            typename M::simd_type::value_type>>;
+            typename M::simd_vector::value_type>>;
 };
 ```
 
@@ -165,14 +165,14 @@ As with `simd_abi`, these types are further classified into *fixed-width* and *s
 
 Custom SIMD and mask types must be convertible to their corresponding native types. This conversion serves as a bridge within DPL, allowing generic components to interoperate with user-defined types.
 
-In particular, DPL provides the utility function `dpl::datapar::to_basic_type`, which converts a custom SIMD or mask type into the corresponding primary DPL type. This enables fallback behavior: if a custom type does not provide specialized implementations for certain operations, DPL can transparently fall back to the default implementations defined for the primary templates.
+In particular, DPL provides the utility function `dpl::datapar::to_canonical`, which converts a custom SIMD or mask type into the corresponding primary DPL type. This enables fallback behavior: if a custom type does not provide specialized implementations for certain operations, DPL can transparently fall back to the default implementations defined for the primary templates.
 
 Aside from the basic operations, higher-level operations follow a similar dispatch strategy:
 
 - If the type is a custom SIMD type:
   - Attempt unqualified lookup (ADL) for the operation.
   - If a matching overload is found, use it.
-  - Otherwise, convert the value to the corresponding basic DPL type via `to_basic_type` and retry.
+  - Otherwise, convert the value to the corresponding basic DPL type via `to_canonical` and retry.
 
 - If the type is a primary DPL SIMD type:
   - Attempt unqualified lookup (ADL) for the operation.
@@ -212,12 +212,12 @@ struct multiply {
     }
 
     template<simd_with<float, abi_type> R>
-    friend basic_simd<float, abi_type> add(abi_type, multiply lhs, R rhs) noexcept {
+    friend basic_vector<float, abi_type> add(abi_type, multiply lhs, R rhs) noexcept {
         return _mm_fmadd_ps(lhs.lhs,lhs.rhs, static_cast<__m128>(rhs));
     }
 
     template<simd_with<float, abi_type> L>
-    friend basic_simd<float, abi_type> add(abi_type, L lhs, multiply rhs) noexcept {
+    friend basic_vector<float, abi_type> add(abi_type, L lhs, multiply rhs) noexcept {
         return _mm_fmadd_ps(rhs.lhs, rhs.rhs, static_cast<__m128>(lhs));
     }
 };
@@ -231,6 +231,6 @@ One such example in the core library is logical negation of the primary SIMD mas
 
 ### Limitations
 
-Operations involving the primary DPL SIMD types (`basic_simd` and `basic_simd_mask`) must always return primary types. Returning expression template types from such operations violates this expectation and may lead to incorrect behavior or ill-formed programs, as many components of DPL rely on this invariant.
+Operations involving the primary DPL SIMD types (`basic_vector` and `basic_mask`) must always return primary types. Returning expression template types from such operations violates this expectation and may lead to incorrect behavior or ill-formed programs, as many components of DPL rely on this invariant.
 
 Users wishing to implement expression templates should do so in conjunction with custom SIMD and mask types. This ensures that all participating operations are consistently defined and that DPL’s dispatch and fallback mechanisms behave as intended.

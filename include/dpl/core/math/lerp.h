@@ -38,9 +38,9 @@ private:
     }
 
     template <typename E, typename A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST NODISCARD)
-    static constexpr auto DPL_VECTORCALL fallback(basic_simd<E, A> start,
-        basic_simd<E, A> end, basic_simd<E, A> scale) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST NODISCARD) static constexpr auto DPL_VECTORCALL
+    fallback(basic_vector<E, A> start, basic_vector<E, A> end,
+        basic_vector<E, A> scale) noexcept {
         return dx::fmadd(scale, dx::subtract(end, start), start);
     }
 
@@ -53,8 +53,8 @@ public:
     static constexpr auto operator()(TA a, TB b, TC c) noexcept {
         using A = typename TA::abi_type;
         if constexpr (unqualified_lerp<TA, TB, TC, A>) {
-            if constexpr (basic_simd_type<TA> && basic_simd_type<TB> &&
-                basic_simd_type<TC>) {
+            if constexpr (canonical_vector<TA> && canonical_vector<TB> &&
+                canonical_vector<TC>) {
                 if consteval {
                     return fallback(a, b, c);
                 } else {
@@ -63,12 +63,12 @@ public:
             } else {
                 return lerp(internal::abi<A>, a, b, c);
             }
-        } else if constexpr (basic_simd_type<TA> && basic_simd_type<TB> &&
-            basic_simd_type<TC>) {
+        } else if constexpr (canonical_vector<TA> && canonical_vector<TB> &&
+            canonical_vector<TC>) {
             return fallback(a, b, c);
         } else {
-            return fallback(dx::to_basic_type(a), dx::to_basic_type(b),
-                dx::to_basic_type(c));
+            return fallback(
+                dx::to_canonical(a), dx::to_canonical(b), dx::to_canonical(c));
         }
     }
 
@@ -77,16 +77,16 @@ public:
     requires (!same_abi_simd_as<TA, TB> || !same_abi_simd_as<TA, TC> ||
                  !same_abi_simd_as<TB, TC>) &&
         (unqualified_lerp<TA, TB, TC> ||
-            unqualified_lerp<basic_type_t<TA>, basic_type_t<TB>,
-                basic_type_t<TC>>)
+            unqualified_lerp<canonical_type_t<TA>, canonical_type_t<TB>,
+                canonical_type_t<TC>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(TA a, TB b, TC c) noexcept {
         using A = common_abi_t<TA, TB, TC>;
         if constexpr (unqualified_lerp<TA, TB, TC>) {
             return lerp(internal::abi<A>, a, b, c);
         } else {
-            return lerp(internal::abi<A>, dx::to_basic_type(a),
-                dx::to_basic_type(b), dx::to_basic_type(c));
+            return lerp(internal::abi<A>, dx::to_canonical(a),
+                dx::to_canonical(b), dx::to_canonical(c));
         }
     }
 

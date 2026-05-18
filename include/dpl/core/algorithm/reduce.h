@@ -26,11 +26,11 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 
 template <typename F, typename T>
-concept reduction_operator_for = simd_type<T> && regular_invocable<F, T, T> &&
+concept reduction_operator_for = simd_vector<T> && regular_invocable<F, T, T> &&
     core_convertible_to<invoke_result_t<F, T, T>, T>;
 
 template <typename T, auto V>
-concept reducible = simd_type<T> && integral<decltype(V)> &&
+concept reducible = simd_vector<T> && integral<decltype(V)> &&
     (V == static_cast<decltype(V)>(-1) ||
         __DPL bit_width(__DPL to_unsigned(V)) <= simd_abi_traits<T>::size);
 
@@ -56,10 +56,10 @@ struct reduce_t {
 private:
     template <immediate_mask_like M>
     static constexpr size_t accumulations = __DPL popcount(dx::popcount(M{}));
-    template <simd_type T, reduction_operator_for<T> BinaryOp>
+    template <simd_vector T, reduction_operator_for<T> BinaryOp>
     static constexpr bool is_nothrow_v = is_nothrow_invocable_v<BinaryOp, T, T>;
 
-    template <typename M, simd_type T, typename BinaryOp>
+    template <typename M, simd_vector T, typename BinaryOp>
     requires (accumulations<M> == 1)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto fallbacki(M mask, T value, BinaryOp&& op) noexcept(
@@ -81,7 +81,7 @@ private:
         return reducer(value);
     }
 
-    template <typename M, simd_type T, typename BinaryOp>
+    template <typename M, simd_vector T, typename BinaryOp>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto fallbacki(M mask, T value, BinaryOp&& op) noexcept(
         is_nothrow_v<T, BinaryOp>) {
@@ -140,12 +140,12 @@ private:
     }
 
 public:
-    template <fixed_width_simd T, reduction_operator_for<T> BinaryOp>
+    template <fixed_width_vector T, reduction_operator_for<T> BinaryOp>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto operator()(T value, BinaryOp op) noexcept {
         constexpr auto all = make_immediate_mask_t<T, -1>{};
         if constexpr (unqualified_reduce<T, BinaryOp>) {
-            if constexpr (basic_simd_type<T>) {
+            if constexpr (canonical_vector<T>) {
                 if consteval {
                     using E = typename decltype(reduce(
                         internal::abi<T>, value, op))::value_type;
@@ -156,14 +156,14 @@ public:
             } else {
                 return reduce(internal::abi<T>, value, op);
             }
-        } else if constexpr (basic_simd_type<T>) {
+        } else if constexpr (canonical_vector<T>) {
             return fallbacki(all, value, op);
         } else {
-            return operator()(dx::to_basic_type(value), op);
+            return operator()(dx::to_canonical(value), op);
         }
     }
 
-    template <fixed_width_simd T, immediate_mask_for<T> M,
+    template <fixed_width_vector T, immediate_mask_for<T> M,
         reduction_operator_for<T> BinaryOp>
     requires reducible<T, M::value>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
@@ -171,7 +171,7 @@ public:
         is_nothrow_v<T, BinaryOp>) {
         if constexpr (unqualified_reduce<T, BinaryOp>) {
             constexpr auto V = immediate_mask_v<T, M>;
-            if constexpr (basic_simd_type<T>) {
+            if constexpr (canonical_vector<T>) {
                 if consteval {
                     using E = typename decltype(reduce<V>(
                         internal::abi<T>, value, op))::value_type;
@@ -182,18 +182,19 @@ public:
             } else {
                 return reduce<V>(internal::abi<T>, value, op);
             }
-        } else if constexpr (basic_simd_type<T>) {
+        } else if constexpr (canonical_vector<T>) {
             return fallbacki(mask, value, op);
         } else {
-            return operator()(mask, dx::to_basic_type(value), op);
+            return operator()(mask, dx::to_canonical(value), op);
         }
     }
 
-    template <fixed_width_simd T, compatible_mask_with<T> M,
+    template <fixed_width_vector T, compatible_mask_with<T> M,
         reduction_operator_for<T> BinaryOp>
     requires reducible<T, M::value> &&
         (unqualified_mreduce<M, T, BinaryOp> ||
-            unqualified_mreduce<basic_type_t<M>, basic_type_t<T>, BinaryOp>)
+            unqualified_mreduce<canonical_type_t<M>, canonical_type_t<T>,
+                BinaryOp>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto operator()(M mask, T value, BinaryOp op) noexcept(
         is_nothrow_v<T, BinaryOp>) {
@@ -201,8 +202,8 @@ public:
         if constexpr (unqualified_mreduce<M, T, BinaryOp>) {
             return reduce(internal::abi<T>, mask, value, op);
         } else {
-            return reduce(internal::abi<T>, dx::to_basic_type(mask),
-                dx::to_basic_type(value), op);
+            return reduce(internal::abi<T>, dx::to_canonical(mask),
+                dx::to_canonical(value), op);
         }
     }
 };
@@ -218,7 +219,7 @@ private:
 
 public:
     template <arithmetic_simd T>
-    requires fixed_width_simd<T> && requires {
+    requires fixed_width_vector<T> && requires {
         typename mask_type<T>;
         requires regular_invocable<reduce_t, mask_type<T>, T>;
     }

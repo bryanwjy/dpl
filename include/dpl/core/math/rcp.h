@@ -11,7 +11,7 @@
 #  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_traits.h"
-#  include "dpl/core/concepts/simd_type.h"
+#  include "dpl/core/concepts/simd_vector.h"
 #  include "dpl/core/operations/arithmetic.h"
 #  include "dpl/core/type_traits/representation.h"
 #  include "dpl/core/utility/fpfix.h"
@@ -41,14 +41,14 @@ private:
     template <floating_point E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto refine(
-        basic_simd<E, A> y, basic_simd<E, A> x) noexcept {
+        basic_vector<E, A> y, basic_vector<E, A> x) noexcept {
         return y * dx::fnmadd(x, y, 2.0);
     }
 
     template <floating_point E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr basic_simd<float, A> approximate(
-        basic_simd<float, A> val) noexcept {
+    static constexpr basic_vector<float, A> approximate(
+        basic_vector<float, A> val) noexcept {
         auto const seed =
             useed<E> - dx::reinterpret<unsigned_representation_t<E>>(val);
         return refine(dx::reinterpret<E>(seed), val);
@@ -56,8 +56,8 @@ private:
 
     template <simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallback(basic_simd<float, A> val) noexcept {
+    static constexpr auto DPL_VECTORCALL fallback(
+        basic_vector<float, A> val) noexcept {
         auto const result = approximate(val);
         // nan is implicitly handled
         return dx::fixup(val, result,
@@ -74,7 +74,7 @@ public:
                               rcp(internal::abi<T>, val)
                           } -> equivalent_simd_as<T>;
                       }) {
-            if constexpr (basic_simd_type<T>) {
+            if constexpr (canonical_vector<T>) {
                 if not consteval {
                     return rcp(internal::abi<T>, val);
                 } else {
@@ -83,10 +83,10 @@ public:
             } else {
                 return rcp(internal::abi<T>, val);
             }
-        } else if constexpr (basic_simd_type<T>) {
+        } else if constexpr (canonical_vector<T>) {
             return fallback(val);
         } else {
-            return operator()(dx::to_basic_type(val));
+            return operator()(dx::to_canonical(val));
         }
     }
 };

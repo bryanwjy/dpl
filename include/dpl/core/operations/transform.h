@@ -17,7 +17,7 @@ namespace datapar::internal {
 
 template <typename F, typename R, typename... Args>
 concept value_invocable_r =
-    (basic_simd_class<R> && ... && basic_simd_class<Args>) &&
+    (canonical_class<R> && ... && canonical_class<Args>) &&
     (... && (simd_abi_traits<R>::size == simd_abi_traits<Args>::size)) &&
     is_invocable_r_v<typename R::value_type, F, typename Args::value_type...>;
 
@@ -30,11 +30,11 @@ consteval bool invocable(index_sequence<Is...>) noexcept {
 
 template <typename F, typename R, typename... Args>
 concept ivalue_invocable_r =
-    (basic_simd_class<R> && ... && basic_simd_class<Args>) &&
+    (canonical_class<R> && ... && canonical_class<Args>) &&
     (... && (simd_abi_traits<R>::size == simd_abi_traits<Args>::size)) &&
     internal::invocable<R, F, Args...>(iota_sequence<R>);
 
-template <basic_simd_class Result, basic_simd_class... Ts,
+template <canonical_class Result, canonical_class... Ts,
     ivalue_invocable_r<Result, Ts...> Op>
 requires (... && same_abi_simd_as<Result, Ts>) &&
     (fixed_width_class<Result> && ... && fixed_width_class<Ts>)
@@ -52,7 +52,7 @@ constexpr Result itransform(Op func, Ts... args) noexcept {
     }(args..., func, iota_sequence<Result>);
 }
 
-template <basic_simd_class Result, basic_simd_class... Ts,
+template <canonical_class Result, canonical_class... Ts,
     value_invocable_r<Result, Ts...> Op>
 requires (... && same_abi_simd_as<Result, Ts>) &&
     (fixed_width_class<Result> && ... && fixed_width_class<Ts>)

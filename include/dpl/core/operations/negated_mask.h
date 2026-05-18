@@ -16,7 +16,7 @@
 #  include "dpl/core/basic/to_native_type.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_element.h"
-#  include "dpl/core/concepts/simd_mask_type.h"
+#  include "dpl/core/concepts/simd_mask.h"
 #  include "dpl/core/type_traits/basic_type.h"
 #  include "dpl/core/type_traits/simd_traits.h"
 #  include "dpl/std/concepts/same_as.h"
@@ -28,12 +28,12 @@ namespace datapar::internal {
 template <typename T>
 inline constexpr bool is_negated_mask_specialization = false;
 
-template <simd_mask_type T>
+template <simd_mask T>
 class negated_mask {
     using element_type = simd_lane_type_t<T>;
 
 public:
-    using simd_type = basic_simd<element_type, typename T::abi_type>;
+    using simd_vector = basic_vector<element_type, typename T::abi_type>;
     using abi_type = typename T::abi_type;
     using value_type = bool;
     static constexpr auto decay_policy = simd_traits<T>::decay_policy;
@@ -49,7 +49,7 @@ public:
     }
 
     __DPL_HIDE_FROM_ABI constexpr negated_mask() noexcept
-        : negated_mask(dx::to_native_type(basic_type_t<T>())) {}
+        : negated_mask(dx::to_native_type(canonical_type_t<T>())) {}
 
     __DPL_HIDE_FROM_ABI constexpr negated_mask(T mask) noexcept : mask_(mask) {}
 
@@ -74,7 +74,7 @@ public:
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     constexpr mask_type operator+(this negated_mask self) noexcept
-    requires basic_simd_mask_type<T>
+    requires canonical_mask<T>
     {
         return dx::to_native_type(dx::bwnot(!self));
     }
@@ -95,7 +95,7 @@ public:
         return self.mask_;
     }
 
-    template <dx::simd_type L, dx::simd_type R>
+    template <dx::simd_vector L, dx::simd_vector R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     friend constexpr auto select(common_abi_with<abi_type> auto,
         negated_mask self, L lhs, R rhs) noexcept {
@@ -209,7 +209,7 @@ public:
         return dx::bwornot(!arg, !self);
     }
 
-    template <simd_mask_type M, same_as<common_abi_t<M, T>> A>
+    template <simd_mask M, same_as<common_abi_t<M, T>> A>
     requires (!internal::is_negated_mask_specialization<M>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     friend constexpr auto bwand(A, negated_mask self, M arg) noexcept
@@ -218,7 +218,7 @@ public:
         return dx::bwandnot(arg, !self);
     }
 
-    template <simd_mask_type M, same_as<common_abi_t<M, T>> A>
+    template <simd_mask M, same_as<common_abi_t<M, T>> A>
     requires (!internal::is_negated_mask_specialization<M>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     friend constexpr auto bwor(A, negated_mask self, M arg) noexcept
@@ -227,7 +227,7 @@ public:
         return dx::bwornot(arg, !self);
     }
 
-    template <simd_mask_type M, same_as<common_abi_t<M, T>> A>
+    template <simd_mask M, same_as<common_abi_t<M, T>> A>
     requires (!internal::is_negated_mask_specialization<M>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     friend constexpr auto bwxor(A, negated_mask self, M arg) noexcept
@@ -236,7 +236,7 @@ public:
         return !dx::bwxor(!self, arg);
     }
 
-    template <simd_mask_type M, same_as<common_abi_t<M, T>> A>
+    template <simd_mask M, same_as<common_abi_t<M, T>> A>
     requires (!internal::is_negated_mask_specialization<M>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     friend constexpr auto bwandnot(A, negated_mask self, M arg) noexcept
@@ -245,7 +245,7 @@ public:
         return !dx::bwor(!arg, self);
     }
 
-    template <simd_mask_type M, same_as<common_abi_t<M, T>> A>
+    template <simd_mask M, same_as<common_abi_t<M, T>> A>
     requires (!internal::is_negated_mask_specialization<M>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     friend constexpr auto bwornot(A, negated_mask self, M arg) noexcept
@@ -370,12 +370,12 @@ private:
     mask_type mask_;
 };
 
-template <simd_mask_type T>
+template <simd_mask T>
 inline constexpr bool is_negated_mask_specialization<negated_mask<T>> = true;
 } // namespace datapar::internal
 
 namespace datapar {
-DPL_EXPORT template <simd_mask_type T>
+DPL_EXPORT template <simd_mask T>
 inline constexpr bool enable_simd_mask<internal::negated_mask<T>> = true;
 }
 DPL_DEFAULT_NAMESPACE_END

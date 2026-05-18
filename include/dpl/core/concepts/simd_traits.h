@@ -3,9 +3,10 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/concepts/basic_type.h"
 #include "dpl/core/concepts/operation_category.h"
 #include "dpl/core/concepts/simd_abi_traits.h"
-#include "dpl/core/concepts/simd_type.h"
+#include "dpl/core/concepts/simd_lane_representation.h"
 
 #if !DPL_MODULES
 #  include "dpl/std/type_traits/conditional.h"
@@ -24,11 +25,11 @@ struct simd_traits<T> {
     using value_type = typename T::value_type;
     using element_type = simd_lane_type_t<T>;
     using element_representation = simd_lane_representation_t<T>;
-    using native_type = conditional_t<simd_mask_type<T>,
+    using native_type = conditional_t<simd_mask<T>,
         typename simd_abi_traits<abi_type, element_type>::native_mask,
-        typename simd_abi_traits<abi_type, element_type>::native_type>;
+        typename simd_abi_traits<abi_type, element_type>::native_vector>;
     static constexpr operation_category decay_policy = []() {
-        if constexpr (basic_simd_class<T>) {
+        if constexpr (canonical_class<T>) {
             return T::all;
         } else if constexpr (requires { T::decay_policy; }) {
             static_assert(requires {

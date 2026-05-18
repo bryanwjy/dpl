@@ -28,25 +28,25 @@ struct hmin_t {
 private:
     template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallback(basic_simd<E, A> val) noexcept {
+    static constexpr auto DPL_VECTORCALL fallback(
+        basic_vector<E, A> val) noexcept {
         return dx::reduce(val, dx::max);
     }
 
     template <auto V, typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallbacki(basic_simd<E, A> val) noexcept {
+    static constexpr auto DPL_VECTORCALL fallbacki(
+        basic_vector<E, A> val) noexcept {
         return dx::reducei<V>(val, dx::max);
     }
 
 public:
     template <ordered_simd T>
-    requires fixed_width_simd<T>
+    requires fixed_width_vector<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T arg) noexcept {
         if constexpr (unqualified_hmin<T>) {
-            if constexpr (basic_simd_type<T>) {
+            if constexpr (canonical_vector<T>) {
                 if consteval {
                     using RT = decltype(hmin(internal::abi<T>, arg));
                     return dx::reinterpret<RT>(fallback(arg));
@@ -56,22 +56,22 @@ public:
             } else {
                 return hmin(internal::abi<T>, arg);
             }
-        } else if constexpr (basic_simd_type<T>) {
+        } else if constexpr (canonical_vector<T>) {
             return fallback(arg);
         } else {
-            return operator()(dx::to_basic_type(arg));
+            return operator()(dx::to_canonical(arg));
         }
     }
 
     template <ordered_simd T>
-    requires scalable_simd<T> &&
-        (unqualified_hmin<T> || unqualified_hmin<basic_type_t<T>>)
+    requires scalable_vector<T> &&
+        (unqualified_hmin<T> || unqualified_hmin<canonical_type_t<T>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T arg) noexcept {
         if constexpr (unqualified_hmin<T>) {
             return hmin(internal::abi<T>, arg);
         } else {
-            return hmin(internal::abi<T>, dx::to_basic_type(arg));
+            return hmin(internal::abi<T>, dx::to_canonical(arg));
         }
     }
 
@@ -80,7 +80,7 @@ public:
     static constexpr auto operator()(M mask, T arg) noexcept {
         constexpr auto V = immediate_mask_v<T, M>;
         if constexpr (unqualified_hmini<M, T>) {
-            if constexpr (basic_simd_type<T>) {
+            if constexpr (canonical_vector<T>) {
                 if consteval {
                     using RT = decltype(hmin<V>(internal::abi<T>, arg));
                     return dx::reinterpret<RT>(fallbacki<V>(arg));
@@ -90,10 +90,10 @@ public:
             } else {
                 return hmin<V>(internal::abi<T>, arg);
             }
-        } else if constexpr (basic_simd_type<T>) {
+        } else if constexpr (canonical_vector<T>) {
             return fallbacki<V>(arg);
         } else {
-            return operator()(mask, dx::to_basic_type(arg));
+            return operator()(mask, dx::to_canonical(arg));
         }
     }
 };
@@ -109,7 +109,7 @@ private:
 
 public:
     template <arithmetic_simd T>
-    requires fixed_width_simd<T> && requires {
+    requires fixed_width_vector<T> && requires {
         typename mask_type<T>;
         requires regular_invocable<hmin_t, mask_type<T>, T>;
     }

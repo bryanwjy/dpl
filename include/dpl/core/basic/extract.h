@@ -3,7 +3,7 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/basic/to_basic_type.h"
+#include "dpl/core/basic/to_canonical.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/basic_type.h"
@@ -22,13 +22,13 @@ void extract(...) noexcept = delete;
 
 struct extract_t {
     /**
-     * Prevent basic_simd_class overload from falling back to simd_class
+     * Prevent canonical_class overload from falling back to simd_class
      * overload
      */
-    template <basic_simd_class T, typename I>
+    template <canonical_class T, typename I>
     static constexpr void operator()(T, I) noexcept = delete;
 
-    template <basic_simd_class T, extraction_index I>
+    template <canonical_class T, extraction_index I>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr typename T::value_type operator()(T src, I idx) noexcept
     requires requires { extract(internal::abi<T>, src, idx); }
@@ -43,7 +43,7 @@ struct extract_t {
         if constexpr (requires { extract(internal::abi<T>, src, idx); }) {
             return extract(internal::abi<T>, src, idx);
         } else {
-            return operator()(dx::to_basic_type(src), idx);
+            return operator()(dx::to_canonical(src), idx);
         }
     }
 };

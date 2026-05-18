@@ -7,8 +7,8 @@
 #  include "dpl/core/fwd.h"
 
 #  include "dpl/core/concepts/simd_class.h"
-#  include "dpl/core/concepts/simd_mask_type.h"
-#  include "dpl/core/concepts/simd_type.h"
+#  include "dpl/core/concepts/simd_mask.h"
+#  include "dpl/core/concepts/simd_vector.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -18,24 +18,23 @@ namespace datapar {
  * Specializable trait to rebind a simd class's element abi type
  *
  * It is undefined behaviour to define specializations (partial or otherwise)
- * to rebind basic classes, i.e. basic_simd, basic_simd_mask.
+ * to rebind basic classes, i.e. basic_vector, basic_mask.
  */
-DPL_EXPORT template <simd_class T, typename U,
-    typename A = typename T::abi_type>
+DPL_EXPORT template <simd_class T, typename U, typename A = typename T::abi_type>
 struct rebind_simd {};
 
 DPL_EXPORT template <simd_class T, simd_element E,
     simd_abi A = typename T::abi_type>
 using rebind_simd_t = typename rebind_simd<T, E, A>::type;
 
-DPL_EXPORT template <simd_type T, simd_element E, simd_abi A>
+DPL_EXPORT template <simd_vector T, simd_element E, simd_abi A>
 struct rebind_simd<T, E, A> {
-    using type DPL_NODEBUG = basic_simd<E, A>;
+    using type DPL_NODEBUG = basic_vector<E, A>;
 };
 
-DPL_EXPORT template <simd_mask_type T, simd_element E, simd_abi A>
+DPL_EXPORT template <simd_mask T, simd_element E, simd_abi A>
 struct rebind_simd<T, E, A> {
-    using type DPL_NODEBUG = basic_simd_mask<E, A>;
+    using type DPL_NODEBUG = basic_mask<E, A>;
 };
 
 } // namespace datapar

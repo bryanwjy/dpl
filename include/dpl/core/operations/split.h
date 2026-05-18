@@ -131,7 +131,7 @@ struct split_t {
 private:
     template <typename E, typename A0>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static consteval auto fallback(basic_simd<E, A0> src) noexcept {
+    static consteval auto fallback(basic_vector<E, A0> src) noexcept {
         using A = split_target_t<N, A0>;
         array_for<E, A0> buffer{};
         dx::store(src, buffer.data);
@@ -150,7 +150,7 @@ private:
 
     template <typename E, typename A0>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static consteval auto fallback(basic_simd_mask<E, A0> src) noexcept {
+    static consteval auto fallback(basic_mask<E, A0> src) noexcept {
         using A = split_target_t<N, A0>;
 #if DPL_CXX26
         constexpr auto S = simd_abi_traits<A, E>::size;
@@ -182,12 +182,12 @@ private:
 public:
     template <splittable<N> T>
     requires (unqualified_split_into<T, N> ||
-        unqualified_split_into<basic_type_t<T>, N>)
+        unqualified_split_into<canonical_type_t<T>, N>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto operator()(T src) noexcept {
         if constexpr (unqualified_split_into<T, N>) {
             using A = split_target_t<N, typename T::abi_type>;
-            if constexpr (basic_simd_class<T>) {
+            if constexpr (canonical_class<T>) {
                 if consteval {
                     return fallback(src);
                 } else {
@@ -197,20 +197,20 @@ public:
                 return split<A>(internal::abi<T>, src);
             }
         } else {
-            return operator()(dx::to_basic_type(src));
+            return operator()(dx::to_canonical(src));
         }
     }
 
     template <splittable<N> T>
     requires (!unqualified_split_into<T, N> &&
-                 !unqualified_split_into<basic_type_t<T>, N>) &&
+                 !unqualified_split_into<canonical_type_t<T>, N>) &&
         (unqualified_split_outof<T, N> ||
-            unqualified_split_outof<basic_type_t<T>, N>)
+            unqualified_split_outof<canonical_type_t<T>, N>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto operator()(T src) noexcept {
         if constexpr (unqualified_split_outof<T, N>) {
             using A = split_target_t<N, typename T::abi_type>;
-            if constexpr (basic_simd_class<T>) {
+            if constexpr (canonical_class<T>) {
                 if consteval {
                     return fallback(src);
                 } else {
@@ -220,7 +220,7 @@ public:
                 return split(internal::abi<A>, src);
             }
         } else {
-            return operator()(dx::to_basic_type(src));
+            return operator()(dx::to_canonical(src));
         }
     }
 };

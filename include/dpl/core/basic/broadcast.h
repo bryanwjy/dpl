@@ -26,7 +26,7 @@ void broadcast(...) noexcept = delete;
 template <simd_abi A>
 struct broadcast_t<A> {
     template <typename E>
-    using simd DPL_NODEBUG = basic_simd<E, A>;
+    using simd DPL_NODEBUG = basic_vector<E, A>;
 
 public:
     template <simd_element_for<A> E>
@@ -41,14 +41,14 @@ template <simd_abi A, simd_element_for<A> E>
 struct broadcast_t<A, E> {
 public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr basic_simd<E, A> operator()(E scalar) noexcept
+    static constexpr basic_vector<E, A> operator()(E scalar) noexcept
     requires requires { broadcast<E>(internal::abi<A>, scalar); }
     {
         return broadcast<E>(internal::abi<A>, scalar);
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr basic_simd_mask<E, A> operator()(
+    static constexpr basic_mask<E, A> operator()(
         same_as<bool> auto scalar) noexcept
     requires requires { broadcast<E>(internal::abi<A>, scalar); }
     {
@@ -59,7 +59,7 @@ public:
 template <simd_abi A, simd_element_for<A> E>
 struct broadcast_t<E, A> : broadcast_t<A, E> {};
 
-template <basic_simd_class T>
+template <canonical_class T>
 struct broadcast_t<T> {
 private:
     using E DPL_NODEBUG = typename T::value_type;
@@ -68,14 +68,14 @@ private:
 public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(E scalar) noexcept
-    requires simd_type<T> && regular_invocable<broadcast_t<A, E>, E>
+    requires simd_vector<T> && regular_invocable<broadcast_t<A, E>, E>
     {
         return broadcast_t<A, E>::operator()(scalar);
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(same_as<bool> auto scalar) noexcept
-    requires simd_mask_type<T> && regular_invocable<broadcast_t<A, E>, bool>
+    requires simd_mask<T> && regular_invocable<broadcast_t<A, E>, bool>
     {
         return broadcast_t<A, E>::operator()(scalar);
     }
@@ -85,14 +85,14 @@ template <simd_class T>
 struct broadcast_t<T> {
 private:
     using E DPL_NODEBUG = typename T::value_type;
-    using base_type DPL_NODEBUG = broadcast_t<basic_type_t<T>>;
+    using base_type DPL_NODEBUG = broadcast_t<canonical_type_t<T>>;
 
 public:
     template <typename Arg>
     requires regular_invocable<base_type, Arg>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr T operator()(Arg&& scalar) noexcept
-    requires explicitly_convertible_to<basic_type_t<T>, T>
+    requires explicitly_convertible_to<canonical_type_t<T>, T>
     {
         // ADL cannot perform the lookup for
         // broadcast<T>(internal::abi<T>, scalar)

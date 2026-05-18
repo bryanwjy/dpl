@@ -15,7 +15,7 @@ concept simd_element_for = simd_abi<A> && requires {
     typename simd_element_representation_t<A, E>;
     requires basic_element<simd_element_representation_t<A, E>> &&
         sizeof(E) == sizeof(simd_element_representation_t<A, E>);
-    typename A::template native_type<simd_element_representation_t<A, E>>;
+    typename A::template native_vector<simd_element_representation_t<A, E>>;
     typename A::template native_mask<simd_element_representation_t<A, E>>;
 };
 

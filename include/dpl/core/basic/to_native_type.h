@@ -16,12 +16,12 @@ DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr auto DPL_VECTORCALL to_native_type(T src) noexcept {
     using A = typename T::abi_type;
     using E = simd_lane_type_t<T>;
-    if constexpr (simd_type<T>) {
-        using native_type = typename A::template native_type<E>;
-        return static_cast<native_type>(src);
+    if constexpr (simd_vector<T>) {
+        using native_vector = typename A::template native_vector<E>;
+        return static_cast<native_vector>(src);
     } else {
-        using native_type = typename A::template native_mask<E>;
-        return static_cast<native_type>(src);
+        using native_vector = typename A::template native_mask<E>;
+        return static_cast<native_vector>(src);
     }
 }
 

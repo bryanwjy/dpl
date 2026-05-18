@@ -6,17 +6,17 @@
 
 ```c++
 // Two xmm (128-bit) → ymm (256-bit)
-basic_simd<float, xmm> a, b;
-auto c = concat(a, b); // basic_simd<float, ymm>
+basic_vector<float, xmm> a, b;
+auto c = concat(a, b); // basic_vector<float, ymm>
 
 // Four xmm (128-bit) → zmm (512-bit)
-basic_simd<float, xmm> a, b, c, d;
-auto z = concat(a, b, c, d); // basic_simd<float, zmm>
+basic_vector<float, xmm> a, b, c, d;
+auto z = concat(a, b, c, d); // basic_vector<float, zmm>
 
 // Mixed ABI: xmm + ymm + xmm (128 + 256 + 128 = 512-bit) → zmm
-basic_simd<float, xmm> lo, hi;
-basic_simd<float, ymm> mid;
-auto z = concat(lo, mid, hi); // basic_simd<float, zmm>
+basic_vector<float, xmm> lo, hi;
+basic_vector<float, ymm> mid;
+auto z = concat(lo, mid, hi); // basic_vector<float, zmm>
 ```
 
 `concat` is only defined for fixed-width ABI types. Scalable ABIs are excluded for 2 reasons: their lane count is not known until runtime, making static capacity reasoning impossible; and more fundamentally, a scalable ABI has only a single size — there is no notion of a "wider" scalable register to concatenate into, so the operation has no meaningful definition for them.

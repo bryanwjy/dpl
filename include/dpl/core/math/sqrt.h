@@ -15,7 +15,7 @@
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_equivalence.h"
 #  include "dpl/core/concepts/simd_traits.h"
-#  include "dpl/core/concepts/simd_type.h"
+#  include "dpl/core/concepts/simd_vector.h"
 #  include "dpl/core/operations/arithmetic.h"
 #  include "dpl/core/operations/bitwise.h"
 #  include "dpl/core/operations/compare.h"
@@ -32,8 +32,8 @@ struct sqrt_t {
 private:
     template <simd_element E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallback(basic_simd<E, A> val) noexcept {
+    static constexpr auto DPL_VECTORCALL fallback(
+        basic_vector<E, A> val) noexcept {
         // 2 * sqrt(2)
         constexpr auto two = dx::broadcast<E, A>(2.0);
         constexpr auto vsqrt8 =
@@ -60,7 +60,7 @@ public:
                               sqrt(internal::abi<T>, val)
                           } -> equivalent_simd_as<T>;
                       }) {
-            if constexpr (basic_simd_type<T>) {
+            if constexpr (canonical_vector<T>) {
                 if not consteval {
                     return sqrt(internal::abi<T>, val);
                 } else {
@@ -69,10 +69,10 @@ public:
             } else {
                 return sqrt(internal::abi<T>, val);
             }
-        } else if constexpr (basic_simd_type<T>) {
+        } else if constexpr (canonical_vector<T>) {
             return fallback(val);
         } else {
-            return operator()(dx::to_basic_type(val));
+            return operator()(dx::to_canonical(val));
         }
     }
 };

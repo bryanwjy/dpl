@@ -7,7 +7,7 @@
 #if !DPL_MODULES
 #  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/concepts/simd_type.h"
+#  include "dpl/core/concepts/simd_vector.h"
 #  include "dpl/core/constants/msb.h"
 #  include "dpl/core/constants/zero.h"
 #  include "dpl/core/operations/bit.h"
@@ -51,8 +51,9 @@ private:
 
     template <arithmetic_type E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_simd<E, A> DPL_VECTORCALL
-        fallback(basic_simd<E, A> left, basic_simd<E, A> right) noexcept {
+    static constexpr basic_vector<E, A>
+        DPL_VECTORCALL fallback(
+            basic_vector<E, A> left, basic_vector<E, A> right) noexcept {
         if constexpr (floating_point<E>) {
             return left ^ (right & dx::msb);
         } else {
@@ -63,7 +64,7 @@ private:
     }
 
 public:
-    template <basic_simd_type T>
+    template <canonical_vector T>
     requires arithmetic_simd<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T left, T right) noexcept {
@@ -78,7 +79,7 @@ public:
         }
     }
 
-    template <simd_type L, common_arithmetic_simd_with<L> R>
+    template <simd_vector L, common_arithmetic_simd_with<L> R>
     requires arithmetic_simd<L> && arithmetic_simd<R> &&
         common_order_simd_with<L, R> && only_unqualified<L, R> &&
         unqualified_sign<common_abi_t<L, R>, L, R>
@@ -89,15 +90,15 @@ public:
         return sign(internal::abi<A>, left, right);
     }
 
-    template <simd_type L, common_arithmetic_simd_with<L> R>
+    template <simd_vector L, common_arithmetic_simd_with<L> R>
     requires arithmetic_simd<L> && arithmetic_simd<R> &&
         common_order_simd_with<L, R> &&
-        (!basic_simd_type<L> || !basic_simd_type<R>) &&
+        (!canonical_vector<L> || !canonical_vector<R>) &&
         (!unqualified_sign<common_abi_t<L, R>, L, R>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L left, R right) noexcept
         -> simd_with<typename L::value_type, common_abi_t<L, R>> auto {
-        return operator()(dx::to_basic_type(left), dx::to_basic_type(right));
+        return operator()(dx::to_canonical(left), dx::to_canonical(right));
     }
 
     using binary_operation_base<sign_t>::operator();

@@ -52,7 +52,7 @@ private:
 
     template <floating_point E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto is_exp_underflow(basic_simd<E, A> val) noexcept {
+    static constexpr auto is_exp_underflow(basic_vector<E, A> val) noexcept {
         if constexpr (common_float_with<E, float>) {
             return val < -103.97208f;
         } else {
@@ -64,8 +64,8 @@ private:
     template <floating_point E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr fmath::pair<E, A>
-        DPL_VECTORCALL exp(basic_simd<E, A> arg) noexcept {
-        using simdf = basic_simd<E, A>;
+        DPL_VECTORCALL exp(basic_vector<E, A> arg) noexcept {
+        using simdf = basic_vector<E, A>;
         auto const u = arg * fmath::inv_ln2;
         auto const qf =
             dx::round(u, rounding::to_nearest_int | rounding::no_exc);
@@ -106,9 +106,9 @@ public:
 
     template <integral auto V, floating_point E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_simd<E, A>
-        DPL_VECTORCALL fallback(basic_simd<E, A> const arg) noexcept {
-        using simdf = basic_simd<E, A>;
+    static constexpr basic_vector<E, A>
+        DPL_VECTORCALL fallback(basic_vector<E, A> const arg) noexcept {
+        using simdf = basic_vector<E, A>;
         static constexpr make_immediate_mask_t<simdf, V> mask;
 
         auto const absarg = dx::abs(arg);
@@ -149,8 +149,8 @@ public:
     requires (dx::digits_v<E><dx::digits_v<float> || dx::digits_v<E>>
                      dx::digits_v<double>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
-    static constexpr basic_simd<E, A>
-        fallback(basic_simd<E, A>) = delete;
+    static constexpr basic_vector<E, A>
+        fallback(basic_vector<E, A>) = delete;
 };
 
 void sinh(...) noexcept = delete;
@@ -168,7 +168,7 @@ struct sinh_t : private internal::sinhcosh_base {
                               sinh(internal::abi<T>, val)
                           } -> equivalent_simd_as<T>;
                       }) {
-            if constexpr (basic_simd_type<T>) {
+            if constexpr (canonical_vector<T>) {
                 if not consteval {
                     return sinh(internal::abi<T>, val);
                 } else {
@@ -177,10 +177,10 @@ struct sinh_t : private internal::sinhcosh_base {
             } else {
                 return sinh(internal::abi<T>, val);
             }
-        } else if constexpr (basic_simd_type<T>) {
+        } else if constexpr (canonical_vector<T>) {
             return internal::sinhcosh_base::fallback<0>(val);
         } else {
-            return operator()(dx::to_basic_type(val));
+            return operator()(dx::to_canonical(val));
         }
     }
 };
@@ -195,7 +195,7 @@ struct cosh_t : private internal::sinhcosh_base {
                               cosh(internal::abi<T>, val)
                           } -> equivalent_simd_as<T>;
                       }) {
-            if constexpr (basic_simd_type<T>) {
+            if constexpr (canonical_vector<T>) {
                 if not consteval {
                     return cosh(internal::abi<T>, val);
                 } else {
@@ -204,10 +204,10 @@ struct cosh_t : private internal::sinhcosh_base {
             } else {
                 return cosh(internal::abi<T>, val);
             }
-        } else if constexpr (basic_simd_type<T>) {
+        } else if constexpr (canonical_vector<T>) {
             return internal::sinhcosh_base::fallback<-1>(val);
         } else {
-            return operator()(dx::to_basic_type(val));
+            return operator()(dx::to_canonical(val));
         }
     }
 };
@@ -222,7 +222,7 @@ struct sinhcoshi_t : private internal::sinhcosh_base {
                               sinhcosh<V>(internal::abi<T>, val)
                           } -> equivalent_simd_as<T>;
                       }) {
-            if constexpr (basic_simd_type<T>) {
+            if constexpr (canonical_vector<T>) {
                 if not consteval {
                     return sinhcosh<V>(internal::abi<T>, val);
                 } else {
@@ -231,10 +231,10 @@ struct sinhcoshi_t : private internal::sinhcosh_base {
             } else {
                 return sinhcosh<V>(internal::abi<T>, val);
             }
-        } else if constexpr (basic_simd_type<T>) {
+        } else if constexpr (canonical_vector<T>) {
             return internal::sinhcosh_base::fallback<V>(val);
         } else {
-            return operator()(dx::to_basic_type(val));
+            return operator()(dx::to_canonical(val));
         }
     }
 };

@@ -14,6 +14,7 @@
 #  include "dpl/core/type_traits/simd_abi_traits.h"
 #  include "dpl/std/bit/bit_type.h"
 #  include "dpl/std/bit/char_bit.h"
+#  include "dpl/std/bit/countl.h"
 #  include "dpl/std/bit/countr.h"
 #  include "dpl/std/bit/popcount.h"
 #  include "dpl/std/concepts/convertible_to.h"
@@ -76,9 +77,9 @@ struct basic_immediate_mask {
     template <simd_abi A, simd_element_for<A> E>
     requires (simd_abi_traits<E, A>::size == W)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    constexpr operator basic_simd_mask<E, A>() const noexcept {
+    constexpr operator basic_mask<E, A>() const noexcept {
         return []<size_t... Is>(index_sequence<Is...>) {
-            return basic_simd<E, A>(operator[](Is)...);
+            return basic_vector<E, A>(operator[](Is)...);
         }(iota_sequence<E, A>);
     }
 

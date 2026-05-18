@@ -5,7 +5,7 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/broadcast.h"
-#  include "dpl/core/basic/to_basic_type.h"
+#  include "dpl/core/basic/to_canonical.h"
 #  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/broadcastable_to.h"
 #  include "dpl/core/concepts/common_abi_with.h"
@@ -16,7 +16,7 @@ namespace datapar::internal {
 
 template <typename L, typename R>
 concept only_unqualified =
-    !basic_simd_class<L> || !basic_simd_class<R> || !same_abi_simd_as<L, R>;
+    !canonical_class<L> || !canonical_class<R> || !same_abi_simd_as<L, R>;
 
 template <typename T, typename A, typename... Args>
 concept implements_native = requires(Args... args) {
@@ -31,7 +31,7 @@ struct binary_operation_base {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs) noexcept {
         if constexpr (implements_native<T, L, L, R>) {
-            if constexpr (basic_simd_class<L>) {
+            if constexpr (canonical_class<L>) {
                 if consteval {
                     return T::operator()(lhs, dx::broadcast<L>(rhs));
                 } else {
@@ -40,10 +40,10 @@ struct binary_operation_base {
             } else {
                 return T::native(internal::abi<L>, lhs, rhs);
             }
-        } else if constexpr (basic_simd_class<L>) {
+        } else if constexpr (canonical_class<L>) {
             return T::operator()(lhs, dx::broadcast<L>(rhs));
         } else {
-            return operator()(dx::to_basic_type(lhs), rhs);
+            return operator()(dx::to_canonical(lhs), rhs);
         }
     }
 
@@ -51,7 +51,7 @@ struct binary_operation_base {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs) noexcept {
         if constexpr (implements_native<T, R, L, R>) {
-            if constexpr (basic_simd_class<R>) {
+            if constexpr (canonical_class<R>) {
                 if consteval {
                     return T::operator()(dx::broadcast<R>(lhs), rhs);
                 } else {
@@ -60,10 +60,10 @@ struct binary_operation_base {
             } else {
                 return T::native(internal::abi<R>, lhs, rhs);
             }
-        } else if constexpr (basic_simd_class<R>) {
+        } else if constexpr (canonical_class<R>) {
             return T::operator()(dx::broadcast<R>(lhs), rhs);
         } else {
-            return operator()(lhs, dx::to_basic_type(rhs));
+            return operator()(lhs, dx::to_canonical(rhs));
         }
     }
 };

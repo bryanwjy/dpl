@@ -74,12 +74,12 @@ protected:
 
     template <integral auto V = 0, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_simd<float, A> rempi_low(
-        basic_simd<float, A> qf, basic_simd<float, A> arg) noexcept {
+    static constexpr basic_vector<float, A> rempi_low(
+        basic_vector<float, A> qf, basic_vector<float, A> arg) noexcept {
         constexpr float a = 3.1414794921875f;           // NOLINT
         constexpr float b = 0.00011315941810607910156f; // NOLINT
         constexpr float c = 1.9841872589410058936e-09f; // NOLINT
-        using simdf = basic_simd<float, A>;
+        using simdf = basic_vector<float, A>;
         constexpr auto scale = dx::selecti<V>(fmath::half, dx::one_v<simdf>);
         constexpr auto sa = a * scale;
         constexpr auto sb = b * scale;
@@ -90,8 +90,8 @@ protected:
 
     template <integral auto V = 0, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_simd<float, A> rempi_mid(
-        basic_simd<float, A> qf, basic_simd<float, A> arg) noexcept {
+    static constexpr basic_vector<float, A> rempi_mid(
+        basic_vector<float, A> qf, basic_vector<float, A> arg) noexcept {
         constexpr float a0 = 3.140625f;               // NOLINT
         constexpr float b0 = 0.0009675025939941406f;  // NOLINT
         constexpr float c0 = 1.7881393432617188e-07f; // NOLINT
@@ -100,7 +100,7 @@ protected:
         constexpr float b1 = 0.0004837512969970703f;  // NOLINT
         constexpr float c1 = 5.960464477539063e-08f;  // NOLINT
         constexpr float d1 = 1.5893254712295857e-08f; // NOLINT
-        using simdf = basic_simd<float, A>;
+        using simdf = basic_vector<float, A>;
         constexpr auto sa = dx::selecti<V>(dx::broadcast<A>(a1), a0);
         constexpr auto sb = dx::selecti<V>(dx::broadcast<A>(b1), b0);
         constexpr auto sc = dx::selecti<V>(dx::broadcast<A>(c1), c0);
@@ -112,11 +112,11 @@ protected:
 
     template <integral auto V = 0, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_simd<double, A> rempi_low(
-        basic_simd<double, A> qf, basic_simd<double, A> arg) noexcept {
+    static constexpr basic_vector<double, A> rempi_low(
+        basic_vector<double, A> qf, basic_vector<double, A> arg) noexcept {
         constexpr double a = 3.141592653589793116;      // NOLINT
         constexpr double b = 1.2246467991473532072e-16; // NOLINT
-        using simdf = basic_simd<float, A>;
+        using simdf = basic_vector<float, A>;
         constexpr auto scale = dx::selecti<V>(fmath::half, dx::one_v<simdf>);
         constexpr auto scaled_pi = fmath::scale(pi_pair<double, A>, scale);
 
@@ -126,8 +126,8 @@ protected:
 
     template <integral auto V = 0, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_simd<double, A> rempi_mid(
-        basic_simd<double, A> arg) noexcept {
+    static constexpr basic_vector<double, A> rempi_mid(
+        basic_vector<double, A> arg) noexcept {
         constexpr auto upper_scale = static_cast<double>(1 << 24);
         constexpr auto pi_scale = dx::inv_pi_v<double> / upper_scale;
 
@@ -141,7 +141,7 @@ protected:
         constexpr double b = 3.1786509424591713469e-08; // NOLINT
         constexpr double c = 1.2246467864107188502e-16; // NOLINT
         constexpr double d = 1.2736634327021899816e-24; // NOLINT
-        using simdf = basic_simd<float, A>;
+        using simdf = basic_vector<float, A>;
         constexpr auto scale = dx::selecti<V>(fmath::half, dx::one_v<simdf>);
         constexpr auto sa = a * scale;
         constexpr auto sb = b * scale;
@@ -179,19 +179,19 @@ protected:
 
     template <floating_point E, simd_abi A>
     struct rempi_single {
-        basic_simd<E, A> f;
-        basic_simd<signed_representation_t<E>, A> i;
+        basic_vector<E, A> f;
+        basic_vector<signed_representation_t<E>, A> i;
     };
     template <floating_point E, simd_abi A>
     struct rempi_pair {
         fmath::pair<E, A> df;
-        basic_simd<signed_representation_t<E>, A> i;
+        basic_vector<signed_representation_t<E>, A> i;
     };
 
     template <floating_point E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr rempi_single<E, A> quantize_quarters(
-        basic_simd<E, A> arg) noexcept {
+        basic_vector<E, A> arg) noexcept {
         // It breaks a value down into its proximity to the nearest quarter
         // (0.25) and identifies which quarter-step it belongs to relative to
         // the nearest whole integer.
@@ -208,16 +208,16 @@ protected:
 
     template <floating_point E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr rempi_pair<E, A> rempi(basic_simd<E, A> arg) noexcept {
+    static constexpr rempi_pair<E, A> rempi(basic_vector<E, A> arg) noexcept {
         using sint = signed_representation_t<E>;
-        using simdi = basic_simd<sint, A>;
+        using simdi = basic_vector<sint, A>;
 
         struct expq {
             simdi exp;
             simdi q;
         };
 
-        auto const [exp, q] = [](basic_simd<E, A> arg) {
+        auto const [exp, q] = [](basic_vector<E, A> arg) {
             constexpr sint n64 = -64;
             if constexpr (common_float_with<E, double>) {
                 auto exp = fmath::ilogb(fmath::compliance::unsafe, arg) - 55;
@@ -235,8 +235,8 @@ protected:
             }
         }(arg);
 
-        return [](basic_simd<sint, A> q, basic_simd<E, A> const arg,
-                   basic_simd<sint, A> const exp) {
+        return [](basic_vector<sint, A> q, basic_vector<E, A> const arg,
+                   basic_vector<sint, A> const exp) {
             auto x =
                 fmath::single(arg) * dx::gather(fmath::rempi_table<E>, exp);
             auto di = quantize_quarters(x.upper);
@@ -275,13 +275,13 @@ protected:
 
     template <integral auto V, floating_point E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_simd<E, A> fallback(
-        basic_simd<E, A> const arg) noexcept {
-        using simdf = basic_simd<E, A>;
+    static constexpr basic_vector<E, A> fallback(
+        basic_vector<E, A> const arg) noexcept {
+        using simdf = basic_vector<E, A>;
         using sint = signed_representation_t<E>;
-        using simdi = basic_simd<sint, A>;
+        using simdi = basic_vector<sint, A>;
         static constexpr make_immediate_mask_t<simdf, V> mask;
-        simdf const qf = [](basic_simd<E, A> arg) {
+        simdf const qf = [](basic_vector<E, A> arg) {
             if constexpr (dx::none_of(mask)) {
                 return dx::round(arg * dx::inv_pi,
                     rounding::to_nearest_int | rounding::no_exc);
@@ -385,8 +385,8 @@ protected:
     requires (dx::digits_v<E><dx::digits_v<float> || dx::digits_v<E>>
                      dx::digits_v<double>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_simd<E, A>
-        fallback(basic_simd<E, A>) = delete;
+    static constexpr basic_vector<E, A>
+        fallback(basic_vector<E, A>) = delete;
 };
 
 void sin(...) noexcept = delete;
@@ -404,7 +404,7 @@ struct sin_t : private internal::sincos_base {
                               sin(internal::abi<T>, val)
                           } -> equivalent_simd_as<T>;
                       }) {
-            if constexpr (basic_simd_type<T>) {
+            if constexpr (canonical_vector<T>) {
                 if not consteval {
                     return sin(internal::abi<T>, val);
                 } else {
@@ -413,10 +413,10 @@ struct sin_t : private internal::sincos_base {
             } else {
                 return sin(internal::abi<T>, val);
             }
-        } else if constexpr (basic_simd_type<T>) {
+        } else if constexpr (canonical_vector<T>) {
             return internal::sincos_base::fallback<0>(val);
         } else {
-            return operator()(dx::to_basic_type(val));
+            return operator()(dx::to_canonical(val));
         }
     }
 };
@@ -431,7 +431,7 @@ struct cos_t : private internal::sincos_base {
                               cos(internal::abi<T>, val)
                           } -> equivalent_simd_as<T>;
                       }) {
-            if constexpr (basic_simd_type<T>) {
+            if constexpr (canonical_vector<T>) {
                 if not consteval {
                     return cos(internal::abi<T>, val);
                 } else {
@@ -440,10 +440,10 @@ struct cos_t : private internal::sincos_base {
             } else {
                 return cos(internal::abi<T>, val);
             }
-        } else if constexpr (basic_simd_type<T>) {
+        } else if constexpr (canonical_vector<T>) {
             return internal::sincos_base::fallback<-1>(val);
         } else {
-            return operator()(dx::to_basic_type(val));
+            return operator()(dx::to_canonical(val));
         }
     }
 };
@@ -458,7 +458,7 @@ struct sincosi_t : private internal::sincos_base {
                               sincos<V>(internal::abi<T>, val)
                           } -> equivalent_simd_as<T>;
                       }) {
-            if constexpr (basic_simd_type<T>) {
+            if constexpr (canonical_vector<T>) {
                 if not consteval {
                     return sincos<V>(internal::abi<T>, val);
                 } else {
@@ -467,10 +467,10 @@ struct sincosi_t : private internal::sincos_base {
             } else {
                 return sincos<V>(internal::abi<T>, val);
             }
-        } else if constexpr (basic_simd_type<T>) {
+        } else if constexpr (canonical_vector<T>) {
             return internal::sincos_base::fallback<V>(val);
         } else {
-            return operator()(dx::to_basic_type(val));
+            return operator()(dx::to_canonical(val));
         }
     }
 };

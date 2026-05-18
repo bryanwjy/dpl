@@ -21,7 +21,7 @@ template <typename T>
 concept simd_abi =
     enable_simd_abi<T> && is_empty_v<T> && semiregular<T> && requires {
         typename integral_constant<T, T{}>;
-        typename internal::unary_template<T::template native_type>;
+        typename internal::unary_template<T::template native_vector>;
         typename internal::unary_template<T::template native_mask>;
     };
 } // namespace internal

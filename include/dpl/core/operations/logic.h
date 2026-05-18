@@ -12,7 +12,7 @@
 #if !DPL_MODULES
 #  include "dpl/core/basic/to_native_type.h"
 #  include "dpl/core/concepts/common_size_with.h"
-#  include "dpl/core/concepts/simd_mask_type.h"
+#  include "dpl/core/concepts/simd_mask.h"
 #  include "dpl/core/type_traits/simd_lane_type.h"
 #endif
 
@@ -40,13 +40,13 @@ concept unqualified_logical_not = requires(T val) {
 };
 
 struct logical_and_t {
-    template <simd_mask_type L, simd_mask_type R>
+    template <simd_mask L, simd_mask R>
     requires same_abi_simd_as<L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs) noexcept {
         using A = typename L::abi_type;
         if constexpr (unqualified_logical_and<L, R, A>) {
-            if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
+            if constexpr (canonical_vector<L> && canonical_vector<R>) {
                 if consteval {
                     using E = simd_lane_type_t<decltype(logical_and(
                         internal::abi<A>, lhs, rhs))>;
@@ -57,37 +57,37 @@ struct logical_and_t {
             } else {
                 return logical_and(internal::abi<A>, lhs, rhs);
             }
-        } else if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
+        } else if constexpr (canonical_vector<L> && canonical_vector<R>) {
             return dx::bwand(lhs, rhs);
         } else {
-            return operator()(dx::to_basic_type(lhs), dx::to_basic_type(rhs));
+            return operator()(dx::to_canonical(lhs), dx::to_canonical(rhs));
         }
     }
 
-    template <simd_mask_type L, simd_mask_type R>
+    template <simd_mask L, simd_mask R>
     requires (!same_abi_simd_as<L, R>) &&
         (unqualified_logical_and<L, R> ||
-            unqualified_logical_and<basic_type_t<L>, basic_type_t<R>>)
+            unqualified_logical_and<canonical_type_t<L>, canonical_type_t<R>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs) noexcept {
         using A = typename L::abi_type;
         if constexpr (unqualified_logical_and<L, R, A>) {
             return logical_and(internal::abi<A>, lhs, rhs);
         } else {
-            return logical_and(internal::abi<A>, dx::to_basic_type(lhs),
-                dx::to_basic_type(rhs));
+            return logical_and(
+                internal::abi<A>, dx::to_canonical(lhs), dx::to_canonical(rhs));
         }
     }
 };
 
 struct logical_or_t {
-    template <simd_mask_type L, simd_mask_type R>
+    template <simd_mask L, simd_mask R>
     requires same_abi_simd_as<L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs) noexcept {
         using A = typename L::abi_type;
         if constexpr (unqualified_logical_or<L, R, A>) {
-            if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
+            if constexpr (canonical_vector<L> && canonical_vector<R>) {
                 if consteval {
                     using E = simd_lane_type_t<decltype(logical_or(
                         internal::abi<A>, lhs, rhs))>;
@@ -98,35 +98,35 @@ struct logical_or_t {
             } else {
                 return logical_or(internal::abi<A>, lhs, rhs);
             }
-        } else if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
+        } else if constexpr (canonical_vector<L> && canonical_vector<R>) {
             return dx::bwor(lhs, rhs);
         } else {
-            return operator()(dx::to_basic_type(lhs), dx::to_basic_type(rhs));
+            return operator()(dx::to_canonical(lhs), dx::to_canonical(rhs));
         }
     }
 
-    template <simd_mask_type L, simd_mask_type R>
+    template <simd_mask L, simd_mask R>
     requires (!same_abi_simd_as<L, R>) &&
         (unqualified_logical_or<L, R> ||
-            unqualified_logical_or<basic_type_t<L>, basic_type_t<R>>)
+            unqualified_logical_or<canonical_type_t<L>, canonical_type_t<R>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs) noexcept {
         using A = typename L::abi_type;
         if constexpr (unqualified_logical_or<L, R, A>) {
             return logical_or(internal::abi<A>, lhs, rhs);
         } else {
-            return logical_or(internal::abi<A>, dx::to_basic_type(lhs),
-                dx::to_basic_type(rhs));
+            return logical_or(
+                internal::abi<A>, dx::to_canonical(lhs), dx::to_canonical(rhs));
         }
     }
 };
 
 struct logical_not_t {
-    template <simd_mask_type T>
+    template <simd_mask T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T val) noexcept {
         if constexpr (unqualified_logical_not<T>) {
-            if constexpr (basic_simd_mask_type<T>) {
+            if constexpr (canonical_mask<T>) {
                 if consteval {
                     using E = simd_lane_type_t<decltype(logical_not(
                         internal::abi<T>, val))>;
@@ -154,69 +154,69 @@ DPL_EXPORT inline constexpr internal::logical_not_t logical_not{};
 DPL_EXPORT template <typename D>
 class logical_simd_interface {
 public:
-    template <simd_mask_type R>
+    template <simd_mask R>
     requires regular_invocable<internal::logical_or_t, D, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     constexpr invoke_result_t<internal::logical_or_t, D, R> operator||(
         this D lhs, R rhs) noexcept
-    requires simd_mask_type<D>
+    requires simd_mask<D>
     {
         return datapar::logical_or(lhs, rhs);
     }
 
-    template <simd_mask_type R>
+    template <simd_mask R>
     requires regular_invocable<internal::logical_and_t, D, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     constexpr invoke_result_t<internal::logical_and_t, D, R> operator&&(
         this D lhs, R rhs) noexcept
-    requires simd_mask_type<D>
+    requires simd_mask<D>
     {
         return datapar::logical_and(lhs, rhs);
     }
 
-    template <simd_mask_type Self>
+    template <simd_mask Self>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     constexpr invoke_result_t<internal::logical_not_t, Self> operator!(
         this Self lhs) noexcept {
         return datapar::logical_not(lhs);
     }
 
-    template <simd_mask_type L>
+    template <simd_mask L>
     requires regular_invocable<internal::logical_or_t, L, D>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     friend constexpr invoke_result_t<internal::logical_or_t, L, D> operator||(
         L lhs, D rhs) noexcept
-    requires simd_mask_type<D>
+    requires simd_mask<D>
     {
         return datapar::logical_or(lhs, rhs);
     }
 
-    template <simd_mask_type L>
+    template <simd_mask L>
     requires regular_invocable<internal::logical_or_t, L, D>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     friend constexpr invoke_result_t<internal::logical_and_t, L, D> operator&&(
         L lhs, D rhs) noexcept
-    requires simd_mask_type<D>
+    requires simd_mask<D>
     {
         return datapar::logical_and(lhs, rhs);
     }
 };
 
-DPL_EXPORT template <simd_mask_type L, simd_mask_type R>
+DPL_EXPORT template <simd_mask L, simd_mask R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr invoke_result_t<internal::bwor_t, L, R> operator||(
     L lhs, R rhs) noexcept {
     return datapar::logical_or(lhs, rhs);
 }
 
-DPL_EXPORT template <simd_mask_type L, simd_mask_type R>
+DPL_EXPORT template <simd_mask L, simd_mask R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr invoke_result_t<internal::bwand_t, L, R> operator&&(
     L lhs, R rhs) noexcept {
     return datapar::logical_and(lhs, rhs);
 }
 
-DPL_EXPORT template <simd_mask_type T>
+DPL_EXPORT template <simd_mask T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr auto operator!(T val) noexcept
     -> invoke_result_t<internal::logical_not_t, T> {

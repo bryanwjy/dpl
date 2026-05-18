@@ -40,9 +40,9 @@ struct splice_t {
 private:
     template <typename EM, typename EL, typename ER, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL fallback(basic_simd_mask<EM, A> mask,
-        basic_simd<EL, A> lhs, basic_simd<ER, A> rhs) noexcept {
-        using mask_type = basic_simd_mask<EM, A>;
+    static constexpr auto DPL_VECTORCALL fallback(basic_mask<EM, A> mask,
+        basic_vector<EL, A> lhs, basic_vector<ER, A> rhs) noexcept {
+        using mask_type = basic_mask<EM, A>;
         auto const low = dx::countr_zero(mask);
         auto const high = dx::countl_zero(mask);
         return dx::slide_left(dx::shift_right(lhs, high), rhs, high + low);
@@ -51,7 +51,7 @@ private:
     template <auto V, typename EL, typename ER, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallbacki(
-        basic_simd<EL, A> lhs, basic_simd<ER, A> rhs) noexcept {
+        basic_vector<EL, A> lhs, basic_vector<ER, A> rhs) noexcept {
         constexpr immediate_mask<simd_abi_traits<EL, A>::size, V> inmask{};
         constexpr auto low = dx::countr_zero(inmask);
         constexpr auto high = dx::countr_zero(inmask);
@@ -60,14 +60,14 @@ private:
     }
 
 public:
-    template <simd_type L, simd_mask_type M, selectable_with<L, M> R>
+    template <simd_vector L, simd_mask M, selectable_with<L, M> R>
     requires same_abi_simd_as<L, R> && fixed_width_abi<common_abi_t<L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, L lhs, R rhs) noexcept {
         using A = typename M::abi_type;
         if constexpr (unqualified_splice<M, L, R, A>) {
-            if constexpr (basic_simd_type<L> && basic_simd_type<R> &&
-                basic_simd_mask_type<M>) {
+            if constexpr (canonical_vector<L> && canonical_vector<R> &&
+                canonical_mask<M>) {
                 if consteval {
                     return fallback(mask, lhs, rhs);
                 } else {
@@ -76,38 +76,38 @@ public:
             } else {
                 return splice(internal::abi<A>, mask, lhs, rhs);
             }
-        } else if constexpr (basic_simd_type<L> && basic_simd_type<R> &&
-            basic_simd_mask_type<M>) {
+        } else if constexpr (canonical_vector<L> && canonical_vector<R> &&
+            canonical_mask<M>) {
             return fallback(mask, lhs, rhs);
         } else {
-            return operator()(dx::to_basic_type(mask), dx::to_basic_type(lhs),
-                dx::to_basic_type(rhs));
+            return operator()(dx::to_canonical(mask), dx::to_canonical(lhs),
+                dx::to_canonical(rhs));
         }
     }
 
-    template <simd_type L, simd_mask_type M, selectable_with<L, M> R>
+    template <simd_vector L, simd_mask M, selectable_with<L, M> R>
     requires (!same_abi_simd_as<L, R> || scalable_abi<common_abi_t<L, R>>) &&
         (unqualified_splice<M, L, R> ||
-            unqualified_splice<M, basic_type_t<L>, basic_type_t<R>>)
+            unqualified_splice<M, canonical_type_t<L>, canonical_type_t<R>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, L lhs, R rhs) noexcept {
         using A = common_abi_t<L, R>;
         if constexpr (unqualified_splice<M, L, R>) {
             return splice(internal::abi<A>, mask, lhs, rhs);
         } else {
-            return splice(internal::abi<A>, dx::to_basic_type(mask),
-                dx::to_basic_type(lhs), dx::to_basic_type(rhs));
+            return splice(internal::abi<A>, dx::to_canonical(mask),
+                dx::to_canonical(lhs), dx::to_canonical(rhs));
         }
     }
 
-    template <simd_type L, selectablei_with<L> R, immediate_mask_for<L> M>
+    template <simd_vector L, selectablei_with<L> R, immediate_mask_for<L> M>
     requires same_abi_simd_as<L, R> && fixed_width_abi<common_abi_t<L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, L lhs, R rhs) noexcept {
         using A = typename L::abi_type;
         constexpr auto V = decltype(dx::to_immediate_mask<L>(mask))::value;
         if constexpr (unqualified_splicei<M, L, R, A>) {
-            if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
+            if constexpr (canonical_vector<L> && canonical_vector<R>) {
                 if consteval {
                     return fallbacki<V>(lhs, rhs);
                 } else {
@@ -116,18 +116,18 @@ public:
             } else {
                 return splice<V>(internal::abi<A>, lhs, rhs);
             }
-        } else if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
+        } else if constexpr (canonical_vector<L> && canonical_vector<R>) {
             return fallbacki<V>(lhs, rhs);
         } else {
             return operator()(
-                mask, dx::to_basic_type(lhs), dx::to_basic_type(rhs));
+                mask, dx::to_canonical(lhs), dx::to_canonical(rhs));
         }
     }
 
-    template <simd_type L, selectablei_with<L> R, immediate_mask_for<L> M>
+    template <simd_vector L, selectablei_with<L> R, immediate_mask_for<L> M>
     requires (!same_abi_simd_as<L, R> || scalable_abi<common_abi_t<L, R>>) &&
         (unqualified_splicei<M, L, R> ||
-            unqualified_splicei<M, basic_type_t<L>, basic_type_t<R>>)
+            unqualified_splicei<M, canonical_type_t<L>, canonical_type_t<R>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, L lhs, R rhs) noexcept {
         using A = common_abi_t<L, R>;
@@ -135,8 +135,8 @@ public:
         if constexpr (unqualified_splicei<M, L, R>) {
             return splice<V>(internal::abi<A>, lhs, rhs);
         } else {
-            return splice<V>(internal::abi<A>, dx::to_basic_type(lhs),
-                dx::to_basic_type(rhs));
+            return splice<V>(
+                internal::abi<A>, dx::to_canonical(lhs), dx::to_canonical(rhs));
         }
     }
 };
@@ -151,7 +151,7 @@ private:
     using mask_type DPL_NODEBUG = immediate_mask<simd_abi_traits<T>::size, V>;
 
 public:
-    template <simd_type L, simd_type R>
+    template <simd_vector L, simd_vector R>
     requires requires {
         typename mask_type<L>;
         requires regular_invocable<splice_t, mask_type<L>, L, R>;

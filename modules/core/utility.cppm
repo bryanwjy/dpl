@@ -19,7 +19,7 @@ import :core.type_traits;
 // IWYU pragma: begin_exports
 #include "dpl/core/utility/fpfix.h"
 #include "dpl/core/utility/rounding.h"
-#include "dpl/core/utility/to_basic_type.h"
+#include "dpl/core/utility/to_canonical.h"
 #include "dpl/core/utility/to_signed.h"
 #include "dpl/core/utility/to_underlying.h"
 #include "dpl/core/utility/to_unsigned.h"

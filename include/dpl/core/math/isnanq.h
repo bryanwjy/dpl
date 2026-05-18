@@ -9,7 +9,7 @@
 #  include "dpl/core/concepts/compatible_mask_with.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_traits.h"
-#  include "dpl/core/concepts/simd_type.h"
+#  include "dpl/core/concepts/simd_vector.h"
 #  include "dpl/core/constants/mantissa_width.h"
 #  include "dpl/core/constants/value_bits.h"
 #  include "dpl/core/operations/abs.h"
@@ -27,8 +27,8 @@ struct isnanq_t {
 private:
     template <floating_point E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_simd_mask<E, A> DPL_VECTORCALL
-        fallback(basic_simd<E, A> val) noexcept {
+    static constexpr basic_mask<E, A>
+        DPL_VECTORCALL fallback(basic_vector<E, A> val) noexcept {
         constexpr signed_representation_t<E> signaling_bit =
             signed_representation_t<E>(1) << (dx::mantissa_width_v<E> - 1);
         constexpr signed_representation_t<E> max_snan =
@@ -48,7 +48,7 @@ public:
                               isnanq(internal::abi<T>, arg)
                           } -> compatible_mask_with<T>;
                       }) {
-            if constexpr (basic_simd_type<T>) {
+            if constexpr (canonical_vector<T>) {
                 if consteval {
                     return fallback(arg);
                 } else {
@@ -57,10 +57,10 @@ public:
             } else {
                 return isnanq(internal::abi<T>, arg);
             }
-        } else if constexpr (basic_simd_type<T>) {
+        } else if constexpr (canonical_vector<T>) {
             return fallback(arg);
         } else {
-            return operator()(dx::to_basic_type(arg));
+            return operator()(dx::to_canonical(arg));
         }
     }
 };

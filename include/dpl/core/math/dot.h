@@ -5,7 +5,7 @@
 
 #include "dpl/core/math/internal/floating_point_simd.h"
 #if !DPL_MODULES
-#  include "dpl/core/basic/to_basic_type.h"
+#  include "dpl/core/basic/to_canonical.h"
 #  include "dpl/core/concepts/simd_traits.h"
 #  include "dpl/core/constants/digits.h"
 #  include "dpl/core/operations/reinterpret.h"
@@ -45,8 +45,8 @@ public:
         if constexpr (unqualified_dot_product<Result, L, R, A>) {
             return dot_product(internal::abi<A>, acc, left, right);
         } else {
-            return dot_product(internal::abi<A>, dx::to_basic_type(acc),
-                dx::to_basic_type(left), dx::to_basic_type(right));
+            return dot_product(internal::abi<A>, dx::to_canonical(acc),
+                dx::to_canonical(left), dx::to_canonical(right));
         }
     }
 
@@ -58,7 +58,8 @@ public:
             decayable_dot_product<Result, L, R>)
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
         static constexpr Result operator()(Result acc, L left, R right) noexcept
-    requires basic_simd_type<Result> && basic_simd_type<L> && basic_simd_type<R>
+    requires canonical_vector<Result> && canonical_vector<L> &&
+        canonical_vector<R>
     {
         using A = common_abi_t<L, R, Result>;
         return dot_product(internal::abi<A>, acc, left, right);

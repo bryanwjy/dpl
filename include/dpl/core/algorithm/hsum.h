@@ -33,15 +33,15 @@ struct hsum_t {
 private:
     template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallback(basic_simd<E, A> val) noexcept {
+    static constexpr auto DPL_VECTORCALL fallback(
+        basic_vector<E, A> val) noexcept {
         return dx::reduce(val, dx::add);
     }
 
     template <auto V, typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallbacki(basic_simd<E, A> val) noexcept {
+    static constexpr auto DPL_VECTORCALL fallbacki(
+        basic_vector<E, A> val) noexcept {
         return dx::reducei<V>(val, dx::add);
     }
 
@@ -50,7 +50,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T arg) noexcept {
         if constexpr (unqualified_hsum<T>) {
-            if constexpr (basic_simd_type<T>) {
+            if constexpr (canonical_vector<T>) {
                 if consteval {
                     using RT = decltype(hsum(internal::abi<T>, arg));
                     return dx::reinterpret<RT>(fallback(arg));
@@ -60,22 +60,22 @@ public:
             } else {
                 return hsum(internal::abi<T>, arg);
             }
-        } else if constexpr (basic_simd_type<T>) {
+        } else if constexpr (canonical_vector<T>) {
             return fallback(arg);
         } else {
-            return operator()(dx::to_basic_type(arg));
+            return operator()(dx::to_canonical(arg));
         }
     }
 
     template <ordered_simd T>
-    requires scalable_simd<T> &&
-        (unqualified_hsum<T> || unqualified_hsum<basic_type_t<T>>)
+    requires scalable_vector<T> &&
+        (unqualified_hsum<T> || unqualified_hsum<canonical_type_t<T>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T arg) noexcept {
         if constexpr (unqualified_hsum<T>) {
             return hsum(internal::abi<T>, arg);
         } else {
-            return hsum(internal::abi<T>, dx::to_basic_type(arg));
+            return hsum(internal::abi<T>, dx::to_canonical(arg));
         }
     }
 
@@ -84,7 +84,7 @@ public:
     static constexpr auto operator()(M mask, T arg) noexcept {
         constexpr auto V = immediate_mask_v<T, M>;
         if constexpr (unqualified_hsumi<M, T>) {
-            if constexpr (basic_simd_type<T>) {
+            if constexpr (canonical_vector<T>) {
                 if consteval {
                     using RT = decltype(hsum<V>(internal::abi<T>, arg));
                     return dx::reinterpret<RT>(fallbacki<V>(arg));
@@ -94,10 +94,10 @@ public:
             } else {
                 return hsum<V>(internal::abi<T>, arg);
             }
-        } else if constexpr (basic_simd_type<T>) {
+        } else if constexpr (canonical_vector<T>) {
             return fallbacki<V>(arg, dx::add);
         } else {
-            return operator()(dx::to_basic_type(arg));
+            return operator()(dx::to_canonical(arg));
         }
     }
 };
@@ -113,7 +113,7 @@ private:
 
 public:
     template <arithmetic_simd T>
-    requires fixed_width_simd<T> && requires {
+    requires fixed_width_vector<T> && requires {
         typename mask_type<T>;
         requires regular_invocable<hsum_t, mask_type<T>, T>;
     }

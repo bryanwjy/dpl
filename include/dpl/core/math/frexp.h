@@ -11,7 +11,6 @@
 #if !DPL_MODULES
 #  include "dpl/core/concepts/integral_simd.h"
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/concepts/simd_traits.h"
 #  include "dpl/core/constants/exponent_bias.h"
 #  include "dpl/core/constants/mantissa_width.h"
 #  include "dpl/core/constants/min_value.h"
@@ -266,10 +265,10 @@ private:
     template <floating_point E, simd_abi A, frexp_options Opt>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(
-        basic_simd<E, A> val, Opt) noexcept
+        basic_vector<E, A> val, Opt) noexcept
     requires (Opt::has(frexp_reduced))
     {
-        using result_type = make_frexp_t<basic_simd<E, A>, Opt>;
+        using result_type = make_frexp_t<basic_vector<E, A>, Opt>;
         constexpr auto fourthirds = dx::broadcast<E, A>(1.0 / 0.75);
         auto const issubnormal = [](auto val) {
             if constexpr (Opt::has(frexp_positive)) {
@@ -316,10 +315,10 @@ private:
     template <floating_point E, simd_abi A, frexp_options Opt>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(
-        basic_simd<E, A> val, Opt) noexcept
+        basic_vector<E, A> val, Opt) noexcept
     requires (Opt::has(frexp_cmath))
     {
-        using result_type = make_frexp_t<basic_simd<E, A>, Opt>;
+        using result_type = make_frexp_t<basic_vector<E, A>, Opt>;
         auto const issubnormal = [](auto val) {
             if constexpr (Opt::has(frexp_positive)) {
                 return val < dx::min_value;
@@ -378,7 +377,7 @@ public:
     requires (opt == frexp_cmath || opt == frexp_reduced)
     {
         if constexpr (unqualified_frexp<T, Opt>) {
-            if constexpr (basic_simd_type<T>) {
+            if constexpr (canonical_vector<T>) {
                 if consteval {
                     return fallback(val, opt);
                 } else {
@@ -387,16 +386,16 @@ public:
             } else {
                 return frexp(internal::abi<T>, val, opt);
             }
-        } else if constexpr (basic_simd_type<T>) {
+        } else if constexpr (canonical_vector<T>) {
             return fallback(val, opt);
         } else {
-            return operator()(dx::to_basic_type(val), opt);
+            return operator()(dx::to_canonical(val), opt);
         }
     }
 
     template <floating_point_simd T, frexp_options Opt>
-    requires (
-        unqualified_frexp<T, Opt> || unqualified_frexp<basic_type_t<T>, Opt>)
+    requires (unqualified_frexp<T, Opt> ||
+        unqualified_frexp<canonical_type_t<T>, Opt>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(T val, Opt opt) noexcept
     requires (!Opt::has(frexp_cmath) && !Opt::has(frexp_reduced))
@@ -404,7 +403,7 @@ public:
         if constexpr (unqualified_frexp<T, Opt>) {
             return frexp(internal::abi<T>, val, opt);
         } else {
-            return frexp(internal::abi<T>, dx::to_basic_type(val), opt);
+            return frexp(internal::abi<T>, dx::to_canonical(val), opt);
         }
     }
 };

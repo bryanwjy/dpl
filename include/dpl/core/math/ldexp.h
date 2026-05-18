@@ -44,16 +44,17 @@ struct ldexp_t : binary_operation_base<ldexp_t> {
 
     template <signed_integral E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_simd<E, A> signbit(basic_simd<E, A> val) noexcept {
+    static constexpr basic_vector<E, A> signbit(
+        basic_vector<E, A> val) noexcept {
         constexpr auto shift = sizeof(E) * char_bit_v - 1;
         return val >> imm<shift>;
     }
 
     template <floating_point E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_simd<E, A> DPL_VECTORCALL
-        fallback(basic_simd<E, A> num,
-            basic_simd<signed_representation_t<E>, A> exp) noexcept {
+    static constexpr basic_vector<E, A>
+        DPL_VECTORCALL fallback(basic_vector<E, A> num,
+            basic_vector<signed_representation_t<E>, A> exp) noexcept {
 
         constexpr auto mantissa_shift = imm<dx::mantissa_width_v<E>>;
         using sint = signed_representation_t<E>;
@@ -72,7 +73,7 @@ struct ldexp_t : binary_operation_base<ldexp_t> {
         m = dx::bit_drop(dx::zero > m, m);
         m = dx::select(m > exp_mask, exp_mask, m);
 
-        using simdi = basic_simd<sint, A>;
+        using simdi = basic_vector<sint, A>;
         auto u = dx::reinterpret<E>(m << mantissa_shift);
 
         num *= [](auto u2) { return u2 * u2; }(u * u);
@@ -80,7 +81,7 @@ struct ldexp_t : binary_operation_base<ldexp_t> {
         return num * dx::reinterpret<E>((exp + exp_bias) << mantissa_shift);
     }
 
-    template <simd_type T>
+    template <simd_vector T>
     using int_simd DPL_NODEBUG =
         rebind_simd_t<T, signed_representation_t<typename T::value_type>>;
 
@@ -94,7 +95,7 @@ public:
                               ldexp(internal::abi<T>, num, exp)
                           } -> equivalent_simd_as<T>;
                       }) {
-            if constexpr (basic_simd_type<T> && basic_simd_type<I>) {
+            if constexpr (canonical_vector<T> && canonical_vector<I>) {
                 if consteval {
                     return fallback(num, exp);
                 } else {
@@ -103,10 +104,10 @@ public:
             } else {
                 return ldexp(internal::abi<T>, num, exp);
             }
-        } else if constexpr (basic_simd_type<T> && basic_simd_type<I>) {
+        } else if constexpr (canonical_vector<T> && canonical_vector<I>) {
             return fallback(num, exp);
         } else {
-            return operator()(dx::to_basic_type(num), dx::to_basic_type(exp));
+            return operator()(dx::to_canonical(num), dx::to_canonical(exp));
         }
     }
 

@@ -6,7 +6,7 @@
 #if !DPL_MODULES
 #  include "dpl/core/basic/immediate.h"
 #  include "dpl/core/basic/initialize.h"
-#  include "dpl/core/basic/to_basic_type.h"
+#  include "dpl/core/basic/to_canonical.h"
 #  include "dpl/core/concepts/integral_simd.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_equivalence.h"
@@ -30,23 +30,23 @@ struct gather_t {
 private:
     template <typename E, typename I, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_simd<E, A> fallback(
-        E const* ptr, basic_simd<I, A> idx) noexcept {
-        return []<size_t... Is>(
-                   E const* ptr, basic_simd<I, A> idx, index_sequence<Is...>) {
+    static constexpr basic_vector<E, A> fallback(
+        E const* ptr, basic_vector<I, A> idx) noexcept {
+        return []<size_t... Is>(E const* ptr, basic_vector<I, A> idx,
+                   index_sequence<Is...>) {
             return dx::initialize<E>(internal::abi<A>, ptr[idx[imm<Is>]]...);
         }(ptr, idx, iota_sequence<E, A>);
     }
 
 public:
     template <simd_element E, integral_simd I>
-    requires basic_simd_type<rebind_simd_t<I, E>> &&
+    requires canonical_vector<rebind_simd_t<I, E>> &&
         (sizeof(E) >= sizeof(typename I::value_type))
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
-    static constexpr rebind_simd_t<I, E> DPL_VECTORCALL operator()(
-        E const* ptr, I idx) noexcept {
+    static constexpr rebind_simd_t<I, E>
+        DPL_VECTORCALL operator()(E const* ptr, I idx) noexcept {
         if constexpr (unqualified_gather<E, I>) {
-            if constexpr (basic_simd_type<I>) {
+            if constexpr (canonical_vector<I>) {
                 if consteval {
                     return fallback(ptr, idx);
                 } else {
@@ -55,24 +55,24 @@ public:
             } else {
                 return gather(internal::abi<I>, ptr, idx);
             }
-        } else if constexpr (basic_simd_type<I>) {
+        } else if constexpr (canonical_vector<I>) {
             return fallback(ptr, idx);
         } else {
-            return operator()(ptr, dx::to_basic_type(idx));
+            return operator()(ptr, dx::to_canonical(idx));
         }
     }
 
     template <simd_element E, integral_simd I>
     requires (sizeof(E) >= sizeof(typename I::value_type)) &&
-        (!basic_simd_type<rebind_simd_t<I, E>>) &&
-        (unqualified_gather<E, I> || unqualified_gather<E, basic_type_t<I>>)
+        (!canonical_vector<rebind_simd_t<I, E>>) &&
+        (unqualified_gather<E, I> || unqualified_gather<E, canonical_type_t<I>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
-    static constexpr rebind_simd_t<I, E> DPL_VECTORCALL operator()(
-        E const* ptr, I idx) noexcept {
+    static constexpr rebind_simd_t<I, E>
+        DPL_VECTORCALL operator()(E const* ptr, I idx) noexcept {
         if constexpr (unqualified_gather<E, I>) {
             return gather(internal::abi<I>, ptr, idx);
         } else {
-            return gather(internal::abi<I>, ptr, dx::to_basic_type(idx));
+            return gather(internal::abi<I>, ptr, dx::to_canonical(idx));
         }
     }
 };

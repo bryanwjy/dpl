@@ -80,7 +80,7 @@ DPL_EXPORT template <typename T>
 concept ordered_type = atom::common_order_with<T, T>;
 
 DPL_EXPORT template <typename T>
-concept ordered_simd = simd_type<T> &&
+concept ordered_simd = simd_vector<T> &&
     atom::common_order_with<simd_lane_representation_t<T>,
         simd_lane_representation_t<T>>;
 

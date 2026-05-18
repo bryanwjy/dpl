@@ -9,8 +9,6 @@
 #include "dpl/core/basic/initialize.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/concepts/common_arithmetic_with.h"
-#  include "dpl/core/concepts/common_order_with.h" // IWYU pragma: keep
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_element_for.h"
 #  include "dpl/core/type_traits/simd_abi_traits.h"
@@ -21,55 +19,54 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 DPL_EXPORT template <typename E, simd_abi A>
 requires simd_element_for<E, A>
-class basic_simd<E, A> {
-    using traits DPL_NODEBUG = simd_abi_traits<E, A>;
-    using vector_type DPL_NODEBUG = typename traits::native_type;
+class basic_vector<E, A> {
+    using abi_traits DPL_NODEBUG = simd_abi_traits<E, A>;
+    using vector_type DPL_NODEBUG = typename abi_traits::native_vector;
 
 public:
-    using value_type = typename traits::element_type;
+    using value_type = typename abi_traits::element_type;
     using abi_type = A;
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr size_t size() noexcept {
         if constexpr (fixed_width_abi<A>) {
-            return traits::size;
+            return abi_traits::size;
         } else {
-            return traits::size();
+            return abi_traits::size();
         }
     }
 
-    __DPL_HIDE_FROM_ABI constexpr basic_simd() noexcept
-        : basic_simd(datapar::broadcast<basic_simd>(0)) {}
+    __DPL_HIDE_FROM_ABI constexpr basic_vector() noexcept
+        : basic_vector(datapar::broadcast<basic_vector>(0)) {}
 
-    __DPL_HIDE_FROM_ABI constexpr basic_simd(vector_type vec) noexcept
+    __DPL_HIDE_FROM_ABI constexpr basic_vector(vector_type vec) noexcept
         : data_(vec) {}
 
-    template <different_from<basic_simd> B>
+    template <different_from<basic_vector> B>
     requires broadcastable_constant<B, value_type>
-    __DPL_HIDE_FROM_ABI constexpr basic_simd(B scalar) noexcept
-        : basic_simd(datapar::broadcast<E, A>(static_cast<E>(scalar))) {}
+    __DPL_HIDE_FROM_ABI constexpr basic_vector(B scalar) noexcept
+        : basic_vector(datapar::broadcast<E, A>(static_cast<E>(scalar))) {}
 
     template <core_convertible_to<E>... Args>
     __DPL_HIDE_FROM_ABI explicit(
         !same_as<invoke_result_t<internal::initialize_t<A>, Args...>,
-            basic_simd>) constexpr basic_simd(Args&&... args) noexcept
-        : basic_simd(
-              datapar::initialize<basic_simd>(__DPL forward<Args>(args)...)) {
-    }
+            basic_vector>) constexpr basic_vector(Args&&... args) noexcept
+        : basic_vector(datapar::initialize<basic_vector>(
+              __DPL forward<Args>(args)...)) {}
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    constexpr auto operator+(this basic_simd self) noexcept {
+    constexpr auto operator+(this basic_vector self) noexcept {
         return self.data_;
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     constexpr auto operator[](
-        this basic_simd self, internal::extraction_index auto idx) noexcept {
+        this basic_vector self, internal::extraction_index auto idx) noexcept {
         return datapar::extract(self, idx);
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    explicit constexpr operator vector_type(this basic_simd self) noexcept {
+    explicit constexpr operator vector_type(this basic_vector self) noexcept {
 
         return self.data_;
     }

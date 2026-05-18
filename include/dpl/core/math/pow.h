@@ -15,7 +15,7 @@
 #  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_traits.h"
-#  include "dpl/core/concepts/simd_type.h"
+#  include "dpl/core/concepts/simd_vector.h"
 #  include "dpl/core/constants/infinity.h"
 #  include "dpl/core/operations/arithmetic.h" // IWYU pragma: keep
 #  include "dpl/core/operations/bitwise.h"    // IWYU pragma: keep
@@ -49,7 +49,7 @@ private:
 
     template <simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_simd<float, A>
+    static constexpr basic_vector<float, A>
         DPL_VECTORCALL exp2(fmath::pair<float, A> arg) noexcept {
         // A little more expensive than dx::exp2 but results in
         // better precision for this use-case
@@ -68,7 +68,7 @@ private:
             0.0001546145067550242f>
             polynomial;
         u = polynomial(s.upper);
-        constexpr auto one = dx::one_v<basic_simd<float, A>>;
+        constexpr auto one = dx::one_v<basic_vector<float, A>>;
 
         // t = pow(2,x) where x is in the interval [-0.5,0.5]
         // |s| <= 0.5
@@ -84,7 +84,7 @@ private:
 
     template <simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_simd<double, A>
+    static constexpr basic_vector<double, A>
         DPL_VECTORCALL exp2(fmath::pair<double, A> arg) noexcept {
         // A little more expensive than dx::exp2 but results in
         // better precision for this use-case
@@ -103,7 +103,7 @@ private:
             -3.065528692252689>
             polynomial;
         u = polynomial(s.upper);
-        constexpr auto one = dx::one_v<basic_simd<double, A>>;
+        constexpr auto one = dx::one_v<basic_vector<double, A>>;
 
         // t = pow(2,x) where x is in the interval [-0.5,0.5]
         // |s| <= 0.5
@@ -120,7 +120,7 @@ private:
     template <simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr fmath::pair<float, A>
-        DPL_VECTORCALL log2(basic_simd<float, A> arg) noexcept {
+        DPL_VECTORCALL log2(basic_vector<float, A> arg) noexcept {
         // takes a decomposed significand; only valid in interval [0.75,1.5)
 
         constexpr auto n_one = fmath::single(dx::broadcast<A>(-1.0f));
@@ -147,7 +147,7 @@ private:
     template <simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr fmath::pair<double, A>
-        DPL_VECTORCALL log2(basic_simd<double, A> arg) noexcept {
+        DPL_VECTORCALL log2(basic_vector<double, A> arg) noexcept {
         // takes a decomposed significand; only valid in interval [0.75,1.5)
 
         constexpr auto n_one = fmath::single(dx::broadcast<A>(-1.0));
@@ -176,7 +176,7 @@ private:
     template <floating_point E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(
-        basic_simd<E, A> lhs, basic_simd<E, A> rhs) noexcept {
+        basic_vector<E, A> lhs, basic_vector<E, A> rhs) noexcept {
         auto const absl = dx::abs(lhs);
         auto const [fr, exp] =
             dx::frexp(absl, frexp_reduced | frexp_floating_point);
@@ -213,7 +213,7 @@ public:
     static constexpr auto operator()(L lhs, R rhs) noexcept {
         using A = typename L::abi_type; // Same ABI, just pick one
         if constexpr (unqualified_pow<L, R, A>) {
-            if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
+            if constexpr (canonical_vector<L> && canonical_vector<R>) {
                 if consteval {
                     return fallback(lhs, rhs);
                 } else {
@@ -222,25 +222,25 @@ public:
             } else {
                 return pow(internal::abi<A>, lhs, rhs);
             }
-        } else if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
+        } else if constexpr (canonical_vector<L> && canonical_vector<R>) {
             return fallback(lhs, rhs);
         } else {
-            return operator()(dx::to_basic_type(lhs), dx::to_basic_type(rhs));
+            return operator()(dx::to_canonical(lhs), dx::to_canonical(rhs));
         }
     }
 
     template <floating_point_simd L, common_float_simd_with<L> R>
     requires (!same_abi_simd_as<L, R>) &&
         (unqualified_pow<L, R> ||
-            unqualified_pow<basic_type_t<L>, basic_type_t<R>>)
+            unqualified_pow<canonical_type_t<L>, canonical_type_t<R>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs) noexcept {
         using A = common_abi_t<L, R>;
         if constexpr (unqualified_pow<L, R>) {
             return pow(internal::abi<A>, lhs, rhs);
         } else {
-            return pow(internal::abi<A>, dx::to_basic_type(lhs),
-                dx::to_basic_type(rhs));
+            return pow(
+                internal::abi<A>, dx::to_canonical(lhs), dx::to_canonical(rhs));
         }
     }
 

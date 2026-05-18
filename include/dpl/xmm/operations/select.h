@@ -37,13 +37,13 @@ struct ternary_type {};
 template <typename L, typename R>
 using ternary_type_t DPL_NODEBUG = typename ternary_type<L, R>::type;
 
-template <simd_type L, simd_element R>
+template <simd_vector L, simd_element R>
 struct ternary_type<L, R> : ternary_type<typename L::value_type, R> {};
 
-template <simd_element L, simd_type R>
+template <simd_element L, simd_vector R>
 struct ternary_type<L, R> : ternary_type<L, typename R::value_type> {};
 
-template <simd_type L, simd_type R>
+template <simd_vector L, simd_vector R>
 struct ternary_type<L, R> :
     ternary_type<typename L::value_type, typename R::value_type> {};
 

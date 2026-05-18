@@ -3,7 +3,7 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/concepts/simd_type.h"
+#include "dpl/core/concepts/simd_vector.h"
 
 #if !DPL_MODULES
 #  include "dpl/std/concepts/enumeration.h"
@@ -40,7 +40,7 @@ concept arithmetic_type = !same_as<T, bool> &&
 
 DPL_EXPORT template <typename T>
 concept arithmetic_simd =
-    simd_type<T> && arithmetic_type<typename T::value_type>;
+    simd_vector<T> && arithmetic_type<typename T::value_type>;
 
 } // namespace datapar
 

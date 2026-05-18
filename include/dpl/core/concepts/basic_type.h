@@ -9,14 +9,6 @@
 #include "dpl/core/concepts/simd_lane_representation.h"
 #include "dpl/core/concepts/simd_lane_type.h"
 
-#if !DPL_MODULES
-#  include "dpl/std/bit/bit_type.h"
-#  include "dpl/std/bit/char_bit.h"
-#  include "dpl/std/concepts/enumeration.h"
-#  include "dpl/std/concepts/integral.h"
-#  include "dpl/std/type_traits/make_signed.h"
-#endif
-
 DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar {
@@ -25,11 +17,11 @@ namespace internal {
 template <typename>
 inline constexpr bool is_canonical_simd = false;
 template <simd_abi A, simd_element_for<A> E>
-inline constexpr bool is_canonical_simd<basic_simd<E, A>> = true;
+inline constexpr bool is_canonical_simd<basic_vector<E, A>> = true;
 template <typename>
 inline constexpr bool is_canonical_mask = false;
 template <simd_abi A, simd_element_for<A> E>
-inline constexpr bool is_canonical_mask<basic_simd_mask<E, A>> = true;
+inline constexpr bool is_canonical_mask<basic_mask<E, A>> = true;
 template <typename T>
 concept canonical_simd_specialization = is_canonical_simd<T>;
 template <typename T>
@@ -39,29 +31,29 @@ concept canonical_mask_specialization = is_canonical_mask<T>;
 
 namespace atom {
 template <typename T>
-concept basic_simd_class = (internal::canonical_simd_specialization<T> ||
-                               internal::canonical_mask_specialization<T>) &&
+concept canonical_class = (internal::canonical_simd_specialization<T> ||
+                              internal::canonical_mask_specialization<T>) &&
     requires { typename simd_lane_representation_t<T>; } &&
     same_as<simd_lane_representation_t<T>, simd_lane_type_t<T>>;
 } // namespace atom
 
 DPL_EXPORT template <typename T>
-concept basic_simd_class = simd_class<T> && atom::basic_simd_class<T>;
+concept canonical_class = simd_class<T> && atom::canonical_class<T>;
 
 DPL_EXPORT template <typename T>
-concept basic_simd_type = basic_simd_class<T> && atom::simd_type<T>;
+concept canonical_vector = canonical_class<T> && atom::vector_type<T>;
 
 DPL_EXPORT template <typename T>
-concept basic_simd_mask_type = basic_simd_class<T> && atom::simd_mask_type<T>;
+concept canonical_mask = canonical_class<T> && atom::simd_mask<T>;
 
 DPL_EXPORT template <typename T>
-concept extended_class = simd_class<T> && !atom::basic_simd_class<T>;
+concept extended_class = simd_class<T> && !atom::canonical_class<T>;
 
 DPL_EXPORT template <typename T>
-concept extended_simd = extended_class<T> && atom::simd_type<T>;
+concept extended_vector = extended_class<T> && atom::vector_type<T>;
 
 DPL_EXPORT template <typename T>
-concept extended_mask = extended_class<T> && atom::simd_mask_type<T>;
+concept extended_mask = extended_class<T> && atom::simd_mask<T>;
 
 } // namespace datapar
 

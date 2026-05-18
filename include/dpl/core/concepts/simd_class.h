@@ -3,15 +3,15 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/concepts/simd_mask_type.h"
-#include "dpl/core/concepts/simd_type.h"
+#include "dpl/core/concepts/simd_mask.h"
+#include "dpl/core/concepts/simd_vector.h"
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar {
 DPL_EXPORT template <typename T>
 concept simd_class =
-    atom::simd_basics<T> && (atom::simd_mask_type<T> || atom::simd_type<T>);
+    atom::simd_basics<T> && (atom::simd_mask<T> || atom::vector_type<T>);
 
 DPL_EXPORT template <typename T>
 concept fixed_width_class =

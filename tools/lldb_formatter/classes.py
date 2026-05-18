@@ -40,8 +40,8 @@ class bf16:
             result.PutCString(f"(__bf16) {bf16.to_float(rep):.6g}")
             return
 
-        if type_name.startswith("basic_simd<") or (type_name.startswith(_NAMESPACE) 
-            and type_name[len(_NAMESPACE):].startswith("basic_simd<")):
+        if type_name.startswith("basic_vector<") or (type_name.startswith(_NAMESPACE) 
+            and type_name[len(_NAMESPACE):].startswith("basic_vector<")):
             size = type_obj.GetByteSize()
             buffer = data.ReadRawData(error, 0, size)
             if not error.Success():
@@ -82,9 +82,9 @@ class FormatDispatcher:
         if name.startswith(_NAMESPACE):
             name = name[len(_NAMESPACE):]
 
-        if name.startswith("basic_simd<"):
+        if name.startswith("basic_vector<"):
             self.impl = BasicSimd.Synthetic(valobj, None)
-        elif name.startswith("basic_simd_mask<"):
+        elif name.startswith("basic_mask<"):
             self.impl = BasicSimdMask.Synthetic(valobj, None)
 
     def update(self):
@@ -102,9 +102,9 @@ def summarize(valobj, _):
     if name.startswith(_NAMESPACE):
         name = name[len(_NAMESPACE):]
 
-    if name.startswith("basic_simd<"):
+    if name.startswith("basic_vector<"):
         return BasicSimd.summarize(valobj, None)
-    elif name.startswith("basic_simd_mask<"):
+    elif name.startswith("basic_mask<"):
         return BasicSimdMask.summarize(valobj, None)
     else:
         return None

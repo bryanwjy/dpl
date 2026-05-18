@@ -13,8 +13,8 @@ namespace xmm = dpl::datapar::xmm;
 namespace dpp = dpl::datapar;
 template <typename... Ts>
 constexpr auto element_count = dpp::simd_abi_traits<Ts...>::size;
-static_assert(dpp::basic_simd_type<
-    dpl::datapar::basic_simd<signed char, dpl::datapar::xmm::abi_tag>>);
+static_assert(dpp::canonical_vector<
+    dpl::datapar::basic_vector<signed char, dpl::datapar::xmm::abi_tag>>);
 
 template <typename T>
 consteval T repeat_as(unsigned char val) {

@@ -6,7 +6,7 @@
 #if !DPL_MODULES
 #  include "dpl/core/basic/immediate.h"
 #  include "dpl/core/basic/initialize.h"
-#  include "dpl/core/basic/to_basic_type.h"
+#  include "dpl/core/basic/to_canonical.h"
 #  include "dpl/core/concepts/integral_simd.h"
 #  include "dpl/core/concepts/simd_class.h"
 #  include "dpl/core/concepts/simd_equivalence.h"
@@ -50,13 +50,13 @@ struct broadcast_lanei_t;
 
 struct permute_t {
 private:
-    template <basic_simd_class T, common_size_with<simd_lane_type_t<T>> E,
+    template <canonical_class T, common_size_with<simd_lane_type_t<T>> E,
         same_as<typename T::abi_type> A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr T DPL_VECTORCALL
-        fallback(T arg, basic_simd<E, A> idx) noexcept {
+    static constexpr T DPL_VECTORCALL fallback(
+        T arg, basic_vector<E, A> idx) noexcept {
         return []<size_t... Is>(
-                   T arg, basic_simd<E, A> idx, index_sequence<Is...>) {
+                   T arg, basic_vector<E, A> idx, index_sequence<Is...>) {
             return dx::initialize<T>(arg[idx[imm<Is>]]...);
         }(arg, idx, iota_sequence<T>);
     }
@@ -72,11 +72,11 @@ public:
 
     template <simd_class T, integral_simd I>
     requires common_size_simd_with<T, I> && same_abi_simd_as<T, I> &&
-        fixed_width_simd<T>
+        fixed_width_vector<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T arg, I idx) noexcept {
         if constexpr (unqualified_permute<T, I>) {
-            if constexpr (basic_simd_type<T> && basic_simd_type<I>) {
+            if constexpr (canonical_vector<T> && canonical_vector<I>) {
                 if consteval {
                     return fallback(arg, idx);
                 } else {
@@ -85,32 +85,32 @@ public:
             } else {
                 return permute(internal::abi<T>, arg, idx);
             }
-        } else if constexpr (basic_simd_type<T> && basic_simd_type<I>) {
+        } else if constexpr (canonical_vector<T> && canonical_vector<I>) {
             return fallback(arg, idx);
         } else {
-            return operator()(dx::to_basic_type(arg), dx::to_basic_type(idx));
+            return operator()(dx::to_canonical(arg), dx::to_canonical(idx));
         }
     }
 
     template <simd_class T, integral_simd I>
     requires common_size_simd_with<T, I> && same_abi_simd_as<T, I> &&
-        scalable_simd<T> &&
+        scalable_vector<T> &&
         (unqualified_permute<T, I> ||
-            unqualified_permute<basic_type_t<T>, basic_type_t<I>>)
+            unqualified_permute<canonical_type_t<T>, canonical_type_t<I>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T arg, I idx) noexcept {
         if constexpr (unqualified_permute<T, I>) {
             return permute(internal::abi<T>, arg, idx);
         } else {
-            return permute(internal::abi<T>, dx::to_basic_type(arg),
-                dx::to_basic_type(idx));
+            return permute(
+                internal::abi<T>, dx::to_canonical(arg), dx::to_canonical(idx));
         }
     }
 };
 
 struct broadcast_lane_t {
 private:
-    template <basic_simd_class T>
+    template <canonical_class T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr T DPL_VECTORCALL fallback(T arg, size_t idx) noexcept {
         return dx::broadcast<simd_lane_type_t<T>>(arg[idx]);
@@ -125,11 +125,11 @@ public:
         return broadcast_lane(arg);
     }
 
-    template <fixed_width_simd T>
+    template <fixed_width_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T arg, size_t idx) noexcept {
         if constexpr (unqualified_broadcast_lane<T>) {
-            if constexpr (basic_simd_type<T>) {
+            if constexpr (canonical_vector<T>) {
                 if consteval {
                     return fallback(arg, idx);
                 } else {
@@ -138,23 +138,22 @@ public:
             } else {
                 return broadcast_lane(internal::abi<T>, arg, idx);
             }
-        } else if constexpr (basic_simd_type<T>) {
+        } else if constexpr (canonical_vector<T>) {
             return fallback(arg, idx);
         } else {
-            return operator()(dx::to_basic_type(arg), idx);
+            return operator()(dx::to_canonical(arg), idx);
         }
     }
 
-    template <scalable_simd T>
+    template <scalable_vector T>
     requires unqualified_broadcast_lane<T> ||
-        unqualified_broadcast_lane<basic_type_t<T>>
+        unqualified_broadcast_lane<canonical_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T arg, size_t idx) noexcept {
         if constexpr (unqualified_broadcast_lane<T>) {
             return broadcast_lane(internal::abi<T>, arg, idx);
         } else {
-            return broadcast_lane(
-                internal::abi<T>, dx::to_basic_type(arg), idx);
+            return broadcast_lane(internal::abi<T>, dx::to_canonical(arg), idx);
         }
     }
 };
@@ -162,14 +161,14 @@ public:
 template <size_t... Is>
 struct permutei_t {
 private:
-    template <basic_simd_class T>
+    template <canonical_class T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr T DPL_VECTORCALL fallback(T arg) noexcept {
         return dx::initialize<T>(arg[imm<Is>]...);
     }
 
 public:
-    template <fixed_width_simd T>
+    template <fixed_width_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T arg) noexcept {
         static_assert((sizeof...(Is) <= simd_abi_traits<T>::size) &&
@@ -183,7 +182,7 @@ public:
                     arg);
             }(arg, iota_sequence<T>);
         } else if constexpr (unqualified_permutei<T, Is...>) {
-            if constexpr (basic_simd_class<T>) {
+            if constexpr (canonical_class<T>) {
                 if consteval {
                     return fallback(arg);
                 } else {
@@ -192,10 +191,10 @@ public:
             } else {
                 return permute<Is...>(internal::abi<T>, arg);
             }
-        } else if constexpr (basic_simd_class<T>) {
+        } else if constexpr (canonical_class<T>) {
             return fallback(arg);
         } else {
-            return operator()(dx::to_basic_type(arg));
+            return operator()(dx::to_canonical(arg));
         }
     }
 };
@@ -212,12 +211,12 @@ private:
     }
 
 public:
-    template <fixed_width_simd T>
+    template <fixed_width_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T arg) noexcept {
         static_assert(I < simd_abi_traits<T>::size);
         if constexpr (unqualified_broadcast_lanei<I, T>) {
-            if constexpr (basic_simd_class<T>) {
+            if constexpr (canonical_class<T>) {
                 if consteval {
                     return fallback(arg);
                 } else {
@@ -226,10 +225,10 @@ public:
             } else {
                 return broadcast_lane<I>(internal::abi<T>, arg);
             }
-        } else if constexpr (basic_simd_class<T>) {
+        } else if constexpr (canonical_class<T>) {
             return fallback(arg);
         } else {
-            return operator()(dx::to_basic_type(arg));
+            return operator()(dx::to_canonical(arg));
         }
     }
 };

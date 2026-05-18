@@ -10,6 +10,7 @@
 #  include "dpl/core/concepts/simd_class.h"
 #  include "dpl/core/type_traits/basic_type.h"
 #  include "dpl/core/type_traits/simd_abi_traits.h"
+#  include "dpl/std/bit/bit_type.h"
 #  include "dpl/std/bit/char_bit.h"
 #  include "dpl/std/bit/has_single_bit.h"
 #  include "dpl/std/concepts/array_initializable.h"
@@ -40,7 +41,7 @@ public:
     requires array_initializable<array_type, Args...> &&
         (... && !same_as<bool, Args>)
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-        static constexpr basic_simd<E, A> operator()(Args&&... args) noexcept
+        static constexpr basic_vector<E, A> operator()(Args&&... args) noexcept
     requires requires {
         initialize<E>(internal::abi<A>, __DPL forward<Args>(args)...);
     }
@@ -51,7 +52,7 @@ public:
     template <same_as<bool>... Bs>
     requires array_initializable<barray_type, Bs...>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr basic_simd_mask<E, A> operator()(Bs... args) noexcept
+    static constexpr basic_mask<E, A> operator()(Bs... args) noexcept
     requires requires {
         initialize<E>(internal::abi<A>, static_cast<bool>(args)...);
     }
@@ -63,7 +64,7 @@ public:
 template <simd_abi A, simd_element_for<A> E>
 struct initialize_t<E, A> : initialize_t<A, E> {};
 
-template <basic_simd_class T>
+template <canonical_class T>
 requires fixed_width_class<T>
 struct initialize_t<T> {
 private:
@@ -76,7 +77,7 @@ public:
     requires array_initializable<array_type, Args...>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr T operator()(Args&&... args) noexcept
-    requires simd_type<T> && regular_invocable<initialize_t<A, E>, Args...>
+    requires simd_vector<T> && regular_invocable<initialize_t<A, E>, Args...>
     {
         return initialize_t<A, E>::operator()(__DPL forward<Args>(args)...);
     }
@@ -85,7 +86,7 @@ public:
     requires array_initializable<array_type, Bs...>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr T operator()(Bs... args) noexcept
-    requires simd_mask_type<T> &&
+    requires simd_mask<T> &&
         regular_invocable<initialize_t<A, simd_lane_type_t<T>>, Bs...>
     {
         return initialize_t<A, simd_lane_type_t<T>>::operator()(args...);
@@ -101,12 +102,12 @@ private:
         requires simd_element_for<decay_t<common_type_t<Es...>>, A>;
     }
     using deduced_simd DPL_NODEBUG =
-        basic_simd<decay_t<common_type_t<Es...>>, A>;
+        basic_vector<decay_t<common_type_t<Es...>>, A>;
 
     template <same_as<bool>... Bs>
     requires (has_single_bit(sizeof...(Bs)) && A::size >= sizeof...(Bs))
     using deduced_mask DPL_NODEBUG =
-        basic_simd_mask<bit_type_t<(A::size / sizeof...(Bs)) * char_bit_v>, A>;
+        basic_mask<bit_type_t<(A::size / sizeof...(Bs)) * char_bit_v>, A>;
 
 public:
     template <typename... Args>
@@ -131,14 +132,14 @@ template <simd_class T>
 struct initialize_t<T> {
 private:
     using E DPL_NODEBUG = typename T::value_type; // bool for masks
-    using base_type DPL_NODEBUG = initialize_t<basic_type_t<T>>;
+    using base_type DPL_NODEBUG = initialize_t<canonical_type_t<T>>;
 
 public:
     template <typename... Args>
     requires regular_invocable<base_type, Args...>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr T operator()(Args&&... args) noexcept
-    requires explicitly_convertible_to<basic_type_t<T>, T>
+    requires explicitly_convertible_to<canonical_type_t<T>, T>
     {
         return static_cast<T>(
             base_type::operator()( __DPL forward<Args>(args)...));

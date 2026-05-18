@@ -9,7 +9,7 @@
 #  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_traits.h"
-#  include "dpl/core/concepts/simd_type.h"
+#  include "dpl/core/concepts/simd_vector.h"
 #  include "dpl/core/constants/msb.h"
 #  include "dpl/core/operations/abs.h"
 #  include "dpl/core/operations/bitwise.h"
@@ -28,8 +28,9 @@ struct copysign_t {
 private:
     template <floating_point E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_simd<E, A> DPL_VECTORCALL
-        fallback(basic_simd<E, A> magnitude, basic_simd<E, A> sign) noexcept {
+    static constexpr basic_vector<E, A>
+        DPL_VECTORCALL fallback(
+            basic_vector<E, A> magnitude, basic_vector<E, A> sign) noexcept {
         return dx::bwor(dx::abs(magnitude), dx::bwand(dx::msb, sign));
     }
 
@@ -39,7 +40,7 @@ public:
     static constexpr auto operator()(L magnitude, R sign) noexcept {
         using A = typename L::abi_type;
         if constexpr (unqualified_copysign<L, R, A>) {
-            if constexpr (basic_simd_type<L>) {
+            if constexpr (canonical_vector<L>) {
                 if not consteval {
                     return copysign(internal::abi<A>, magnitude, sign);
                 } else {
@@ -48,11 +49,11 @@ public:
             } else {
                 return copysign(internal::abi<A>, magnitude, sign);
             }
-        } else if constexpr (basic_simd_type<L>) {
+        } else if constexpr (canonical_vector<L>) {
             return fallback(magnitude, sign);
         } else {
             return operator()(
-                dx::to_basic_type(magnitude), dx::to_basic_type(sign));
+                dx::to_canonical(magnitude), dx::to_canonical(sign));
         }
     }
 
@@ -60,7 +61,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L magnitude, R sign) noexcept {
         if constexpr (unqualified_copysign<L, R, typename R::abi_type>) {
-            if constexpr (basic_simd_type<R>) {
+            if constexpr (canonical_vector<R>) {
                 if consteval {
                     return operator()(dx::broadcast<R>(magnitude), sign);
                 } else {
@@ -69,10 +70,10 @@ public:
             } else {
                 return copysign(internal::abi<R>, magnitude, sign);
             }
-        } else if constexpr (basic_simd_type<R>) {
+        } else if constexpr (canonical_vector<R>) {
             return operator()(dx::broadcast<R>(magnitude), sign);
         } else {
-            return operator()(magnitude, dx::to_basic_type(sign));
+            return operator()(magnitude, dx::to_canonical(sign));
         }
     }
 };

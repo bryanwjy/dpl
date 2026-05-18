@@ -6,7 +6,7 @@
 #if !DPL_MODULES
 #  include "dpl/core/concepts/simd_equivalence.h"
 #  include "dpl/core/concepts/simd_traits.h"
-#  include "dpl/core/concepts/simd_type.h"
+#  include "dpl/core/concepts/simd_vector.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -14,7 +14,7 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 template <typename T>
 concept floating_point_simd =
-    simd_type<T> && floating_point<simd_lane_type_t<T>>;
+    simd_vector<T> && floating_point<simd_lane_type_t<T>>;
 template <typename T, typename A>
 concept floating_point_simd_with_abi =
     simd_with_abi<T, A> && floating_point_simd<T>;

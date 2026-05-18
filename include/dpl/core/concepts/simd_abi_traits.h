@@ -9,7 +9,8 @@
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_class.h"
 #  include "dpl/core/concepts/simd_element.h"
-#  include "dpl/std/concepts/unsigned_integral.h"
+#  include "dpl/core/concepts/simd_lane_type.h"
+#  include "dpl/std/type_traits/constants.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -22,8 +23,8 @@ DPL_EXPORT template <simd_abi T>
 struct simd_abi_traits<T> {
 
     template <typename E>
-    using native_type =
-        typename T::template native_type<simd_element_representation_t<T, E>>;
+    using native_vector =
+        typename T::template native_vector<simd_element_representation_t<T, E>>;
 
     template <typename E>
     using native_mask =
@@ -40,7 +41,7 @@ struct simd_abi_traits<T> {
     requires requires { typename simd_element_representation_t<T, E>; }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr size_t size() noexcept {
-        if constexpr (scalable_simd<T>) {
+        if constexpr (scalable_vector<T>) {
             return T::template size<E>();
         } else {
             return T::size / sizeof(E);
@@ -69,7 +70,7 @@ struct simd_abi_traits<T> {
                       }) {
             return T::alignment;
         } else {
-            return alignof(native_type<E>);
+            return alignof(native_vector<E>);
         }
     }
 };
@@ -111,7 +112,7 @@ public:
     using type = A;
     using element_type = E;
     using representation_type = simd_element_representation_t<A, E>;
-    using native_type = typename base_type::template native_type<E>;
+    using native_vector = typename base_type::template native_vector<E>;
     using native_mask = typename base_type::template native_mask<E>;
 
     consteval operator simd_abi_traits<A>(this simd_abi_traits) noexcept {

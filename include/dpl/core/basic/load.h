@@ -29,16 +29,16 @@ struct aligned_load_t {};
 template <simd_abi A, simd_element_for<A> E>
 struct load_t<A, E> {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr basic_simd<E, A> operator()(E const* data) noexcept
+    static constexpr basic_vector<E, A> operator()(E const* data) noexcept
     requires requires(E const* data) {
-        { load(internal::abi<A>, data) } -> same_as<basic_simd<E, A>>;
+        { load(internal::abi<A>, data) } -> same_as<basic_vector<E, A>>;
     }
     {
         return load(internal::abi<A>, data);
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr basic_simd<E, A> operator()(
+    static constexpr basic_vector<E, A> operator()(
         aligned_t, E const* data) noexcept {
         if consteval {
             return operator()(data);
@@ -55,29 +55,30 @@ struct load_t<A, E> {
 template <simd_abi A, simd_element_for<A> E>
 struct load_t<E, A> : load_t<A, E> {};
 
-template <basic_simd_type T>
+template <canonical_vector T>
 struct load_t<T> : load_t<typename T::value_type, typename T::abi_type> {};
 
-template <simd_type T>
+template <simd_vector T>
 struct load_t<T> {
     using E DPL_NODEBUG = typename T::value_type;
-    using base_type DPL_NODEBUG = load_t<basic_type_t<T>>;
+    using base_type DPL_NODEBUG = load_t<canonical_type_t<T>>;
 
 public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(E const* src) noexcept
     requires regular_invocable<base_type, E const*> &&
-        explicitly_convertible_to<basic_type_t<T>, T>
+        explicitly_convertible_to<canonical_type_t<T>, T>
     {
-        return static_cast<T>(load_t<basic_type_t<T>>::operator()(src));
+        return static_cast<T>(load_t<canonical_type_t<T>>::operator()(src));
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(aligned_t tag, E const* src) noexcept
     requires regular_invocable<base_type, aligned_t, E const*> &&
-        explicitly_convertible_to<basic_type_t<T>, T>
+        explicitly_convertible_to<canonical_type_t<T>, T>
     {
-        return static_cast<T>(load_t<basic_type_t<T>>::operator()(tag, src));
+        return static_cast<T>(
+            load_t<canonical_type_t<T>>::operator()(tag, src));
     }
 };
 
@@ -85,7 +86,7 @@ template <simd_abi A>
 struct load_t<A> {
 private:
     template <typename E>
-    using base_type DPL_NODEBUG = load_t<basic_simd<E, A>>;
+    using base_type DPL_NODEBUG = load_t<basic_vector<E, A>>;
 
 public:
     template <simd_element_for<A> E>
@@ -116,7 +117,7 @@ struct aligned_load_t<A, E> {
 template <simd_abi A, simd_element_for<A> E>
 struct aligned_load_t<E, A> : aligned_load_t<A, E> {};
 
-template <simd_type T>
+template <simd_vector T>
 struct aligned_load_t<T> : private load_t<T> {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(typename T::value_type const* src) noexcept

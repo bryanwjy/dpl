@@ -21,20 +21,20 @@ DPL_EXPORT template <simd_class T>
 using make_simd_mask_type_t = typename make_simd_mask_type<T>::type;
 
 DPL_EXPORT template <simd_class T>
-requires simd_mask_type<T>
+requires simd_mask<T>
 struct make_simd_mask_type<T> {
     using type DPL_NODEBUG = T;
 };
 
 /**
  * Non-basic types may specialize this class to return the corresponding
- * simd_mask_type. If the returned type does not satisfy simd_mask_type,
+ * simd_mask. If the returned type does not satisfy simd_mask,
  * behaviour is undefined.
  */
 DPL_EXPORT template <simd_class T>
 struct make_simd_mask_type<T> {
     using type DPL_NODEBUG =
-        basic_simd_mask<simd_lane_type_t<T>, typename T::abi_type>;
+        basic_mask<simd_lane_type_t<T>, typename T::abi_type>;
 };
 
 } // namespace datapar

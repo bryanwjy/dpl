@@ -33,9 +33,9 @@
                     "clangd.malloc-trim": true,
                     "clangd.experimental-modules-support": true,
                 },
-            	"enabled": false,
+            	"enabled": true,
 			},
-        }
+        },
 	},
 	"syntax_override": {
 		".*\\.(h|cpp)$": ["cpp-sublime-syntax/C++20"],

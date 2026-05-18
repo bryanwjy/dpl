@@ -33,9 +33,9 @@ concept unqualified_inner_producti = immediate_mask_for<M, L> &&
 
 template <typename L, typename R, typename... Args>
 concept basic_inner_product =
-    simd_type<L> && (... && immediate_mask_for<Args, L>) &&
+    simd_vector<L> && (... && immediate_mask_for<Args, L>) &&
     (... && immediate_mask_for<Args, R>) &&
-    requires(basic_type_t<L> lhs, basic_type_t<L> rhs, Args... mask) {
+    requires(canonical_type_t<L> lhs, canonical_type_t<L> rhs, Args... mask) {
         dx::reduce(mask..., dx::multiply(lhs, rhs), dx::add);
     };
 
@@ -43,26 +43,26 @@ struct inner_product_t {
 private:
     template <typename L, typename R, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallback(basic_simd<L, A> lhs, basic_simd<L, A> rhs) noexcept {
+    static constexpr auto DPL_VECTORCALL fallback(
+        basic_vector<L, A> lhs, basic_vector<L, A> rhs) noexcept {
         return dx::hsum(dx::multiply(lhs, rhs));
     }
 
     template <auto V, typename L, typename R, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallbacki(basic_simd<L, A> lhs, basic_simd<L, A> rhs) noexcept {
+    static constexpr auto DPL_VECTORCALL fallbacki(
+        basic_vector<L, A> lhs, basic_vector<L, A> rhs) noexcept {
         return dx::hsumi<V>(dx::multiply(lhs, rhs));
     }
 
 public:
-    template <simd_type L, common_arithmetic_simd_with<L> R>
+    template <simd_vector L, common_arithmetic_simd_with<L> R>
     requires same_abi_simd_as<L, R> && fixed_width_abi<common_abi_t<L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs) noexcept {
         using A = typename L::abi_type;
         if constexpr (unqualified_inner_product<L, R, A>) {
-            if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
+            if constexpr (canonical_vector<L> && canonical_vector<R>) {
                 if consteval {
                     using RT =
                         decltype(inner_product(internal::abi<A>, lhs, rhs));
@@ -73,29 +73,29 @@ public:
             } else {
                 return inner_product(internal::abi<A>, lhs, rhs);
             }
-        } else if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
+        } else if constexpr (canonical_vector<L> && canonical_vector<R>) {
             return fallback(lhs, rhs);
         } else {
-            return operator()(dx::to_basic_type(lhs), dx::to_basic_type(rhs));
+            return operator()(dx::to_canonical(lhs), dx::to_canonical(rhs));
         }
     }
 
-    template <simd_type L, common_arithmetic_simd_with<L> R>
+    template <simd_vector L, common_arithmetic_simd_with<L> R>
     requires (!same_abi_simd_as<L, R> || scalable_abi<common_abi_t<L, R>>) &&
         (unqualified_inner_product<L, R> ||
-            unqualified_inner_product<basic_type_t<L>, basic_type_t<R>>)
+            unqualified_inner_product<canonical_type_t<L>, canonical_type_t<R>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs) noexcept {
         using A = common_abi_t<L, R>;
         if constexpr (unqualified_inner_product<L, R>) {
             return inner_product(internal::abi<A>, lhs, rhs);
         } else {
-            return inner_product(internal::abi<A>, dx::to_basic_type(lhs),
-                dx::to_basic_type(rhs));
+            return inner_product(
+                internal::abi<A>, dx::to_canonical(lhs), dx::to_canonical(rhs));
         }
     }
 
-    template <simd_type L, common_arithmetic_simd_with<L> R,
+    template <simd_vector L, common_arithmetic_simd_with<L> R,
         immediate_mask_for<L> M>
     requires same_abi_simd_as<L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -103,7 +103,7 @@ public:
         using A = typename L::abi_type;
         constexpr auto V = immediate_mask_v<L, M>;
         if constexpr (unqualified_inner_producti<M, L, R, A>) {
-            if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
+            if constexpr (canonical_vector<L> && canonical_vector<R>) {
                 if consteval {
                     using RT =
                         decltype(inner_product<V>(internal::abi<A>, lhs, rhs));
@@ -114,19 +114,20 @@ public:
             } else {
                 return inner_product<V>(internal::abi<A>, lhs, rhs);
             }
-        } else if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
+        } else if constexpr (canonical_vector<L> && canonical_vector<R>) {
             return fallbacki<V>(lhs, rhs);
         } else {
             return operator()(
-                mask, dx::to_basic_type(lhs), dx::to_basic_type(rhs));
+                mask, dx::to_canonical(lhs), dx::to_canonical(rhs));
         }
     }
 
-    template <simd_type L, common_arithmetic_simd_with<L> R,
+    template <simd_vector L, common_arithmetic_simd_with<L> R,
         immediate_mask_for<L> M>
     requires (!same_abi_simd_as<L, R>) &&
         (unqualified_inner_producti<M, L, R> ||
-            unqualified_inner_producti<M, basic_type_t<L>, basic_type_t<R>>)
+            unqualified_inner_producti<M, canonical_type_t<L>,
+                canonical_type_t<R>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M, L lhs, R rhs) noexcept {
         using A = common_abi_t<L, R>;
@@ -134,8 +135,8 @@ public:
         if constexpr (unqualified_inner_producti<M, L, R>) {
             return inner_product<V>(internal::abi<A>, lhs, rhs);
         } else {
-            return inner_product<V>(internal::abi<A>, dx::to_basic_type(lhs),
-                dx::to_basic_type(rhs));
+            return inner_product<V>(
+                internal::abi<A>, dx::to_canonical(lhs), dx::to_canonical(rhs));
         }
     }
 };
@@ -149,7 +150,7 @@ private:
     using mask_type DPL_NODEBUG = make_immediate_mask_t<T, V>;
 
 public:
-    template <fixed_width_simd L, common_arithmetic_simd_with<L> R>
+    template <fixed_width_vector L, common_arithmetic_simd_with<L> R>
     requires requires {
         typename mask_type<L>;
         requires regular_invocable<inner_product_t, mask_type<L>, L, R>;

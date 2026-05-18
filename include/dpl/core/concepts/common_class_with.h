@@ -11,8 +11,8 @@ namespace datapar {
 
 namespace atom {
 template <typename A, typename B>
-concept common_class_with = (atom::simd_type<A> && atom::simd_type<B>) ||
-    (atom::simd_mask_type<A> && atom::simd_mask_type<B>);
+concept common_class_with = (atom::vector_type<A> && atom::vector_type<B>) ||
+    (atom::simd_mask<A> && atom::simd_mask<B>);
 }
 
 DPL_EXPORT template <typename A, typename B>

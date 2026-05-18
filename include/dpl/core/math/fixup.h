@@ -15,7 +15,7 @@
 #  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_traits.h"
-#  include "dpl/core/concepts/simd_type.h"
+#  include "dpl/core/concepts/simd_vector.h"
 #  include "dpl/core/constants/nan.h"
 #  include "dpl/core/constants/zero.h"
 #  include "dpl/core/operations/arithmetic.h" // IWYU pragma: keep
@@ -55,7 +55,7 @@ private:
     template <floating_point E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto match_disjoint(
-        basic_simd<E, A> src, auto flags) noexcept {
+        basic_vector<E, A> src, auto flags) noexcept {
         static_assert((flags & fpfix::nan) != fpfix::nan);
         static_assert((flags & fpfix::infinity) != fpfix::infinity);
         static_assert((flags & fpfix::finite) != fpfix::finite);
@@ -130,7 +130,7 @@ private:
     template <floating_point E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto match_posneg(
-        basic_simd<E, A> src, auto flags) noexcept {
+        basic_vector<E, A> src, auto flags) noexcept {
         using flag_type = decltype(flags);
         constexpr flag_type F{};
         static_assert((F & fpfix::finite) != fpfix::finite);
@@ -197,7 +197,7 @@ private:
 
     template <floating_point E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto match(basic_simd<E, A> src, auto flags) noexcept {
+    static constexpr auto match(basic_vector<E, A> src, auto flags) noexcept {
         using flag_type = decltype(flags);
         constexpr flag_type F{};
         if constexpr (F == fpfix::all) {
@@ -269,12 +269,12 @@ private:
 
     template <floating_point E, simd_abi A, fpfix::condition_set F>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto fallback(
-        basic_simd<E, A> src, basic_simd<E, A> result, F conditions) noexcept {
+    static constexpr auto fallback(basic_vector<E, A> src,
+        basic_vector<E, A> result, F conditions) noexcept {
         auto mask = dx::broadcast<E, A>(false);
         fpfix::template_for(
             [&](auto flags, auto val) {
-                using simd = basic_simd<E, A>;
+                using simd = basic_vector<E, A>;
                 if constexpr (val == fpfix::signed_inf) {
                     result = dx::select(match(src, flags),
                         dx::negate(dx::signbit(src), dx::infinity_v<simd>),
@@ -303,7 +303,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T src, T result, F conditions) noexcept {
         if constexpr (unqualified_fixup<T, T, T, F>) {
-            if constexpr (basic_simd_type<T>) {
+            if constexpr (canonical_vector<T>) {
                 if not consteval {
                     return fixup(internal::abi<T>, src, result, conditions);
                 } else {
@@ -312,11 +312,11 @@ public:
             } else {
                 return fixup(internal::abi<T>, src, result, conditions);
             }
-        } else if constexpr (basic_simd_type<T>) {
+        } else if constexpr (canonical_vector<T>) {
             return fallback(src, result, conditions);
         } else {
             return operator()(
-                dx::to_basic_type(src), dx::to_basic_type(result), conditions);
+                dx::to_canonical(src), dx::to_canonical(result), conditions);
         }
     }
 };

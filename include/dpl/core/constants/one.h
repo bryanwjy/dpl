@@ -5,6 +5,7 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/broadcastable_base.h"
+#  include "dpl/core/concepts/arithmetic_type.h"
 #  include "dpl/std/concepts/convertible_to.h"
 #endif
 
@@ -14,7 +15,7 @@ namespace datapar {
 DPL_EXPORT struct one_t : broadcastable_base {
     __DPL_HIDE_FROM_ABI explicit constexpr one_t() noexcept = default;
 
-    template <simd_element T>
+    template <arithmetic_type T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     constexpr operator T(this one_t) noexcept {
         return static_cast<T>(1);

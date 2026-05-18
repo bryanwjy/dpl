@@ -38,13 +38,13 @@ struct ternary_type {};
 template <typename L, typename R>
 using ternary_type_t DPL_NODEBUG = typename ternary_type<L, R>::type;
 
-template <simd_type L, simd_element R>
+template <simd_vector L, simd_element R>
 struct ternary_type<L, R> : ternary_type<simd_lane_representation_t<L>, R> {};
 
-template <simd_element L, simd_type R>
+template <simd_element L, simd_vector R>
 struct ternary_type<L, R> : ternary_type<L, simd_lane_representation_t<R>> {};
 
-template <simd_type L, simd_type R>
+template <simd_vector L, simd_vector R>
 struct ternary_type<L, R> :
     ternary_type<simd_lane_representation_t<L>, simd_lane_representation_t<R>> {
 };
@@ -64,11 +64,11 @@ struct ternary_simd {};
 template <typename L, typename R>
 using ternary_simd_t DPL_NODEBUG = typename ternary_simd<L, R>::type;
 
-template <simd_type L, simd_type R>
+template <simd_vector L, simd_vector R>
 requires requires { typename ternary_type_t<L, R>; }
 struct ternary_simd<L, R> {
     using type DPL_NODEBUG =
-        basic_simd<ternary_type_t<L, R>, common_abi_t<L, R>>;
+        basic_vector<ternary_type_t<L, R>, common_abi_t<L, R>>;
 };
 
 template <typename R, typename L, typename C = make_simd_mask_type_t<L>>
@@ -130,10 +130,10 @@ struct select_t {
 private:
     template <typename M, typename ET, typename EF, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL fallback(basic_simd_mask<M, A> mask,
-        basic_simd<ET, A> tval, basic_simd<EF, A> fval) noexcept {
+    static constexpr auto DPL_VECTORCALL fallback(basic_mask<M, A> mask,
+        basic_vector<ET, A> tval, basic_vector<EF, A> fval) noexcept {
         using ER = ternary_type_t<ET, EF>;
-        return internal::transform<basic_simd<ER, A>>(
+        return internal::transform<basic_vector<ER, A>>(
             [](bool cond, ET tval, EF fval) -> ER {
                 return cond ? tval : fval;
             },
@@ -142,10 +142,10 @@ private:
 
     template <typename M, typename ET, typename EF, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL fallback(basic_simd_mask<M, A> mask,
-        basic_simd_mask<ET, A> tval, basic_simd_mask<EF, A> fval) noexcept {
+    static constexpr auto DPL_VECTORCALL fallback(basic_mask<M, A> mask,
+        basic_mask<ET, A> tval, basic_mask<EF, A> fval) noexcept {
         using ER = common_size_type_t<M, ET, EF>;
-        return internal::transform<basic_simd_mask<ER, A>>(
+        return internal::transform<basic_mask<ER, A>>(
             [](bool cond, bool tval, bool fval) -> bool {
                 return cond ? tval : fval;
             },
@@ -154,11 +154,11 @@ private:
 
     template <auto V, typename ET, typename EF, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        fallbacki(basic_simd<ET, A> tval, basic_simd<EF, A> fval) noexcept {
+    static constexpr auto DPL_VECTORCALL fallbacki(
+        basic_vector<ET, A> tval, basic_vector<EF, A> fval) noexcept {
         static constexpr immediate_mask<simd_abi_traits<ET, A>::size, V> mask{};
         using ER = ternary_type_t<ET, EF>;
-        return internal::itransform<basic_simd<ER, A>>(
+        return internal::itransform<basic_vector<ER, A>>(
             [](auto idx, ET tval, EF fval) -> ER {
                 return mask[idx] ? tval : fval;
             },
@@ -168,10 +168,10 @@ private:
     template <auto V, typename ET, typename EF, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallbacki(
-        basic_simd_mask<ET, A> tval, basic_simd_mask<EF, A> fval) noexcept {
+        basic_mask<ET, A> tval, basic_mask<EF, A> fval) noexcept {
         static constexpr immediate_mask<simd_abi_traits<ET, A>::size, V> mask{};
         using ER = common_size_type_t<ET, EF>;
-        return internal::itransform<basic_simd_mask<ER, A>>(
+        return internal::itransform<basic_mask<ER, A>>(
             [](auto idx, ET tval, EF fval) -> ER {
                 return mask[idx] ? tval : fval;
             },
@@ -179,15 +179,15 @@ private:
     }
 
 public:
-    template <simd_type TT, compatible_mask_with<TT> C,
+    template <simd_vector TT, compatible_mask_with<TT> C,
         selectable_with<TT, C> TF>
     requires same_abi_simd_as<TT, TF> && fixed_width_abi<common_abi_t<TT, TF>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(C mask, TT tval, TF fval) noexcept {
         using A = typename C::abi_type;
         if constexpr (unqualified_select<C, TT, TF, A>) {
-            if constexpr (basic_simd_type<TT> && basic_simd_type<TF> &&
-                basic_simd_mask_type<C>) {
+            if constexpr (canonical_vector<TT> && canonical_vector<TF> &&
+                canonical_mask<C>) {
                 if consteval {
                     return fallback(mask, tval, fval);
                 } else {
@@ -196,41 +196,41 @@ public:
             } else {
                 return select(internal::abi<A>, mask, tval, fval);
             }
-        } else if constexpr (basic_simd_type<TT> && basic_simd_type<TF> &&
-            basic_simd_mask_type<C>) {
+        } else if constexpr (canonical_vector<TT> && canonical_vector<TF> &&
+            canonical_mask<C>) {
             return fallback(mask, tval, fval);
         } else {
-            return operator()(dx::to_basic_type(mask), dx::to_basic_type(tval),
-                dx::to_basic_type(fval));
+            return operator()(dx::to_canonical(mask), dx::to_canonical(tval),
+                dx::to_canonical(fval));
         }
     }
 
-    template <simd_type TT, compatible_mask_with<TT> C,
+    template <simd_vector TT, compatible_mask_with<TT> C,
         selectable_with<TT, C> TF>
     requires (!same_abi_simd_as<TT, TF> ||
                  scalable_abi<common_abi_t<TT, TF>>) &&
         (unqualified_select<C, TT, TF> ||
-            unqualified_select<C, basic_type_t<TT>, basic_type_t<TF>>)
+            unqualified_select<C, canonical_type_t<TT>, canonical_type_t<TF>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(C mask, TT tval, TF fval) noexcept {
         using A = common_abi_t<TT, TF>;
         if constexpr (unqualified_select<C, TT, TF>) {
             return select(internal::abi<A>, mask, tval, fval);
         } else {
-            return select(internal::abi<A>, dx::to_basic_type(mask),
-                dx::to_basic_type(tval), dx::to_basic_type(fval));
+            return select(internal::abi<A>, dx::to_canonical(mask),
+                dx::to_canonical(tval), dx::to_canonical(fval));
         }
     }
 
-    template <simd_mask_type TT, common_size_simd_with<TT> C,
+    template <simd_mask TT, common_size_simd_with<TT> C,
         mselectable_with<TT, C> TF>
     requires same_abi_simd_as<TT, TF> && fixed_width_abi<common_abi_t<TT, TF>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(C mask, TT tval, TF fval) noexcept {
         using A = typename C::abi_type;
         if constexpr (unqualified_mselect<C, TT, TF, A>) {
-            if constexpr (basic_simd_mask_type<TT> &&
-                basic_simd_mask_type<TF> && basic_simd_mask_type<C>) {
+            if constexpr (canonical_mask<TT> && canonical_mask<TF> &&
+                canonical_mask<C>) {
                 if consteval {
                     return fallback(mask, tval, fval);
                 } else {
@@ -239,40 +239,40 @@ public:
             } else {
                 return select(internal::abi<A>, mask, tval, fval);
             }
-        } else if constexpr (basic_simd_mask_type<TT> &&
-            basic_simd_mask_type<TF> && basic_simd_mask_type<C>) {
+        } else if constexpr (canonical_mask<TT> && canonical_mask<TF> &&
+            canonical_mask<C>) {
             return fallback(mask, tval, fval);
         } else {
-            return operator()(dx::to_basic_type(mask), dx::to_basic_type(tval),
-                dx::to_basic_type(fval));
+            return operator()(dx::to_canonical(mask), dx::to_canonical(tval),
+                dx::to_canonical(fval));
         }
     }
 
-    template <simd_mask_type TT, common_size_simd_with<TT> C,
+    template <simd_mask TT, common_size_simd_with<TT> C,
         mselectable_with<TT, C> TF>
     requires (!same_abi_simd_as<TT, TF> ||
                  scalable_abi<common_abi_t<TT, TF>>) &&
         (unqualified_mselect<C, TT, TF> ||
-            unqualified_mselect<C, basic_type_t<TT>, basic_type_t<TF>>)
+            unqualified_mselect<C, canonical_type_t<TT>, canonical_type_t<TF>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(C mask, TT tval, TF fval) noexcept {
         using A = common_abi_t<TT, TF>;
         if constexpr (unqualified_mselect<C, TT, TF>) {
             return select(internal::abi<A>, mask, tval, fval);
         } else {
-            return select(internal::abi<A>, dx::to_basic_type(mask),
-                dx::to_basic_type(tval), dx::to_basic_type(fval));
+            return select(internal::abi<A>, dx::to_canonical(mask),
+                dx::to_canonical(tval), dx::to_canonical(fval));
         }
     }
 
-    template <simd_type TT, selectablei_with<TT> TF, immediate_mask_for<TT> C>
+    template <simd_vector TT, selectablei_with<TT> TF, immediate_mask_for<TT> C>
     requires same_abi_simd_as<TT, TF> && fixed_width_abi<common_abi_t<TT, TF>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(C mask, TT tval, TF fval) noexcept {
         using A = typename TT::abi_type;
         constexpr auto V = decltype(dx::to_immediate_mask<TT>(mask))::value;
         if constexpr (unqualified_selecti<C, TT, TF, A>) {
-            if constexpr (basic_simd_type<TT> && basic_simd_type<TF>) {
+            if constexpr (canonical_vector<TT> && canonical_vector<TF>) {
                 if consteval {
                     return fallbacki<V>(tval, fval);
                 } else {
@@ -281,19 +281,19 @@ public:
             } else {
                 return select<V>(internal::abi<A>, tval, fval);
             }
-        } else if constexpr (basic_simd_type<TT> && basic_simd_type<TF>) {
+        } else if constexpr (canonical_vector<TT> && canonical_vector<TF>) {
             return fallbacki<V>(tval, fval);
         } else {
             return operator()(
-                mask, dx::to_basic_type(tval), dx::to_basic_type(fval));
+                mask, dx::to_canonical(tval), dx::to_canonical(fval));
         }
     }
 
-    template <simd_type TT, selectablei_with<TT> TF, immediate_mask_for<TT> C>
+    template <simd_vector TT, selectablei_with<TT> TF, immediate_mask_for<TT> C>
     requires (!same_abi_simd_as<TT, TF> ||
                  scalable_abi<common_abi_t<TT, TF>>) &&
         (unqualified_selecti<C, TT, TF> ||
-            unqualified_selecti<C, basic_type_t<TT>, basic_type_t<TF>>)
+            unqualified_selecti<C, canonical_type_t<TT>, canonical_type_t<TF>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(C mask, TT tval, TF fval) noexcept {
         using A = common_abi_t<TT, TF>;
@@ -301,12 +301,12 @@ public:
         if constexpr (unqualified_selecti<C, TT, TF>) {
             return select<V>(internal::abi<A>, tval, fval);
         } else {
-            return select<V>(internal::abi<A>, dx::to_basic_type(tval),
-                dx::to_basic_type(fval));
+            return select<V>(internal::abi<A>, dx::to_canonical(tval),
+                dx::to_canonical(fval));
         }
     }
 
-    template <simd_mask_type TT, common_size_simd_with<TT> TF,
+    template <simd_mask TT, common_size_simd_with<TT> TF,
         immediate_mask_for<TT> C>
     requires same_abi_simd_as<TT, TF>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -314,8 +314,7 @@ public:
         using A = common_abi_t<TT, TF>;
         constexpr auto V = decltype(dx::to_immediate_mask<TT>(mask))::value;
         if constexpr (unqualified_mselecti<C, TT, TF>) {
-            if constexpr (basic_simd_mask_type<TT> &&
-                basic_simd_mask_type<TF>) {
+            if constexpr (canonical_mask<TT> && canonical_mask<TF>) {
                 if consteval {
                     return fallbacki<V>(tval, fval);
                 } else {
@@ -324,20 +323,19 @@ public:
             } else {
                 return select<V>(internal::abi<A>, tval, fval);
             }
-        } else if constexpr (basic_simd_mask_type<TT> &&
-            basic_simd_mask_type<TF>) {
+        } else if constexpr (canonical_mask<TT> && canonical_mask<TF>) {
             return fallbacki<V>(tval, fval);
         } else {
             return operator()(
-                mask, dx::to_basic_type(tval), dx::to_basic_type(fval));
+                mask, dx::to_canonical(tval), dx::to_canonical(fval));
         }
     }
 
-    template <simd_mask_type TT, common_size_simd_with<TT> TF,
+    template <simd_mask TT, common_size_simd_with<TT> TF,
         immediate_mask_for<TT> C>
     requires (!same_abi_simd_as<TT, TF>) &&
         (unqualified_mselecti<C, TT, TF> ||
-            unqualified_mselecti<C, basic_type_t<TT>, basic_type_t<TF>>)
+            unqualified_mselecti<C, canonical_type_t<TT>, canonical_type_t<TF>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(C mask, TT tval, TF fval) noexcept {
         using A = common_abi_t<TT, TF>;
@@ -345,12 +343,12 @@ public:
         if constexpr (unqualified_mselecti<C, TT, TF>) {
             return select<V>(internal::abi<A>, tval, fval);
         } else {
-            return select<V>(internal::abi<A>, dx::to_basic_type(tval),
-                dx::to_basic_type(fval));
+            return select<V>(internal::abi<A>, dx::to_canonical(tval),
+                dx::to_canonical(fval));
         }
     }
 
-    template <simd_mask_type C, simd_class TT, broadcastable_to<TT> TF>
+    template <simd_mask C, simd_class TT, broadcastable_to<TT> TF>
     requires selectable_with<TT, TT, C>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(C mask, TT tval, TF fval) noexcept {
@@ -360,7 +358,7 @@ public:
                               select(internal::abi<A>, mask, tval, fval)
                           } -> equivalent_simd_as<TT>;
                       }) {
-            if constexpr (basic_simd_mask_type<C> && basic_simd_class<TT>) {
+            if constexpr (canonical_mask<C> && canonical_class<TT>) {
                 if consteval {
                     return operator()(mask, tval, dx::broadcast<TT>(fval));
                 } else {
@@ -374,7 +372,7 @@ public:
         }
     }
 
-    template <simd_mask_type C, simd_class TF, broadcastable_to<TF> TT>
+    template <simd_mask C, simd_class TF, broadcastable_to<TF> TT>
     requires selectable_with<TF, TF, C>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(C mask, TT tval, TF fval) noexcept {
@@ -384,7 +382,7 @@ public:
                               select(internal::abi<A>, mask, tval, fval)
                           } -> equivalent_simd_as<TT>;
                       }) {
-            if constexpr (basic_simd_mask_type<C> && basic_simd_class<TT>) {
+            if constexpr (canonical_mask<C> && canonical_class<TT>) {
                 if consteval {
                     return operator()(mask, dx::broadcast<TF>(tval), fval);
                 } else {
@@ -398,14 +396,14 @@ public:
         }
     }
 
-    template <simd_mask_type C, broadcastable_to<make_simd_type_t<C>> TF,
+    template <simd_mask C, broadcastable_to<make_simd_type_t<C>> TF,
         broadcastable_to<make_simd_type_t<C>> TT>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(C mask, TT tval, TF fval) noexcept {
         using T = make_simd_type_t<C>;
         using A = typename C::abi_type;
         if constexpr (unqualified_select<C, TT, TF, A>) {
-            if constexpr (basic_simd_mask_type<C>) {
+            if constexpr (canonical_mask<C>) {
                 if consteval {
                     return operator()(
                         mask, dx::broadcast<T>(tval), dx::broadcast<T>(fval));

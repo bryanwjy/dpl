@@ -48,7 +48,7 @@ private:
     template <typename E, fixed_width_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto fallback(
-        basic_simd<E, A> val, size_t lanes) noexcept {
+        basic_vector<E, A> val, size_t lanes) noexcept {
         using traits = simd_abi_traits<E, A>;
         lanes = lanes > traits::size ? traits::size : lanes;
         alignas(traits::alignment) E data[2 * traits::size]{};
@@ -59,13 +59,13 @@ private:
     template <typename E, fixed_width_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto fallback(
-        basic_simd_mask<E, A> val, size_t lanes) noexcept {
+        basic_mask<E, A> val, size_t lanes) noexcept {
         return dx::bwshift_left(val, lanes);
     }
 
     template <size_t V, typename E, fixed_width_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto fallbacki(basic_simd<E, A> val) noexcept {
+    static constexpr auto fallbacki(basic_vector<E, A> val) noexcept {
         using traits = simd_abi_traits<E, A>;
         if constexpr (V >= traits::size) {
             return dx::broadcast<E, A>(dx::zero);
@@ -79,7 +79,7 @@ private:
 
     template <size_t V, typename E, fixed_width_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto fallbacki(basic_simd_mask<E, A> val) noexcept {
+    static constexpr auto fallbacki(basic_mask<E, A> val) noexcept {
         return dx::bwshift_lefti<V>(val);
     }
 
@@ -88,7 +88,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L arg, size_t shift) noexcept {
         if constexpr (unqualified_shift_left<L>) {
-            if constexpr (basic_simd_class<L>) {
+            if constexpr (canonical_class<L>) {
                 if consteval {
                     return fallback(arg, shift);
                 } else {
@@ -97,22 +97,22 @@ public:
             } else {
                 return shift_left(internal::abi<L>, arg, shift);
             }
-        } else if constexpr (basic_simd_class<L>) {
+        } else if constexpr (canonical_class<L>) {
             return fallback(arg, shift);
         } else {
-            return operator()(dx::to_basic_type(arg), shift);
+            return operator()(dx::to_canonical(arg), shift);
         }
     }
 
     template <scalable_class L>
     requires unqualified_shift_left<L> ||
-        unqualified_shift_left<basic_type_t<L>>
+        unqualified_shift_left<canonical_type_t<L>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L arg, size_t shift) noexcept {
         if constexpr (unqualified_shift_left<L>) {
             return shift_left(internal::abi<L>, arg, shift);
         } else {
-            return shift_left(internal::abi<L>, dx::to_basic_type(arg), shift);
+            return shift_left(internal::abi<L>, dx::to_canonical(arg), shift);
         }
     }
 
@@ -121,7 +121,7 @@ public:
     static constexpr auto operator()(L arg, R shift) noexcept {
         static_assert(R::value > 0);
         if constexpr (unqualified_shift_lefti<R::value, L>) {
-            if constexpr (basic_simd_class<L>) {
+            if constexpr (canonical_class<L>) {
                 if consteval {
                     return fallbacki<R::value>(arg);
                 } else {
@@ -130,16 +130,16 @@ public:
             } else {
                 return shift_left<R::value>(internal::abi<L>, arg);
             }
-        } else if constexpr (basic_simd_class<L>) {
+        } else if constexpr (canonical_class<L>) {
             return fallbacki<R::value>(arg);
         } else {
-            return operator()(dx::to_basic_type(arg), shift);
+            return operator()(dx::to_canonical(arg), shift);
         }
     }
 
     template <scalable_class L, integral_constant_like R>
     requires unqualified_shift_lefti<R::value, L> ||
-        unqualified_shift_lefti<R::value, basic_type_t<L>>
+        unqualified_shift_lefti<R::value, canonical_type_t<L>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L arg, R shift) noexcept {
         static_assert(R::value > 0);
@@ -147,7 +147,7 @@ public:
             return shift_left<R::value>(internal::abi<L>, arg);
         } else {
             return shift_left<R::value>(
-                internal::abi<L>, dx::to_basic_type(arg));
+                internal::abi<L>, dx::to_canonical(arg));
         }
     }
 };
@@ -157,7 +157,7 @@ private:
     template <typename E, fixed_width_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(
-        basic_simd<E, A> val, size_t lanes) noexcept {
+        basic_vector<E, A> val, size_t lanes) noexcept {
         using traits = simd_abi_traits<E, A>;
         lanes = lanes > traits::size ? traits::size : lanes;
         alignas(traits::alignment) E data[2 * traits::size]{};
@@ -168,14 +168,14 @@ private:
     template <typename E, fixed_width_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(
-        basic_simd_mask<E, A> val, size_t lanes) noexcept {
+        basic_mask<E, A> val, size_t lanes) noexcept {
         return dx::bwshift_right(val, lanes);
     }
 
     template <size_t V, typename E, fixed_width_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallbacki(
-        basic_simd<E, A> val) noexcept {
+        basic_vector<E, A> val) noexcept {
         using traits = simd_abi_traits<E, A>;
         if constexpr (V >= traits::size) {
             return dx::broadcast<E, A>(dx::zero);
@@ -190,7 +190,7 @@ private:
     template <size_t V, typename E, fixed_width_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallbacki(
-        basic_simd_mask<E, A> val) noexcept {
+        basic_mask<E, A> val) noexcept {
         return dx::bwshift_righti<V>(val);
     }
 
@@ -199,7 +199,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L arg, size_t shift) noexcept {
         if constexpr (unqualified_shift_right<L>) {
-            if constexpr (basic_simd_class<L>) {
+            if constexpr (canonical_class<L>) {
                 if consteval {
                     return fallback(arg, shift);
                 } else {
@@ -208,22 +208,22 @@ public:
             } else {
                 return shift_right(internal::abi<L>, arg, shift);
             }
-        } else if constexpr (basic_simd_class<L>) {
+        } else if constexpr (canonical_class<L>) {
             return fallback(arg, shift);
         } else {
-            return operator()(dx::to_basic_type(arg), shift);
+            return operator()(dx::to_canonical(arg), shift);
         }
     }
 
     template <scalable_class L>
     requires unqualified_shift_right<L> ||
-        unqualified_shift_right<basic_type_t<L>>
+        unqualified_shift_right<canonical_type_t<L>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L arg, size_t shift) noexcept {
         if constexpr (unqualified_shift_right<L>) {
             return shift_right(internal::abi<L>, arg, shift);
         } else {
-            return shift_right(internal::abi<L>, dx::to_basic_type(arg), shift);
+            return shift_right(internal::abi<L>, dx::to_canonical(arg), shift);
         }
     }
 
@@ -232,7 +232,7 @@ public:
     static constexpr auto operator()(L arg, R shift) noexcept {
         static_assert(R::value > 0);
         if constexpr (unqualified_shift_righti<R::value, L>) {
-            if constexpr (basic_simd_class<L>) {
+            if constexpr (canonical_class<L>) {
                 if consteval {
                     return fallbacki<R::value>(arg);
                 } else {
@@ -241,16 +241,16 @@ public:
             } else {
                 return shift_right<R::value>(internal::abi<L>, arg);
             }
-        } else if constexpr (basic_simd_class<L>) {
+        } else if constexpr (canonical_class<L>) {
             return fallbacki<R::value>(arg);
         } else {
-            return operator()(dx::to_basic_type(arg), shift);
+            return operator()(dx::to_canonical(arg), shift);
         }
     }
 
     template <scalable_class L, integral_constant_like R>
     requires unqualified_shift_righti<R::value, L> ||
-        unqualified_shift_righti<R::value, basic_type_t<L>>
+        unqualified_shift_righti<R::value, canonical_type_t<L>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L arg, R shift) noexcept {
         static_assert(R::value > 0);
@@ -258,7 +258,7 @@ public:
             return shift_right<R::value>(internal::abi<L>, arg);
         } else {
             return shift_right<R::value>(
-                internal::abi<L>, dx::to_basic_type(arg));
+                internal::abi<L>, dx::to_canonical(arg));
         }
     }
 };

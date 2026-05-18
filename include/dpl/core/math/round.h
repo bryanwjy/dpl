@@ -15,7 +15,7 @@
 #  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_traits.h"
-#  include "dpl/core/concepts/simd_type.h"
+#  include "dpl/core/concepts/simd_vector.h"
 #  include "dpl/core/constants/one.h"
 #  include "dpl/core/operations/abs.h"
 #  include "dpl/core/operations/arithmetic.h"
@@ -46,7 +46,7 @@ private:
     template <floating_point E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(
-        basic_simd<E, A> val) noexcept {
+        basic_vector<E, A> val) noexcept {
         auto const isfinite = dx::isfinite(val);
         auto const finite = dx::bit_keep(isfinite, val);
         auto x = finite + mx::half;
@@ -63,7 +63,7 @@ private:
     template <floating_point E, simd_abi A, rounding_flags R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(
-        basic_simd<E, A> val, rounding_t<R>) noexcept {
+        basic_vector<E, A> val, rounding_t<R>) noexcept {
         constexpr auto opt = rounding_v<R>;
         static_assert(opt);
         if constexpr (opt.has(rounding::to_zero | rounding::no_exc)) {
@@ -104,7 +104,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(T val) noexcept {
         if constexpr (unqualified_cmath_round<T>) {
-            if constexpr (basic_simd_type<T>) {
+            if constexpr (canonical_vector<T>) {
                 if not consteval {
                     return round(internal::abi<T>, val);
                 } else {
@@ -113,10 +113,10 @@ public:
             } else {
                 return round(internal::abi<T>, val);
             }
-        } else if constexpr (basic_simd_type<T>) {
+        } else if constexpr (canonical_vector<T>) {
             return fallback(val);
         } else {
-            return operator()(dx::to_basic_type(val));
+            return operator()(dx::to_canonical(val));
         }
     }
 
@@ -124,7 +124,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(T val, rounding_t<R> flags) noexcept {
         if constexpr (unqualified_round<T, R>) {
-            if constexpr (basic_simd_type<T>) {
+            if constexpr (canonical_vector<T>) {
                 if not consteval {
                     return round(internal::abi<T>, val, flags);
                 } else {
@@ -134,10 +134,10 @@ public:
                 return round(internal::abi<T>, val, flags);
             }
 
-        } else if constexpr (basic_simd_type<T>) {
+        } else if constexpr (canonical_vector<T>) {
             return fallback(val, flags);
         } else {
-            return operator()(dx::to_basic_type(val), flags);
+            return operator()(dx::to_canonical(val), flags);
         }
     }
 };

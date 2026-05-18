@@ -4,8 +4,8 @@
 #include "dpl/config.h"
 
 #include "dpl/core/concepts/common_class_with.h"
-#include "dpl/core/concepts/simd_mask_type.h"
-#include "dpl/core/concepts/simd_type.h"
+#include "dpl/core/concepts/simd_mask.h"
+#include "dpl/core/concepts/simd_vector.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/fwd/basic.h"
@@ -24,19 +24,19 @@ concept equivalent_class_as = common_class_with<T, U> &&
 
 DPL_EXPORT template <typename T, typename U>
 concept equivalent_simd_as =
-    simd_type<T> && simd_type<U> && equivalent_class_as<T, U>;
+    simd_vector<T> && simd_vector<U> && equivalent_class_as<T, U>;
 
 DPL_EXPORT template <typename T, typename U>
 concept equivalent_mask_as =
-    simd_mask_type<T> && simd_mask_type<U> && equivalent_class_as<T, U>;
+    simd_mask<T> && simd_mask<U> && equivalent_class_as<T, U>;
 
 DPL_EXPORT template <typename T, typename E, typename A = typename T::abi_type>
-concept simd_with = simd_abi<A> && simd_element_for<E, A> && simd_type<T> &&
-    equivalent_simd_as<T, basic_simd<E, A>>;
+concept simd_with = simd_abi<A> && simd_element_for<E, A> && simd_vector<T> &&
+    equivalent_simd_as<T, basic_vector<E, A>>;
 
 DPL_EXPORT template <typename T, typename E, typename A = typename T::abi_type>
-concept mask_with = simd_abi<A> && simd_element_for<E, A> &&
-    simd_mask_type<T> && equivalent_mask_as<T, basic_simd_mask<E, A>>;
+concept mask_with = simd_abi<A> && simd_element_for<E, A> && simd_mask<T> &&
+    equivalent_mask_as<T, basic_mask<E, A>>;
 
 DPL_EXPORT template <typename T, typename A>
 concept simd_with_abi =

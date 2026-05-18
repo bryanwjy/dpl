@@ -29,7 +29,7 @@ struct unintialized_t {};
 template <floating_point E, simd_abi A>
 union optional {
     unintialized_t none;
-    basic_simd<E, A> val;
+    basic_vector<E, A> val;
 };
 
 /**
@@ -42,20 +42,22 @@ class vpowers : protected vpowers<S - 1, E, A> {
 
 public:
     __DPL_HIDE_FROM_ABI constexpr vpowers() noexcept = default;
-    __DPL_HIDE_FROM_ABI explicit constexpr vpowers(basic_simd<E, A> x0) noexcept
+    __DPL_HIDE_FROM_ABI explicit constexpr vpowers(
+        basic_vector<E, A> x0) noexcept
     requires (S == 0)
         : data{
               .val = x0,
           } {}
 
-    __DPL_HIDE_FROM_ABI explicit constexpr vpowers(basic_simd<E, A> x0) noexcept
+    __DPL_HIDE_FROM_ABI explicit constexpr vpowers(
+        basic_vector<E, A> x0) noexcept
         : base_type(nullptr, x0)
         , data{.none = {}} {}
 
     template <integral auto I>
     requires (S > 0 && I <= S)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    constexpr basic_simd<E, A> operator[](immediate<I>) const noexcept {
+    constexpr basic_vector<E, A> operator[](immediate<I>) const noexcept {
         if constexpr (I == S) {
             return data.val;
         } else {
@@ -75,13 +77,13 @@ public:
 
 protected:
     __DPL_HIDE_FROM_ABI explicit constexpr vpowers(
-        decltype(nullptr), basic_simd<E, A> x0) noexcept
+        decltype(nullptr), basic_vector<E, A> x0) noexcept
     requires (S == 1)
         : base_type(x0)
         , data{.val = dx::multiply(x0, x0)} {}
 
     __DPL_HIDE_FROM_ABI explicit constexpr vpowers(
-        decltype(nullptr) tag, basic_simd<E, A> x0) noexcept
+        decltype(nullptr) tag, basic_vector<E, A> x0) noexcept
         : base_type(tag, x0)
         , data{.none = {}} {}
 
@@ -167,8 +169,8 @@ private:
 
     template <floating_point E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        eval_estrin(basic_simd<E, A> x) noexcept {
+    static constexpr auto DPL_VECTORCALL eval_estrin(
+        basic_vector<E, A> x) noexcept {
         // Compiler Explorer: https://godbolt.org/z/nsvsYnez1
         // Evaluates estrin with lower register pressure by deferring
         // the square operation as late as possible, using the FMA dependency
@@ -181,9 +183,9 @@ private:
 
     template <floating_point E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL
-        eval_horner(basic_simd<E, A> x) noexcept {
-        using simd = basic_simd<E, A>;
+    static constexpr auto DPL_VECTORCALL eval_horner(
+        basic_vector<E, A> x) noexcept {
+        using simd = basic_vector<E, A>;
         return []<int I = sizeof...(Vs) - 1>(
             this auto self, simd result, simd x, immediate<I> = {}) {
             if constexpr (I > 0) {
@@ -199,7 +201,7 @@ private:
 public:
     template <floating_point T, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(basic_simd<T, A> x) noexcept {
+    static constexpr auto operator()(basic_vector<T, A> x) noexcept {
         if constexpr (degree < 6) {
             return eval_horner(x);
         } else {
@@ -208,7 +210,9 @@ public:
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(dx::zero_t) noexcept { return V0; }
+    static constexpr auto operator()(dx::zero_t) noexcept {
+        return V0;
+    }
 };
 } // namespace datapar::fmath
 DPL_DEFAULT_NAMESPACE_END

@@ -11,8 +11,8 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 DPL_EXPORT template <typename E, typename A>
-class basic_simd;
+class basic_vector;
 DPL_EXPORT template <typename E, typename A>
-class basic_simd_mask;
+class basic_mask;
 } // namespace datapar
 DPL_DEFAULT_NAMESPACE_END

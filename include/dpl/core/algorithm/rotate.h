@@ -49,7 +49,7 @@ private:
     template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(
-        basic_simd<E, A> val, size_t lanes) noexcept {
+        basic_vector<E, A> val, size_t lanes) noexcept {
         lanes %= val.size();
         return dx::slide_right(val, val, lanes);
     }
@@ -57,7 +57,7 @@ private:
     template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(
-        basic_simd_mask<E, A> val, size_t lanes) noexcept {
+        basic_mask<E, A> val, size_t lanes) noexcept {
         lanes %= val.size();
         return dx::slide_right(val, val, lanes);
     }
@@ -65,7 +65,7 @@ private:
     template <size_t V, typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallbacki(
-        basic_simd<E, A> val) noexcept {
+        basic_vector<E, A> val) noexcept {
         return dx::slide_righti<V>(val, val);
     }
 
@@ -76,7 +76,7 @@ public:
         static_assert(R::value > 0);
         constexpr auto V = R::value % simd_abi_traits<L>::size;
         if constexpr (unqualified_rotate_righti<V, L>) {
-            if constexpr (basic_simd_class<L>) {
+            if constexpr (canonical_class<L>) {
                 if consteval {
                     return fallbacki<V>(arg);
                 } else {
@@ -85,10 +85,10 @@ public:
             } else {
                 return rotate_right<V>(internal::abi<L>, arg);
             }
-        } else if constexpr (basic_simd_class<L>) {
+        } else if constexpr (canonical_class<L>) {
             return fallbacki<V>(arg);
         } else {
-            return operator()(dx::to_basic_type(arg), lanes);
+            return operator()(dx::to_canonical(arg), lanes);
         }
     }
 
@@ -96,7 +96,7 @@ public:
     requires unqualified_rotate_righti<R::value % simd_abi_traits<L>::size,
                  L> ||
         unqualified_rotate_righti<R::value % simd_abi_traits<L>::size,
-            basic_type_t<L>>
+            canonical_type_t<L>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L arg, R lanes) noexcept {
         static_assert(R::value > 0);
@@ -104,7 +104,7 @@ public:
         if constexpr (unqualified_rotate_righti<V, L>) {
             return rotate_right<V>(internal::abi<L>, arg);
         } else {
-            return rotate_right<V>(internal::abi<L>, dx::to_basic_type(arg));
+            return rotate_right<V>(internal::abi<L>, dx::to_canonical(arg));
         }
     }
 
@@ -112,7 +112,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L arg, size_t lanes) noexcept {
         if constexpr (unqualified_rotate_right<L>) {
-            if constexpr (basic_simd_class<L>) {
+            if constexpr (canonical_class<L>) {
                 if consteval {
                     return fallback(arg, lanes);
                 } else {
@@ -121,23 +121,22 @@ public:
             } else {
                 return rotate_right(internal::abi<L>, arg, lanes);
             }
-        } else if constexpr (basic_simd_class<L>) {
+        } else if constexpr (canonical_class<L>) {
             return fallback(arg, lanes);
         } else {
-            return operator()(dx::to_basic_type(arg), lanes);
+            return operator()(dx::to_canonical(arg), lanes);
         }
     }
 
     template <scalable_class L>
     requires unqualified_rotate_right<L> ||
-        unqualified_rotate_right<basic_type_t<L>>
+        unqualified_rotate_right<canonical_type_t<L>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L arg, size_t lanes) noexcept {
         if constexpr (unqualified_rotate_right<L>) {
             return rotate_right(internal::abi<L>, arg, lanes);
         } else {
-            return rotate_right(
-                internal::abi<L>, dx::to_basic_type(arg), lanes);
+            return rotate_right(internal::abi<L>, dx::to_canonical(arg), lanes);
         }
     }
 };
@@ -147,7 +146,7 @@ private:
     template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(
-        basic_simd<E, A> val, size_t lanes) noexcept {
+        basic_vector<E, A> val, size_t lanes) noexcept {
         lanes %= simd_abi_traits<E, A>::size;
         return dx::slide_left(val, val, lanes);
     }
@@ -155,7 +154,7 @@ private:
     template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(
-        basic_simd_mask<E, A> val, size_t lanes) noexcept {
+        basic_mask<E, A> val, size_t lanes) noexcept {
         lanes %= simd_abi_traits<E, A>::size;
         return dx::slide_left(val, val, lanes);
     }
@@ -163,7 +162,7 @@ private:
     template <size_t V, typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallbacki(
-        basic_simd<E, A> val) noexcept {
+        basic_vector<E, A> val) noexcept {
         return dx::slide_lefti<V>(val, val);
     }
 
@@ -174,7 +173,7 @@ public:
         static_assert(R::value > 0);
         constexpr auto V = R::value % simd_abi_traits<L>::size;
         if constexpr (unqualified_rotate_lefti<V, L>) {
-            if constexpr (basic_simd_class<L>) {
+            if constexpr (canonical_class<L>) {
                 if consteval {
                     return fallbacki<V>(arg);
                 } else {
@@ -183,17 +182,17 @@ public:
             } else {
                 return rotate_left<V>(internal::abi<L>, arg);
             }
-        } else if constexpr (basic_simd_class<L>) {
+        } else if constexpr (canonical_class<L>) {
             return fallbacki<V>(arg);
         } else {
-            return operator()(dx::to_basic_type(arg), lanes);
+            return operator()(dx::to_canonical(arg), lanes);
         }
     }
 
     template <scalable_class L, integral_constant_like R>
     requires unqualified_rotate_lefti<R::value % simd_abi_traits<L>::size, L> ||
         unqualified_rotate_lefti<R::value % simd_abi_traits<L>::size,
-            basic_type_t<L>>
+            canonical_type_t<L>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L arg, R lanes) noexcept {
         static_assert(R::value > 0);
@@ -201,7 +200,7 @@ public:
         if constexpr (unqualified_rotate_lefti<V, L>) {
             return rotate_left<V>(internal::abi<L>, arg);
         } else {
-            return rotate_left<V>(internal::abi<L>, dx::to_basic_type(arg));
+            return rotate_left<V>(internal::abi<L>, dx::to_canonical(arg));
         }
     }
 
@@ -209,7 +208,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L arg, size_t lanes) noexcept {
         if constexpr (unqualified_rotate_left<L>) {
-            if constexpr (basic_simd_class<L>) {
+            if constexpr (canonical_class<L>) {
                 if consteval {
                     return fallback(arg, lanes);
                 } else {
@@ -218,22 +217,22 @@ public:
             } else {
                 return rotate_left(internal::abi<L>, arg, lanes);
             }
-        } else if constexpr (basic_simd_class<L>) {
+        } else if constexpr (canonical_class<L>) {
             return fallback(arg, lanes);
         } else {
-            return operator()(dx::to_basic_type(arg), lanes);
+            return operator()(dx::to_canonical(arg), lanes);
         }
     }
 
     template <scalable_class L>
     requires unqualified_rotate_left<L> ||
-        unqualified_rotate_left<basic_type_t<L>>
+        unqualified_rotate_left<canonical_type_t<L>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L arg, size_t lanes) noexcept {
         if constexpr (unqualified_rotate_left<L>) {
             return rotate_left(internal::abi<L>, arg, lanes);
         } else {
-            return rotate_left(internal::abi<L>, dx::to_basic_type(arg), lanes);
+            return rotate_left(internal::abi<L>, dx::to_canonical(arg), lanes);
         }
     }
 };

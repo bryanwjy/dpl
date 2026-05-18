@@ -53,7 +53,7 @@ private:
     template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(
-        basic_simd<E, A> val) noexcept {
+        basic_vector<E, A> val) noexcept {
         using T = negated_type<E>;
         if constexpr (enumeration<E>) {
             return operator()(dx::reinterpret<underlying_type_t<E>>(val));
@@ -67,15 +67,15 @@ private:
     template <typename C, typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(
-        basic_simd_mask<C, A> mask, basic_simd<E, A> val) noexcept {
+        basic_mask<C, A> mask, basic_vector<E, A> val) noexcept {
         using T = negated_type<E>;
         return dx::max(dx::reinterpret<T>(val), dx::negate(mask, val));
     }
 
     template <integral auto V, typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_simd<E, A>
-        DPL_VECTORCALL fallbacki(basic_simd<E, A> val) noexcept {
+    static constexpr basic_vector<E, A>
+        DPL_VECTORCALL fallbacki(basic_vector<E, A> val) noexcept {
         static constexpr immediate_mask<simd_abi_traits<E, A>::size, V> mask{};
         if constexpr (all_of(mask)) {
             return fallback(val);
@@ -90,11 +90,11 @@ private:
 
 public:
     template <arithmetic_simd T>
-    requires fixed_width_simd<T>
+    requires fixed_width_vector<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr negated_simd<T> operator()(T val) noexcept {
         if constexpr (unqualified_abs<T>) {
-            if constexpr (basic_simd_type<T>) {
+            if constexpr (canonical_vector<T>) {
                 if consteval {
                     return fallback(val);
                 } else {
@@ -103,32 +103,32 @@ public:
             } else {
                 return abs(internal::abi<T>, val);
             }
-        } else if constexpr (basic_simd_type<T>) {
+        } else if constexpr (canonical_vector<T>) {
             return fallback(val);
         } else {
-            return operator()(dx::to_basic_type(val));
+            return operator()(dx::to_canonical(val));
         }
     }
 
     template <arithmetic_simd T>
-    requires scalable_simd<T> &&
-        (unqualified_abs<T> || unqualified_abs<basic_type_t<T>>)
+    requires scalable_vector<T> &&
+        (unqualified_abs<T> || unqualified_abs<canonical_type_t<T>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr negated_simd<T> operator()(T val) noexcept {
         if constexpr (unqualified_abs<T>) {
             return abs(internal::abi<T>, val);
         } else {
-            return abs(internal::abi<T>, dx::to_basic_type(val));
+            return abs(internal::abi<T>, dx::to_canonical(val));
         }
     }
 
     template <arithmetic_simd T, compatible_mask_with<T> M>
-    requires same_abi_simd_as<T, M> && fixed_width_simd<T>
+    requires same_abi_simd_as<T, M> && fixed_width_vector<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr negated_simd<T> operator()(M mask, T val) noexcept {
         using A = typename T::abi_type;
         if constexpr (unqualified_mabs<M, T, A>) {
-            if constexpr (basic_simd_type<T> && basic_simd_mask_type<M>) {
+            if constexpr (canonical_vector<T> && canonical_mask<M>) {
                 if consteval {
                     return fallback(mask, val);
                 } else {
@@ -137,24 +137,24 @@ public:
             } else {
                 return abs(internal::abi<A>, mask, val);
             }
-        } else if constexpr (basic_simd_type<T> && basic_simd_mask_type<M>) {
+        } else if constexpr (canonical_vector<T> && canonical_mask<M>) {
             return fallback(mask, val);
         } else {
-            return operator()(dx::to_basic_type(mask), dx::to_basic_type(val));
+            return operator()(dx::to_canonical(mask), dx::to_canonical(val));
         }
     }
 
     template <arithmetic_simd T, compatible_mask_with<T> M>
-    requires (!same_abi_simd_as<T, M> || scalable_simd<T>) &&
+    requires (!same_abi_simd_as<T, M> || scalable_vector<T>) &&
         (unqualified_mabs<M, T> ||
-            unqualified_mabs<basic_type_t<M>, basic_type_t<T>>)
+            unqualified_mabs<canonical_type_t<M>, canonical_type_t<T>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr negated_simd<T> operator()(M mask, T val) noexcept {
         using A = common_abi_t<M, T>;
         if constexpr (unqualified_mabs<M, T>) {
             return abs(internal::abi<A>, mask, val);
         } else {
-            return operator()(dx::to_basic_type(mask), dx::to_basic_type(val));
+            return operator()(dx::to_canonical(mask), dx::to_canonical(val));
         }
     }
 
@@ -163,7 +163,7 @@ public:
     static constexpr negated_simd<T> operator()(M mask, T val) noexcept {
         constexpr auto V = decltype(dx::to_immediate_mask<T>(mask))::value;
         if constexpr (unqualified_abs<T>) {
-            if constexpr (basic_simd_type<T>) {
+            if constexpr (canonical_vector<T>) {
                 if consteval {
                     return fallbacki<V>(val);
                 } else {
@@ -172,10 +172,10 @@ public:
             } else {
                 return abs<V>(internal::abi<T>, val);
             }
-        } else if constexpr (basic_simd_type<T>) {
+        } else if constexpr (canonical_vector<T>) {
             return fallbacki<V>(val);
         } else {
-            return operator()(mask, dx::to_basic_type(val));
+            return operator()(mask, dx::to_canonical(val));
         }
     }
 };

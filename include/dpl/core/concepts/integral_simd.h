@@ -5,14 +5,14 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/simd_lane_type.h"
-#  include "dpl/core/concepts/simd_type.h"
+#  include "dpl/core/concepts/simd_vector.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::internal {
 template <typename T>
-concept integral_simd = simd_type<T> && integral<simd_lane_type_t<T>>;
+concept integral_simd = simd_vector<T> && integral<simd_lane_type_t<T>>;
 } // namespace datapar::internal
 
 DPL_DEFAULT_NAMESPACE_END

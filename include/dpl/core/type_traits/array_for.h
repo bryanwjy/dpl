@@ -21,7 +21,7 @@ struct alignas(simd_abi_traits<E, A>::alignment) array_for<E, A> {
     E data[simd_abi_traits<E, A>::size];
 };
 
-template <simd_type T>
+template <simd_vector T>
 struct alignas(simd_abi_traits<T>::alignment) array_for<T> {
     simd_lane_type_t<T> data[simd_abi_traits<T>::size];
 };

@@ -53,8 +53,8 @@ private:
     template <typename E, fixed_width_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(
-        basic_simd<E, A> lhs, basic_simd<E, A> rhs, size_t num) noexcept {
-        constexpr auto simd_size = basic_simd<E, A>::size();
+        basic_vector<E, A> lhs, basic_vector<E, A> rhs, size_t num) noexcept {
+        constexpr auto simd_size = basic_vector<E, A>::size();
         num = num <= simd_size ? num : simd_size;
         auto const low = dx::shift_left(lhs, num);
         auto const high =
@@ -65,7 +65,7 @@ private:
     template <size_t N, typename E, fixed_width_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(
-        basic_simd<E, A> lhs, basic_simd<E, A> rhs) noexcept {
+        basic_vector<E, A> lhs, basic_vector<E, A> rhs) noexcept {
         static_assert(N <= simd_abi_traits<E, A>::size);
         constexpr auto size = 2 * simd_abi_traits<E, A>::size;
         auto const low = dx::shift_left(lhs, imm<N>);
@@ -75,13 +75,13 @@ private:
     }
 
 public:
-    template <simd_type L, simd_with<typename L::value_type> R>
+    template <simd_vector L, simd_with<typename L::value_type> R>
     requires same_abi_simd_as<L, R> && fixed_width_abi<common_abi_t<L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs, size_t num) noexcept {
         using A = typename L::abi_type; // Same ABI, just pick one
         if constexpr (unqualified_slide_left<L, R, A>) {
-            if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
+            if constexpr (canonical_vector<L> && canonical_vector<R>) {
                 if consteval {
                     using E = typename decltype(slide_left(
                         internal::abi<A>, lhs, rhs, num))::value_type;
@@ -92,37 +92,37 @@ public:
             } else {
                 return slide_left(internal::abi<A>, lhs, rhs, num);
             }
-        } else if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
+        } else if constexpr (canonical_vector<L> && canonical_vector<R>) {
             return fallback(lhs, rhs, num);
         } else {
             return operator()(
-                dx::to_basic_type(lhs), dx::to_basic_type(rhs), num);
+                dx::to_canonical(lhs), dx::to_canonical(rhs), num);
         }
     }
 
-    template <simd_type L, simd_with<typename L::value_type> R>
-    requires (!same_abi_simd_as<L, R> || scalable_simd<common_abi_t<L, R>>) &&
+    template <simd_vector L, simd_with<typename L::value_type> R>
+    requires (!same_abi_simd_as<L, R> || scalable_vector<common_abi_t<L, R>>) &&
         (unqualified_slide_left<L, R> ||
-            unqualified_slide_left<basic_type_t<L>, basic_type_t<R>>)
+            unqualified_slide_left<canonical_type_t<L>, canonical_type_t<R>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs, size_t num) noexcept {
         using A = common_abi_t<L, R>;
         if constexpr (unqualified_slide_left<L, R>) {
             return slide_left(internal::abi<A>, lhs, rhs, num);
         } else {
-            return slide_left(internal::abi<A>, dx::to_basic_type(lhs),
-                dx::to_basic_type(rhs), num);
+            return slide_left(internal::abi<A>, dx::to_canonical(lhs),
+                dx::to_canonical(rhs), num);
         }
     }
 
-    template <simd_type L, simd_with<typename L::value_type> R,
+    template <simd_vector L, simd_with<typename L::value_type> R,
         integral_constant_like N>
     requires same_abi_simd_as<L, R> && fixed_width_abi<common_abi_t<L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs, N num) noexcept {
         using A = typename L::abi_type; // Same ABI, just pick one
         if constexpr (unqualified_slide_lefti<N, L, R, A>) {
-            if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
+            if constexpr (canonical_vector<L> && canonical_vector<R>) {
                 if consteval {
                     using E = typename decltype(slide_left<N::value>(
                         internal::abi<A>, lhs, rhs))::value_type;
@@ -133,27 +133,28 @@ public:
             } else {
                 return slide_left<N::value>(internal::abi<A>, lhs, rhs);
             }
-        } else if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
+        } else if constexpr (canonical_vector<L> && canonical_vector<R>) {
             return fallback<N::value>(lhs, rhs);
         } else {
             return operator()(
-                dx::to_basic_type(lhs), dx::to_basic_type(rhs), num);
+                dx::to_canonical(lhs), dx::to_canonical(rhs), num);
         }
     }
 
-    template <simd_type L, simd_with<typename L::value_type> R,
+    template <simd_vector L, simd_with<typename L::value_type> R,
         integral_constant_like N>
-    requires (!same_abi_simd_as<L, R> || scalable_simd<common_abi_t<L, R>>) &&
+    requires (!same_abi_simd_as<L, R> || scalable_vector<common_abi_t<L, R>>) &&
         (unqualified_slide_lefti<N, L, R> ||
-            unqualified_slide_lefti<N, basic_type_t<L>, basic_type_t<R>>)
+            unqualified_slide_lefti<N, canonical_type_t<L>,
+                canonical_type_t<R>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs, N num) noexcept {
         using A = common_abi_t<L, R>;
         if constexpr (unqualified_slide_left<L, N>) {
             return slide_left<N::value>(internal::abi<A>, lhs, rhs);
         } else {
-            return slide_left<N::value>(internal::abi<A>,
-                dx::to_basic_type(lhs), dx::to_basic_type(rhs));
+            return slide_left<N::value>(
+                internal::abi<A>, dx::to_canonical(lhs), dx::to_canonical(rhs));
         }
     }
 };
@@ -163,7 +164,7 @@ private:
     template <typename E, fixed_width_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(
-        basic_simd<E, A> lhs, basic_simd<E, A> rhs, size_t num) noexcept {
+        basic_vector<E, A> lhs, basic_vector<E, A> rhs, size_t num) noexcept {
         num = num <= simd_abi_traits<E, A>::size ? num
                                                  : simd_abi_traits<E, A>::size;
         return slide_left_t::operator()(
@@ -173,19 +174,19 @@ private:
     template <size_t N, typename E, fixed_width_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallbacki(
-        basic_simd<E, A> lhs, basic_simd<E, A> rhs) noexcept {
+        basic_vector<E, A> lhs, basic_vector<E, A> rhs) noexcept {
         constexpr auto num = simd_abi_traits<E, A>::size - N;
         return slide_left_t::operator()(lhs, rhs, imm<num>);
     }
 
 public:
-    template <simd_type L, simd_with<typename L::value_type> R>
+    template <simd_vector L, simd_with<typename L::value_type> R>
     requires same_abi_simd_as<L, R> && fixed_width_abi<common_abi_t<L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs, size_t num) noexcept {
         using A = typename L::abi_type; // Same ABI, just pick one
         if constexpr (unqualified_slide_right<L, R, A>) {
-            if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
+            if constexpr (canonical_vector<L> && canonical_vector<R>) {
                 if consteval {
                     using E = typename decltype(slide_right(
                         internal::abi<A>, lhs, rhs, num))::value_type;
@@ -196,37 +197,37 @@ public:
             } else {
                 return slide_right(internal::abi<A>, lhs, rhs, num);
             }
-        } else if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
+        } else if constexpr (canonical_vector<L> && canonical_vector<R>) {
             return fallback(lhs, rhs, num);
         } else {
             return operator()(
-                dx::to_basic_type(lhs), dx::to_basic_type(rhs), num);
+                dx::to_canonical(lhs), dx::to_canonical(rhs), num);
         }
     }
 
-    template <simd_type L, simd_with<typename L::value_type> R>
-    requires (!same_abi_simd_as<L, R> || scalable_simd<common_abi_t<L, R>>) &&
+    template <simd_vector L, simd_with<typename L::value_type> R>
+    requires (!same_abi_simd_as<L, R> || scalable_vector<common_abi_t<L, R>>) &&
         (unqualified_slide_right<L, R> ||
-            unqualified_slide_right<basic_type_t<L>, basic_type_t<R>>)
+            unqualified_slide_right<canonical_type_t<L>, canonical_type_t<R>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs, size_t num) noexcept {
         using A = common_abi_t<L, R>;
         if constexpr (unqualified_slide_right<L, R>) {
             return slide_right(internal::abi<A>, lhs, rhs, num);
         } else {
-            return slide_right(internal::abi<A>, dx::to_basic_type(lhs),
-                dx::to_basic_type(rhs), num);
+            return slide_right(internal::abi<A>, dx::to_canonical(lhs),
+                dx::to_canonical(rhs), num);
         }
     }
 
-    template <simd_type L, simd_with<typename L::value_type> R,
+    template <simd_vector L, simd_with<typename L::value_type> R,
         integral_constant_like N>
     requires same_abi_simd_as<L, R> && fixed_width_abi<common_abi_t<L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs, N num) noexcept {
         using A = typename L::abi_type; // Same ABI, just pick one
         if constexpr (unqualified_slide_righti<N, L, R, A>) {
-            if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
+            if constexpr (canonical_vector<L> && canonical_vector<R>) {
                 if consteval {
                     using E = typename decltype(slide_right<N::value>(
                         internal::abi<A>, lhs, rhs))::value_type;
@@ -237,27 +238,28 @@ public:
             } else {
                 return slide_right<N::value>(internal::abi<A>, lhs, rhs);
             }
-        } else if constexpr (basic_simd_type<L> && basic_simd_type<R>) {
+        } else if constexpr (canonical_vector<L> && canonical_vector<R>) {
             return fallbacki<N::value>(lhs, rhs);
         } else {
             return operator()(
-                dx::to_basic_type(lhs), dx::to_basic_type(rhs), num);
+                dx::to_canonical(lhs), dx::to_canonical(rhs), num);
         }
     }
 
-    template <simd_type L, simd_with<typename L::value_type> R,
+    template <simd_vector L, simd_with<typename L::value_type> R,
         integral_constant_like N>
-    requires (!same_abi_simd_as<L, R> || scalable_simd<common_abi_t<L, R>>) &&
+    requires (!same_abi_simd_as<L, R> || scalable_vector<common_abi_t<L, R>>) &&
         (unqualified_slide_righti<N, L, R> ||
-            unqualified_slide_righti<N, basic_type_t<L>, basic_type_t<R>>)
+            unqualified_slide_righti<N, canonical_type_t<L>,
+                canonical_type_t<R>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs, N num) noexcept {
         using A = common_abi_t<L, R>;
         if constexpr (unqualified_slide_right<L, N>) {
             return slide_right<N::value>(internal::abi<A>, lhs, rhs);
         } else {
-            return slide_right<N::value>(internal::abi<A>,
-                dx::to_basic_type(lhs), dx::to_basic_type(rhs));
+            return slide_right<N::value>(
+                internal::abi<A>, dx::to_canonical(lhs), dx::to_canonical(rhs));
         }
     }
 };
@@ -278,7 +280,7 @@ private:
     }
 
 public:
-    template <simd_type L, simd_with<typename L::value_type> R>
+    template <simd_vector L, simd_with<typename L::value_type> R>
     requires regular_invocable<slide_left_t, L, R, immediate<V>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs) noexcept {
@@ -304,7 +306,7 @@ private:
     }
 
 public:
-    template <simd_type L, simd_with<typename L::value_type> R>
+    template <simd_vector L, simd_with<typename L::value_type> R>
     requires regular_invocable<slide_right_t, L, R, immediate<V>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs) noexcept {

@@ -15,7 +15,8 @@ import :std.utility;
 
 // IWYU pragma: begin_exports
 #include "dpl/core/basic/aligned.h"
-#include "dpl/core/basic/basic_simd.h"
+#include "dpl/core/basic/basic_mask.h"
+#include "dpl/core/basic/basic_vector.h"
 #include "dpl/core/basic/broadcast.h"
 #include "dpl/core/basic/broadcastable_base.h"
 #include "dpl/core/basic/extract.h"
@@ -23,8 +24,7 @@ import :std.utility;
 #include "dpl/core/basic/immediate_mask.h"
 #include "dpl/core/basic/initialize.h"
 #include "dpl/core/basic/load.h"
-#include "dpl/core/basic/simd_mask.h"
 #include "dpl/core/basic/store.h"
-#include "dpl/core/basic/to_basic_type.h"
+#include "dpl/core/basic/to_canonical.h"
 #include "dpl/core/basic/to_native_type.h"
 // IWYU pragma: end_exports
