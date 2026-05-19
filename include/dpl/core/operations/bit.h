@@ -10,10 +10,10 @@
 #include "dpl/core/operations/transform.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/basic/immediate_mask.h"
+#  include "dpl/core/basic/const_mask.h"
 #  include "dpl/core/concepts/common_bits_with.h"
 #  include "dpl/core/concepts/compatible_mask_with.h"
-#  include "dpl/core/concepts/immediate_mask_like.h"
+#  include "dpl/core/concepts/const_mask_like.h"
 #  include "dpl/core/concepts/integral_simd.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_traits.h"
@@ -119,17 +119,17 @@ concept unqualified_mbit_select = requires(C cond, L lhs, R rhs) {
 
 template <typename M, typename L, typename R, typename A = common_abi_t<L, R>>
 concept unqualified_bit_selecti =
-    immediate_mask_for<M, L> && requires(L lhs, R rhs) {
+    const_mask_for<M, L> && requires(L lhs, R rhs) {
         {
-            bit_select<immediate_mask_v<L, M>>(internal::abi<A>, lhs, rhs)
+            bit_select<const_mask_v<L, M>>(internal::abi<A>, lhs, rhs)
         } -> bit_result<L, R>;
     };
 
 template <typename M, typename L, typename R, typename A = common_abi_t<L, R>>
 concept unqualified_mbit_selecti =
-    immediate_mask_for<M, L> && requires(L lhs, R rhs) {
+    const_mask_for<M, L> && requires(L lhs, R rhs) {
         {
-            bit_select<immediate_mask_v<L, M>>(internal::abi<A>, lhs, rhs)
+            bit_select<const_mask_v<L, M>>(internal::abi<A>, lhs, rhs)
         } -> mbit_result<L, R>;
     };
 
@@ -232,10 +232,11 @@ public:
         }
     }
 
-    template <simd_class R, immediate_mask_for<R> L>
+    template <simd_class R, const_mask_for<R> L>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs) noexcept {
-        constexpr auto V = decltype(dx::to_immediate_mask<R>(lhs))::value;
+        constexpr auto V =
+            decltype(dx::to_compatible_const_mask<R>(lhs))::value;
         if constexpr (requires {
                           {
                               bit_drop<V>(internal::abi<R>, rhs)
@@ -286,7 +287,7 @@ template <auto V>
 struct bit_dropi_t {
 private:
     template <typename T>
-    using imm_mask DPL_NODEBUG = make_immediate_mask_t<T, V>;
+    using imm_mask DPL_NODEBUG = make_const_mask_t<T, V>;
 
 public:
     template <simd_class T>
@@ -400,10 +401,11 @@ public:
         }
     }
 
-    template <simd_class R, immediate_mask_for<R> L>
+    template <simd_class R, const_mask_for<R> L>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs) noexcept {
-        constexpr auto V = decltype(dx::to_immediate_mask<R>(lhs))::value;
+        constexpr auto V =
+            decltype(dx::to_compatible_const_mask<R>(lhs))::value;
         if constexpr (requires {
                           {
                               bit_fill<V>(internal::abi<R>, rhs)
@@ -454,7 +456,7 @@ template <auto V>
 struct bit_filli_t {
 private:
     template <typename T>
-    using mask_type DPL_NODEBUG = make_immediate_mask_t<T, V>;
+    using mask_type DPL_NODEBUG = make_const_mask_t<T, V>;
 
 public:
     template <simd_class T>
@@ -568,10 +570,11 @@ public:
         }
     }
 
-    template <simd_class R, immediate_mask_for<R> L>
+    template <simd_class R, const_mask_for<R> L>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs) noexcept {
-        constexpr auto V = decltype(dx::to_immediate_mask<R>(lhs))::value;
+        constexpr auto V =
+            decltype(dx::to_compatible_const_mask<R>(lhs))::value;
         if constexpr (requires {
                           {
                               bit_keep<V>(internal::abi<R>, rhs)
@@ -622,7 +625,7 @@ template <auto V>
 struct bit_keepi_t {
 private:
     template <typename T>
-    using mask_type DPL_NODEBUG = make_immediate_mask_t<T, V>;
+    using mask_type DPL_NODEBUG = make_const_mask_t<T, V>;
 
 public:
     template <simd_class T>
@@ -741,10 +744,11 @@ public:
         }
     }
 
-    template <simd_class R, immediate_mask_for<R> L>
+    template <simd_class R, const_mask_for<R> L>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(L lhs, R rhs) noexcept {
-        constexpr auto V = decltype(dx::to_immediate_mask<R>(lhs))::value;
+        constexpr auto V =
+            decltype(dx::to_compatible_const_mask<R>(lhs))::value;
         if constexpr (requires {
                           {
                               bit_stencil<V>(internal::abi<R>, rhs)
@@ -795,7 +799,7 @@ template <auto V>
 struct bit_stencili_t {
 private:
     template <typename T>
-    using mask_type DPL_NODEBUG = make_immediate_mask_t<T, V>;
+    using mask_type DPL_NODEBUG = make_const_mask_t<T, V>;
 
 public:
     template <simd_class T>
@@ -861,7 +865,8 @@ private:
     template <typename T, typename F, typename M>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto impli(M mask, T tval, F fval) {
-        constexpr auto V = decltype(dx::to_immediate_mask<T>(mask))::value;
+        constexpr auto V =
+            decltype(dx::to_compatible_const_mask<T>(mask))::value;
         using A = T::abi_type;
         if constexpr (unqualified_bit_selecti<M, T, F, A> ||
             unqualified_mbit_selecti<M, T, F, A>) {
@@ -904,16 +909,14 @@ private:
     }
 
 public:
-    template <simd_vector T, common_bits_simd_with<T> F,
-        immediate_mask_for<T> M>
+    template <simd_vector T, common_bits_simd_with<T> F, const_mask_for<T> M>
     requires same_abi_simd_as<T, F>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, T tval, F fval) noexcept {
         return impli(mask, tval, fval);
     }
 
-    template <simd_vector T, common_bits_simd_with<T> F,
-        immediate_mask_for<T> M>
+    template <simd_vector T, common_bits_simd_with<T> F, const_mask_for<T> M>
     requires (!same_abi_simd_as<T, F>) &&
         (unqualified_bit_selecti<M, T, F> ||
             unqualified_bit_selecti<M, canonical_type_t<T>,
@@ -921,7 +924,8 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, T tval, F fval) noexcept {
         using A = common_abi_t<T, F>;
-        constexpr auto V = decltype(dx::to_immediate_mask<T>(mask))::value;
+        constexpr auto V =
+            decltype(dx::to_compatible_const_mask<T>(mask))::value;
         if constexpr (unqualified_bit_selecti<M, T, F>) {
             return bit_select<V>(internal::abi<A>, tval, fval);
         } else {
@@ -964,7 +968,7 @@ private:
     friend binary_operation_base<bit_selecti_t>;
 
     template <typename T>
-    using mask_type DPL_NODEBUG = make_immediate_mask_t<T, V>;
+    using mask_type DPL_NODEBUG = make_const_mask_t<T, V>;
 
     template <simd_abi A, simd_class L, typename R>
     requires unqualified_bit_selecti<mask_type<L>, L, R, A> ||
@@ -1116,7 +1120,7 @@ public:
         return __DPL popcount(T::value);
     }
 
-    template <immediate_mask_like T>
+    template <const_mask_like T>
     static consteval size_t operator()(T val) noexcept {
         if constexpr (requires {
                           { popcount(val) } -> core_convertible_to<size_t>;
@@ -1244,7 +1248,7 @@ public:
         return __DPL countl_zero(T::value);
     }
 
-    template <immediate_mask_like T>
+    template <const_mask_like T>
     static consteval size_t operator()(T val) noexcept {
         if constexpr (requires {
                           { countl_zero(val) } -> core_convertible_to<size_t>;
@@ -1376,7 +1380,7 @@ public:
         return __DPL countl_one(T::value);
     }
 
-    template <immediate_mask_like T>
+    template <const_mask_like T>
     static consteval size_t operator()(T val) noexcept {
         if constexpr (requires {
                           { countl_one(val) } -> core_convertible_to<size_t>;
@@ -1504,7 +1508,7 @@ public:
         return __DPL countr_zero(T::value);
     }
 
-    template <immediate_mask_like T>
+    template <const_mask_like T>
     static consteval size_t operator()(T val) noexcept {
         if constexpr (requires {
                           { countr_zero(val) } -> core_convertible_to<size_t>;
@@ -1631,7 +1635,7 @@ public:
         return __DPL countr_one(T::value);
     }
 
-    template <immediate_mask_like T>
+    template <const_mask_like T>
     static consteval size_t operator()(T val) noexcept {
         if constexpr (requires {
                           { countr_one(val) } -> core_convertible_to<size_t>;

@@ -24,17 +24,16 @@ concept unqualified_inner_product = requires(L lhs, R rhs) {
 };
 
 template <typename M, typename L, typename R, typename A = common_abi_t<L, R>>
-concept unqualified_inner_producti = immediate_mask_for<M, L> &&
-    immediate_mask_for<M, R> && requires(L lhs, R rhs) {
+concept unqualified_inner_producti =
+    const_mask_for<M, L> && const_mask_for<M, R> && requires(L lhs, R rhs) {
         {
-            inner_product<immediate_mask_v<M, L>>(internal::abi<A>, lhs, rhs)
+            inner_product<const_mask_v<M, L>>(internal::abi<A>, lhs, rhs)
         } -> arithmetic_result<L, R>;
     };
 
 template <typename L, typename R, typename... Args>
-concept basic_inner_product =
-    simd_vector<L> && (... && immediate_mask_for<Args, L>) &&
-    (... && immediate_mask_for<Args, R>) &&
+concept basic_inner_product = simd_vector<L> &&
+    (... && const_mask_for<Args, L>) && (... && const_mask_for<Args, R>) &&
     requires(canonical_type_t<L> lhs, canonical_type_t<L> rhs, Args... mask) {
         dx::reduce(mask..., dx::multiply(lhs, rhs), dx::add);
     };
@@ -96,12 +95,12 @@ public:
     }
 
     template <simd_vector L, common_arithmetic_simd_with<L> R,
-        immediate_mask_for<L> M>
+        const_mask_for<L> M>
     requires same_abi_simd_as<L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, L lhs, R rhs) noexcept {
         using A = typename L::abi_type;
-        constexpr auto V = immediate_mask_v<L, M>;
+        constexpr auto V = const_mask_v<L, M>;
         if constexpr (unqualified_inner_producti<M, L, R, A>) {
             if constexpr (canonical_vector<L> && canonical_vector<R>) {
                 if consteval {
@@ -123,7 +122,7 @@ public:
     }
 
     template <simd_vector L, common_arithmetic_simd_with<L> R,
-        immediate_mask_for<L> M>
+        const_mask_for<L> M>
     requires (!same_abi_simd_as<L, R>) &&
         (unqualified_inner_producti<M, L, R> ||
             unqualified_inner_producti<M, canonical_type_t<L>,
@@ -131,7 +130,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M, L lhs, R rhs) noexcept {
         using A = common_abi_t<L, R>;
-        constexpr auto V = immediate_mask_v<L, M>;
+        constexpr auto V = const_mask_v<L, M>;
         if constexpr (unqualified_inner_producti<M, L, R>) {
             return inner_product<V>(internal::abi<A>, lhs, rhs);
         } else {
@@ -147,7 +146,7 @@ template <integral auto V>
 struct inner_producti_t<V> : binary_operation_base<inner_producti_t<V>> {
 private:
     template <typename T>
-    using mask_type DPL_NODEBUG = make_immediate_mask_t<T, V>;
+    using mask_type DPL_NODEBUG = make_const_mask_t<T, V>;
 
 public:
     template <fixed_width_vector L, common_arithmetic_simd_with<L> R>

@@ -38,7 +38,7 @@ requires invocable<Op, basic_vector<InEs, A>...> &&
 }
 
 template <typename Op, fixed_width_abi A, simd_element_for<A> PassE,
-    immediate_mask_for<basic_vector<PassE, A>> M, simd_element_for<A>... InEs>
+    const_mask_for<basic_vector<PassE, A>> M, simd_element_for<A>... InEs>
 requires invocable<Op, basic_vector<InEs, A>...> &&
     same_as<invoke_result_t<Op, basic_vector<InEs, A>...>,
         basic_vector<PassE, A>>
@@ -52,7 +52,7 @@ requires invocable<Op, basic_vector<InEs, A>...> &&
 template <typename Op, fixed_width_abi A, typename M,
     simd_element_for<A>... InEs>
 requires invocable<Op, basic_vector<InEs, A>...> &&
-    immediate_mask_for<M, invoke_result_t<Op, basic_vector<InEs, A>...>>
+    const_mask_for<M, invoke_result_t<Op, basic_vector<InEs, A>...>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) constexpr auto masked(
     M mask, basic_vector<InEs, A>... args) noexcept {
     constexpr Op operation{};
@@ -105,6 +105,11 @@ namespace datapar {
 
 DPL_EXPORT struct masked_operation_t {
     explicit consteval masked_operation_t() noexcept = default;
+
+    template <integral_constant_like T>
+    consteval operator T(this masked_operation_t) noexcept {
+        return T{};
+    }
 };
 
 DPL_EXPORT inline constexpr masked_operation_t masked_operation{};

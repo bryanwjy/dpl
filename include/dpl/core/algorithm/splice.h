@@ -29,12 +29,11 @@ concept unqualified_splice = requires(C cond, L lhs, R rhs) {
 };
 
 template <typename C, typename L, typename R, typename A = common_abi_t<L, R>>
-concept unqualified_splicei =
-    immediate_mask_for<C, L> && requires(L lhs, R rhs) {
-        {
-            splice<immediate_mask_v<L, C>>(internal::abi<A>, lhs, rhs)
-        } -> ternary_result_of<L, R, A>;
-    };
+concept unqualified_splicei = const_mask_for<C, L> && requires(L lhs, R rhs) {
+    {
+        splice<const_mask_v<L, C>>(internal::abi<A>, lhs, rhs)
+    } -> ternary_result_of<L, R, A>;
+};
 
 struct splice_t {
 private:
@@ -52,7 +51,7 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallbacki(
         basic_vector<EL, A> lhs, basic_vector<ER, A> rhs) noexcept {
-        constexpr immediate_mask<simd_abi_traits<EL, A>::size, V> inmask{};
+        constexpr const_mask<simd_abi_traits<EL, A>::size, V> inmask{};
         constexpr auto low = dx::countr_zero(inmask);
         constexpr auto high = dx::countr_zero(inmask);
         return dx::slide_left(
@@ -100,12 +99,13 @@ public:
         }
     }
 
-    template <simd_vector L, selectablei_with<L> R, immediate_mask_for<L> M>
+    template <simd_vector L, selectablei_with<L> R, const_mask_for<L> M>
     requires same_abi_simd_as<L, R> && fixed_width_abi<common_abi_t<L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, L lhs, R rhs) noexcept {
         using A = typename L::abi_type;
-        constexpr auto V = decltype(dx::to_immediate_mask<L>(mask))::value;
+        constexpr auto V =
+            decltype(dx::to_compatible_const_mask<L>(mask))::value;
         if constexpr (unqualified_splicei<M, L, R, A>) {
             if constexpr (canonical_vector<L> && canonical_vector<R>) {
                 if consteval {
@@ -124,14 +124,15 @@ public:
         }
     }
 
-    template <simd_vector L, selectablei_with<L> R, immediate_mask_for<L> M>
+    template <simd_vector L, selectablei_with<L> R, const_mask_for<L> M>
     requires (!same_abi_simd_as<L, R> || scalable_abi<common_abi_t<L, R>>) &&
         (unqualified_splicei<M, L, R> ||
             unqualified_splicei<M, canonical_type_t<L>, canonical_type_t<R>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, L lhs, R rhs) noexcept {
         using A = common_abi_t<L, R>;
-        constexpr auto V = decltype(dx::to_immediate_mask<L>(mask))::value;
+        constexpr auto V =
+            decltype(dx::to_compatible_const_mask<L>(mask))::value;
         if constexpr (unqualified_splicei<M, L, R>) {
             return splice<V>(internal::abi<A>, lhs, rhs);
         } else {
@@ -148,7 +149,7 @@ template <integral auto V>
 struct splicei_t<V> : binary_operation_base<splicei_t<V>> {
 private:
     template <typename T>
-    using mask_type DPL_NODEBUG = immediate_mask<simd_abi_traits<T>::size, V>;
+    using mask_type DPL_NODEBUG = const_mask<simd_abi_traits<T>::size, V>;
 
 public:
     template <simd_vector L, simd_vector R>

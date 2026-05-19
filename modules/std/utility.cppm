@@ -6,15 +6,18 @@ module;
 
 export module dpl:std.utility;
 export import :std.stddef;
+import :std.bit;
 import :std.type_traits;
 import :std.concepts;
 
 // IWYU pragma: begin_exports
 #include "dpl/std/utility/apply.h"
 #include "dpl/std/utility/as_const.h"
+#include "dpl/std/utility/bitset.h"
 #include "dpl/std/utility/exchange.h"
 #include "dpl/std/utility/forward.h"
 #include "dpl/std/utility/forward_like.h"
+#include "dpl/std/utility/ignore.h"
 #include "dpl/std/utility/move.h"
 #include "dpl/std/utility/sequence.h"
 #include "dpl/std/utility/structured_bindings.h"

@@ -17,6 +17,7 @@
 #  include "dpl/std/concepts/convertible_to.h"
 #  include "dpl/std/concepts/invocable.h"
 #  include "dpl/std/concepts/same_as.h"
+#  include "dpl/std/utility/bitset.h"
 #  include "dpl/std/utility/forward.h"
 #endif
 
@@ -26,19 +27,18 @@ namespace datapar::internal {
 template <typename>
 void initialize(...) noexcept = delete;
 
-template <typename...>
+template <typename, typename = ignore_t>
 struct initialize_t {};
 
-template <simd_abi A, simd_element_for<A> E>
-requires fixed_width_abi<A>
-struct initialize_t<A, E> {
-private:
-    using barray_type DPL_NODEBUG = bool[simd_abi_traits<E, A>::size];
-    using array_type DPL_NODEBUG = E[simd_abi_traits<E, A>::size];
+template <typename T, different_from<ignore_t> U>
+struct initialize_t<T, U> {
+    using E = conditional_t<simd_abi<T>, U, T>;
+    using A = conditional_t<simd_abi<T>, T, U>;
 
 public:
     template <core_convertible_to<E>... Args>
-    requires array_initializable<array_type, Args...> &&
+    requires fixed_width_abi<A> && simd_element_for<E, A> &&
+        array_initializable<E[simd_abi_traits<E, A>::size], Args...> &&
         (... && !same_as<bool, Args>)
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
         static constexpr basic_vector<E, A> operator()(Args&&... args) noexcept
@@ -49,52 +49,67 @@ public:
         return initialize<E>(internal::abi<A>, __DPL forward<Args>(args)...);
     }
 
-    template <same_as<bool>... Bs>
-    requires array_initializable<barray_type, Bs...>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr basic_mask<E, A> operator()(Bs... args) noexcept
+    static constexpr basic_mask<E, A> operator()(
+        bitset<simd_abi_traits<A, E>::size> data) noexcept
+    requires fixed_width_abi<A> && simd_element_for<E, A> &&
+        requires { initialize<E>(internal::abi<A>, data); }
+    {
+        return initialize<E>(internal::abi<A>, data);
+    }
+
+    template <core_convertible_to<E>... Args>
+    requires scalable_abi<A> && simd_element_for<E, A> &&
+        array_initializable<E[sizeof...(Args)], Args...> &&
+        (... && !same_as<bool, Args>)
+        DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+        static constexpr basic_vector<E, A> operator()(Args&&... args) noexcept
     requires requires {
-        initialize<E>(internal::abi<A>, static_cast<bool>(args)...);
+        initialize<E>(internal::abi<A>, __DPL forward<Args>(args)...);
     }
     {
-        return initialize<E>(internal::abi<A>, static_cast<bool>(args)...);
+        return initialize<E>(internal::abi<A>, __DPL forward<Args>(args)...);
+    }
+
+    template <size_t W>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr basic_mask<E, A> operator()(bitset<W> data) noexcept
+    requires scalable_abi<A> && simd_element_for<E, A> &&
+        requires { initialize<E>(internal::abi<A>, data); }
+    {
+        return initialize<E>(internal::abi<A>, data);
     }
 };
 
-template <simd_abi A, simd_element_for<A> E>
-struct initialize_t<E, A> : initialize_t<A, E> {};
-
 template <canonical_class T>
 requires fixed_width_class<T>
-struct initialize_t<T> {
+struct initialize_t<T, ignore_t> {
 private:
     using A DPL_NODEBUG = typename T::abi_type;
-    using E DPL_NODEBUG = typename T::value_type; // bool for masks
-    using array_type DPL_NODEBUG = E[simd_abi_traits<T>::size];
+    using E DPL_NODEBUG = simd_lane_type_t<T>;
 
 public:
-    template <core_convertible_to<E>... Args>
-    requires array_initializable<array_type, Args...>
+    template <typename... Args>
+    requires regular_invocable<initialize_t<A, E>, Args...>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr T operator()(Args&&... args) noexcept
-    requires simd_vector<T> && regular_invocable<initialize_t<A, E>, Args...>
+    requires simd_vector<T>
     {
         return initialize_t<A, E>::operator()(__DPL forward<Args>(args)...);
     }
 
-    template <same_as<bool>... Bs>
-    requires array_initializable<array_type, Bs...>
+    template <size_t W>
+    requires regular_invocable<initialize_t<A, E>, bitset<W>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr T operator()(Bs... args) noexcept
-    requires simd_mask<T> &&
-        regular_invocable<initialize_t<A, simd_lane_type_t<T>>, Bs...>
+    static constexpr T operator()(bitset<W> data) noexcept
+    requires simd_mask<T>
     {
-        return initialize_t<A, simd_lane_type_t<T>>::operator()(args...);
+        return initialize_t<A, E>::operator()(data);
     }
 };
 
 template <simd_abi A>
-struct initialize_t<A> {
+struct initialize_t<A, ignore_t> {
 private:
     template <typename... Es>
     requires requires {
@@ -104,10 +119,10 @@ private:
     using deduced_simd DPL_NODEBUG =
         basic_vector<decay_t<common_type_t<Es...>>, A>;
 
-    template <same_as<bool>... Bs>
-    requires (has_single_bit(sizeof...(Bs)) && A::size >= sizeof...(Bs))
+    template <size_t W>
+    requires fixed_width_abi<A> && (__DPL has_single_bit(W))
     using deduced_mask DPL_NODEBUG =
-        basic_mask<bit_type_t<(A::size / sizeof...(Bs)) * char_bit_v>, A>;
+        basic_mask<bit_type_t<(A::size * char_bit_v / W)>, A>;
 
 public:
     template <typename... Args>
@@ -119,19 +134,18 @@ public:
             __DPL forward<Args>(args)...);
     }
 
-    template <same_as<bool>... Bs>
-    requires requires { typename deduced_mask<Bs...>; } &&
-        regular_invocable<initialize_t<deduced_mask<Bs...>>, Bs...>
+    template <size_t W>
+    requires requires { typename deduced_mask<W>; } &&
+        regular_invocable<initialize_t<deduced_mask<W>>, bitset<W>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr deduced_mask<Bs...> operator()(Bs... args) noexcept {
-        return initialize_t<deduced_mask<Bs...>>::operator()(args...);
+    static constexpr deduced_mask<W> operator()(bitset<W> data) noexcept {
+        return initialize_t<deduced_mask<W>>::operator()(data);
     }
 };
 
-template <simd_class T>
-struct initialize_t<T> {
+template <extended_class T>
+struct initialize_t<T, ignore_t> {
 private:
-    using E DPL_NODEBUG = typename T::value_type; // bool for masks
     using base_type DPL_NODEBUG = initialize_t<canonical_type_t<T>>;
 
 public:
@@ -139,10 +153,15 @@ public:
     requires regular_invocable<base_type, Args...>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr T operator()(Args&&... args) noexcept
-    requires explicitly_convertible_to<canonical_type_t<T>, T>
+    requires constructible_from<T, Args...> ||
+        explicitly_convertible_to<canonical_type_t<T>, T>
     {
-        return static_cast<T>(
-            base_type::operator()( __DPL forward<Args>(args)...));
+        if constexpr (constructible_from<T, Args...>) {
+            return T(__DPL forward<Args>(args)...);
+        } else {
+            return static_cast<T>(
+                base_type::operator()( __DPL forward<Args>(args)...));
+        }
     }
 };
 } // namespace datapar::internal

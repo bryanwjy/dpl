@@ -15,11 +15,11 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
 DPL_EXPORT template <typename T>
-inline constexpr bool enable_immediate_mask = false;
+inline constexpr bool enable_const_mask = false;
 
 template <typename T>
-concept immediate_mask_like = enable_immediate_mask<T> &&
-    integral_constant_like<T> && unsigned_integral<typename T::value_type> &&
+concept const_mask_like = enable_const_mask<T> && integral_constant_like<T> &&
+    unsigned_integral<typename T::value_type> &&
     requires { typename integral_constant<size_t, T::width>; } &&
     (T::width < sizeof(typename T::value_type) * char_bit_v);
 } // namespace datapar

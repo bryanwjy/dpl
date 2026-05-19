@@ -30,7 +30,7 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::xmm {
-DPL_EXPORT template <simd_element E>
+DPL_EXPORT template <simd_element_for<abi_tag> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr simd<E> broadcast(abi_tag tag, type_identity_t<E> scalar) noexcept {
     static_assert(!is_const_v<E> && !is_volatile_v<E>);
@@ -61,20 +61,22 @@ constexpr simd<E> broadcast(abi_tag tag, type_identity_t<E> scalar) noexcept {
     }
 }
 
-DPL_EXPORT template <simd_element E>
+DPL_EXPORT template <simd_element_for<abi_tag> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr mask<E> broadcast(abi_tag tag, same_as<bool> auto scalar) noexcept {
     static_assert(!is_const_v<E> && !is_volatile_v<E>);
-    return +xmm::broadcast(tag, scalar ? dx::all_bits_v<E> : dx::zero);
+    return +xmm::initialize(tag,
+        scalar ? ~bitset<simd_abi_traits<abi_tag, E>::size>()
+               : bitset<simd_abi_traits<abi_tag, E>::size>());
 }
 
-DPL_EXPORT template <simd_element E>
+DPL_EXPORT template <simd_element_for<abi_tag> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr simd<E> broadcast(type_identity_t<E> scalar) noexcept {
     return xmm::broadcast<E>(xmm::abi, scalar);
 }
 
-DPL_EXPORT template <simd_element E>
+DPL_EXPORT template <simd_element_for<abi_tag> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr mask<E> broadcast(same_as<bool> auto scalar) noexcept {
     return xmm::broadcast<E>(xmm::abi, scalar);

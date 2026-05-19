@@ -23,9 +23,9 @@ concept unqualified_hsum = requires(T val) {
 };
 
 template <typename M, typename T>
-concept unqualified_hsumi = immediate_mask_for<M, T> && requires(T val) {
+concept unqualified_hsumi = const_mask_for<M, T> && requires(T val) {
     {
-        hsum<immediate_mask_v<T, M>>(internal::abi<T>, val)
+        hsum<const_mask_v<T, M>>(internal::abi<T>, val)
     } -> equivalent_simd_as<T>;
 };
 
@@ -79,10 +79,10 @@ public:
         }
     }
 
-    template <arithmetic_vector T, immediate_mask_for<T> M>
+    template <arithmetic_vector T, const_mask_for<T> M>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, T arg) noexcept {
-        constexpr auto V = immediate_mask_v<T, M>;
+        constexpr auto V = const_mask_v<T, M>;
         if constexpr (unqualified_hsumi<M, T>) {
             if constexpr (canonical_vector<T>) {
                 if consteval {
@@ -109,7 +109,7 @@ template <integral auto V>
 struct hsumi_t<V> {
 private:
     template <typename T>
-    using mask_type DPL_NODEBUG = make_immediate_mask_t<T, V>;
+    using mask_type DPL_NODEBUG = make_const_mask_t<T, V>;
 
 public:
     template <arithmetic_vector T>

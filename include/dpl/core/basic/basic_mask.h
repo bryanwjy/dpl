@@ -18,6 +18,7 @@
 #  include "dpl/core/type_traits/simd_abi_traits.h"
 #  include "dpl/std/bit/bit_cast.h"
 #  include "dpl/std/concepts/different_from.h"
+#  include "dpl/std/utility/bitset.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -40,7 +41,7 @@ class basic_mask<E, A> {
         } else if consteval {
             if constexpr (fixed_width_abi<A>) {
                 return [&]<size_t... Is>(index_sequence<Is...>) {
-                    return datapar::initialize<E, A>(other[imm<Is>]...);
+                    return datapar::initialize<E, A>(bitset(other[imm<Is>]...));
                 }(iota_sequence<E, A>);
             }
         }
@@ -68,10 +69,16 @@ public:
     __DPL_HIDE_FROM_ABI constexpr basic_mask(mask_type data) noexcept
         : mask_{data} {}
 
+    __DPL_HIDE_FROM_ABI constexpr basic_mask(
+        bitset<abi_traits::size> data) noexcept
+    requires fixed_width_abi<A>
+        : basic_mask(datapar::initialize<E, A>(data)) {}
+
     template <core_convertible_to<bool>... Bs>
-    requires fixed_width_abi<A> && (sizeof...(Bs) == abi_traits::size)
-    __DPL_HIDE_FROM_ABI constexpr basic_mask(Bs&&... args) noexcept
-        : basic_mask(datapar::initialize<A>(
+    requires fixed_width_abi<A>
+    __DPL_HIDE_FROM_ABI explicit(sizeof...(Bs) !=
+        abi_traits::size) constexpr basic_mask(Bs&&... args) noexcept
+        : basic_mask(bitset<abi_traits::size>(
               static_cast<bool>(__DPL forward<Bs>(args))...)) {}
 
     template <different_from<E> E2>

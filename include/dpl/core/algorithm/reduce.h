@@ -7,8 +7,8 @@
 #include "dpl/core/algorithm/permute.h"
 
 #if !DPL_MODULES
+#  include "dpl/core/basic/const_mask.h"
 #  include "dpl/core/basic/immediate.h"
-#  include "dpl/core/basic/immediate_mask.h"
 #  include "dpl/core/basic/to_native_type.h"
 #  include "dpl/core/operations/bit.h"
 #  include "dpl/core/operations/logic.h"
@@ -46,15 +46,15 @@ concept unqualified_mreduce = requires(M mask, T val, BinaryOp op) {
 
 template <typename M, typename T, typename BinaryOp>
 concept unqualified_reducei =
-    immediate_mask_for<M, T> && requires(T val, BinaryOp op) {
+    const_mask_for<M, T> && requires(T val, BinaryOp op) {
         {
-            reduce<immediate_mask_v<T, M>>(internal::abi<T>, val, op)
+            reduce<const_mask_v<T, M>>(internal::abi<T>, val, op)
         } -> equivalent_simd_as<T>;
     };
 
 struct reduce_t {
 private:
-    template <immediate_mask_like M>
+    template <const_mask_like M>
     static constexpr size_t accumulations = __DPL popcount(dx::popcount(M{}));
     template <simd_vector T, reduction_operator_for<T> BinaryOp>
     static constexpr bool is_nothrow_v = is_nothrow_invocable_v<BinaryOp, T, T>;
@@ -143,7 +143,7 @@ public:
     template <fixed_width_vector T, reduction_operator_for<T> BinaryOp>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto operator()(T value, BinaryOp op) noexcept {
-        constexpr auto all = make_immediate_mask_t<T, -1>{};
+        constexpr auto all = make_const_mask_t<T, -1>{};
         if constexpr (unqualified_reduce<T, BinaryOp>) {
             if constexpr (canonical_vector<T>) {
                 if consteval {
@@ -163,14 +163,14 @@ public:
         }
     }
 
-    template <fixed_width_vector T, immediate_mask_for<T> M,
+    template <fixed_width_vector T, const_mask_for<T> M,
         reduction_operator_for<T> BinaryOp>
     requires reducible<T, M::value>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto operator()(M mask, T value, BinaryOp op) noexcept(
         is_nothrow_v<T, BinaryOp>) {
         if constexpr (unqualified_reduce<T, BinaryOp>) {
-            constexpr auto V = immediate_mask_v<T, M>;
+            constexpr auto V = const_mask_v<T, M>;
             if constexpr (canonical_vector<T>) {
                 if consteval {
                     using E = typename decltype(reduce<V>(
@@ -215,7 +215,7 @@ template <integral auto V>
 struct reducei_t<V> {
 private:
     template <typename T>
-    using mask_type DPL_NODEBUG = make_immediate_mask_t<T, V>;
+    using mask_type DPL_NODEBUG = make_const_mask_t<T, V>;
 
 public:
     template <arithmetic_vector T>

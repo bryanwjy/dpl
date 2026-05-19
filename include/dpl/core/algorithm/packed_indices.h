@@ -4,7 +4,7 @@
 #include "dpl/config.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/basic/immediate_mask.h"
+#  include "dpl/core/concepts/const_mask_like.h"
 #  include "dpl/core/constants/zero.h"
 #  include "dpl/core/operations/bit.h"
 #  include "dpl/std/bit/bit_ceil.h"
@@ -117,9 +117,10 @@ consteval packed_indices<N> rotate(packed_indices<N> val, size_t num) noexcept {
     }(make_index_sequence<N>{});
 }
 
-template <size_t N, auto V>
+template <size_t N, const_mask_like M>
+requires (M::width == N)
 consteval packed_indices<N> rotate(
-    immediate_mask<N, V> mask, packed_indices<N> val, size_t num) noexcept {
+    M mask, packed_indices<N> val, size_t num) noexcept {
     if constexpr (all_of(mask)) {
         return seq::rotate(val, num);
     } else if constexpr (none_of(mask)) {

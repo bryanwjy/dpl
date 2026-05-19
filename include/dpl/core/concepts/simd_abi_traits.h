@@ -8,7 +8,6 @@
 
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_class.h"
-#  include "dpl/core/concepts/simd_element.h"
 #  include "dpl/core/concepts/simd_lane_type.h"
 #  include "dpl/std/type_traits/constants.h"
 #endif
@@ -79,14 +78,15 @@ DPL_EXPORT template <simd_class T>
 struct simd_abi_traits<T> :
     simd_abi_traits<simd_lane_type_t<T>, typename T::abi_type> {};
 
-DPL_EXPORT template <typename E, scalable_abi A>
+DPL_EXPORT template <typename E, simd_abi A>
 struct simd_abi_traits<A, E> : simd_abi_traits<E, A> {};
 
 namespace internal {
 template <typename, typename>
 struct simd_abi_size {};
 
-template <simd_element E, scalable_abi A>
+template <typename E, scalable_abi A>
+requires simd_element_for<E, A>
 struct simd_abi_size<E, A> {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr size_t size() noexcept {
@@ -94,14 +94,16 @@ struct simd_abi_size<E, A> {
     }
 };
 
-template <simd_element E, fixed_width_abi A>
+template <typename E, fixed_width_abi A>
+requires simd_element_for<E, A>
 struct simd_abi_size<E, A> {
     static constexpr size_constant<simd_abi_traits<A>::template size<E>()>
         size{};
 };
 } // namespace internal
 
-DPL_EXPORT template <simd_element E, simd_abi A>
+DPL_EXPORT template <typename E, simd_abi A>
+requires simd_element_for<E, A>
 struct simd_abi_traits<E, A> : private internal::simd_abi_size<E, A> {
 private:
     static_assert(basic_element<simd_element_representation_t<A, E>>);

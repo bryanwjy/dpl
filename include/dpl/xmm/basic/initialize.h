@@ -14,15 +14,17 @@
 #  include "dpl/core/concepts/common_float_with.h"
 #  include "dpl/core/concepts/common_order_with.h" // IWYU pragma: keep
 #  include "dpl/core/concepts/common_size_with.h"
-#  include "dpl/core/concepts/simd_element.h"
+#  include "dpl/core/concepts/simd_abi_traits.h"
 #  include "dpl/core/constants/all_bits.h"
 #  include "dpl/core/constants/zero.h"
+#  include "dpl/core/type_traits/iota_sequence.h"
 #  include "dpl/std/bit/bit_cast.h"
 #  include "dpl/std/type_traits/is_const.h"
 #  include "dpl/std/type_traits/is_volatile.h"
 #  include "dpl/std/type_traits/type_identity.h" // IWYU pragma: keep
-#  include "dpl/std/utility/forward.h"           // IWYU pragma: keep
-#  include "dpl/std/utility/to_underlying.h"     // IWYU pragma: keep
+#  include "dpl/std/utility/bitset.h"
+#  include "dpl/std/utility/forward.h"       // IWYU pragma: keep
+#  include "dpl/std/utility/to_underlying.h" // IWYU pragma: keep
 
 #  include <immintrin.h>
 #endif
@@ -30,8 +32,9 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::xmm {
-DPL_EXPORT template <vectorizable E, core_convertible_to<E>... Args>
-requires (... && !same_as<Args, bool>)
+DPL_EXPORT template <simd_element_for<abi_tag> E, core_convertible_to<E>... Args>
+requires (... && !same_as<Args, bool>) &&
+    (sizeof...(Args) == simd_abi_traits<E, abi_tag>::size)
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr simd<E> initialize(abi_tag tag, Args&&... args) noexcept {
     static_assert(!is_const_v<E> && !is_volatile_v<E>);
@@ -137,28 +140,33 @@ constexpr simd<E> initialize(abi_tag tag, Args&&... args) noexcept {
     }
 }
 
-DPL_EXPORT template <simd_element E, same_as<bool>... Args>
+DPL_EXPORT template <simd_element_for<abi_tag> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr mask<E> initialize(abi_tag tag, Args... scalars) noexcept {
+constexpr mask<E> initialize(
+    abi_tag tag, bitset<simd_abi_traits<E, abi_tag>::size> mask) noexcept {
     static_assert(!is_const_v<E> && !is_volatile_v<E>);
-    return +xmm::initialize<E>(
-        tag, (scalars ? dx::all_bits_v<E> : dx::zero_v<E>)...);
+    return [&]<size_t... Is>(index_sequence<Is...>) {
+        return +xmm::initialize<E>(
+            tag, (mask[Is] ? dx::all_bits_v<E> : dx::zero_v<E>)...);
+    }(iota_sequence<E, abi_tag>);
 }
 
-DPL_EXPORT template <vectorizable E, different_from<abi_tag> Arg,
+DPL_EXPORT template <simd_element_for<abi_tag> E, different_from<abi_tag> Arg,
     core_convertible_to<E>... Args>
-requires core_convertible_to<Arg, E> && (... && !same_as<Args, bool>)
+requires core_convertible_to<Arg, E> &&
+    (different_from<Arg, bool> && ... && different_from<Args, bool>) &&
+    (sizeof...(Args) + 1 == simd_abi_traits<E, abi_tag>::size)
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr simd<E> initialize(Arg&& arg, Args&&... args) noexcept {
     return xmm::initialize<E>(
         xmm::abi, __DPL forward<Arg>(arg), __DPL forward<Args>(args)...);
 }
 
-DPL_EXPORT template <simd_element E, same_as<bool>... Args>
+DPL_EXPORT template <simd_element_for<abi_tag> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr mask<E> initialize(Args&&... args) noexcept {
-    return +xmm::initialize<E>(
-        xmm::abi, (args ? dx::all_bits_v<E> : dx::zero_v<E>)...);
+constexpr mask<E> initialize(
+    bitset<simd_abi_traits<E, abi_tag>::size> mask) noexcept {
+    return +xmm::initialize<E>(xmm::abi, mask);
 }
 
 } // namespace datapar::xmm

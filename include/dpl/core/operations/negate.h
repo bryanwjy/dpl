@@ -9,7 +9,7 @@
 #include "dpl/core/operations/reinterpret.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/basic/immediate_mask.h"
+#  include "dpl/core/basic/const_mask.h"
 #  include "dpl/core/concepts/arithmetic_type.h"
 #  include "dpl/core/constants/msb.h"
 #  include "dpl/core/type_traits/common_arithmetic_type.h"
@@ -68,7 +68,7 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallbacki(
         basic_vector<E, A> val) noexcept {
-        static constexpr immediate_mask<simd_abi_traits<E, A>::size, V> mask{};
+        static constexpr const_mask<simd_abi_traits<E, A>::size, V> mask{};
         if constexpr (all_of(mask)) {
             return fallback(val);
         } else if constexpr (none_of(mask)) {
@@ -153,10 +153,11 @@ public:
         }
     }
 
-    template <arithmetic_vector T, immediate_mask_for<T> M>
+    template <arithmetic_vector T, const_mask_for<T> M>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr negated_simd<T> operator()(M mask, T val) noexcept {
-        constexpr auto V = decltype(dx::to_immediate_mask<T>(mask))::value;
+        constexpr auto V =
+            decltype(dx::to_compatible_const_mask<T>(mask))::value;
         if constexpr (unqualified_negate<T>) {
             if constexpr (canonical_vector<T>) {
                 if consteval {
@@ -179,7 +180,7 @@ template <auto V>
 struct negatei_t {
 private:
     template <typename T>
-    using mask_type DPL_NODEBUG = make_immediate_mask_t<T, V>;
+    using mask_type DPL_NODEBUG = make_const_mask_t<T, V>;
 
 public:
     template <simd_class T>

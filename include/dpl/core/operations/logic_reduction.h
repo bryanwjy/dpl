@@ -4,7 +4,7 @@
 #include "dpl/config.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/basic/immediate_mask.h"
+#  include "dpl/core/basic/const_mask.h"
 #  include "dpl/core/basic/to_canonical.h"
 #  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/simd_abi.h"
@@ -69,7 +69,7 @@ public:
         }
     }
 
-    template <immediate_mask_like T>
+    template <const_mask_like T>
     static consteval bool operator()(T val) noexcept {
         if constexpr (requires {
                           { all_of(val) } -> boolean_testable;
@@ -133,7 +133,7 @@ public:
         }
     }
 
-    template <immediate_mask_like T>
+    template <const_mask_like T>
     static consteval bool operator()(T val) noexcept {
         if constexpr (requires {
                           { any_of(val) } -> boolean_testable;
@@ -193,7 +193,7 @@ public:
         }
     }
 
-    template <immediate_mask_like T>
+    template <const_mask_like T>
     static consteval bool operator()(T val) noexcept {
         if constexpr (requires {
                           { none_of(val) } -> boolean_testable;
@@ -253,7 +253,7 @@ public:
         }
     }
 
-    template <immediate_mask_like T>
+    template <const_mask_like T>
     static consteval bool operator()(T val) noexcept {
         if constexpr (requires {
                           { some_of(val) } -> boolean_testable;

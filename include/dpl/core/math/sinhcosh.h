@@ -109,7 +109,7 @@ public:
     static constexpr basic_vector<E, A>
         DPL_VECTORCALL fallback(basic_vector<E, A> const arg) noexcept {
         using simdf = basic_vector<E, A>;
-        static constexpr make_immediate_mask_t<simdf, V> mask;
+        static constexpr make_const_mask_t<simdf, V> mask;
 
         auto const absarg = dx::abs(arg);
         auto const pair = [](fmath::pair<E, A> p) {

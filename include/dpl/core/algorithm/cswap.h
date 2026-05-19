@@ -4,7 +4,7 @@
 #include "dpl/config.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/basic/immediate_mask.h"
+#  include "dpl/core/basic/const_mask.h"
 #  include "dpl/core/concepts/compatible_mask_with.h"
 #  include "dpl/core/operations/select.h"
 #  include "dpl/std/concepts/invocable.h"
@@ -19,8 +19,8 @@ struct cswap_t {
         invoke_result_t<internal::select_t, M, L, R>;
 
 public:
-    template <simd_class L, selectable_with<L> R, immediate_mask_for<L> M>
-    requires immediate_mask_for<M, R> &&
+    template <simd_class L, selectable_with<L> R, const_mask_for<L> M>
+    requires const_mask_for<M, R> &&
         regular_invocable<internal::select_t, M, L, R> &&
         regular_invocable<internal::select_t, M, R, L> &&
         assignable_from<L&, selection_t<M, R, L> const&> &&
@@ -54,7 +54,7 @@ template <integral auto V>
 struct cswapi_t<V> {
 private:
     template <typename T>
-    using mask_type DPL_NODEBUG = make_immediate_mask_t<T, V>;
+    using mask_type DPL_NODEBUG = make_const_mask_t<T, V>;
 
 public:
     template <fixed_width_class L, common_size_simd_with<L> R>

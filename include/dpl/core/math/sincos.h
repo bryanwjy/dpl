@@ -280,7 +280,7 @@ protected:
         using simdf = basic_vector<E, A>;
         using sint = signed_representation_t<E>;
         using simdi = basic_vector<sint, A>;
-        static constexpr make_immediate_mask_t<simdf, V> mask;
+        static constexpr make_const_mask_t<simdf, V> mask;
         simdf const qf = [](basic_vector<E, A> arg) {
             if constexpr (dx::none_of(mask)) {
                 return dx::round(arg * dx::inv_pi,

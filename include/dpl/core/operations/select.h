@@ -8,7 +8,7 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/broadcast.h"
-#  include "dpl/core/basic/immediate_mask.h"
+#  include "dpl/core/basic/const_mask.h"
 #  include "dpl/core/concepts/common_arithmetic_with.h"
 #  include "dpl/core/concepts/common_size_with.h"
 #  include "dpl/core/concepts/compatible_mask_with.h"
@@ -111,20 +111,18 @@ concept unqualified_mselect = requires(C cond, L lhs, R rhs) {
 };
 
 template <typename C, typename L, typename R, typename A = common_abi_t<L, R>>
-concept unqualified_selecti =
-    immediate_mask_for<C, L> && requires(L lhs, R rhs) {
-        {
-            select<immediate_mask_v<L, C>>(internal::abi<A>, lhs, rhs)
-        } -> ternary_result_of<L, R, A>;
-    };
+concept unqualified_selecti = const_mask_for<C, L> && requires(L lhs, R rhs) {
+    {
+        select<const_mask_v<L, C>>(internal::abi<A>, lhs, rhs)
+    } -> ternary_result_of<L, R, A>;
+};
 
 template <typename C, typename L, typename R, typename A = common_abi_t<L, R>>
-concept unqualified_mselecti =
-    immediate_mask_for<C, L> && requires(L lhs, R rhs) {
-        {
-            select<immediate_mask_v<L, C>>(internal::abi<A>, lhs, rhs)
-        } -> mternary_result_of<L, R, A>;
-    };
+concept unqualified_mselecti = const_mask_for<C, L> && requires(L lhs, R rhs) {
+    {
+        select<const_mask_v<L, C>>(internal::abi<A>, lhs, rhs)
+    } -> mternary_result_of<L, R, A>;
+};
 
 struct select_t {
 private:
@@ -156,7 +154,7 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallbacki(
         basic_vector<ET, A> tval, basic_vector<EF, A> fval) noexcept {
-        static constexpr immediate_mask<simd_abi_traits<ET, A>::size, V> mask{};
+        static constexpr const_mask<simd_abi_traits<ET, A>::size, V> mask{};
         using ER = ternary_type_t<ET, EF>;
         return internal::itransform<basic_vector<ER, A>>(
             [](auto idx, ET tval, EF fval) -> ER {
@@ -169,7 +167,7 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallbacki(
         basic_mask<ET, A> tval, basic_mask<EF, A> fval) noexcept {
-        static constexpr immediate_mask<simd_abi_traits<ET, A>::size, V> mask{};
+        static constexpr const_mask<simd_abi_traits<ET, A>::size, V> mask{};
         using ER = common_size_type_t<ET, EF>;
         return internal::itransform<basic_mask<ER, A>>(
             [](auto idx, ET tval, EF fval) -> ER {
@@ -265,12 +263,13 @@ public:
         }
     }
 
-    template <simd_vector TT, selectablei_with<TT> TF, immediate_mask_for<TT> C>
+    template <simd_vector TT, selectablei_with<TT> TF, const_mask_for<TT> C>
     requires same_abi_simd_as<TT, TF> && fixed_width_abi<common_abi_t<TT, TF>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(C mask, TT tval, TF fval) noexcept {
         using A = typename TT::abi_type;
-        constexpr auto V = decltype(dx::to_immediate_mask<TT>(mask))::value;
+        constexpr auto V =
+            decltype(dx::to_compatible_const_mask<TT>(mask))::value;
         if constexpr (unqualified_selecti<C, TT, TF, A>) {
             if constexpr (canonical_vector<TT> && canonical_vector<TF>) {
                 if consteval {
@@ -289,7 +288,7 @@ public:
         }
     }
 
-    template <simd_vector TT, selectablei_with<TT> TF, immediate_mask_for<TT> C>
+    template <simd_vector TT, selectablei_with<TT> TF, const_mask_for<TT> C>
     requires (!same_abi_simd_as<TT, TF> ||
                  scalable_abi<common_abi_t<TT, TF>>) &&
         (unqualified_selecti<C, TT, TF> ||
@@ -297,7 +296,8 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(C mask, TT tval, TF fval) noexcept {
         using A = common_abi_t<TT, TF>;
-        constexpr auto V = decltype(dx::to_immediate_mask<TT>(mask))::value;
+        constexpr auto V =
+            decltype(dx::to_compatible_const_mask<TT>(mask))::value;
         if constexpr (unqualified_selecti<C, TT, TF>) {
             return select<V>(internal::abi<A>, tval, fval);
         } else {
@@ -306,13 +306,13 @@ public:
         }
     }
 
-    template <simd_mask TT, common_size_simd_with<TT> TF,
-        immediate_mask_for<TT> C>
+    template <simd_mask TT, common_size_simd_with<TT> TF, const_mask_for<TT> C>
     requires same_abi_simd_as<TT, TF>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(C mask, TT tval, TF fval) noexcept {
         using A = common_abi_t<TT, TF>;
-        constexpr auto V = decltype(dx::to_immediate_mask<TT>(mask))::value;
+        constexpr auto V =
+            decltype(dx::to_compatible_const_mask<TT>(mask))::value;
         if constexpr (unqualified_mselecti<C, TT, TF>) {
             if constexpr (canonical_mask<TT> && canonical_mask<TF>) {
                 if consteval {
@@ -331,15 +331,15 @@ public:
         }
     }
 
-    template <simd_mask TT, common_size_simd_with<TT> TF,
-        immediate_mask_for<TT> C>
+    template <simd_mask TT, common_size_simd_with<TT> TF, const_mask_for<TT> C>
     requires (!same_abi_simd_as<TT, TF>) &&
         (unqualified_mselecti<C, TT, TF> ||
             unqualified_mselecti<C, canonical_type_t<TT>, canonical_type_t<TF>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(C mask, TT tval, TF fval) noexcept {
         using A = common_abi_t<TT, TF>;
-        constexpr auto V = decltype(dx::to_immediate_mask<TT>(mask))::value;
+        constexpr auto V =
+            decltype(dx::to_compatible_const_mask<TT>(mask))::value;
         if constexpr (unqualified_mselecti<C, TT, TF>) {
             return select<V>(internal::abi<A>, tval, fval);
         } else {
@@ -426,7 +426,7 @@ template <integral auto V>
 struct selecti_t<V> : binary_operation_base<selecti_t<V>> {
 private:
     template <typename T>
-    using mask_type DPL_NODEBUG = make_immediate_mask_t<T, V>;
+    using mask_type DPL_NODEBUG = make_const_mask_t<T, V>;
 
 public:
     template <simd_class T, simd_class F>

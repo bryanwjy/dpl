@@ -167,21 +167,19 @@ $(OUTPUT_DIR)/%.pass.cpp.jcmd: $(OUTPUT_DIR)/%.pass.cpp.mrsp $(OUTPUT_DIR)/%.pas
 	--arg file '$(ROOT_DIR)/$*.cpp' \
 	--arg output '$(@:.jcmd=.o)' > $@
 
-$(OUTPUT_DIR)/%.cppm.jscan: $(OUTPUT_DIR)/compile.command $(TOOLS_DIR)/generate-jcmd.jq | $(ROOT_DIR)/%.cppm
-	@mkdir -p '$(@D)'
-	@jq -f $(TOOLS_DIR)/generate-jcmd.jq -n \
+$(OUTPUT_DIR)/%.cppm.jscan: $(OUTPUT_DIR)/compile.command $(TOOLS_DIR)/generate-jcmd.jq $(ROOT_DIR)/%.cppm
+	$(call replace_if_different, jq -f $(TOOLS_DIR)/generate-jcmd.jq -n \
 		--arg directory '$(OUTPUT_DIR)' \
 		--arg command '$(CXX) $(CPPFLAGS) $(CXXFLAGS) --precompile $(ROOT_DIR)/$*.cppm -o $*.cppm.pcm' \
 		--arg file '$(ROOT_DIR)/$*.cppm' \
-		--arg output '$(@:.jscan=.pcm)' > $@
+		--arg output '$(@:.jscan=.pcm)')
 
 $(OUTPUT_DIR)/%.cpp.jscan: $(OUTPUT_DIR)/compile.command $(TOOLS_DIR)/generate-jcmd.jq | $(ROOT_DIR)/%.cpp
-	@mkdir -p '$(@D)'
-	@jq -f $(TOOLS_DIR)/generate-jcmd.jq -n \
+	$(call replace_if_different, jq -f $(TOOLS_DIR)/generate-jcmd.jq -n \
 		--arg directory '$(OUTPUT_DIR)' \
 		--arg command '$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(ROOT_DIR)/$*.cpp -o $*.cpp.o' \
 		--arg file '$(ROOT_DIR)/$*.cppm' \
-		--arg output '$(@:.jscan=.o)' > $@
+		--arg output '$(@:.jscan=.o)')
 
 $(OUTPUT_DIR)/%.pass.jdir: $(ROOT_DIR)/%.pass.cpp $(TOOLS_DIR)/directives.awk
 	$(call replace_if_different, $(TOOLS_DIR)/directives.awk -v family=$(CXX_FAMILY) $<)

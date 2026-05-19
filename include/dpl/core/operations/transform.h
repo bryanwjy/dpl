@@ -9,6 +9,7 @@
 #  include "dpl/core/concepts/common_abi_with.h"
 #  include "dpl/core/type_traits/iota_sequence.h"
 #  include "dpl/std/type_traits/is_invocable.h"
+#  include "dpl/std/utility/bitset.h"
 #  include "dpl/std/utility/sequence.h"
 #endif
 
@@ -48,7 +49,11 @@ constexpr Result itransform(Op func, Ts... args) noexcept {
     };
 
     return [single]<size_t... Is>(Ts... args, Op func, index_sequence<Is...>) {
-        return Result{single(imm<Is>, args..., func)...};
+        if constexpr (simd_mask<Result>) {
+            return Result{bitset(single(imm<Is>, args..., func)...)};
+        } else {
+            return Result{single(imm<Is>, args..., func)...};
+        }
     }(args..., func, iota_sequence<Result>);
 }
 

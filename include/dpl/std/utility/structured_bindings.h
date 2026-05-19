@@ -4,6 +4,8 @@
 
 #include "dpl/config.h"
 
+// IWYU pragma: always_keep
+
 #if !DPL_MODULES
 #  include "dpl/std/type_traits/constants.h"
 #endif

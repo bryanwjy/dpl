@@ -4,9 +4,13 @@
 
 #include "dpl/config.h"
 
+#include "dpl/std/utility/move.h"
+
 #if !DPL_MODULES
 #  include "dpl/std/concepts/invocable.h"
+#  include "dpl/std/concepts/same_as.h"
 #  include "dpl/std/type_traits/add_lvalue_reference.h"
+#  include "dpl/std/type_traits/add_rvalue_reference.h"
 #  include "dpl/std/type_traits/remove_cvref.h"
 #  include "dpl/std/utility/forward.h"
 #  include "dpl/std/utility/sequence.h"

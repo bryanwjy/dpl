@@ -13,7 +13,7 @@
 #if !DPL_MODULES
 #  include "dpl/core/fwd.h"
 
-#  include "dpl/core/basic/immediate_mask.h"
+#  include "dpl/core/basic/const_mask.h"
 #  include "dpl/core/concepts/common_arithmetic_with.h"
 #  include "dpl/core/concepts/common_integral_with.h"
 #  include "dpl/core/concepts/common_size_with.h"
@@ -129,9 +129,7 @@ requires requires { xmm::select(condition, if_true, or_else); }
 
 namespace details {
 template <auto M>
-inline constexpr auto imm16 = []<size_t... Is>(index_sequence<Is...>) {
-    return xmm::initialize<uint8>(xmm::abi, M[Is]...);
-}(iota_sequence<uint8, abi_tag>);
+inline constexpr auto imm16 = xmm::initialize<uint8>(M);
 } // namespace details
 
 DPL_EXPORT template <integral auto C, simd_element T, simd_element F>
@@ -141,7 +139,7 @@ DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<ternary_type_t<T, F>> select(
     simd<T> if_true, simd<F> or_else) noexcept {
     using V = ternary_type_t<T, F>;
-    constexpr immediate_mask<simd_abi_traits<V, abi_tag>::size, C> mask{};
+    constexpr const_mask<simd_abi_traits<V, abi_tag>::size, C> mask{};
     constexpr auto imm8 = static_cast<int>(mask);
     if constexpr (common_float_with<float, V>) {
         return _mm_blend_ps(+or_else, +if_true, imm8);
@@ -177,12 +175,12 @@ inline mask<common_size_type_t<T, F>> select(
         simd<V>(+xmm::reinterpret<V>(or_else)));
 }
 
-template <simd_class T, immediate_mask_for<T> M>
+template <simd_class T, const_mask_for<T> M>
 inline constexpr auto imm_mask_v =
-    decltype(datapar::to_immediate_mask<T>(M{}))::value;
+    decltype(datapar::to_compatible_const_mask<T>(M{}))::value;
 
 DPL_EXPORT template <template_barrier_t = __DPL template_barrier, simd_element T,
-    common_size_with<T> F, immediate_mask_for<simd<T>> C>
+    common_size_with<T> F, const_mask_for<simd<T>> C>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline auto select(C, simd<T> if_true, simd<F> or_else) noexcept
 requires requires { xmm::select<imm_mask_v<T, C>>(if_true, or_else); }
@@ -191,7 +189,7 @@ requires requires { xmm::select<imm_mask_v<T, C>>(if_true, or_else); }
 }
 
 DPL_EXPORT template <template_barrier_t = __DPL template_barrier, simd_element T,
-    common_size_with<T> F, immediate_mask_for<mask<T>> C>
+    common_size_with<T> F, const_mask_for<mask<T>> C>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline auto select(C, mask<T> if_true, mask<F> or_else) noexcept
 requires requires { xmm::select<imm_mask_v<T, C>>(if_true, or_else); }
