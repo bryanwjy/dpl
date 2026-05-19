@@ -59,13 +59,17 @@ requires invocable<Op, basic_vector<InEs, A>...> &&
     return dx::bit_keep(mask, operation(args...));
 }
 
-template <typename T, typename U, typename A = typename U::abi_type>
-using canonical_if_zero_t DPL_NODEBUG = conditional_t<is_same_v<T, zero_t>,
-    basic_vector<typename U::value_type, A>, T>;
+template <typename Op, typename... Ts>
+using operation_result_t DPL_NODEBUG =
+    decltype(Op::operator()( __DPL declval<Ts>()...));
 
 template <typename T, typename U, typename A = typename U::abi_type>
-using canonical_or_zero_t DPL_NODEBUG = conditional_t<is_same_v<T, zero_t>,
-    basic_vector<typename U::value_type, A>, T>;
+using canonical_if_zero_t DPL_NODEBUG = conditional_t<is_same_v<T, zero_t>,
+    basic_vector<simd_lane_type_t<U>, A>, T>;
+
+template <typename T, typename U, typename A = typename U::abi_type>
+using canonical_or_zero_t DPL_NODEBUG = conditional_t<is_same_v<T, zero_t>, T,
+    basic_vector<simd_lane_type_t<U>, A>>;
 
 template <typename S, typename M, typename... Args>
 concept maskable_args =
@@ -75,25 +79,17 @@ concept maskable_args =
     common_abi_with<common_abi_t<Args...>, typename S::abi_type> &&
     common_abi_with<common_abi_t<Args...>, typename M::abi_type> &&
     same_abi_as<common_abi_t<typename S::abi_type, Args...>,
-        typename S::abi_type> &&
-    same_abi_as<common_abi_t<typename M::abi_type, Args...>,
-        typename M::abi_type> &&
-    same_abi_as<common_abi_t<typename S::abi_type, Args...>,
         common_abi_t<typename M::abi_type, Args...>>;
 
 template <typename M, typename... Args>
 concept zmaskable_args = simd_mask<M> && (... && simd_vector<Args>) &&
     all_common_abi<typename Args::abi_type...> &&
-    common_abi_with<common_abi_t<Args...>, typename M::abi_type> &&
-    same_abi_as<common_abi_t<typename M::abi_type, Args...>,
-        typename M::abi_type>;
+    common_abi_with<common_abi_t<Args...>, typename M::abi_type>;
 
 template <typename S, typename... Args>
 concept imm_maskable_args = simd_vector<S> && (... && simd_vector<Args>) &&
     all_common_abi<typename Args::abi_type...> &&
-    common_abi_with<common_abi_t<Args...>, typename S::abi_type> &&
-    same_abi_as<common_abi_t<typename S::abi_type, Args...>,
-        typename S::abi_type>;
+    common_abi_with<common_abi_t<Args...>, typename S::abi_type>;
 
 template <typename... Args>
 concept imm_zmaskable_args =

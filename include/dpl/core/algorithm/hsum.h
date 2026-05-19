@@ -7,6 +7,7 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/arithmetic_type.h"
+#  include "dpl/core/concepts/common_order_with.h"
 #  include "dpl/core/operations/arithmetic.h"
 #endif
 

@@ -102,7 +102,7 @@ public:
         return broadcast_t<A, E>::operator()(scalar);
     }
 
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr T operator()(same_as<bool> auto scalar) noexcept
     requires simd_mask<T> && regular_invocable<broadcast_t<A, E>, bool>
     {

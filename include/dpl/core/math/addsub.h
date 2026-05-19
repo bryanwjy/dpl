@@ -89,13 +89,28 @@ struct subadd_t;
 void addsub(...) noexcept = delete;
 void subadd(...) noexcept = delete;
 
+template <typename T, typename L, typename R>
+concept addsub_result = simd_vector<T> &&
+    requires {
+        typename operation_result_t<add_t, L, R>;
+        typename operation_result_t<subtract_t, L, R>;
+    } &&
+    same_as<typename T::value_type,
+        typename operation_result_t<add_t, L, R>::value_type> &&
+    same_as<typename T::value_type,
+        typename operation_result_t<subtract_t, L, R>::value_type> &&
+    same_as<typename T::abi_type,
+        typename operation_result_t<add_t, L, R>::abi_type> &&
+    same_as<typename T::abi_type,
+        typename operation_result_t<subtract_t, L, R>::abi_type>;
+
 template <typename L, typename R, typename A = common_abi_t<L, R>>
 concept unqualified_addsub = requires(L lhs, R rhs) {
-    { addsub(internal::abi<A>, lhs, rhs) } -> arithmetic_result<L, R>;
+    { addsub(internal::abi<A>, lhs, rhs) } -> addsub_result<L, R>;
 };
 template <typename L, typename R, typename A = common_abi_t<L, R>>
 concept unqualified_subadd = requires(L lhs, R rhs) {
-    { subadd(internal::abi<A>, lhs, rhs) } -> arithmetic_result<L, R>;
+    { subadd(internal::abi<A>, lhs, rhs) } -> addsub_result<L, R>;
 };
 
 struct addsub_t : binary_operation_base<addsub_t> {

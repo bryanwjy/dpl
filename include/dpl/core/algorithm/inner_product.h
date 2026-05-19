@@ -7,7 +7,6 @@
 #include "dpl/core/algorithm/reduce.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/concepts/common_arithmetic_with.h"
 #  include "dpl/core/operations/arithmetic.h"
 #endif
 
@@ -20,7 +19,9 @@ void inner_product(...) noexcept = delete;
 
 template <typename L, typename R, typename A = common_abi_t<L, R>>
 concept unqualified_inner_product = requires(L lhs, R rhs) {
-    { inner_product(internal::abi<A>, lhs, rhs) } -> arithmetic_result<L, R>;
+    {
+        inner_product(internal::abi<A>, lhs, rhs)
+    } -> equivalent_simd_as<operation_result_t<multiply_t, L, R>>;
 };
 
 template <typename M, typename L, typename R, typename A = common_abi_t<L, R>>
@@ -28,7 +29,7 @@ concept unqualified_inner_producti =
     const_mask_for<M, L> && const_mask_for<M, R> && requires(L lhs, R rhs) {
         {
             inner_product<const_mask_v<M, L>>(internal::abi<A>, lhs, rhs)
-        } -> arithmetic_result<L, R>;
+        } -> equivalent_simd_as<operation_result_t<multiply_t, L, R>>;
     };
 
 template <typename L, typename R, typename... Args>
