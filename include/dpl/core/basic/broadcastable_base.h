@@ -3,8 +3,6 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/basic/immediate.h"
-
 #if !DPL_MODULES
 #  include "dpl/std/concepts/convertible_to.h"
 #  include "dpl/std/concepts/derived_from.h"
@@ -15,8 +13,7 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar {
-DPL_EXPORT
-struct broadcastable_base {
+DPL_EXPORT struct broadcastable_base {
 protected:
     __DPL_HIDE_FROM_ABI constexpr ~broadcastable_base() noexcept = default;
 };
@@ -24,7 +21,7 @@ protected:
 DPL_EXPORT template <typename T, typename ValueType>
 concept broadcastable_constant = derived_from<T, broadcastable_base> &&
     is_empty_v<T> && semiregular<T> && convertible_to<T, ValueType> &&
-    requires { typename immediate<static_cast<ValueType>(T{})>; };
+    requires { typename integral_constant<ValueType, T{}>; };
 
 } // namespace datapar
 

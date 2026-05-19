@@ -3,10 +3,10 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/operations/arithmetic.h"
 #include "dpl/core/operations/bitwise.h"
 #include "dpl/core/operations/masked.h"
 #include "dpl/core/operations/minmax.h"
-#include "dpl/core/operations/negate.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/const_mask.h"

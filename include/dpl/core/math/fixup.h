@@ -21,7 +21,6 @@
 #  include "dpl/core/operations/arithmetic.h" // IWYU pragma: keep
 #  include "dpl/core/operations/bitwise.h"    // IWYU pragma: keep
 #  include "dpl/core/operations/compare.h"    // IWYU pragma: keep
-#  include "dpl/core/operations/negate.h"
 #  include "dpl/core/operations/select.h"
 #  include "dpl/core/utility/fpfix.h"
 #endif

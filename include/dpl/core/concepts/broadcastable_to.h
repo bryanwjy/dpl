@@ -10,12 +10,13 @@
 #  include "dpl/core/fwd.h"
 
 #  include "dpl/std/concepts/invocable.h"
+#  include "dpl/std/utility/ignore.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 namespace internal {
-template <typename...>
+template <typename, typename = ignore_t>
 struct broadcast_t;
 }
 

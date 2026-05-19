@@ -31,13 +31,15 @@ template <typename, typename = ignore_t>
 struct initialize_t {};
 
 template <typename T, different_from<ignore_t> U>
+requires (simd_abi<T> && simd_element_for<U, T>) ||
+    (simd_abi<U> && simd_element_for<T, U>)
 struct initialize_t<T, U> {
-    using E = conditional_t<simd_abi<T>, U, T>;
-    using A = conditional_t<simd_abi<T>, T, U>;
+    using E DPL_NODEBUG = conditional_t<simd_abi<T>, U, T>;
+    using A DPL_NODEBUG = conditional_t<simd_abi<T>, T, U>;
 
 public:
     template <core_convertible_to<E>... Args>
-    requires fixed_width_abi<A> && simd_element_for<E, A> &&
+    requires fixed_width_abi<A> &&
         array_initializable<E[simd_abi_traits<E, A>::size], Args...> &&
         (... && !same_as<bool, Args>)
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
@@ -52,14 +54,14 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr basic_mask<E, A> operator()(
         bitset<simd_abi_traits<A, E>::size> data) noexcept
-    requires fixed_width_abi<A> && simd_element_for<E, A> &&
+    requires fixed_width_abi<A> &&
         requires { initialize<E>(internal::abi<A>, data); }
     {
         return initialize<E>(internal::abi<A>, data);
     }
 
     template <core_convertible_to<E>... Args>
-    requires scalable_abi<A> && simd_element_for<E, A> &&
+    requires scalable_abi<A> &&
         array_initializable<E[sizeof...(Args)], Args...> &&
         (... && !same_as<bool, Args>)
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
@@ -74,7 +76,7 @@ public:
     template <size_t W>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr basic_mask<E, A> operator()(bitset<W> data) noexcept
-    requires scalable_abi<A> && simd_element_for<E, A> &&
+    requires scalable_abi<A> &&
         requires { initialize<E>(internal::abi<A>, data); }
     {
         return initialize<E>(internal::abi<A>, data);

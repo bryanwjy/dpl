@@ -11,7 +11,6 @@
 #  include "dpl/core/concepts/simd_traits.h"
 #  include "dpl/core/concepts/simd_vector.h"
 #  include "dpl/core/operations/arithmetic.h"
-#  include "dpl/core/operations/negate.h"
 #  include "dpl/core/operations/operation_base.h"
 #  include "dpl/core/type_traits/common_arithmetic_type.h"
 #endif
