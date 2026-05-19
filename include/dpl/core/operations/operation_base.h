@@ -9,6 +9,7 @@
 #  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/broadcastable_to.h"
 #  include "dpl/core/concepts/common_abi_with.h"
+#  include "dpl/std/type_traits/type_identity.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -26,44 +27,69 @@ concept implements_native = requires(Args... args) {
 
 template <typename T>
 struct binary_operation_base {
+private:
+    template <typename L, typename R>
+    static consteval auto abi_for() noexcept {
+        if constexpr (simd_class<L>) {
+            return typename L::abi_type{};
+        } else {
+            return typename R::abi_type{};
+        }
+    }
 
-    template <simd_class L, broadcastable_to<L> R>
+    template <simd_class L, typename R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L lhs, R rhs) noexcept {
-        if constexpr (implements_native<T, L, L, R>) {
-            if constexpr (canonical_class<L>) {
+    static constexpr decltype(auto) fallback(
+        type_identity_t<L> const& arg) noexcept {
+        return (arg);
+    }
+
+    template <typename L, simd_class R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr decltype(auto) fallback(
+        type_identity_t<R> const& arg) noexcept {
+        return (arg);
+    }
+
+    template <typename L, simd_class R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr decltype(auto) fallback(type_identity_t<L> arg) noexcept {
+        return dx::broadcast<R>(arg);
+    }
+
+    template <simd_class L, typename R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr decltype(auto) fallback(type_identity_t<R> arg) noexcept {
+        return dx::broadcast<L>(arg);
+    }
+
+public:
+    template <typename L, typename R>
+    requires (simd_class<L> && !simd_class<R> && broadcastable_to<R, L>) ||
+        (simd_class<R> && !simd_class<L> && broadcastable_to<L, R>)
+        DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+        static constexpr auto operator()(L lhs, R rhs) noexcept
+    requires requires(
+        T impl) { impl(fallback<L, R>(lhs), fallback<L, R>(rhs)); }
+    {
+        using A = decltype(abi_for<L, R>());
+        if constexpr (implements_native<T, A, L, R>) {
+            if constexpr (canonical_class<L> || canonical_class<R>) {
                 if consteval {
-                    return T::operator()(lhs, dx::broadcast<L>(rhs));
+                    return T::operator()(
+                        fallback<L, R>(lhs), fallback<L, R>(rhs));
                 } else {
                     return T::native(internal::abi<L>, lhs, rhs);
                 }
             } else {
                 return T::native(internal::abi<L>, lhs, rhs);
             }
-        } else if constexpr (canonical_class<L>) {
-            return T::operator()(lhs, dx::broadcast<L>(rhs));
-        } else {
+        } else if constexpr (canonical_class<L> || canonical_class<R>) {
+            return T::operator()(fallback<L, R>(lhs), fallback<L, R>(rhs));
+        } else if constexpr (simd_class<L>) {
             return operator()(dx::to_canonical(lhs), rhs);
-        }
-    }
-
-    template <simd_class R, broadcastable_to<R> L>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L lhs, R rhs) noexcept {
-        if constexpr (implements_native<T, R, L, R>) {
-            if constexpr (canonical_class<R>) {
-                if consteval {
-                    return T::operator()(dx::broadcast<R>(lhs), rhs);
-                } else {
-                    return T::native(internal::abi<R>, lhs, rhs);
-                }
-            } else {
-                return T::native(internal::abi<R>, lhs, rhs);
-            }
-        } else if constexpr (canonical_class<R>) {
-            return T::operator()(dx::broadcast<R>(lhs), rhs);
         } else {
-            return operator()(lhs, dx::to_canonical(rhs));
+            return operator()(rhs, dx::to_canonical(rhs));
         }
     }
 };
