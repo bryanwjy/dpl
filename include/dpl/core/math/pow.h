@@ -78,7 +78,7 @@ private:
         auto t = fmath::fast(one) +
             (fmath::fast(fmath::ln2_v<fpair> * s) + fmath::square(s) * u);
         // zero if underflow
-        return dx::bit_drop(arg.upper < -150.0f,
+        return dx::select(arg.upper < -150.0f, dx::zero,
             fmath::ldexp(fmath::compliance::speed, t.upper + t.lower, q));
     }
 
@@ -113,7 +113,7 @@ private:
         auto t = fmath::fast(one) +
             (fmath::fast(fmath::ln2_v<fpair> * s) + fmath::square(s) * u);
         // zero if underflow
-        return dx::bit_drop(arg.upper < -1000.0f,
+        return dx::select(arg.upper < -1000.0f, dx::zero,
             fmath::ldexp(fmath::compliance::speed, t.upper + t.lower, q));
     }
 
@@ -199,9 +199,11 @@ private:
 
         result = dx::select(dx::isinf(lhs) || islhs_zero,
             dx::negate(is_odd(rhs) && lhs < dx::zero,
-                dx::bit_drop(dx::signbit(rhs) ^ islhs_zero, dx::infinity)),
+                dx::select(
+                    dx::signbit(rhs) ^ islhs_zero, dx::zero, dx::infinity)),
             result);
-        result = dx::bit_fill(dx::isnan(lhs) || dx::isnan(rhs), result);
+        result =
+            dx::select(dx::isnan(lhs) || dx::isnan(rhs), dx::all_bits, result);
 
         return dx::select(rhs == dx::zero || lhs == dx::one, dx::one, result);
     }

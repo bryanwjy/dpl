@@ -7,6 +7,7 @@
 #  include "dpl/core/concepts/common_order_with.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_equivalence.h"
+#  include "dpl/core/operations/bitwise.h"
 #  include "dpl/core/operations/operation_base.h"
 #  include "dpl/core/operations/reinterpret.h"
 #  include "dpl/core/operations/select.h"
@@ -80,7 +81,7 @@ private:
     template <size_t V, typename E, fixed_width_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto fallbacki(basic_mask<E, A> val) noexcept {
-        return dx::bwshift_lefti<V>(val);
+        return dx::bwshift_left(val, size_constant<V>{});
     }
 
 public:

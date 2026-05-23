@@ -8,8 +8,6 @@
 #  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/compatible_mask_with.h"
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/concepts/simd_traits.h"
-#  include "dpl/core/concepts/simd_vector.h"
 #  include "dpl/core/constants/infinity.h"
 #  include "dpl/core/constants/value_bits.h"
 #  include "dpl/core/operations/bitwise.h"
@@ -33,7 +31,7 @@ private:
             dx::reinterpret<uint>(dx::infinity_v<basic_vector<E, A>>);
         constexpr auto abs_bits =
             dx::reinterpret<uint>(dx::value_bits_v<basic_vector<E, A>>);
-        auto const abs_val = dx::reinterpret<uint>(dx::bwand(arg, abs_bits));
+        auto const abs_val = dx::bwand(dx::reinterpret<uint>(arg), abs_bits);
         return dx::cmpgt(abs_val, inf_bits);
     }
 

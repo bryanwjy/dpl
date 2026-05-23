@@ -48,7 +48,7 @@ private:
             sig, (decomp.exp - dx::one) >> imm<1>);
 
         return dx::select(dx::isfinite(val) && val != dx::zero,
-            dx::bit_fill(val < dx::zero, result), val);
+            dx::select(val < dx::zero, dx::all_bits, result), val);
     }
 
 public:

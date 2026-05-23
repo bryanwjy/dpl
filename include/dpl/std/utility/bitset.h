@@ -196,6 +196,14 @@ public:
 
     __DPL_HIDE_FROM_ABI constexpr void clear() noexcept { value_ = 0; }
 
+    __DPL_HIDE_FROM_ABI constexpr bitset& invert() noexcept {
+        if constexpr (all == static_cast<underlying_type>(-1)) {
+            value_ = ~value_;
+        } else {
+            value_ ^= all;
+        }
+    }
+
     __DPL_HIDE_FROM_ABI constexpr bitset& operator&=(bitset other) noexcept {
         value_ &= other.value_;
         return *this;
@@ -356,6 +364,18 @@ public:
         }
     }
 
+    __DPL_HIDE_FROM_ABI constexpr bitset& invert() noexcept {
+        [this]<size_t I = 0>(this auto self, size_constant<I> = {}) {
+            if constexpr (I == chunk_sequence.size() - 1) {
+                constexpr auto remainder = W % chunk_size;
+                constexpr size_t mask = ~(-1zu << remainder);
+                storage_[I] ^= mask;
+            } else {
+                storage_[I] = ~storage_[I];
+            }
+        }(chunk_sequence);
+    }
+
     __DPL_HIDE_FROM_ABI constexpr void clear() noexcept {
         [this]<size_t I = 0>(this auto self, size_constant<I> = {}) constexpr {
             if constexpr (I < extent_v<underlying_type>) {
@@ -405,6 +425,11 @@ public:
             dst ^= other;
             return dst;
         }
+    }
+
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD, PURE) constexpr bitset
+    operator~() const noexcept {
+        return auto(*this).invert();
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD, PURE) constexpr bitset operator<<(

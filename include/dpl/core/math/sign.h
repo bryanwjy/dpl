@@ -59,7 +59,7 @@ private:
         } else {
             auto const negated =
                 dx::select(right < dx::zero, dx::negate(left), left);
-            return dx::bit_drop(right == dx::zero, negated);
+            return dx::select(right == dx::zero, dx::zero, negated);
         }
     }
 

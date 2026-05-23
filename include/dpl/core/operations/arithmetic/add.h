@@ -4,7 +4,6 @@
 #include "dpl/config.h"
 
 // IWYU pragma: always_keep
-
 #include "dpl/core/operations/arithmetic/result.h"
 #include "dpl/core/operations/masked.h"
 #include "dpl/core/operations/operation_base.h"
@@ -12,6 +11,8 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/arithmetic_type.h"
+#  include "dpl/core/concepts/decayable.h"
+#  include "dpl/core/concepts/operation_category.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_equivalence.h"
 #  include "dpl/core/constants/zero.h"
@@ -80,7 +81,7 @@ template <typename Op, typename S, typename M, typename L, typename R,
     typename A =
         common_abi_t<canonical_if_zero_t<S, operation_result_t<Op, L, R>>,
             operation_result_t<Op, L, R>>>
-concept unqualified_canonical_addi = requires(S src, L lhs, R rhs) {
+concept unqualified_canonical_imadd = requires(S src, L lhs, R rhs) {
     {
         add<const_mask_v<
             canonical_if_zero_t<S, operation_result_t<Op, L, R>, A>, M>>(
@@ -93,7 +94,7 @@ template <typename Op, typename S, typename M, typename L, typename R,
     typename A =
         common_abi_t<canonical_if_zero_t<S, operation_result_t<Op, L, R>>,
             operation_result_t<Op, L, R>>>
-concept unqualified_extended_addi = requires(S src, L lhs, R rhs) {
+concept unqualified_extended_imadd = requires(S src, L lhs, R rhs) {
     {
         add<const_mask_v<
             canonical_if_zero_t<S, operation_result_t<Op, L, R>, A>, M>>(
@@ -106,7 +107,7 @@ template <typename Op, typename S, typename M, typename L, typename R,
     typename A =
         common_abi_t<canonical_if_zero_t<S, operation_result_t<Op, L, R>>,
             operation_result_t<Op, L, R>>>
-concept decayable_addi =
+concept decayable_imadd =
     decayable_vector_for<
         canonical_if_zero_t<S, operation_result_t<Op, L, R>, A>,
         operation_category::lane_agnostic> &&
@@ -120,8 +121,8 @@ template <typename Op, typename S, typename M, typename L, typename R,
     typename A =
         common_abi_t<canonical_if_zero_t<S, operation_result_t<Op, L, R>>,
             operation_result_t<Op, L, R>>>
-concept extended_addi = unqualified_extended_addi<Op, S, M, L, R, A> ||
-    decayable_addi<Op, S, M, L, R, A>;
+concept extended_imadd = unqualified_extended_imadd<Op, S, M, L, R, A> ||
+    decayable_imadd<Op, S, M, L, R, A>;
 
 struct add_t : binary_operation_base<add_t> {
 private:
@@ -304,7 +305,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A> operator()(basic_vector<E, A> src,
         Mask mask, basic_vector<E, A> lhs, basic_vector<E, A> rhs) noexcept {
-        if constexpr (unqualified_canonical_addi<add_t, basic_vector<E, A>,
+        if constexpr (unqualified_canonical_imadd<add_t, basic_vector<E, A>,
                           Mask, basic_vector<E, A>, basic_vector<E, A>>) {
             if consteval {
                 return internal::masked<add_t>(src, mask, lhs, rhs);
@@ -327,7 +328,7 @@ public:
         simd_element_for<E, LA> && simd_element_for<E, RA> &&
         imm_maskable_args<basic_vector<E, SA>, basic_vector<E, LA>,
             basic_vector<E, RA>> &&
-        unqualified_canonical_addi<add_t, basic_vector<E, SA>, Mask,
+        unqualified_canonical_imadd<add_t, basic_vector<E, SA>, Mask,
             basic_vector<E, LA>, basic_vector<E, RA>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, SA> operator()(basic_vector<E, SA> src,
@@ -339,10 +340,10 @@ public:
     template <simd_vector S, const_mask_for<S> Mask, simd_vector L,
         simd_vector R>
     requires (extended_vector<S> || extended_vector<L> || extended_vector<R>) &&
-        imm_maskable_args<S, L, R> && extended_addi<add_t, S, Mask, L, R>
+        imm_maskable_args<S, L, R> && extended_imadd<add_t, S, Mask, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(S src, Mask mask, L lhs, R rhs) noexcept {
-        if constexpr (unqualified_extended_addi<add_t, S, Mask, L, R>) {
+        if constexpr (unqualified_extended_imadd<add_t, S, Mask, L, R>) {
             constexpr auto V = const_mask_v<S, Mask>;
             return add<V>(src, masked_operation, lhs, rhs);
         } else {
@@ -357,7 +358,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A> operator()(
         Mask mask, basic_vector<E, A> lhs, basic_vector<E, A> rhs) noexcept {
-        if constexpr (unqualified_canonical_addi<add_t, zero_t, Mask,
+        if constexpr (unqualified_canonical_imadd<add_t, zero_t, Mask,
                           basic_vector<E, A>, basic_vector<E, A>>) {
             if consteval {
                 return internal::masked<add_t>(mask, lhs, rhs);
@@ -378,7 +379,7 @@ public:
                  !arithmetic_type<E>) &&
         simd_element_for<E, LA> && simd_element_for<E, RA> &&
         imm_zmaskable_args<basic_vector<E, LA>, basic_vector<E, RA>> &&
-        unqualified_canonical_addi<add_t, zero_t, Mask, basic_vector<E, LA>,
+        unqualified_canonical_imadd<add_t, zero_t, Mask, basic_vector<E, LA>,
             basic_vector<E, RA>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, common_abi_t<LA, RA>> operator()(
@@ -391,11 +392,11 @@ public:
     template <simd_vector L, simd_vector R,
         const_mask_for<operation_result_t<add_t, L, R>> Mask>
     requires (extended_vector<L> || extended_vector<R>) &&
-        imm_zmaskable_args<L, R> && extended_addi<add_t, zero_t, Mask, L, R>
+        imm_zmaskable_args<L, R> && extended_imadd<add_t, zero_t, Mask, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(Mask mask, L lhs, R rhs) noexcept {
         using S = operation_result_t<add_t, L, R>;
-        if constexpr (unqualified_extended_madd<add_t, zero_t, Mask, L, R>) {
+        if constexpr (unqualified_extended_imadd<add_t, zero_t, Mask, L, R>) {
             constexpr auto V = const_mask_v<S, Mask>;
             return add<V>(dx::zero, masked_operation, lhs, rhs);
         } else {

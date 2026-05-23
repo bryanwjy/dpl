@@ -6,9 +6,15 @@
 #include "dpl/core/operations/split_result.h"
 
 #if !DPL_MODULES
+#  include "dpl/core/basic/initialize.h"
+#  include "dpl/core/basic/load.h"
+#  include "dpl/core/basic/store.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_class.h"
+#  include "dpl/core/concepts/simd_equivalence.h"
+#  include "dpl/core/type_traits/array_for.h"
 #  include "dpl/core/type_traits/promote_abi.h"
+#  include "dpl/core/type_traits/rebind_simd.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -143,7 +149,8 @@ private:
         constexpr make_index_sequence<N> iseq{};
         return [&]<size_t... Is>(index_sequence<Is...>) {
             constexpr auto S = simd_abi_traits<A, E>::size;
-            return dx::make_split_result(dx::load<A>(buffer.data + Is * S)...);
+            return dx::make_split_result(
+                dx::load<E, A>(buffer.data + Is * S)...);
         }(iseq);
 #endif
     }
@@ -172,7 +179,7 @@ private:
         return [&]<size_t... Js>(index_sequence<Js...>) {
             return dx::make_split_result([&](size_t j) {
                 return [&]<size_t... Ks>(index_sequence<Ks...>) {
-                    return dx::initialize<A>(src[j + Ks]...);
+                    return dx::initialize<E, A>(bitset(src[j + Ks]...));
                 }(kseq);
             }(Js)...);
         }(jseq);

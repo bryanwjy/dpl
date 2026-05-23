@@ -23,16 +23,18 @@ namespace datapar {
 DPL_EXPORT template <simd_class T, typename U, typename A = typename T::abi_type>
 struct rebind_simd {};
 
-DPL_EXPORT template <simd_class T, simd_element E,
-    simd_abi A = typename T::abi_type>
+DPL_EXPORT template <simd_class T, typename E, simd_abi A = typename T::abi_type>
+requires simd_element_for<E, A>
 using rebind_simd_t = typename rebind_simd<T, E, A>::type;
 
-DPL_EXPORT template <simd_vector T, simd_element E, simd_abi A>
+DPL_EXPORT template <simd_vector T, typename E, simd_abi A>
+requires simd_element_for<E, A>
 struct rebind_simd<T, E, A> {
     using type DPL_NODEBUG = basic_vector<E, A>;
 };
 
-DPL_EXPORT template <simd_mask T, simd_element E, simd_abi A>
+DPL_EXPORT template <simd_mask T, typename E, simd_abi A>
+requires simd_element_for<E, A>
 struct rebind_simd<T, E, A> {
     using type DPL_NODEBUG = basic_mask<E, A>;
 };

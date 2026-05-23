@@ -38,11 +38,6 @@ struct store_t {
     template <canonical_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
     static constexpr void operator()(
-        T src, typename T::value_type* dst) noexcept = delete;
-
-    template <canonical_vector T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
-    static constexpr void operator()(
         T src, typename T::value_type* dst) noexcept
     requires requires { store(internal::abi<T>, src, dst); }
     {

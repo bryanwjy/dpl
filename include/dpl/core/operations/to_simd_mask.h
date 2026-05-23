@@ -4,7 +4,6 @@
 #include "dpl/config.h"
 
 #include "dpl/core/operations/compare.h"
-#include "dpl/core/operations/reinterpret.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/to_canonical.h"

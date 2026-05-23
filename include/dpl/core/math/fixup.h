@@ -282,10 +282,11 @@ private:
                     result = dx::select(match(src, flags), src, result);
                 } else if constexpr (same_as<decltype(val),
                                          decltype(dx::nan)>) {
-                    result = dx::bit_fill(match(src, flags), result);
+                    result =
+                        dx::select(match(src, flags), dx::all_bits, result);
                 } else if constexpr (same_as<decltype(val),
                                          decltype(dx::zero)>) {
-                    result = dx::bit_drop(match(src, flags), result);
+                    result = dx::select(match(src, flags), dx::zero, result);
                 } else {
                     result = dx::select(match(src, flags), val, result);
                 }

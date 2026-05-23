@@ -10,7 +10,6 @@
 #if !DPL_MODULES
 #  include "dpl/core/concepts/common_order_with.h"
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/concepts/simd_element.h"
 #  include "dpl/core/concepts/simd_equivalence.h"
 #  include "dpl/core/type_traits/common_order_type.h"
 #endif

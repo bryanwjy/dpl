@@ -69,10 +69,9 @@ constexpr void general_int_to_fp() noexcept {
     auto const make_expected = [](I val) {
         constexpr auto keep =
             min(element_count<F, xmm::abi_tag>, element_count<I, xmm::abi_tag>);
-        constexpr auto mask = dpp::imm<(1 << keep) - 1>;
         auto const result =
             dpp::broadcast<F, xmm::abi_tag>(static_cast<F>(val));
-        return dpp::bit_keep(mask, result);
+        return dpp::selecti<(1 << keep) - 1>(result, dpp::zero);
     };
 
     for (auto const val : inputs) {
@@ -124,10 +123,10 @@ constexpr bool large_int_to_sp() noexcept {
             ? element_count<float, xmm::abi_tag> -
                 sizeof(I) / sizeof(float) // NOLINT(bugprone-sizeof-expression)
             : element_count<float, xmm::abi_tag>;
-        constexpr auto mask = dpp::imm<(1 << to_keep) - 1>;
+        constexpr auto M = (1 << to_keep) - 1;
         auto const result =
             dpp::broadcast<float, xmm::abi_tag>(static_cast<float>(val));
-        return dpp::bit_keep(mask, result);
+        return dpp::selecti<M>(result, dpp::zero);
     };
 
     constexpr auto test1 = [=]<dpl::integral T>(dpl::type_identity<T>) {
@@ -268,10 +267,9 @@ constexpr void general_fp_to_int() noexcept {
     auto const make_expected = [](F val) {
         constexpr auto keep =
             min(element_count<F, xmm::abi_tag>, element_count<I, xmm::abi_tag>);
-        constexpr auto mask = dpp::imm<(1 << keep) - 1>;
         auto const result =
             dpp::broadcast<I, xmm::abi_tag>(static_cast<I>(val));
-        return dpp::bit_keep(mask, result);
+        return dpp::selecti<(1 << keep) - 1>(result, dpp::zero);
     };
 
     for (auto const val : inputs) {
@@ -306,10 +304,10 @@ constexpr void large_sp_to_int() noexcept {
     auto const make_expected = [](F val) {
         constexpr auto keep =
             min(element_count<F, xmm::abi_tag>, element_count<I, xmm::abi_tag>);
-        constexpr auto mask = dpp::imm<(1 << keep) - 1>;
+        constexpr auto M = (1 << keep) - 1;
         auto const result =
             dpp::broadcast<I, xmm::abi_tag>(static_cast<I>(val));
-        return dpp::bit_keep(mask, result);
+        return dpp::selecti<M>(result, dpp::zero);
     };
 
     for (auto const val : inputs) {

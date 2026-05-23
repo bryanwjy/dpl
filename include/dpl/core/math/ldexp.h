@@ -70,7 +70,7 @@ struct ldexp_t : binary_operation_base<ldexp_t> {
         exp = exp - (m << imm<2>);
 
         m += exp_bias;
-        m = dx::bit_drop(dx::zero > m, m);
+        m = dx::select(dx::zero > m, dx::zero, m);
         m = dx::select(m > exp_mask, exp_mask, m);
 
         using simdi = basic_vector<sint, A>;

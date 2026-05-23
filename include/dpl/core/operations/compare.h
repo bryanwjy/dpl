@@ -6,6 +6,7 @@
 // IWYU pragma: always_keep
 
 #include "dpl/core/operations/operation_base.h"
+#include "dpl/core/operations/reinterpret.h"
 #include "dpl/core/operations/transform.h"
 
 #if !DPL_MODULES

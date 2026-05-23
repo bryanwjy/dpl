@@ -32,12 +32,12 @@ template <dpl::integral To, dpl::integral From>
 constexpr bool test(From src) noexcept {
     constexpr auto keep =
         min(element_count<To, xmm::abi_tag>, element_count<From, xmm::abi_tag>);
-    constexpr auto keep_mask = dpp::imm<(1 << keep) - 1>;
+    constexpr auto M = (1 << keep) - 1;
 
     return dpp::all_of(
         dpp::element_cast<To>(dpp::broadcast<From, xmm::abi_tag>(src)) ==
-        dpp::bit_keep(
-            keep_mask, dpp::broadcast<To, xmm::abi_tag>(static_cast<To>(src))));
+        dpp::selecti<M>(
+            dpp::broadcast<To, xmm::abi_tag>(static_cast<To>(src)), dpp::zero));
 }
 
 template <dpl::integral From, dpl::integral To>

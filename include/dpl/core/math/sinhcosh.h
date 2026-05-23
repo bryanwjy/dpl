@@ -95,8 +95,8 @@ private:
         t.upper = fmath::ldexp(fmath::compliance::speed, t.upper, q);
         t.lower = fmath::ldexp(fmath::compliance::speed, t.lower, q);
         auto const underflow = is_exp_underflow(arg);
-        t.upper = dx::bit_drop(underflow, t.upper);
-        t.lower = dx::bit_drop(underflow, t.lower);
+        t.upper = dx::select(underflow, dx::zero, t.upper);
+        t.lower = dx::select(underflow, dx::zero, t.lower);
         return t;
     }
 
@@ -137,10 +137,10 @@ public:
         if constexpr (dx::none_of(mask)) {
             result = dx::sign(result, arg);
         } else if constexpr (dx::some_of(mask)) {
-            result = dx::sign(result, dx::bit_dropi<V>(arg));
+            result = dx::sign(result, dx::selecti<V>(dx::zero, arg));
         }
 
-        return dx::bit_fill(dx::isnan(arg), result);
+        return dx::select(dx::isnan(arg), dx::all_bits, result);
     }
 
     // TODO

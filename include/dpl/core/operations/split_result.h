@@ -10,6 +10,8 @@
 #  include "dpl/std/type_traits/is_constructible.h"
 #  include "dpl/std/type_traits/is_explicitly_constructible.h"
 #  include "dpl/std/utility/forward.h"
+#  include "dpl/std/utility/forward_like.h"
+#  include "dpl/std/utility/move.h"
 #  include "dpl/std/utility/structured_bindings.h"
 #  include "dpl/std/utility/tuple_like.h"
 #endif
@@ -80,29 +82,29 @@ constexpr auto make_split_result(Ts&&... data) noexcept {
 
 DPL_EXPORT template <size_t I, size_t N, simd_class T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr decltype(auto)
-    get(split_result<T, N> const&& data DPL_LIFETIMEBOUND) noexcept {
+constexpr decltype(auto) get(
+    split_result<T, N> const&& data DPL_LIFETIMEBOUND) noexcept {
     return __DPL move(data[I]);
 }
 
 DPL_EXPORT template <size_t I, size_t N, simd_class T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr decltype(auto)
-    get(split_result<T, N> const& data DPL_LIFETIMEBOUND) noexcept {
+constexpr decltype(auto) get(
+    split_result<T, N> const& data DPL_LIFETIMEBOUND) noexcept {
     return data[I];
 }
 
 DPL_EXPORT template <size_t I, size_t N, simd_class T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr decltype(auto)
-    get(split_result<T, N>&& data DPL_LIFETIMEBOUND) noexcept {
+constexpr decltype(auto) get(
+    split_result<T, N>&& data DPL_LIFETIMEBOUND) noexcept {
     return __DPL move(data[I]);
 }
 
 DPL_EXPORT template <size_t I, size_t N, simd_class T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr decltype(auto)
-    get(split_result<T, N>& data DPL_LIFETIMEBOUND) noexcept {
+constexpr decltype(auto) get(
+    split_result<T, N>& data DPL_LIFETIMEBOUND) noexcept {
     return data[I];
 }
 

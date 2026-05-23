@@ -50,7 +50,7 @@ private:
         }(mx::ilogb(mx::compliance::unsafe, val) + margin);
 
         auto const m = dx::all_bits_v<decltype(val)> >> exp;
-        auto const result = dx::bit_drop(m, val);
+        auto const result = dx::select(m, dx::zero, val);
         return dx::select(exp >= width ||
                 dx::bwand(dx::reinterpret<uint>(val), m) == dx::zero,
             val, result);

@@ -294,7 +294,7 @@ private:
                 fmath::ilogb(fmath::compliance::unsafe, dval * fourthirds));
         auto const fr = [](auto val, auto fr) {
             if constexpr (Opt::has(frexp_positive)) {
-                return dx::bit_fill(val < dx::zero, fr);
+                return dx::select(val < dx::zero, dx::all_bits, fr);
             } else {
                 return fr;
             }
@@ -337,8 +337,8 @@ private:
         auto const exp = [&]() {
             auto const mexp =
                 dx::reinterpret<int_type>(val & dx::exponent_bits);
-            auto const exp_offset =
-                dx::bit_drop(mexp == dx::zero || mexp == exp_bits, magic);
+            auto const exp_offset = dx::select(
+                mexp == dx::zero || mexp == exp_bits, dx::zero, magic);
             auto const exp = (mexp >> imm<dx::mantissa_width_v<E>>)-exp_offset;
 
             return dx::select(issubnormal, exp - subnormal_offset<E>, exp);
@@ -346,7 +346,7 @@ private:
         auto const fr = [&]() {
             auto const fr = (val & ~exponent_bits) | magic_exp;
             if constexpr (Opt::has(frexp_positive)) {
-                return dx::bit_fill(val < dx::zero, fr);
+                return dx::select(val < dx::zero, dx::all_bits, fr);
             } else {
                 return fr;
             }

@@ -48,14 +48,14 @@ private:
     static constexpr auto DPL_VECTORCALL fallback(
         basic_vector<E, A> val) noexcept {
         auto const isfinite = dx::isfinite(val);
-        auto const finite = dx::bit_keep(isfinite, val);
+        auto const finite = dx::select(isfinite, val, dx::zero);
         auto x = finite + mx::half;
         auto fr = x - dx::trunc(x);
-        x -= dx::bit_keep(
-            x <= dx::zero && fr == dx::zero, dx::one_v<decltype(val)>);
-        fr += dx::bit_keep(fr < dx::zero, dx::one_v<decltype(val)>);
+        auto one = dx::broadcast<E, A>(dx::one);
+        x -= dx::select(x <= dx::zero && fr == dx::zero, one, dx::zero);
+        fr += dx::select(fr < dx::zero, one, dx::zero);
 
-        x = dx::bit_keep(fr != mx::underhalf, x);
+        x = dx::select(fr != mx::underhalf, x, dx::zero);
         return dx::select(isfinite && dx::abs(val) < mx::maxint,
             dx::copysign(x - fr, finite), val);
     }
@@ -81,17 +81,18 @@ private:
         } else {
             // R to nearest int, tie to nearest even
             auto const isfinite = dx::isfinite(val);
-            auto const finite = dx::bit_keep(isfinite, val);
+            auto const finite = dx::select(isfinite, val, dx::zero);
             auto x = finite;
             auto i = dx::floor(x);
+            auto one = dx::broadcast<E, A>(dx::one);
             auto fr = x - i;
-            x += dx::bit_keep(fr > mx::half, dx::one_v<decltype(val)>);
+            x += dx::select(fr > mx::half, one, dx::zero);
             // there are bit tricks alternatives to casting available but
             // they usually just add more instructions
             using sint = signed_representation_t<E>;
             auto const iseven =
                 (dx::element_cast<sint>(i) & dx::one) == dx::zero;
-            i += dx::bit_drop(iseven, dx::one_v<decltype(val)>);
+            i += dx::select(iseven, dx::zero, one);
 
             return dx::select(isfinite && dx::abs(val) < mx::maxint,
                 dx::copysign(i, finite), //

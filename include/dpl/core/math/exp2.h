@@ -58,12 +58,12 @@ private:
         if constexpr (brain_float<E>) {
             u = dx::select(val >= 128.0f, dx::infinity, u);
             // underflow
-            return dx::bit_keep(val >= -133.0, u);
+            return dx::select(val >= -133.0, u, dx::zero);
         } else {
             static_assert(digits_v<E> == 12 && sizeof(E) == 2);
             u = dx::select(val >= 16.0, dx::infinity, u);
             // underflow
-            return dx::bit_keep(val >= -24.0, u);
+            return dx::select(val >= -24.0, u, dx::zero);
         }
     }
 
@@ -90,7 +90,7 @@ private:
         u = fmath::ldexp(fmath::compliance::speed, u, q);
         u = dx::select(val >= 128.0f, dx::infinity, u);
         // underflow
-        return dx::bit_keep(val >= -149.0f, u);
+        return dx::select(val >= -149.0f, u, dx::zero);
     }
 
     template <simd_abi A>
@@ -115,7 +115,7 @@ private:
         u = fmath::ldexp(fmath::compliance::speed, u, q);
         u = dx::select(val >= 1024.0, dx::infinity, u);
         // underflow
-        return dx::bit_keep(val >= -1074.0, u);
+        return dx::select(val >= -1074.0, u, dx::zero);
     }
 
 public:

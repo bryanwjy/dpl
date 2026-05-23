@@ -11,7 +11,6 @@
 #if !DPL_MODULES
 #  include "dpl/core/basic/const_mask.h"
 #  include "dpl/core/concepts/arithmetic_type.h"
-#  include "dpl/core/type_traits/common_arithmetic_type.h"
 #  include "dpl/std/concepts/different_from.h"
 #endif
 
@@ -27,12 +26,12 @@ template <typename T>
 concept unqualified_canonical_abs = requires(T val) {
     {
         abs(internal::abi<T>, val)
-    } -> equivalent_simd_as<common_arithmetic_simd_t<T, T>>;
+    } -> canonical_arithmetic_result<T, T, typename T::abi_type>;
 };
 
 template <typename T>
 concept unqualified_extended_abs = requires(T val) {
-    { abs(val) } -> equivalent_simd_as<common_arithmetic_simd_t<T, T>>;
+    { abs(val) } -> extended_arithmetic_result<T, T, typename T::abi_type>;
 };
 
 template <typename T>

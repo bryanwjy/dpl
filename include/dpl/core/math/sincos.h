@@ -222,14 +222,14 @@ protected:
                 auto exp = fmath::ilogb(fmath::compliance::unsafe, arg) - 55;
                 return expq{
                     .exp = exp,
-                    .q = dx::bit_keep(exp > (700 - 55), n64),
+                    .q = dx::select(exp > (700 - 55), n64, dx::zero),
                 };
             } else {
                 static_assert(common_float_with<E, float>);
                 auto exp = fmath::ilogb(fmath::compliance::unsafe, arg) - 25;
                 return expq{
                     .exp = exp,
-                    .q = dx::bit_keep(exp > (90 - 25), n64),
+                    .q = dx::select(exp > (90 - 25), n64, dx::zero),
                 };
             }
         }(arg);
@@ -339,7 +339,8 @@ protected:
                     } else if constexpr (dx::all_of(mask)) {
                         return (val & dx::one) == dx::zero;
                     } else {
-                        constexpr auto rhs = dx::bit_dropi<V>(dx::one_v<simdi>);
+                        constexpr auto rhs =
+                            dx::selecti<V>(dx::zero, dx::one_v<simdi>);
                         return (val & dx::one) == rhs;
                     }
                 }(dfi.i);

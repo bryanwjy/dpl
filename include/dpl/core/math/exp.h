@@ -47,7 +47,7 @@ private:
         constexpr auto ln2 = fmath::ln2_v<fpair>;
         auto const s =
             dx::fnmadd(qf, ln2.lower, dx::fnmadd(qf, ln2.upper, val));
-        static constexpr fmath::polynomial<0.5f,
+        constexpr fmath::polynomial<0.5f,
             0.166666671633720397949219f,   //
             0.0416664853692054748535156f,  //
             0.00833336077630519866943359f, //
@@ -58,14 +58,14 @@ private:
         if constexpr (brain_float<E>) {
             u = dx::select(val > 100.0, dx::infinity, u);
             // underflow
-            return dx::bit_drop(val < -92.186785, u);
+            return dx::select(val < -92.186785, dx::zero, u);
         } else {
             static_assert(digits_v<E> == 12 && sizeof(E) == 2);
-            static constexpr E max_ln = 11.089866;
-            static constexpr E min_ln = -16.63553;
+            constexpr E max_ln = 11.089866;
+            constexpr E min_ln = -16.63553;
             u = dx::select(val > max_ln, dx::infinity, u);
             // underflow
-            return dx::bit_drop(val < min_ln, u);
+            return dx::select(val < min_ln, dx::zero, u);
         }
     }
 
@@ -81,7 +81,7 @@ private:
         constexpr auto ln2 = fmath::ln2_v<fpair>;
         auto const s =
             dx::fnmadd(qf, ln2.lower, dx::fnmadd(qf, ln2.upper, val));
-        static constexpr fmath::polynomial<0.5f,
+        constexpr fmath::polynomial<0.5f,
             0.166666671633720397949219f,   //
             0.0416664853692054748535156f,  //
             0.00833336077630519866943359f, //
@@ -93,7 +93,7 @@ private:
         u = fmath::ldexp(fmath::compliance::speed, u, q);
         u = dx::select(val > 100.0f, dx::infinity, u);
         // underflow
-        return dx::bit_drop(val < -103.97208f, u);
+        return dx::select(val < -103.97208f, dx::zero, u);
     }
 
     template <simd_abi A>
@@ -107,7 +107,7 @@ private:
         constexpr auto ln2 = fmath::ln2_v<fpair>;
         auto const s =
             dx::fnmadd(qf, ln2.lower, dx::fnmadd(qf, ln2.upper, val));
-        static constexpr fmath::polynomial<0.5, 0.1666666666666669072e+0,
+        constexpr fmath::polynomial<0.5, 0.1666666666666669072e+0,
             0.4166666666666602598e-1, 0.8333333333314938210e-2,
             0.1388888888914497797e-2, 0.1984126989855865850e-3,
             0.2480158687479686264e-4, 0.2755723402025388239e-5,
@@ -116,10 +116,10 @@ private:
             polynomial;
         auto u = dx::fmadd(dx::multiply(s, s), polynomial(s), s) + dx::one;
         u = fmath::ldexp(fmath::compliance::speed, u, q);
-        static constexpr auto max_log = 0x1.62e42fefa39efp+9;
+        constexpr auto max_log = 0x1.62e42fefa39efp+9;
         u = dx::select(val > max_log, dx::infinity, u);
         // underflow
-        return dx::bit_drop(val < -745.133, u);
+        return dx::select(val < -745.133, dx::zero, u);
     }
 
 public:

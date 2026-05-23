@@ -3,14 +3,18 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/operations/reinterpret.h"
-
 #if !DPL_MODULES
-#  include "dpl/core/concepts/basic_element.h"
-#  include "dpl/core/concepts/simd_mask.h"
-#  include "dpl/core/concepts/simd_vector.h"
+#  include "dpl/core/basic/immediate.h"
+#  include "dpl/core/basic/initialize.h"
+#  include "dpl/core/basic/load.h"
+#  include "dpl/core/basic/store.h"
+#  include "dpl/core/concepts/simd_equivalence.h"
+#  include "dpl/core/type_traits/array_for.h"
 #  include "dpl/core/type_traits/common_abi.h"
+#  include "dpl/core/type_traits/iota_sequence.h"
 #  include "dpl/core/type_traits/promote_abi.h"
+#  include "dpl/core/type_traits/rebind_simd.h"
+#  include "dpl/core/type_traits/simd_lane_type.h"
 #endif
 
 #if DPL_HAS_CXX26_EXTENSIONS

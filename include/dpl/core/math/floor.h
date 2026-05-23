@@ -43,9 +43,9 @@ private:
     static constexpr auto DPL_VECTORCALL fallback(
         basic_vector<E, A> val) noexcept {
         auto const isfinite = dx::isfinite(val);
-        auto const finite = dx::bit_keep(isfinite, val);
+        auto const finite = dx::select(isfinite, val, dx::zero);
         auto fr = finite - dx::trunc(finite);
-        fr += dx::bit_keep(fr > dx::zero, dx::one_v<decltype(val)>);
+        fr += dx::select(fr > dx::zero, dx::broadcast<E, A>(dx::one), dx::zero);
         return dx::select(isfinite && dx::abs(val) < mx::maxint,
             dx::copysign(finite - fr, finite), val);
     }

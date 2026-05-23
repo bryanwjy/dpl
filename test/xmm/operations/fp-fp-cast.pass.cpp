@@ -40,12 +40,12 @@ requires dpl::different_from<From, To>
 constexpr bool round_trip(From val, Pred pred = dpp::cmpeq) noexcept {
     constexpr auto count =
         min(element_count<From, abi>, element_count<To, abi>);
-    constexpr auto keep_mask = dpp::imm<(1 << count) - 1>;
-    auto const src = dpp::bit_keep(keep_mask, dpp::broadcast<From, abi>(val));
+    constexpr auto M = (1 << count) - 1;
+    auto const src = dpp::selecti<M>(dpp::broadcast<From, abi>(val), dpp::zero);
     static_assert(dpl::same_as<From,
         typename dpl::remove_const_t<decltype(src)>::value_type>);
-    auto const dst =
-        dpp::bit_keep(keep_mask, dpp::broadcast<To, abi>(float_cast<To>(val)));
+    auto const dst = dpp::selecti<M>(
+        dpp::broadcast<To, abi>(float_cast<To>(val)), dpp::zero);
     auto const actual_dst = dpp::element_cast<To>(src);
     auto const dstequal = pred(actual_dst, dst);
     auto const actual_castback = dpp::element_cast<From>(actual_dst);
@@ -86,10 +86,10 @@ requires (dpp::digits_v<To> != dpp::digits_v<From>)
 constexpr bool one_way(From val, Pred pred = dpp::cmpeq) noexcept {
     constexpr auto count =
         min(element_count<From, abi>, element_count<To, abi>);
-    constexpr auto keep_mask = dpp::imm<(1 << count) - 1>;
-    auto const src = dpp::bit_keep(keep_mask, dpp::broadcast<From, abi>(val));
-    auto const dst =
-        dpp::bit_keep(keep_mask, dpp::broadcast<To, abi>(float_cast<To>(val)));
+    constexpr auto M = (1 << count) - 1;
+    auto const src = dpp::selecti<M>(dpp::broadcast<From, abi>(val), dpp::zero);
+    auto const dst = dpp::selecti<M>(
+        dpp::broadcast<To, abi>(float_cast<To>(val)), dpp::zero);
     auto const actual_dst = dpp::element_cast<To>(src);
     auto const dstequal = pred(actual_dst, dst);
     auto const actual_castback = dpp::element_cast<From>(actual_dst);
