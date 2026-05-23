@@ -23,6 +23,8 @@ void bwshift_left(...) noexcept = delete;
 template <auto>
 void bwshift_left(...) noexcept = delete;
 
+struct bwshift_left_t;
+
 template <typename T>
 concept unqualified_canonical_bwsl = requires(T val, size_t shift) {
     { bwshift_left(internal::abi<T>, val, shift) } -> canonical_shift_result<T>;
@@ -102,19 +104,17 @@ concept unqualified_extended_mbwsl =
         } -> equivalent_simd_as<canonical_if_zero_t<S, T, A>>;
     };
 
-template <typename Op, typename S, typename C, typename T,
-    typename A = common_abi_t<T, C>>
+template <typename S, typename C, typename T, typename A = common_abi_t<T, C>>
 concept decayable_mbwsl = decayable_vector_for<canonical_if_zero_t<S, T, A>,
                               operation_category::lane_agnostic> &&
     decayable_vector_for<T, operation_category::lane_agnostic> &&
     decayable_mask_for<C, operation_category::lane_agnostic> &&
-    requires(canonical_or_zero_t<S, T, A> s, canonical_type_t<C> c,
-        canonical_type_t<T> t) { Op::operator()(s, c, t); };
+    requires(bwshift_left_t bwsl, canonical_or_zero_t<S, T, A> s,
+        canonical_type_t<C> c, canonical_type_t<T> t) { bwsl(s, c, t); };
 
-template <typename Op, typename S, typename C, typename T,
-    typename A = common_abi_t<T, C>>
+template <typename S, typename C, typename T, typename A = common_abi_t<T, C>>
 concept extended_mbwsl =
-    unqualified_extended_mbwsl<S, C, T, A> || decayable_mbwsl<Op, S, C, T, A>;
+    unqualified_extended_mbwsl<S, C, T, A> || decayable_mbwsl<S, C, T, A>;
 
 template <typename S, typename M, typename T,
     typename A = common_abi_t<canonical_if_zero_t<S, T>, T>>
@@ -134,18 +134,18 @@ concept unqualified_extended_imbwsl = requires(S src, T val, size_t shift) {
     } -> equivalent_simd_as<canonical_if_zero_t<S, T, A>>;
 };
 
-template <typename Op, typename S, typename M, typename T,
+template <typename S, typename M, typename T,
     typename A = common_abi_t<canonical_if_zero_t<S, T>, T>>
 concept decayable_imbwsl = decayable_vector_for<canonical_if_zero_t<S, T>,
                                operation_category::lane_agnostic> &&
     decayable_vector_for<T, operation_category::lane_agnostic> &&
-    requires(canonical_or_zero_t<S, T, A> src, M mask, canonical_type_t<T> val,
-        size_t shift) { Op::operator()(src, mask, val, shift); };
+    requires(bwshift_left_t bwsl, canonical_or_zero_t<S, T, A> src, M mask,
+        canonical_type_t<T> val, size_t shift) { bwsl(src, mask, val, shift); };
 
-template <typename Op, typename S, typename M, typename T,
+template <typename S, typename M, typename T,
     typename A = common_abi_t<canonical_if_zero_t<S, T>, T>>
 concept extended_imbwsl =
-    unqualified_extended_imbwsl<S, M, T, A> || decayable_imbwsl<Op, S, M, T, A>;
+    unqualified_extended_imbwsl<S, M, T, A> || decayable_imbwsl<S, M, T, A>;
 
 template <typename S, typename C, typename L, typename R,
     typename A = common_abi_t<C, L>>
@@ -163,20 +163,20 @@ concept unqualified_extended_mbwsli = requires(S src, C mask, L val, R shift) {
     } -> equivalent_simd_as<canonical_if_zero_t<S, L, A>>;
 };
 
-template <typename Op, typename S, typename C, typename L, typename R,
+template <typename S, typename C, typename L, typename R,
     typename A = common_abi_t<L, C>>
 concept decayable_mbwsli = decayable_vector_for<canonical_if_zero_t<S, L, A>,
                                operation_category::lane_agnostic> &&
     decayable_vector_for<L, operation_category::lane_agnostic> &&
     decayable_mask_for<C, operation_category::lane_agnostic> &&
-    requires(canonical_or_zero_t<S, L, A> src, canonical_type_t<C> mask,
-        canonical_type_t<L> val,
-        R shift) { Op::operator()(src, mask, val, shift); };
+    requires(bwshift_left_t bwsl, canonical_or_zero_t<S, L, A> src,
+        canonical_type_t<C> mask, canonical_type_t<L> val,
+        R shift) { bwsl(src, mask, val, shift); };
 
-template <typename Op, typename S, typename C, typename L, typename R,
+template <typename S, typename C, typename L, typename R,
     typename A = common_abi_t<L, C>>
 concept extended_mbwsli = unqualified_extended_mbwsli<S, C, L, R, A> ||
-    decayable_mbwsli<Op, S, C, L, R, A>;
+    decayable_mbwsli<S, C, L, R, A>;
 
 template <typename S, typename M, typename L, typename R,
     typename A = common_abi_t<canonical_if_zero_t<S, L>, L>>
@@ -196,101 +196,103 @@ concept unqualified_extended_imbwsli = requires(S src, L val, R shift) {
     } -> equivalent_simd_as<canonical_if_zero_t<S, L, A>>;
 };
 
-template <typename Op, typename S, typename M, typename L, typename R,
+template <typename S, typename M, typename L, typename R,
     typename A = common_abi_t<canonical_if_zero_t<S, L>, L>>
 concept decayable_imbwsli = decayable_vector_for<canonical_if_zero_t<S, L>,
                                 operation_category::lane_agnostic> &&
     decayable_vector_for<L, operation_category::lane_agnostic> &&
-    requires(canonical_or_zero_t<S, L, A> src, M mask, canonical_type_t<L> val,
-        R shift) { Op::operator()(src, mask, val, shift); };
+    requires(bwshift_left_t bwsl, canonical_or_zero_t<S, L, A> src, M mask,
+        canonical_type_t<L> val, R shift) { bwsl(src, mask, val, shift); };
 
-template <typename Op, typename S, typename M, typename L, typename R,
+template <typename S, typename M, typename L, typename R,
     typename A = common_abi_t<canonical_if_zero_t<S, L>, L>>
 concept extended_imbwsli = unqualified_extended_imbwsli<S, M, L, R, A> ||
-    decayable_imbwsli<Op, S, M, L, R, A>;
+    decayable_imbwsli<S, M, L, R, A>;
 
-template <typename Op, typename S, typename C, typename L, typename R,
+template <typename S, typename C, typename L, typename R,
     typename A = common_abi_t<L, R, C>>
 concept unqualified_canonical_mbwslv = requires(S src, C mask, L lhs, R rhs) {
     {
         bwshift_left(internal::abi<A>, src, mask, lhs, rhs)
     } -> equivalent_simd_as<
-        canonical_if_zero_t<S, operation_result_t<Op, L, R>, A>>;
+        canonical_if_zero_t<S, operation_result_t<bwshift_left_t, L, R>, A>>;
 };
 
-template <typename Op, typename S, typename C, typename L, typename R,
+template <typename S, typename C, typename L, typename R,
     typename A = common_abi_t<L, R, C>>
 concept unqualified_extended_mbwslv = requires(S src, C mask, L lhs, R rhs) {
     {
         bwshift_left(src, mask, lhs, rhs)
     } -> equivalent_simd_as<
-        canonical_if_zero_t<S, operation_result_t<Op, L, R>, A>>;
+        canonical_if_zero_t<S, operation_result_t<bwshift_left_t, L, R>, A>>;
 };
 
-template <typename Op, typename S, typename C, typename L, typename R,
+template <typename S, typename C, typename L, typename R,
     typename A = common_abi_t<L, R, C>>
 concept decayable_mbwslv =
     decayable_vector_for<
-        canonical_if_zero_t<S, operation_result_t<Op, L, R>, A>,
+        canonical_if_zero_t<S, operation_result_t<bwshift_left_t, L, R>, A>,
         operation_category::lane_agnostic> &&
     decayable_mask_for<C, operation_category::lane_agnostic> &&
     decayable_vector_for<L, operation_category::lane_agnostic> &&
     decayable_vector_for<R, operation_category::lane_agnostic> &&
-    requires(canonical_if_zero_t<S, operation_result_t<Op, L, R>, A> s,
+    requires(bwshift_left_t bwsl,
+        canonical_if_zero_t<S, operation_result_t<bwshift_left_t, L, R>, A> s,
         canonical_type_t<C> c, canonical_type_t<L> l,
-        canonical_type_t<R> r) { Op::operator()(s, c, l, r); };
+        canonical_type_t<R> r) { bwsl(s, c, l, r); };
 
-template <typename Op, typename S, typename C, typename L, typename R,
+template <typename S, typename C, typename L, typename R,
     typename A = common_abi_t<L, R, C>>
-concept extended_mbwslv = unqualified_extended_mbwslv<Op, S, C, L, R, A> ||
-    decayable_mbwslv<Op, S, C, L, R, A>;
+concept extended_mbwslv = unqualified_extended_mbwslv<S, C, L, R, A> ||
+    decayable_mbwslv<S, C, L, R, A>;
 
-template <typename Op, typename S, typename M, typename L, typename R,
-    typename A =
-        common_abi_t<canonical_if_zero_t<S, operation_result_t<Op, L, R>>,
-            operation_result_t<Op, L, R>>>
+template <typename S, typename M, typename L, typename R,
+    typename A = common_abi_t<
+        canonical_if_zero_t<S, operation_result_t<bwshift_left_t, L, R>>,
+        operation_result_t<bwshift_left_t, L, R>>>
 concept unqualified_canonical_imbwslv = requires(S src, L lhs, R rhs) {
     {
         bwshift_left<const_mask_v<
-            canonical_if_zero_t<S, operation_result_t<Op, L, R>, A>, M>>(
-            internal::abi<A>, src, dx::masked_operation, lhs, rhs)
+            canonical_if_zero_t<S, operation_result_t<bwshift_left_t, L, R>, A>,
+            M>>(internal::abi<A>, src, dx::masked_operation, lhs, rhs)
     } -> equivalent_simd_as<
-        canonical_if_zero_t<S, operation_result_t<Op, L, R>, A>>;
+        canonical_if_zero_t<S, operation_result_t<bwshift_left_t, L, R>, A>>;
 };
 
-template <typename Op, typename S, typename M, typename L, typename R,
-    typename A =
-        common_abi_t<canonical_if_zero_t<S, operation_result_t<Op, L, R>>,
-            operation_result_t<Op, L, R>>>
+template <typename S, typename M, typename L, typename R,
+    typename A = common_abi_t<
+        canonical_if_zero_t<S, operation_result_t<bwshift_left_t, L, R>>,
+        operation_result_t<bwshift_left_t, L, R>>>
 concept unqualified_extended_imbwslv = requires(S src, L lhs, R rhs) {
     {
         bwshift_left<const_mask_v<
-            canonical_if_zero_t<S, operation_result_t<Op, L, R>, A>, M>>(
-            src, dx::masked_operation, lhs, rhs)
+            canonical_if_zero_t<S, operation_result_t<bwshift_left_t, L, R>, A>,
+            M>>(src, dx::masked_operation, lhs, rhs)
     } -> equivalent_simd_as<
-        canonical_if_zero_t<S, operation_result_t<Op, L, R>, A>>;
+        canonical_if_zero_t<S, operation_result_t<bwshift_left_t, L, R>, A>>;
 };
 
-template <typename Op, typename S, typename M, typename L, typename R,
-    typename A =
-        common_abi_t<canonical_if_zero_t<S, operation_result_t<Op, L, R>>,
-            operation_result_t<Op, L, R>>>
+template <typename S, typename M, typename L, typename R,
+    typename A = common_abi_t<
+        canonical_if_zero_t<S, operation_result_t<bwshift_left_t, L, R>>,
+        operation_result_t<bwshift_left_t, L, R>>>
 concept decayable_imbwslv =
     decayable_vector_for<
-        canonical_if_zero_t<S, operation_result_t<Op, L, R>, A>,
+        canonical_if_zero_t<S, operation_result_t<bwshift_left_t, L, R>, A>,
         operation_category::lane_agnostic> &&
     decayable_vector_for<L, operation_category::lane_agnostic> &&
     decayable_vector_for<R, operation_category::lane_agnostic> &&
-    requires(canonical_if_zero_t<S, operation_result_t<Op, L, R>, A> s, M mask,
-        canonical_type_t<L> l,
-        canonical_type_t<R> r) { Op::operator()(s, mask, l, r); };
+    requires(bwshift_left_t bwsl,
+        canonical_if_zero_t<S, operation_result_t<bwshift_left_t, L, R>, A> s,
+        M mask, canonical_type_t<L> l,
+        canonical_type_t<R> r) { bwsl(s, mask, l, r); };
 
-template <typename Op, typename S, typename M, typename L, typename R,
-    typename A =
-        common_abi_t<canonical_if_zero_t<S, operation_result_t<Op, L, R>>,
-            operation_result_t<Op, L, R>>>
-concept extended_imbwslv = unqualified_extended_imbwslv<Op, S, M, L, R, A> ||
-    decayable_imbwslv<Op, S, M, L, R, A>;
+template <typename S, typename M, typename L, typename R,
+    typename A = common_abi_t<
+        canonical_if_zero_t<S, operation_result_t<bwshift_left_t, L, R>>,
+        operation_result_t<bwshift_left_t, L, R>>>
+concept extended_imbwslv = unqualified_extended_imbwslv<S, M, L, R, A> ||
+    decayable_imbwslv<S, M, L, R, A>;
 
 struct bwshift_left_t {
 private:
@@ -601,8 +603,7 @@ public:
     template <simd_vector Pass, simd_mask Mask, simd_vector Arg>
     requires (extended_vector<Pass> || extended_mask<Mask> ||
                  extended_vector<Arg>) &&
-        maskable_args<Pass, Mask, Arg> &&
-        extended_mbwsl<bwshift_left_t, Pass, Mask, Arg>
+        maskable_args<Pass, Mask, Arg> && extended_mbwsl<Pass, Mask, Arg>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         Pass pass, Mask mask, Arg arg, size_t shift) noexcept {
@@ -647,8 +648,7 @@ public:
 
     template <simd_mask Mask, simd_vector Arg>
     requires (extended_mask<Mask> || extended_vector<Arg>) &&
-        zmaskable_args<Mask, Arg> &&
-        extended_mbwsl<bwshift_left_t, zero_t, Mask, Arg>
+        zmaskable_args<Mask, Arg> && extended_mbwsl<zero_t, Mask, Arg>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         Mask mask, Arg arg, size_t shift) noexcept {
@@ -708,8 +708,7 @@ public:
 
     template <simd_vector Pass, const_mask_for<Pass> Mask, simd_vector Arg>
     requires (extended_vector<Pass> || extended_vector<Arg>) &&
-        imm_maskable_args<Pass, Arg> &&
-        extended_imbwsl<bwshift_left_t, Pass, Mask, Arg>
+        imm_maskable_args<Pass, Arg> && extended_imbwsl<Pass, Mask, Arg>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         Pass pass, Mask mask, Arg arg, size_t shift) noexcept {
@@ -756,8 +755,7 @@ public:
     }
 
     template <extended_vector Arg, const_mask_for<Arg> Mask>
-    requires imm_zmaskable_args<Arg> &&
-        extended_imbwsl<bwshift_left_t, zero_t, Mask, Arg>
+    requires imm_zmaskable_args<Arg> && extended_imbwsl<zero_t, Mask, Arg>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         Mask mask, Arg arg, size_t shift) noexcept {
@@ -819,7 +817,7 @@ public:
     requires (extended_vector<Pass> || extended_mask<Mask> ||
                  extended_vector<Arg>) &&
         maskable_args<Pass, Mask, Arg> &&
-        extended_mbwsli<bwshift_left_t, Pass, Mask, Arg, Shift>
+        extended_mbwsli<Pass, Mask, Arg, Shift>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         Pass pass, Mask mask, Arg arg, Shift shift) noexcept {
@@ -864,8 +862,7 @@ public:
 
     template <simd_mask Mask, simd_vector Arg, integral_constant_like Shift>
     requires (extended_mask<Mask> || extended_vector<Arg>) &&
-        zmaskable_args<Mask, Arg> &&
-        extended_mbwsli<bwshift_left_t, zero_t, Mask, Arg, Shift>
+        zmaskable_args<Mask, Arg> && extended_mbwsli<zero_t, Mask, Arg, Shift>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(Mask mask, Arg arg, Shift shift) noexcept {
         if constexpr (unqualified_extended_mbwsli<dx::zero_t, Mask, Arg,
@@ -927,8 +924,7 @@ public:
     template <simd_vector Pass, const_mask_for<Pass> Mask, simd_vector Arg,
         integral_constant_like Shift>
     requires (extended_vector<Pass> || extended_vector<Arg>) &&
-        imm_maskable_args<Pass, Arg> &&
-        extended_imbwsli<bwshift_left_t, Pass, Mask, Arg, Shift>
+        imm_maskable_args<Pass, Arg> && extended_imbwsli<Pass, Mask, Arg, Shift>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         Pass pass, Mask mask, Arg arg, Shift shift) noexcept {
@@ -977,7 +973,7 @@ public:
     template <extended_vector Arg, const_mask_for<Arg> Mask,
         integral_constant_like Shift>
     requires imm_zmaskable_args<Arg> &&
-        extended_imbwsli<bwshift_left_t, zero_t, Mask, Arg, Shift>
+        extended_imbwsli<zero_t, Mask, Arg, Shift>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(Mask mask, Arg arg, Shift shift) noexcept {
         if constexpr (unqualified_extended_mbwsli<zero_t, Mask, Arg, Shift>) {

@@ -25,6 +25,8 @@ void subtract(...) noexcept = delete;
 template <auto>
 void subtract(...) noexcept = delete;
 
+struct subtract_t;
+
 template <typename L, typename R, typename A = common_abi_t<L, R>>
 concept unqualified_canonical_subtract = requires(L lhs, R rhs) {
     {
@@ -42,7 +44,7 @@ concept unqualified_subtract = unqualified_canonical_subtract<L, R> ||
     unqualified_extended_subtract<L, R> ||
     (decayable_vector_for<L, operation_category::lane_agnostic> &&
         decayable_vector_for<R, operation_category::lane_agnostic> &&
-        unqualified_canonical_subtract<canonical_type_t<L>,
+        regular_invocable<subtract_t, canonical_type_t<L>,
             canonical_type_t<R>>);
 
 template <typename Op, typename S, typename C, typename L, typename R,

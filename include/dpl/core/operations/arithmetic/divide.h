@@ -25,6 +25,8 @@ void divide(...) noexcept = delete;
 template <auto>
 void divide(...) noexcept = delete;
 
+struct divide_t;
+
 template <typename L, typename R, typename A = common_abi_t<L, R>>
 concept unqualified_canonical_divide = requires(L lhs, R rhs) {
     {
@@ -42,7 +44,7 @@ concept unqualified_divide =
     unqualified_canonical_divide<L, R> || unqualified_extended_divide<L, R> ||
     (decayable_vector_for<L, operation_category::lane_agnostic> &&
         decayable_vector_for<R, operation_category::lane_agnostic> &&
-        unqualified_canonical_divide<canonical_type_t<L>, canonical_type_t<R>>);
+        regular_invocable<divide_t, canonical_type_t<L>, canonical_type_t<R>>);
 
 template <typename Op, typename S, typename C, typename L, typename R,
     typename A = common_abi_t<L, R, C>>

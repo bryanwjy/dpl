@@ -63,7 +63,7 @@ requires invocable<Op, basic_vector<InEs, A>..., InArgs...> &&
 
 template <typename Op, typename... Ts>
 using operation_result_t DPL_NODEBUG =
-    decltype(Op::operator()( __DPL declval<Ts>()...));
+    decltype(__DPL declval<Op const>()( __DPL declval<Ts>()...));
 
 template <typename T, typename U, typename A = typename U::abi_type>
 using canonical_if_zero_t DPL_NODEBUG = conditional_t<is_same_v<T, zero_t>,

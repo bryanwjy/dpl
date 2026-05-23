@@ -24,6 +24,8 @@ void bwornot(...) noexcept = delete;
 template <auto>
 void bwornot(...) noexcept = delete;
 
+struct bwornot_t;
+
 template <typename L, typename R, typename A = common_abi_t<L, R>>
 concept unqualified_canonical_bwornot = requires(L lhs, R rhs) {
     {
@@ -41,112 +43,111 @@ concept unqualified_bwornot =
     unqualified_canonical_bwornot<L, R> || unqualified_extended_bwornot<L, R> ||
     (decayable_vector_for<L, operation_category::lane_agnostic> &&
         decayable_vector_for<R, operation_category::lane_agnostic> &&
-        unqualified_canonical_bwornot<canonical_type_t<L>,
-            canonical_type_t<R>>);
+        regular_invocable<bwornot_t, canonical_type_t<L>, canonical_type_t<R>>);
 
 template <typename L, typename R, typename A = common_abi_t<L, R>>
-concept unqualified_canonical_mask_ornot = requires(L lhs, R rhs) {
+concept unqualified_canonical_mask_bwornot = requires(L lhs, R rhs) {
     {
         bwornot(internal::abi<A>, lhs, rhs)
     } -> canonical_bitwise_result<L, R, A>;
 };
 
 template <typename L, typename R, typename A = common_abi_t<L, R>>
-concept unqualified_extended_mask_ornot = requires(L lhs, R rhs) {
+concept unqualified_extended_mask_bwornot = requires(L lhs, R rhs) {
     { bwornot(lhs, rhs) } -> extended_bitwise_result<L, R, A>;
 };
 
 template <typename L, typename R, typename A = common_abi_t<L, R>>
-concept unqualified_mask_ornot = unqualified_canonical_mask_ornot<L, R> ||
-    unqualified_extended_mask_ornot<L, R> ||
+concept unqualified_mask_bwornot = unqualified_canonical_mask_bwornot<L, R> ||
+    unqualified_extended_mask_bwornot<L, R> ||
     (decayable_mask_for<L, operation_category::lane_agnostic> &&
         decayable_mask_for<R, operation_category::lane_agnostic> &&
-        unqualified_canonical_mask_ornot<canonical_type_t<L>,
-            canonical_type_t<R>>);
+        regular_invocable<bwornot_t, canonical_type_t<L>, canonical_type_t<R>>);
 
-template <typename Op, typename S, typename C, typename L, typename R,
+template <typename S, typename C, typename L, typename R,
     typename A = common_abi_t<L, R, C>>
 concept unqualified_canonical_mbwornot = requires(S src, C mask, L lhs, R rhs) {
     {
         bwornot(internal::abi<A>, src, mask, lhs, rhs)
     } -> equivalent_simd_as<
-        canonical_if_zero_t<S, operation_result_t<Op, L, R>, A>>;
+        canonical_if_zero_t<S, operation_result_t<bwornot_t, L, R>, A>>;
 };
 
-template <typename Op, typename S, typename C, typename L, typename R,
+template <typename S, typename C, typename L, typename R,
     typename A = common_abi_t<L, R, C>>
 concept unqualified_extended_mbwornot = requires(S src, C mask, L lhs, R rhs) {
     {
         bwornot(src, mask, lhs, rhs)
     } -> equivalent_simd_as<
-        canonical_if_zero_t<S, operation_result_t<Op, L, R>, A>>;
+        canonical_if_zero_t<S, operation_result_t<bwornot_t, L, R>, A>>;
 };
 
-template <typename Op, typename S, typename C, typename L, typename R,
+template <typename S, typename C, typename L, typename R,
     typename A = common_abi_t<L, R, C>>
 concept decayable_mbwornot =
     decayable_vector_for<
-        canonical_if_zero_t<S, operation_result_t<Op, L, R>, A>,
+        canonical_if_zero_t<S, operation_result_t<bwornot_t, L, R>, A>,
         operation_category::lane_agnostic> &&
     decayable_mask_for<C, operation_category::lane_agnostic> &&
     decayable_vector_for<L, operation_category::lane_agnostic> &&
     decayable_vector_for<R, operation_category::lane_agnostic> &&
-    requires(canonical_if_zero_t<S, operation_result_t<Op, L, R>, A> s,
+    requires(bwornot_t op,
+        canonical_if_zero_t<S, operation_result_t<bwornot_t, L, R>, A> s,
         canonical_type_t<C> c, canonical_type_t<L> l,
-        canonical_type_t<R> r) { Op::operator()(s, c, l, r); };
+        canonical_type_t<R> r) { op(s, c, l, r); };
 
-template <typename Op, typename S, typename C, typename L, typename R,
+template <typename S, typename C, typename L, typename R,
     typename A = common_abi_t<L, R, C>>
-concept extended_mbwornot = unqualified_extended_mbwornot<Op, S, C, L, R, A> ||
-    decayable_mbwornot<Op, S, C, L, R, A>;
+concept extended_mbwornot = unqualified_extended_mbwornot<S, C, L, R, A> ||
+    decayable_mbwornot<S, C, L, R, A>;
 
-template <typename Op, typename S, typename M, typename L, typename R,
-    typename A =
-        common_abi_t<canonical_if_zero_t<S, operation_result_t<Op, L, R>>,
-            operation_result_t<Op, L, R>>>
+template <typename S, typename M, typename L, typename R,
+    typename A = common_abi_t<
+        canonical_if_zero_t<S, operation_result_t<bwornot_t, L, R>>,
+        operation_result_t<bwornot_t, L, R>>>
 concept unqualified_canonical_imbwornot = requires(S src, L lhs, R rhs) {
     {
         bwornot<const_mask_v<
-            canonical_if_zero_t<S, operation_result_t<Op, L, R>, A>, M>>(
+            canonical_if_zero_t<S, operation_result_t<bwornot_t, L, R>, A>, M>>(
             internal::abi<A>, src, dx::masked_operation, lhs, rhs)
     } -> equivalent_simd_as<
-        canonical_if_zero_t<S, operation_result_t<Op, L, R>, A>>;
+        canonical_if_zero_t<S, operation_result_t<bwornot_t, L, R>, A>>;
 };
 
-template <typename Op, typename S, typename M, typename L, typename R,
-    typename A =
-        common_abi_t<canonical_if_zero_t<S, operation_result_t<Op, L, R>>,
-            operation_result_t<Op, L, R>>>
+template <typename S, typename M, typename L, typename R,
+    typename A = common_abi_t<
+        canonical_if_zero_t<S, operation_result_t<bwornot_t, L, R>>,
+        operation_result_t<bwornot_t, L, R>>>
 concept unqualified_extended_imbwornot = requires(S src, L lhs, R rhs) {
     {
         bwornot<const_mask_v<
-            canonical_if_zero_t<S, operation_result_t<Op, L, R>, A>, M>>(
+            canonical_if_zero_t<S, operation_result_t<bwornot_t, L, R>, A>, M>>(
             src, dx::masked_operation, lhs, rhs)
     } -> equivalent_simd_as<
-        canonical_if_zero_t<S, operation_result_t<Op, L, R>, A>>;
+        canonical_if_zero_t<S, operation_result_t<bwornot_t, L, R>, A>>;
 };
 
-template <typename Op, typename S, typename M, typename L, typename R,
-    typename A =
-        common_abi_t<canonical_if_zero_t<S, operation_result_t<Op, L, R>>,
-            operation_result_t<Op, L, R>>>
+template <typename S, typename M, typename L, typename R,
+    typename A = common_abi_t<
+        canonical_if_zero_t<S, operation_result_t<bwornot_t, L, R>>,
+        operation_result_t<bwornot_t, L, R>>>
 concept decayable_imbwornot =
     decayable_vector_for<
-        canonical_if_zero_t<S, operation_result_t<Op, L, R>, A>,
+        canonical_if_zero_t<S, operation_result_t<bwornot_t, L, R>, A>,
         operation_category::lane_agnostic> &&
     decayable_vector_for<L, operation_category::lane_agnostic> &&
     decayable_vector_for<R, operation_category::lane_agnostic> &&
-    requires(canonical_if_zero_t<S, operation_result_t<Op, L, R>, A> s, M mask,
-        canonical_type_t<L> l,
-        canonical_type_t<R> r) { Op::operator()(s, mask, l, r); };
+    requires(bwornot_t op,
+        canonical_if_zero_t<S, operation_result_t<bwornot_t, L, R>, A> s,
+        M mask, canonical_type_t<L> l,
+        canonical_type_t<R> r) { op(s, mask, l, r); };
 
-template <typename Op, typename S, typename M, typename L, typename R,
-    typename A =
-        common_abi_t<canonical_if_zero_t<S, operation_result_t<Op, L, R>>,
-            operation_result_t<Op, L, R>>>
-concept extended_imbwornot =
-    unqualified_extended_imbwornot<Op, S, M, L, R, A> ||
-    decayable_imbwornot<Op, S, M, L, R, A>;
+template <typename S, typename M, typename L, typename R,
+    typename A = common_abi_t<
+        canonical_if_zero_t<S, operation_result_t<bwornot_t, L, R>>,
+        operation_result_t<bwornot_t, L, R>>>
+concept extended_imbwornot = unqualified_extended_imbwornot<S, M, L, R, A> ||
+    decayable_imbwornot<S, M, L, R, A>;
 
 struct bwornot_t : binary_operation_base<bwornot_t> {
 private:
@@ -173,7 +174,7 @@ private:
             [](auto lhs, auto rhs) {
                 using bit_type = bitset<sizeof(T) * char_bit_v>;
                 auto promoted = __DPL bit_cast<bit_type>(lhs) |
-                    __DPL bit_cast<bit_type>(rhs).invert();
+                    ~__DPL bit_cast<bit_type>(rhs);
                 return __DPL bit_cast<T>(promoted.reinitialize());
             },
             lhs, rhs);
@@ -230,7 +231,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_mask<E, A> operator()(
         basic_mask<E, A> lhs, basic_mask<E, A> rhs) noexcept {
-        if constexpr (unqualified_canonical_mask_ornot<basic_mask<E, A>,
+        if constexpr (unqualified_canonical_mask_bwornot<basic_mask<E, A>,
                           basic_mask<E, A>>) {
             if consteval {
                 return fallback(lhs, rhs);
@@ -245,7 +246,7 @@ public:
     template <simd_abi LA, common_abi_with<LA> RA, typename E>
     requires simd_element_for<E, LA> && simd_element_for<E, RA> &&
         (scalable_abi<LA> || scalable_abi<RA> || different_from<LA, RA>) &&
-        unqualified_canonical_mask_ornot<basic_mask<E, LA>, basic_mask<E, RA>>
+        unqualified_canonical_mask_bwornot<basic_mask<E, LA>, basic_mask<E, RA>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_mask<E, common_abi_t<LA, RA>> operator()(
         basic_mask<E, LA> lhs, basic_mask<E, RA> rhs) noexcept {
@@ -254,10 +255,10 @@ public:
 
     template <simd_mask L, simd_mask R>
     requires (extended_mask<L> || extended_mask<R>) &&
-        unqualified_mask_ornot<L, R>
+        unqualified_mask_bwornot<L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs) noexcept {
-        if constexpr (unqualified_extended_mask_ornot<L, R>) {
+        if constexpr (unqualified_extended_mask_bwornot<L, R>) {
             return bwornot(lhs, rhs);
         } else {
             return operator()(dx::to_canonical(lhs), dx::to_canonical(rhs));
@@ -272,9 +273,9 @@ public:
     static constexpr basic_vector<E, A> operator()(basic_vector<E, A> src,
         basic_mask<MaskE, A> mask, basic_vector<E, A> lhs,
         basic_vector<E, A> rhs) noexcept {
-        if constexpr (unqualified_canonical_mbwornot<bwornot_t,
-                          basic_vector<E, A>, basic_mask<MaskE, A>,
-                          basic_vector<E, A>, basic_vector<E, A>>) {
+        if constexpr (unqualified_canonical_mbwornot<basic_vector<E, A>,
+                          basic_mask<MaskE, A>, basic_vector<E, A>,
+                          basic_vector<E, A>>) {
             if consteval {
                 return internal::masked<bwornot_t>(src, mask, lhs, rhs);
             } else {
@@ -292,7 +293,7 @@ public:
         simd_element_for<E, LA> && simd_element_for<E, RA> &&
         maskable_args<basic_vector<E, SA>, basic_mask<MaskE, SA>,
             basic_vector<E, LA>, basic_vector<E, RA>> &&
-        unqualified_canonical_mbwornot<bwornot_t, basic_vector<E, SA>,
+        unqualified_canonical_mbwornot<basic_vector<E, SA>,
             basic_mask<MaskE, SA>, basic_vector<E, LA>, basic_vector<E, RA>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, SA> operator()(basic_vector<E, SA> src,
@@ -304,11 +305,10 @@ public:
     template <simd_vector S, simd_mask Mask, simd_vector L, simd_vector R>
     requires (extended_vector<S> || extended_mask<Mask> || extended_vector<L> ||
                  extended_vector<R>) &&
-        maskable_args<S, Mask, L, R> &&
-        extended_mbwornot<bwornot_t, S, Mask, L, R>
+        maskable_args<S, Mask, L, R> && extended_mbwornot<S, Mask, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(S src, Mask mask, L lhs, R rhs) noexcept {
-        if constexpr (unqualified_extended_mbwornot<bwornot_t, S, Mask, L, R>) {
+        if constexpr (unqualified_extended_mbwornot<S, Mask, L, R>) {
             return bwornot(src, mask, lhs, rhs);
         } else {
             return operator()(dx::to_canonical(src), dx::to_canonical(mask),
@@ -321,7 +321,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A> operator()(basic_mask<MaskE, A> mask,
         basic_vector<E, A> lhs, basic_vector<E, A> rhs) noexcept {
-        if constexpr (unqualified_canonical_mbwornot<bwornot_t, zero_t,
+        if constexpr (unqualified_canonical_mbwornot<dx::zero_t,
                           basic_mask<MaskE, A>, basic_vector<E, A>,
                           basic_vector<E, A>>) {
             if consteval {
@@ -342,7 +342,7 @@ public:
         simd_element_for<E, LA> && simd_element_for<E, RA> &&
         zmaskable_args<basic_mask<MaskE, SA>, basic_vector<E, LA>,
             basic_vector<E, RA>> &&
-        unqualified_canonical_mbwornot<bwornot_t, zero_t, basic_mask<MaskE, SA>,
+        unqualified_canonical_mbwornot<dx::zero_t, basic_mask<MaskE, SA>,
             basic_vector<E, LA>, basic_vector<E, RA>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(basic_mask<MaskE, SA> mask,
@@ -354,12 +354,10 @@ public:
     template <simd_vector S, simd_mask Mask, simd_vector L, simd_vector R>
     requires (extended_vector<S> || extended_mask<Mask> || extended_vector<L> ||
                  extended_vector<R>) &&
-        zmaskable_args<Mask, L, R> &&
-        extended_mbwornot<bwornot_t, zero_t, Mask, L, R>
+        zmaskable_args<Mask, L, R> && extended_mbwornot<dx::zero_t, Mask, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(Mask mask, L lhs, R rhs) noexcept {
-        if constexpr (unqualified_extended_mbwornot<bwornot_t, zero_t, Mask, L,
-                          R>) {
+        if constexpr (unqualified_extended_mbwornot<dx::zero_t, Mask, L, R>) {
             return bwornot(mask, lhs, rhs);
         } else {
             return operator()(dx::to_canonical(mask), dx::to_canonical(lhs),
@@ -381,9 +379,8 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A> operator()(basic_vector<E, A> src,
         Mask mask, basic_vector<E, A> lhs, basic_vector<E, A> rhs) noexcept {
-        if constexpr (unqualified_canonical_imbwornot<bwornot_t,
-                          basic_vector<E, A>, Mask, basic_vector<E, A>,
-                          basic_vector<E, A>>) {
+        if constexpr (unqualified_canonical_imbwornot<basic_vector<E, A>, Mask,
+                          basic_vector<E, A>, basic_vector<E, A>>) {
             if consteval {
                 return internal::masked<bwornot_t>(src, mask, lhs, rhs);
             } else {
@@ -405,7 +402,7 @@ public:
         simd_element_for<E, LA> && simd_element_for<E, RA> &&
         imm_maskable_args<basic_vector<E, SA>, basic_vector<E, LA>,
             basic_vector<E, RA>> &&
-        unqualified_canonical_imbwornot<bwornot_t, basic_vector<E, SA>, Mask,
+        unqualified_canonical_imbwornot<basic_vector<E, SA>, Mask,
             basic_vector<E, LA>, basic_vector<E, RA>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, SA> operator()(basic_vector<E, SA> src,
@@ -417,12 +414,10 @@ public:
     template <simd_vector S, const_mask_for<S> Mask, simd_vector L,
         simd_vector R>
     requires (extended_vector<S> || extended_vector<L> || extended_vector<R>) &&
-        imm_maskable_args<S, L, R> &&
-        extended_imbwornot<bwornot_t, S, Mask, L, R>
+        imm_maskable_args<S, L, R> && extended_imbwornot<S, Mask, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(S src, Mask mask, L lhs, R rhs) noexcept {
-        if constexpr (unqualified_extended_imbwornot<bwornot_t, S, Mask, L,
-                          R>) {
+        if constexpr (unqualified_extended_imbwornot<S, Mask, L, R>) {
             constexpr auto V = const_mask_v<S, Mask>;
             return bwornot<V>(src, masked_operation, lhs, rhs);
         } else {
@@ -436,7 +431,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A> operator()(
         Mask mask, basic_vector<E, A> lhs, basic_vector<E, A> rhs) noexcept {
-        if constexpr (unqualified_canonical_imbwornot<bwornot_t, zero_t, Mask,
+        if constexpr (unqualified_canonical_imbwornot<dx::zero_t, Mask,
                           basic_vector<E, A>, basic_vector<E, A>>) {
             if consteval {
                 return internal::masked<bwornot_t>(mask, lhs, rhs);
@@ -456,8 +451,8 @@ public:
     requires (different_from<LA, RA> || scalable_abi<LA> || scalable_abi<RA>) &&
         simd_element_for<E, LA> && simd_element_for<E, RA> &&
         imm_zmaskable_args<basic_vector<E, LA>, basic_vector<E, RA>> &&
-        unqualified_canonical_imbwornot<bwornot_t, zero_t, Mask,
-            basic_vector<E, LA>, basic_vector<E, RA>>
+        unqualified_canonical_imbwornot<dx::zero_t, Mask, basic_vector<E, LA>,
+            basic_vector<E, RA>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, common_abi_t<LA, RA>> operator()(
         Mask mask, basic_vector<E, LA> lhs, basic_vector<E, RA> rhs) noexcept {
@@ -470,13 +465,11 @@ public:
     template <simd_vector L, simd_vector R,
         const_mask_for<operation_result_t<bwornot_t, L, R>> Mask>
     requires (extended_vector<L> || extended_vector<R>) &&
-        imm_zmaskable_args<L, R> &&
-        extended_imbwornot<bwornot_t, zero_t, Mask, L, R>
+        imm_zmaskable_args<L, R> && extended_imbwornot<dx::zero_t, Mask, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(Mask mask, L lhs, R rhs) noexcept {
         using S = operation_result_t<bwornot_t, L, R>;
-        if constexpr (unqualified_extended_imbwornot<bwornot_t, zero_t, Mask, L,
-                          R>) {
+        if constexpr (unqualified_extended_imbwornot<dx::zero_t, Mask, L, R>) {
             constexpr auto V = const_mask_v<S, Mask>;
             return bwornot<V>(dx::zero, masked_operation, lhs, rhs);
         } else {
