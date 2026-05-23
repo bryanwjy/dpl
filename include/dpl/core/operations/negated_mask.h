@@ -17,6 +17,7 @@
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_mask.h"
 #  include "dpl/core/type_traits/basic_type.h"
+#  include "dpl/core/type_traits/rebind_simd.h"
 #  include "dpl/core/type_traits/simd_traits.h"
 #  include "dpl/std/concepts/same_as.h"
 #endif
@@ -29,7 +30,7 @@ inline constexpr bool is_negated_mask_specialization = false;
 
 template <simd_mask T>
 class negated_mask {
-    using element_type = simd_lane_type_t<T>;
+    using element_type DPL_NODEBUG = simd_lane_type_t<T>;
 
 public:
     using vector_type = typename T::vector_type;
@@ -259,7 +260,13 @@ inline constexpr bool is_negated_mask_specialization<negated_mask<T>> = true;
 } // namespace datapar::internal
 
 namespace datapar {
+DPL_EXPORT template <simd_mask T, typename E, typename A>
+requires requires { typename rebind_simd<T, E, A>::type; }
+struct rebind_simd<internal::negated_mask<T>, E, A> {
+    using type DPL_NODEBUG =
+        internal::negated_mask<typename rebind_simd<T, E, A>::type>;
+};
 DPL_EXPORT template <simd_mask T>
 inline constexpr bool enable_simd_mask<internal::negated_mask<T>> = true;
-}
+} // namespace datapar
 DPL_DEFAULT_NAMESPACE_END

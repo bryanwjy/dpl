@@ -17,7 +17,6 @@
 #  include "dpl/core/type_traits/array_for.h"
 #  include "dpl/core/type_traits/basic_type.h"
 #  include "dpl/core/type_traits/iota_sequence.h"
-#  include "dpl/core/type_traits/rebind_simd.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN

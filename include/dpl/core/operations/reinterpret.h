@@ -27,24 +27,48 @@ template <typename>
 void reinterpret(...) noexcept = delete;
 
 template <typename>
-struct reinterpret_t {};
+struct reinterpret_t;
 
 template <typename From, typename To>
-concept unqualified_reinterpretable_to = requires(From from) {
+concept unqualified_canonical_reinterpret = requires(From from) {
     {
         reinterpret<To>(internal::abi<From>, from)
-    } -> simd_with<To, typename From::abi_type>;
+    } -> core_convertible_to<basic_vector<To, typename From::abi_type>>;
 };
 
 template <typename From, typename To>
-concept unqualified_mreinterpretable_to = requires(From from) {
+concept unqualified_canonical_mask_reinterpret = requires(From from) {
     {
         reinterpret<To>(internal::abi<From>, from)
-    } -> mask_with<To, typename From::abi_type>;
+    } -> core_convertible_to<basic_mask<To, typename From::abi_type>>;
 };
 
-template <simd_element ToE>
-struct reinterpret_t<ToE> {
+template <typename T, typename ToE, typename A>
+concept extended_reinterpreted_vector =
+    simd_vector<T> && same_as<simd_lane_type_t<T>, ToE> &&
+    common_abi_with<A, typename T::abi_type>;
+
+template <typename T, typename ToE, typename A>
+concept extended_reinterpreted_mask =
+    simd_mask<T> && same_as<simd_lane_type_t<T>, ToE> &&
+    common_abi_with<A, typename T::abi_type>;
+
+template <typename From, typename To>
+concept unqualified_extended_reinterpret = requires(From from) {
+    {
+        reinterpret<To>(from)
+    } -> extended_reinterpreted_vector<To, typename From::abi_type>;
+};
+
+template <typename From, typename To>
+concept unqualified_extended_mask_reinterpret = requires(From from) {
+    {
+        reinterpret<To>(from)
+    } -> extended_reinterpreted_mask<To, typename From::abi_type>;
+};
+
+template <typename ToE>
+struct reinterpret_t {
 private:
     template <typename From>
     static constexpr auto policy = []() {
@@ -98,7 +122,7 @@ public:
         basic_vector<FromE, A> val) noexcept {
         if constexpr (same_as<FromE, ToE>) {
             return val;
-        } else if constexpr (unqualified_reinterpretable_to<
+        } else if constexpr (unqualified_canonical_reinterpret<
                                  basic_vector<FromE, A>, ToE>) {
             if consteval {
                 return fallback(val);
@@ -111,16 +135,13 @@ public:
     }
 
     template <extended_vector From>
-    requires same_as<typename From::value_type, ToE> ||
-        unqualified_reinterpretable_to<From, ToE> ||
+    requires unqualified_extended_reinterpret<From, ToE> ||
         (decayable_vector_for<From, reinterpret_t::policy<From>> &&
-            unqualified_reinterpretable_to<canonical_type_t<From>, ToE>)
+            unqualified_canonical_reinterpret<canonical_type_t<From>, ToE>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(From val) noexcept {
-        if constexpr (same_as<typename From::value_type, ToE>) {
-            return val;
-        } else if constexpr (unqualified_reinterpretable_to<From, ToE>) {
-            return reinterpret<ToE>(internal::abi<From>, val);
+        if constexpr (unqualified_extended_reinterpret<From, ToE>) {
+            return reinterpret<ToE>(val);
         } else {
             return operator()(dx::to_canonical(val));
         }
@@ -132,7 +153,7 @@ public:
         basic_mask<FromE, A> val) noexcept {
         if constexpr (same_as<FromE, ToE>) {
             return val;
-        } else if constexpr (unqualified_mreinterpretable_to<
+        } else if constexpr (unqualified_canonical_mask_reinterpret<
                                  basic_mask<FromE, A>, ToE>) {
             if consteval {
                 return fallback(val);
@@ -146,16 +167,14 @@ public:
 
     template <extended_mask From>
     requires common_size_with<simd_lane_type_t<From>, ToE> &&
-        (same_as<simd_lane_type_t<From>, ToE> ||
-            unqualified_mreinterpretable_to<From, ToE> ||
+        (unqualified_extended_mask_reinterpret<From, ToE> ||
             (decayable_mask_for<From, operation_category::lane_agnostic> &&
-                unqualified_mreinterpretable_to<canonical_type_t<From>, ToE>))
+                unqualified_canonical_mask_reinterpret<canonical_type_t<From>,
+                    ToE>))
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(From val) noexcept {
-        if constexpr (same_as<simd_lane_type_t<From>, ToE>) {
-            return val;
-        } else if constexpr (unqualified_mreinterpretable_to<From, ToE>) {
-            return reinterpret<ToE>(internal::abi<From>, val);
+        if constexpr (unqualified_extended_mask_reinterpret<From, ToE>) {
+            return reinterpret<ToE>(val);
         } else {
             return operator()(dx::to_canonical(val));
         }
