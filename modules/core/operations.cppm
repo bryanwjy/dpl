@@ -23,7 +23,7 @@ import :core.constants;
 #include "dpl/core/operations/cast.h"
 #include "dpl/core/operations/compare.h"
 #include "dpl/core/operations/concat.h"
-#include "dpl/core/operations/logic.h"
+#include "dpl/core/operations/logical.h"
 #include "dpl/core/operations/minmax.h"
 #include "dpl/core/operations/reinterpret.h"
 #include "dpl/core/operations/select.h"

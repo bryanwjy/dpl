@@ -40,8 +40,8 @@ concept unqualified_extended_multiply = requires(L lhs, R rhs) {
 };
 
 template <typename L, typename R, typename A = common_abi_t<L, R>>
-concept unqualified_multiply = unqualified_canonical_multiply<L, R> ||
-    unqualified_extended_multiply<L, R> ||
+concept unqualified_multiply = unqualified_canonical_multiply<L, R, A> ||
+    unqualified_extended_multiply<L, R, A> ||
     (decayable_vector_for<L, operation_category::lane_agnostic> &&
         decayable_vector_for<R, operation_category::lane_agnostic> &&
         regular_invocable<multiply_t, canonical_type_t<L>,

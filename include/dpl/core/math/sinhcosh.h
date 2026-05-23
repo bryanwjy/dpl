@@ -13,11 +13,9 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/concepts/simd_traits.h"
-#  include "dpl/core/operations/bit.h"
 #  include "dpl/core/operations/bitwise.h"
 #  include "dpl/core/operations/compare.h"
-#  include "dpl/core/operations/logic.h"
+#  include "dpl/core/operations/logical.h"
 #  include "dpl/core/operations/select.h"
 #endif
 

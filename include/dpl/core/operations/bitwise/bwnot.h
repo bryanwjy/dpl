@@ -46,12 +46,12 @@ concept unqualified_bwnot =
 
 template <typename T, typename A = typename T::abi_type>
 concept unqualified_canonical_mask_bwnot = requires(T val) {
-    { bwnot(internal::abi<A>, val) } -> canonical_mask_result<T, A>;
+    { bwnot(internal::abi<A>, val) } -> canonical_bitwise_mask<T, T, A>;
 };
 
 template <typename T, typename A = typename T::abi_type>
 concept unqualified_extended_mask_bwnot = requires(T val) {
-    { bwnot(val) } -> extended_mask_result<T, A>;
+    { bwnot(val) } -> extended_bitwise_mask<T, T, A>;
 };
 
 template <typename T, typename A = typename T::abi_type>

@@ -11,7 +11,7 @@
 #  include "dpl/core/basic/immediate.h"
 #  include "dpl/core/basic/to_native_type.h"
 #  include "dpl/core/operations/bit.h"
-#  include "dpl/core/operations/logic.h"
+#  include "dpl/core/operations/logical.h"
 #  include "dpl/core/operations/reinterpret.h"
 #  include "dpl/core/type_traits/iota_sequence.h"
 #  include "dpl/std/bit/bit_width.h"

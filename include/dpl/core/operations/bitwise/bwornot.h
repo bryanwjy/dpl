@@ -47,19 +47,18 @@ concept unqualified_bwornot =
 
 template <typename L, typename R, typename A = common_abi_t<L, R>>
 concept unqualified_canonical_mask_bwornot = requires(L lhs, R rhs) {
-    {
-        bwornot(internal::abi<A>, lhs, rhs)
-    } -> canonical_bitwise_result<L, R, A>;
+    { bwornot(internal::abi<A>, lhs, rhs) } -> canonical_bitwise_mask<L, R, A>;
 };
 
 template <typename L, typename R, typename A = common_abi_t<L, R>>
 concept unqualified_extended_mask_bwornot = requires(L lhs, R rhs) {
-    { bwornot(lhs, rhs) } -> extended_bitwise_result<L, R, A>;
+    { bwornot(lhs, rhs) } -> extended_bitwise_mask<L, R, A>;
 };
 
 template <typename L, typename R, typename A = common_abi_t<L, R>>
-concept unqualified_mask_bwornot = unqualified_canonical_mask_bwornot<L, R> ||
-    unqualified_extended_mask_bwornot<L, R> ||
+concept unqualified_mask_bwornot =
+    unqualified_canonical_mask_bwornot<L, R, A> ||
+    unqualified_extended_mask_bwornot<L, R, A> ||
     (decayable_mask_for<L, operation_category::lane_agnostic> &&
         decayable_mask_for<R, operation_category::lane_agnostic> &&
         regular_invocable<bwornot_t, canonical_type_t<L>, canonical_type_t<R>>);
@@ -180,11 +179,11 @@ private:
             lhs, rhs);
     }
 
-    template <typename E, typename A>
+    template <typename LE, typename RE, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(
-        basic_mask<E, A> lhs, basic_mask<E, A> rhs) noexcept {
-        return internal::transform<basic_mask<E, A>>(
+        basic_mask<LE, A> lhs, basic_mask<RE, A> rhs) noexcept {
+        return internal::transform<basic_mask<common_size_type_t<LE, RE>, A>>(
             [](auto lhs, auto rhs) { return lhs || !rhs; }, lhs, rhs);
     }
 
@@ -227,12 +226,13 @@ public:
         }
     }
 
-    template <fixed_width_abi A, simd_element_for<A> E>
+    template <fixed_width_abi A, simd_element_for<A> LE, simd_element_for<A> RE>
+    requires common_size_with<LE, RE>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_mask<E, A> operator()(
-        basic_mask<E, A> lhs, basic_mask<E, A> rhs) noexcept {
-        if constexpr (unqualified_canonical_mask_bwornot<basic_mask<E, A>,
-                          basic_mask<E, A>>) {
+    static constexpr basic_mask<common_size_type_t<LE, RE>, A> operator()(
+        basic_mask<LE, A> lhs, basic_mask<RE, A> rhs) noexcept {
+        if constexpr (unqualified_canonical_mask_bwornot<basic_mask<LE, A>,
+                          basic_mask<RE, A>>) {
             if consteval {
                 return fallback(lhs, rhs);
             } else {
@@ -243,13 +243,16 @@ public:
         }
     }
 
-    template <simd_abi LA, common_abi_with<LA> RA, typename E>
-    requires simd_element_for<E, LA> && simd_element_for<E, RA> &&
+    template <simd_abi LA, common_abi_with<LA> RA, typename LE,
+        common_size_with<LE> RE>
+    requires simd_element_for<LE, LA> && simd_element_for<RE, RA> &&
         (scalable_abi<LA> || scalable_abi<RA> || different_from<LA, RA>) &&
-        unqualified_canonical_mask_bwornot<basic_mask<E, LA>, basic_mask<E, RA>>
+        unqualified_canonical_mask_bwornot<basic_mask<LE, LA>,
+            basic_mask<RE, RA>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_mask<E, common_abi_t<LA, RA>> operator()(
-        basic_mask<E, LA> lhs, basic_mask<E, RA> rhs) noexcept {
+    static constexpr basic_mask<common_size_type_t<LE, RE>,
+        common_abi_t<LA, RA>> operator()(basic_mask<LE, LA> lhs,
+        basic_mask<RE, RA> rhs) noexcept {
         return bwornot(internal::abi<common_abi_t<LA, RA>>, lhs, rhs);
     }
 

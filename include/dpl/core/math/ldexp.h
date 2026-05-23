@@ -6,16 +6,16 @@
 #include "dpl/core/math/internal/floating_point_simd.h"
 
 #if !DPL_MODULES
+#  include "dpl/core/concepts/integral_simd.h"
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/concepts/simd_traits.h"
 #  include "dpl/core/constants/exponent_bias.h"
 #  include "dpl/core/constants/exponent_mask.h"
 #  include "dpl/core/constants/mantissa_width.h"
 #  include "dpl/core/operations/arithmetic.h"
-#  include "dpl/core/operations/bit.h"
 #  include "dpl/core/operations/bitwise.h"
 #  include "dpl/core/operations/compare.h"
 #  include "dpl/core/operations/select.h"
+#  include "dpl/core/type_traits/rebind_simd.h"
 #  include "dpl/std/bit/popcount.h"
 #endif
 

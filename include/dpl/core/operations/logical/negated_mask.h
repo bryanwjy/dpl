@@ -3,12 +3,6 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/operations/bit.h"
-#include "dpl/core/operations/bitwise.h"
-#include "dpl/core/operations/logic_reduction.h"
-#include "dpl/core/operations/reinterpret.h"
-#include "dpl/core/operations/select.h"
-
 #if !DPL_MODULES
 #  include "dpl/core/fwd.h"
 
@@ -21,6 +15,15 @@
 #  include "dpl/core/type_traits/simd_traits.h"
 #  include "dpl/std/concepts/same_as.h"
 #endif
+
+#include "dpl/core/operations/bit.h"
+#include "dpl/core/operations/bitwise.h"
+#include "dpl/core/operations/logical/all_of.h"
+#include "dpl/core/operations/logical/any_of.h"
+#include "dpl/core/operations/logical/none_of.h"
+#include "dpl/core/operations/logical/some_of.h"
+#include "dpl/core/operations/reinterpret.h"
+#include "dpl/core/operations/select.h"
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {

@@ -7,6 +7,7 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/common_class_with.h"
+#  include "dpl/core/concepts/common_size_with.h"
 #  include "dpl/core/concepts/simd_lane_type.h"
 #  include "dpl/core/concepts/simd_vector.h"
 #  include "dpl/core/type_traits/common_abi.h"
@@ -32,14 +33,16 @@ template <typename T, typename A, typename... Args>
 concept broadcasting_bitwise_result = (... || common_class_with<T, Args>) &&
     common_abi_with<typename T::abi_type, A>;
 
-template <typename T, typename U, typename A = typename U::abi_type>
-concept canonical_mask_result =
-    simd_mask<T> && same_as<simd_lane_type_t<U>, simd_lane_type_t<T>> &&
+template <typename T, typename L, typename R, typename A = common_abi_t<L, R>>
+concept canonical_bitwise_mask = simd_mask<T> &&
+    common_size_with<simd_lane_type_t<L>, simd_lane_type_t<T>> &&
+    common_size_with<simd_lane_type_t<R>, simd_lane_type_t<T>> &&
     same_abi_as<A, typename T::abi_type>;
 
-template <typename T, typename U, typename A = typename U::abi_type>
-concept extended_mask_result =
-    simd_mask<T> && same_as<simd_lane_type_t<U>, simd_lane_type_t<T>> &&
+template <typename T, typename L, typename R, typename A = common_abi_t<L, R>>
+concept extended_bitwise_mask = simd_mask<T> &&
+    common_size_with<simd_lane_type_t<L>, simd_lane_type_t<T>> &&
+    common_size_with<simd_lane_type_t<R>, simd_lane_type_t<T>> &&
     common_abi_with<A, typename T::abi_type>;
 
 template <typename T, typename In, typename A = typename In::abi_type>

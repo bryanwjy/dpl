@@ -7,6 +7,7 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/basic_vector.h" // IWYU pragma: keep
+#  include "dpl/core/basic/immediate.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/constants/exponent_bias.h"
 #  include "dpl/core/constants/exponent_bits.h"
