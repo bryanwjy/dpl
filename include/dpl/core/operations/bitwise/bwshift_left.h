@@ -1086,8 +1086,8 @@ public:
             internal::abi<common_abi_t<LA, RA>>, dx::zero, mask, lhs, rhs);
     }
 
-    template <simd_vector S, simd_mask Mask, simd_vector L, simd_vector R>
-    requires (extended_vector<S> || extended_mask<Mask> || extended_vector<L> ||
+    template <simd_mask Mask, simd_vector L, simd_vector R>
+    requires (extended_mask<Mask> || extended_vector<L> ||
                  extended_vector<R>) &&
         zmaskable_args<Mask, L, R> &&
         extended_mbwslv<bwshift_left_t, zero_t, Mask, L, R>

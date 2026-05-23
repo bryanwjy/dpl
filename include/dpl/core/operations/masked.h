@@ -8,6 +8,8 @@
 #if !DPL_MODULES
 #  include "dpl/core/basic/zero.h"
 #  include "dpl/core/constants/zero.h"
+#  include "dpl/std/concepts/invocable.h"
+#  include "dpl/std/type_traits/declval.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -16,7 +18,7 @@ namespace datapar::internal {
 template <typename Op, fixed_width_abi A, simd_element_for<A> PassE,
     simd_element_for<A> MaskE, simd_element_for<A>... InEs, typename... InArgs>
 requires common_size_with<MaskE, PassE> &&
-    invocable<Op, basic_vector<InEs, A>..., InArgs...> &&
+    regular_invocable<Op, basic_vector<InEs, A>..., InArgs...> &&
     same_as<invoke_result_t<Op, basic_vector<InEs, A>..., InArgs...>,
         basic_vector<PassE, A>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) constexpr basic_vector<PassE, A> masked(
@@ -28,7 +30,7 @@ requires common_size_with<MaskE, PassE> &&
 
 template <typename Op, fixed_width_abi A, simd_element_for<A> MaskE,
     simd_element_for<A>... InEs, typename... InArgs>
-requires invocable<Op, basic_vector<InEs, A>..., InArgs...> &&
+requires regular_invocable<Op, basic_vector<InEs, A>..., InArgs...> &&
     common_size_with<MaskE,
         typename invoke_result_t<Op, basic_vector<InEs, A>...,
             InArgs...>::value_type>
@@ -41,7 +43,7 @@ requires invocable<Op, basic_vector<InEs, A>..., InArgs...> &&
 template <typename Op, fixed_width_abi A, simd_element_for<A> PassE,
     const_mask_for<basic_vector<PassE, A>> M, simd_element_for<A>... InEs,
     typename... InArgs>
-requires invocable<Op, basic_vector<InEs, A>..., InArgs...> &&
+requires regular_invocable<Op, basic_vector<InEs, A>..., InArgs...> &&
     same_as<invoke_result_t<Op, basic_vector<InEs, A>..., InArgs...>,
         basic_vector<PassE, A>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) constexpr basic_vector<PassE, A> masked(
@@ -53,7 +55,7 @@ requires invocable<Op, basic_vector<InEs, A>..., InArgs...> &&
 
 template <typename Op, fixed_width_abi A, typename M,
     simd_element_for<A>... InEs, typename... InArgs>
-requires invocable<Op, basic_vector<InEs, A>..., InArgs...> &&
+requires regular_invocable<Op, basic_vector<InEs, A>..., InArgs...> &&
     const_mask_for<M, invoke_result_t<Op, basic_vector<InEs, A>..., InArgs...>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) constexpr auto masked(
     M mask, basic_vector<InEs, A>... args, InArgs... others) noexcept {
