@@ -3,7 +3,7 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/operations/arithmetic.h"
+#include "dpl/core/operations/arithmetic/negate.h"
 #include "dpl/core/operations/bitwise.h"
 #include "dpl/core/operations/masked.h"
 #include "dpl/core/operations/minmax.h"

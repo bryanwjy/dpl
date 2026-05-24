@@ -12,12 +12,8 @@
 #if !DPL_MODULES
 #  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/concepts/simd_traits.h"
-#  include "dpl/core/concepts/simd_vector.h"
 #  include "dpl/core/constants/one.h"
-#  include "dpl/core/operations/abs.h"
 #  include "dpl/core/operations/arithmetic.h"
-#  include "dpl/core/operations/bit.h"
 #  include "dpl/core/operations/compare.h"
 #  include "dpl/core/operations/select.h"
 #  include "dpl/core/utility/rounding.h"

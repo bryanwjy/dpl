@@ -16,7 +16,6 @@ import :core.type_traits;
 import :core.constants;
 
 // IWYU pragma: begin_exports
-#include "dpl/core/operations/abs.h"
 #include "dpl/core/operations/arithmetic.h"
 #include "dpl/core/operations/bit.h"
 #include "dpl/core/operations/bitwise.h"

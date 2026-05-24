@@ -15,7 +15,7 @@
 #  include "dpl/core/constants/ln2.h"
 #  include "dpl/core/constants/one.h"
 #  include "dpl/core/constants/zero.h"
-#  include "dpl/core/operations/abs.h"
+#  include "dpl/core/operations/arithmetic/abs.h"
 #  include "dpl/core/operations/select.h"
 #  include "dpl/std/concepts/convertible_to.h"
 #  include "dpl/std/concepts/floating_point.h"

@@ -14,6 +14,7 @@
 #endif
 
 // IWYU pragma: begin_exports
+#include "dpl/core/operations/arithmetic/abs.h"
 #include "dpl/core/operations/arithmetic/add.h"
 #include "dpl/core/operations/arithmetic/divide.h"
 #include "dpl/core/operations/arithmetic/multiply.h"
