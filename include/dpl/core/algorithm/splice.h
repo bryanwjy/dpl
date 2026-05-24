@@ -25,14 +25,16 @@ void splice(...) noexcept = delete;
 template <typename C, typename L, typename R,
     typename A = common_abi_t<L, R, C>>
 concept unqualified_splice = requires(C cond, L lhs, R rhs) {
-    { splice(internal::abi<A>, cond, lhs, rhs) } -> ternary_result_of<L, R, A>;
+    {
+        splice(internal::abi<A>, cond, lhs, rhs)
+    } -> canonical_select_vector<C, L, R, A>;
 };
 
 template <typename C, typename L, typename R, typename A = common_abi_t<L, R>>
 concept unqualified_splicei = const_mask_for<C, L> && requires(L lhs, R rhs) {
     {
         splice<const_mask_v<L, C>>(internal::abi<A>, lhs, rhs)
-    } -> ternary_result_of<L, R, A>;
+    } -> canonical_selecti_vector<L, R, A>;
 };
 
 struct splice_t {

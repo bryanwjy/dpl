@@ -29,7 +29,7 @@ template <typename T>
 struct binary_operation_base {
 private:
     template <typename L, typename R>
-    static consteval auto abi_for() noexcept {
+    static consteval auto selective_abi() noexcept {
         if constexpr (simd_class<L>) {
             return typename L::abi_type{};
         } else {
@@ -39,27 +39,29 @@ private:
 
     template <simd_class L, typename R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr decltype(auto) fallback(
+    static constexpr decltype(auto) selective_cast(
         type_identity_t<L> const& arg) noexcept {
         return (arg);
     }
 
     template <typename L, simd_class R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr decltype(auto) fallback(
+    static constexpr decltype(auto) selective_cast(
         type_identity_t<R> const& arg) noexcept {
         return (arg);
     }
 
     template <typename L, simd_class R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr decltype(auto) fallback(type_identity_t<L> arg) noexcept {
+    static constexpr decltype(auto) selective_cast(
+        type_identity_t<L> arg) noexcept {
         return dx::broadcast<R>(arg);
     }
 
     template <simd_class L, typename R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr decltype(auto) fallback(type_identity_t<R> arg) noexcept {
+    static constexpr decltype(auto) selective_cast(
+        type_identity_t<R> arg) noexcept {
         return dx::broadcast<L>(arg);
     }
 
@@ -70,22 +72,23 @@ public:
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
         static constexpr auto operator()(L lhs, R rhs) noexcept
     requires requires(
-        T impl) { impl(fallback<L, R>(lhs), fallback<L, R>(rhs)); }
+        T impl) { impl(selective_cast<L, R>(lhs), selective_cast<L, R>(rhs)); }
     {
-        using A = decltype(abi_for<L, R>());
+        using A = decltype(selective_abi<L, R>());
         if constexpr (implements_native<T, A, L, R>) {
             if constexpr (canonical_class<L> || canonical_class<R>) {
                 if consteval {
                     return T::operator()(
-                        fallback<L, R>(lhs), fallback<L, R>(rhs));
+                        selective_cast<L, R>(lhs), selective_cast<L, R>(rhs));
                 } else {
-                    return T::native(internal::abi<L>, lhs, rhs);
+                    return T::native(internal::abi<A>, lhs, rhs);
                 }
             } else {
-                return T::native(internal::abi<L>, lhs, rhs);
+                return T::native(internal::abi<A>, lhs, rhs);
             }
         } else if constexpr (canonical_class<L> || canonical_class<R>) {
-            return T::operator()(fallback<L, R>(lhs), fallback<L, R>(rhs));
+            return T::operator()(
+                selective_cast<L, R>(lhs), selective_cast<L, R>(rhs));
         } else if constexpr (simd_class<L>) {
             return operator()(dx::to_canonical(lhs), rhs);
         } else {

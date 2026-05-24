@@ -39,8 +39,8 @@ concept unqualified_extended_bwornot = requires(L lhs, R rhs) {
 };
 
 template <typename L, typename R, typename A = common_abi_t<L, R>>
-concept unqualified_bwornot =
-    unqualified_canonical_bwornot<L, R> || unqualified_extended_bwornot<L, R> ||
+concept unqualified_bwornot = unqualified_canonical_bwornot<L, R, A> ||
+    unqualified_extended_bwornot<L, R, A> ||
     (decayable_vector_for<L, operation_category::lane_agnostic> &&
         decayable_vector_for<R, operation_category::lane_agnostic> &&
         regular_invocable<bwornot_t, canonical_type_t<L>, canonical_type_t<R>>);
@@ -153,6 +153,7 @@ private:
     friend binary_operation_base<bwornot_t>;
 
     template <simd_abi A, typename L, typename R>
+    requires (canonical_class<L> || canonical_class<R>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto native(A abi, L lhs, R rhs) noexcept
     requires requires {
@@ -162,6 +163,17 @@ private:
     }
     {
         return bwornot(internal::abi<A>, lhs, rhs);
+    }
+
+    template <simd_abi A, typename L, typename R>
+    requires (extended_class<L> || extended_class<R>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto native(A abi, L lhs, R rhs) noexcept
+    requires requires {
+        { bwornot(lhs, rhs) } -> broadcasting_bitwise_result<A, L, R>;
+    }
+    {
+        return bwornot(lhs, rhs);
     }
 
     template <typename L, typename R, typename A>

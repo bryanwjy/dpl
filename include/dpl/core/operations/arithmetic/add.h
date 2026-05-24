@@ -132,6 +132,7 @@ private:
     friend binary_operation_base<add_t>;
 
     template <simd_abi A, typename L, typename R>
+    requires (canonical_vector<L> || canonical_vector<R>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto native(A abi, L lhs, R rhs) noexcept
     requires requires {
@@ -141,6 +142,17 @@ private:
     }
     {
         return add(internal::abi<A>, lhs, rhs);
+    }
+
+    template <simd_abi A, typename L, typename R>
+    requires (extended_vector<L> || extended_vector<R>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto native(A abi, L lhs, R rhs) noexcept
+    requires requires {
+        { add(lhs, rhs) } -> broadcasting_arithmetic_result<A>;
+    }
+    {
+        return add(lhs, rhs);
     }
 
     template <typename E, typename A>

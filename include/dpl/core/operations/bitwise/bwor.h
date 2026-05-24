@@ -38,7 +38,7 @@ concept unqualified_extended_bwor = requires(L lhs, R rhs) {
 
 template <typename L, typename R, typename A = common_abi_t<L, R>>
 concept unqualified_bwor =
-    unqualified_canonical_bwor<L, R> || unqualified_extended_bwor<L, R> ||
+    unqualified_canonical_bwor<L, R, A> || unqualified_extended_bwor<L, R, A> ||
     (decayable_vector_for<L, operation_category::lane_agnostic> &&
         decayable_vector_for<R, operation_category::lane_agnostic> &&
         regular_invocable<bwor_t, canonical_type_t<L>, canonical_type_t<R>>);
@@ -149,6 +149,7 @@ private:
     friend binary_operation_base<bwor_t>;
 
     template <simd_abi A, typename L, typename R>
+    requires (canonical_class<L> || canonical_class<R>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto native(A abi, L lhs, R rhs) noexcept
     requires requires {
@@ -158,6 +159,17 @@ private:
     }
     {
         return bwor(internal::abi<A>, lhs, rhs);
+    }
+
+    template <simd_abi A, typename L, typename R>
+    requires (extended_class<L> || extended_class<R>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto native(A abi, L lhs, R rhs) noexcept
+    requires requires {
+        { bwor(lhs, rhs) } -> broadcasting_bitwise_result<A, L, R>;
+    }
+    {
+        return bwor(lhs, rhs);
     }
 
     template <typename L, typename R, typename A>

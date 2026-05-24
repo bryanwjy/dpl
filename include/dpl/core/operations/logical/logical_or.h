@@ -56,7 +56,7 @@ public:
     template <fixed_width_abi A, simd_element_for<A> LE, simd_element_for<A> RE>
     requires common_size_with<LE, RE>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_mask<LE, A> operator()(
+    static constexpr basic_mask<RE, A> operator()(
         basic_mask<LE, A> lhs, basic_mask<RE, A> rhs) noexcept {
         if constexpr (unqualified_canonical_logical_or<basic_mask<LE, A>,
                           basic_mask<RE, A>>) {
@@ -76,7 +76,7 @@ public:
         (scalable_abi<LA> || scalable_abi<RA> || different_from<LA, RA>) &&
         unqualified_canonical_logical_or<basic_mask<LE, LA>, basic_mask<RE, RA>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_mask<LE, common_abi_t<LA, RA>> operator()(
+    static constexpr basic_mask<RE, common_abi_t<LA, RA>> operator()(
         basic_mask<LE, LA> lhs, basic_mask<RE, RA> rhs) noexcept {
         return logical_or(internal::abi<common_abi_t<LA, RA>>, lhs, rhs);
     }

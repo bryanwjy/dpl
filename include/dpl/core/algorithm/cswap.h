@@ -19,8 +19,8 @@ struct cswap_t {
         invoke_result_t<internal::select_t, M, L, R>;
 
 public:
-    template <simd_class L, selectable_with<L> R, const_mask_for<L> M>
-    requires const_mask_for<M, R> &&
+    template <typename M, simd_class L, simd_class R>
+    requires const_mask_for<M, R> && const_mask_for<M, L> &&
         regular_invocable<internal::select_t, M, L, R> &&
         regular_invocable<internal::select_t, M, R, L> &&
         assignable_from<L&, selection_t<M, R, L> const&> &&
@@ -33,9 +33,8 @@ public:
         rhs = right;
     }
 
-    template <simd_class L, selectable_with<L> R, compatible_mask_with<L> M>
-    requires compatible_mask_with<M, R> &&
-        regular_invocable<internal::select_t, M, L, R> &&
+    template <simd_mask M, simd_class L, simd_class R>
+    requires regular_invocable<internal::select_t, M, L, R> &&
         regular_invocable<internal::select_t, M, R, L> &&
         assignable_from<L&, selection_t<M, R, L> const&> &&
         assignable_from<R&, selection_t<M, L, R> const&>
@@ -49,23 +48,26 @@ public:
 };
 
 template <auto V>
-struct cswapi_t {};
-template <integral auto V>
-struct cswapi_t<V> {
+struct cswapi_t {
 private:
     template <typename T>
     using mask_type DPL_NODEBUG = make_const_mask_t<T, V>;
+    template <typename L, typename R>
+    using selection_t DPL_NODEBUG =
+        invoke_result_t<internal::selecti_t<V>, L, R>;
 
 public:
-    template <fixed_width_class L, common_size_simd_with<L> R>
-    requires requires {
-        typename mask_type<L>;
-        requires regular_invocable<cswap_t, mask_type<L>, L, R>;
-    }
+    template <fixed_width_class L, fixed_width_class R>
+    requires regular_invocable<internal::selecti_t<V>, L, R> &&
+        regular_invocable<internal::selecti_t<V>, R, L> &&
+        assignable_from<L&, selection_t<R, L> const&> &&
+        assignable_from<R&, selection_t<L, R> const&>
     __DPL_HIDE_FROM_ABI static constexpr void operator()(
         L& lhs, R& rhs) noexcept {
-        constexpr mask_type<L> mask{};
-        cswap_t::operator()(mask, lhs, rhs);
+        auto const left = dx::selecti<V>(rhs, lhs);
+        auto const right = dx::selecti<V>(lhs, rhs);
+        lhs = left;
+        rhs = right;
     }
 };
 } // namespace datapar::internal
