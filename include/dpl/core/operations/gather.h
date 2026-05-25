@@ -39,40 +39,46 @@ private:
     }
 
 public:
-    template <simd_element E, integral_simd I>
-    requires canonical_vector<rebind_simd_t<I, E>> &&
-        (sizeof(E) >= sizeof(typename I::value_type))
+    template <fixed_width_abi A, simd_element_for<A> E, simd_element_for<A> I>
+    requires integral<I> && (sizeof(E) >= sizeof(I))
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
-    static constexpr rebind_simd_t<I, E>
-        DPL_VECTORCALL operator()(E const* ptr, I idx) noexcept {
+    static constexpr basic_vector<E, A>
+        DPL_VECTORCALL operator()(
+            E const* ptr, basic_vector<I, A> idx) noexcept {
         if constexpr (unqualified_gather<E, I>) {
-            if constexpr (canonical_vector<I>) {
-                if consteval {
-                    return fallback(ptr, idx);
-                } else {
-                    return gather(internal::abi<I>, ptr, idx);
-                }
+            if consteval {
+                return fallback(ptr, idx);
             } else {
                 return gather(internal::abi<I>, ptr, idx);
             }
-        } else if constexpr (canonical_vector<I>) {
-            return fallback(ptr, idx);
         } else {
-            return operator()(ptr, dx::to_canonical(idx));
+            return fallback(ptr, idx);
         }
     }
 
-    template <simd_element E, integral_simd I>
-    requires (sizeof(E) >= sizeof(typename I::value_type)) &&
-        (!canonical_vector<rebind_simd_t<I, E>>) &&
-        (unqualified_gather<E, I> || unqualified_gather<E, canonical_type_t<I>>)
+    template <scalable_abi A, simd_element_for<A> E, simd_element_for<A> I>
+    requires integral<I> && (sizeof(E) >= sizeof(I)) && unqualified_gather<E, I>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
-    static constexpr rebind_simd_t<I, E>
-        DPL_VECTORCALL operator()(E const* ptr, I idx) noexcept {
+    static constexpr basic_vector<E, A>
+        DPL_VECTORCALL operator()(
+            E const* ptr, basic_vector<I, A> idx) noexcept {
+        return gather(internal::abi<I>, ptr, idx);
+    }
+
+    template <typename E, simd_vector I>
+    requires simd_element_for<E, typename I::abi_type> &&
+        integral<typename I::value_type> &&
+        (sizeof(E) >= sizeof(typename I::value_type)) &&
+        unqualified_gather<E, I> ||
+        decayable_vector_for<L, operation_category::lane_agnostic> &&
+            regular_invocable<gather_t, E const*, canonical_type_t<I>>
+        DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
+        static constexpr auto DPL_VECTORCALL operator()(
+            E const* ptr, I idx) noexcept {
         if constexpr (unqualified_gather<E, I>) {
             return gather(internal::abi<I>, ptr, idx);
         } else {
-            return gather(internal::abi<I>, ptr, dx::to_canonical(idx));
+            return operator()(ptr, dx::to_canonical(idx));
         }
     }
 };

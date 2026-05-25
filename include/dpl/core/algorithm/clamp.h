@@ -4,24 +4,81 @@
 #include "dpl/config.h"
 
 #if !DPL_MODULES
+#  include "dpl/core/concepts/decayable.h"
+#  include "dpl/core/concepts/operation_category.h"
+#  include "dpl/core/concepts/simd_abi.h"
+#  include "dpl/core/concepts/simd_equivalence.h"
+#  include "dpl/core/constants/zero.h"
+#  include "dpl/core/operations/arithmetic/result.h"
+#  include "dpl/core/operations/masked.h"
 #  include "dpl/core/operations/minmax.h"
+#  include "dpl/core/operations/operation_base.h"
+#  include "dpl/core/operations/transform.h"
+#  include "dpl/std/concepts/totally_ordered.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void clamp(...) noexcept = delete;
+template <auto>
+void clamp(...) noexcept = delete;
 
-template <typename T, typename L, typename M, typename R>
-concept clamp_result = common_order_simd_with<T, common_order_simd_t<L, M, R>>;
+struct clamp_t;
 
-template <typename L, typename M, typename R,
-    typename A = common_abi_t<L, M, R>>
-concept unqualified_clamp = requires(L val, M low, R high) {
-    { clamp(internal::abi<A>, val, low, high) } -> clamp_result<L, M, R>;
+template <typename AT, typename BT, typename CT,
+    typename A = common_abi_t<AT, BT, CT>>
+concept unqualified_canonical_clamp = requires(AT a, BT b, CT c) {
+    { clamp(internal::abi<A>, a, b, c) } -> canonical_fma_result<AT, BT, CT, A>;
 };
 
-struct clamp_t {
+template <typename AT, typename BT, typename CT,
+    typename A = common_abi_t<AT, BT, CT>>
+concept unqualified_extended_clamp = requires(AT a, BT b, CT c) {
+    { clamp(a, b, c) } -> extended_fma_result<AT, BT, CT, A>;
+};
+
+template <typename AT, typename BT, typename CT,
+    typename A = common_abi_t<AT, BT, CT>>
+concept unqualified_clamp = unqualified_canonical_clamp<AT, BT, CT, A> ||
+    unqualified_extended_clamp<AT, BT, CT, A> ||
+    (decayable_vector_for<AT, operation_category::lane_agnostic> &&
+        decayable_vector_for<BT, operation_category::lane_agnostic> &&
+        decayable_vector_for<CT, operation_category::lane_agnostic> &&
+        regular_invocable<clamp_t, canonical_type_t<AT>, canonical_type_t<BT>,
+            canonical_type_t<CT>>);
+
+struct clamp_t : ternary_operation_base<clamp_t> {
 private:
+    friend ternary_operation_base<clamp_t>;
+
+    template <simd_abi A, typename AT, typename BT, typename CT>
+    requires ((canonical_vector<AT> || !simd_vector<AT>) &&
+        (canonical_vector<BT> || !simd_vector<BT>) &&
+        (canonical_vector<CT> || !simd_vector<CT>))
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto native(A abi, AT a, BT b, CT c) noexcept
+    requires requires {
+        {
+            clamp(internal::abi<A>, a, b, c)
+        } -> broadcasting_arithmetic_result<A>;
+    }
+    {
+        return clamp(internal::abi<A>, a, b, c);
+    }
+
+    template <simd_abi A, typename AT, typename BT, typename CT>
+    requires ((extended_vector<AT> || !simd_vector<AT>) ||
+        (extended_vector<BT> || !simd_vector<BT>) ||
+        (extended_vector<CT> || !simd_vector<CT>))
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto native(A abi, AT a, BT b, CT c) noexcept
+    requires requires {
+        { clamp(a, b, c) } -> broadcasting_arithmetic_result<A>;
+    }
+    {
+        return clamp(a, b, c);
+    }
+
     template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST NODISCARD) static constexpr auto DPL_VECTORCALL
     fallback(basic_vector<E, A> val, basic_vector<E, A> low,
@@ -30,218 +87,62 @@ private:
     }
 
 public:
-    template <simd_vector L, common_order_simd_with<L> M,
-        common_order_simd_with<common_order_simd_t<L, M>> R>
-    requires same_abi_simd_as<L, M> && same_abi_simd_as<L, R> &&
-        same_abi_simd_as<M, R>
+    template <fixed_width_abi A, simd_element_for<A> E>
+    requires totally_ordered<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L val, M low, R high) noexcept {
-        using A = typename L::abi_type;
-        if constexpr (unqualified_clamp<L, M, R, A>) {
-            if constexpr (canonical_vector<L> && canonical_vector<M> &&
-                canonical_vector<R>) {
-                if consteval {
-                    return fallback(val, low, high);
-                } else {
-                    return clamp(internal::abi<A>, val, low, high);
-                }
+    static constexpr basic_vector<E, A> operator()(basic_vector<E, A> a,
+        basic_vector<E, A> b, basic_vector<E, A> c) noexcept {
+        if constexpr (unqualified_canonical_clamp<basic_vector<E, A>,
+                          basic_vector<E, A>, basic_vector<E, A>>) {
+            if consteval {
+                return fallback(a, b, c);
             } else {
-                return clamp(internal::abi<A>, val, low, high);
+                return clamp(internal::abi<A>, a, b, c);
             }
-        } else if constexpr (canonical_vector<L> && canonical_vector<M> &&
-            canonical_vector<R>) {
-            return fallback(val, low, high);
         } else {
-            return operator()(dx::to_canonical(val), dx::to_canonical(low),
-                dx::to_canonical(high));
+            return fallback(a, b, c);
         }
     }
 
-    template <simd_vector L, common_order_simd_with<L> M,
-        common_order_simd_with<common_order_simd_t<L, M>> R>
-    requires (!same_abi_simd_as<L, M> || !same_abi_simd_as<L, R> ||
-                 !same_abi_simd_as<M, R>) &&
-        (unqualified_clamp<L, M, R> ||
-            unqualified_clamp<canonical_type_t<L>, canonical_type_t<M>,
-                canonical_type_t<R>>)
+    template <simd_abi AA, common_abi_with<AA> BA, common_abi_with<BA> CA,
+        typename E>
+    requires common_abi_with<common_abi_t<AA, BA>, CA> &&
+        simd_element_for<E, AA> && simd_element_for<E, BA> &&
+        simd_element_for<E, CA> &&
+        (scalable_abi<AA> || scalable_abi<BA> || scalable_abi<CA> ||
+            different_from<AA, BA> || different_from<AA, CA> ||
+            different_from<BA, CA> || !totally_ordered<E>) &&
+        unqualified_canonical_clamp<basic_vector<E, AA>, basic_vector<E, BA>,
+            basic_vector<E, CA>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L val, M low, R high) noexcept {
-        using A = common_abi_t<L, M, R>;
-        if constexpr (unqualified_clamp<L, M, R>) {
-            return clamp(internal::abi<A>, val, low, high);
+    static constexpr basic_vector<E, common_abi_t<AA, BA, CA>> operator()(
+        basic_vector<E, AA> a, basic_vector<E, BA> b,
+        basic_vector<E, CA> c) noexcept {
+        return clamp(internal::abi<common_abi_t<AA, BA, CA>>, a, b, c);
+    }
+
+    template <simd_vector AT, simd_vector BT, simd_vector CT>
+    requires (extended_vector<AT> || extended_vector<BT> ||
+                 extended_vector<CT>) &&
+        unqualified_clamp<AT, BT, CT>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(AT a, BT b, CT c) noexcept {
+        if constexpr (unqualified_extended_clamp<AT, BT, CT>) {
+            return clamp(a, b, c);
         } else {
-            return clamp(internal::abi<A>, dx::to_canonical(val),
-                dx::to_canonical(low), dx::to_canonical(high));
+            return operator()(
+                dx::to_canonical(a), dx::to_canonical(b), dx::to_canonical(c));
         }
     }
 
-    template <simd_vector TA, broadcastable_to<TA> TB, broadcastable_to<TA> TC>
-    requires regular_invocable<clamp_t, TA, TA, TA>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(TA a, TB b, TC c) noexcept {
-        if constexpr (requires {
-                          {
-                              clamp(internal::abi<TA>, a, b, c)
-                          } -> clamp_result<TA, TA, TA>;
-                      }) {
-            if constexpr (canonical_vector<TA>) {
-                if consteval {
-                    return operator()(
-                        a, dx::broadcast<TA>(b), dx::broadcast<TA>(c));
-                } else {
-                    return clamp(internal::abi<TA>, a, b, c);
-                }
-            } else {
-                return clamp(internal::abi<TA>, a, b, c);
-            }
-        } else if constexpr (canonical_vector<TA>) {
-            return operator()(a, dx::broadcast<TA>(b), dx::broadcast<TA>(c));
-        } else {
-            return operator()(dx::to_canonical(a), b, c);
-        }
-    }
-
-    template <simd_vector TB, broadcastable_to<TB> TA, broadcastable_to<TB> TC>
-    requires regular_invocable<clamp_t, TB, TB, TB>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(TA a, TB b, TC c) noexcept {
-        if constexpr (requires {
-                          {
-                              clamp(internal::abi<TB>, a, b, c)
-                          } -> clamp_result<TB, TB, TB>;
-                      }) {
-            if constexpr (canonical_vector<TB>) {
-                if consteval {
-                    return operator()(
-                        a, dx::broadcast<TB>(b), dx::broadcast<TB>(c));
-                } else {
-                    return clamp(internal::abi<TB>, a, b, c);
-                }
-            } else {
-                return clamp(internal::abi<TB>, a, b, c);
-            }
-        } else if constexpr (canonical_vector<TB>) {
-            return operator()(a, dx::broadcast<TB>(b), dx::broadcast<TB>(c));
-        } else {
-            return operator()(dx::to_canonical(a), b, c);
-        }
-    }
-
-    template <simd_vector TB, broadcastable_to<TB> TA, broadcastable_to<TB> TC>
-    requires regular_invocable<clamp_t, TC, TC, TC>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(TA a, TB b, TC c) noexcept {
-        if constexpr (requires {
-                          {
-                              clamp(internal::abi<TC>, a, b, c)
-                          } -> clamp_result<TC, TC, TC>;
-                      }) {
-            if constexpr (canonical_vector<TC>) {
-                if consteval {
-                    return operator()(
-                        a, dx::broadcast<TC>(b), dx::broadcast<TC>(c));
-                } else {
-                    return clamp(internal::abi<TC>, a, b, c);
-                }
-            } else {
-                return clamp(internal::abi<TC>, a, b, c);
-            }
-        } else if constexpr (canonical_vector<TC>) {
-            return operator()(a, dx::broadcast<TC>(b), dx::broadcast<TC>(c));
-        } else {
-            return operator()(dx::to_canonical(a), b, c);
-        }
-    }
-
-    template <simd_vector TA, common_order_simd_with<TA> TB,
-        broadcastable_to<common_order_simd_t<TA, TB>> TC>
-    requires regular_invocable<clamp_t, TA, TB, common_order_simd_t<TA, TB>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(TA a, TB b, TC c) noexcept {
-        using A = common_abi_t<TA, TB>;
-        using TC2 = common_order_simd_t<TA, TB>;
-        if constexpr (requires {
-                          {
-                              clamp(internal::abi<A>, a, b, c)
-                          } -> clamp_result<TA, TB, TC2>;
-                      }) {
-            if constexpr (canonical_vector<TA> && canonical_vector<TB>) {
-                if consteval {
-                    return operator()(a, b, dx::broadcast<TC2>(c));
-                } else {
-                    return clamp(internal::abi<A>, a, b, c);
-                }
-            } else {
-                return clamp(internal::abi<A>, a, b, c);
-            }
-        } else if constexpr (canonical_vector<TA> && canonical_vector<TB>) {
-            return operator()(a, b, dx::broadcast<TC2>(c));
-        } else {
-            return operator()(dx::to_canonical(a), dx::to_canonical(b), c);
-        }
-    }
-
-    template <simd_vector TA, common_order_simd_with<TA> TC,
-        broadcastable_to<common_order_simd_t<TA, TC>> TB>
-    requires regular_invocable<clamp_t, TA, common_order_simd_t<TA, TC>, TB>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(TA a, TB b, TC c) noexcept {
-        using A = common_abi_t<TA, TC>;
-        using TB2 = common_order_simd_t<TA, TC>;
-        if constexpr (requires {
-                          {
-                              clamp(internal::abi<A>, a, b, c)
-                          } -> clamp_result<TA, TB2, TC>;
-                      }) {
-            if constexpr (canonical_vector<TA> && canonical_vector<TC>) {
-                if consteval {
-                    return operator()(a, dx::broadcast<TB2>(b), c);
-                } else {
-                    return clamp(internal::abi<A>, a, b, c);
-                }
-            } else {
-                return clamp(internal::abi<A>, a, b, c);
-            }
-        } else if constexpr (canonical_vector<TA> && canonical_vector<TC>) {
-            return operator()(a, dx::broadcast<TB2>(b), c);
-        } else {
-            return operator()(dx::to_canonical(a), dx::to_canonical(b), c);
-        }
-    }
-
-    template <simd_vector TB, common_order_simd_with<TB> TC,
-        broadcastable_to<common_order_simd_t<TB, TC>> TA>
-    requires regular_invocable<clamp_t, common_order_simd_t<TB, TC>, TB, TC>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(TA a, TB b, TC c) noexcept {
-        using A = common_abi_t<TB, TC>;
-        using TA2 = common_order_simd_t<TB, TC>;
-        if constexpr (requires {
-                          {
-                              clamp(internal::abi<A>, a, b, c)
-                          } -> clamp_result<TA2, TB, TC>;
-                      }) {
-            if constexpr (canonical_vector<TB> && canonical_vector<TC>) {
-                if consteval {
-                    return operator()(dx::broadcast<TA2>(a), b, c);
-                } else {
-                    return clamp(internal::abi<A>, a, b, c);
-                }
-            } else {
-                return clamp(internal::abi<A>, a, b, c);
-            }
-        } else if constexpr (canonical_vector<TB> && canonical_vector<TC>) {
-            return operator()(dx::broadcast<TA2>(a), b, c);
-        } else {
-            return operator()(a, dx::to_canonical(b), dx::to_canonical(c));
-        }
-    }
+    using ternary_operation_base<clamp_t>::operator();
 };
 
 } // namespace datapar::internal
 
 namespace datapar {
+inline namespace cpo {
 DPL_EXPORT inline constexpr internal::clamp_t clamp{};
-}
-
+} // namespace cpo
+} // namespace datapar
 DPL_DEFAULT_NAMESPACE_END

@@ -126,6 +126,14 @@ concept unqualified_split_outof = requires(T arg) {
 };
 
 template <typename T, size_t N>
+concept unqualified_extended_split = requires(T arg) {
+    {
+        split<split_target_t<N, typename T::abi_type>>(arg)
+    } -> equivalent_split_result_as<rebind_simd_t<T, simd_lane_type_t<T>,
+        split_target_t<N, typename T::abi_type>>>;
+};
+
+template <typename T, size_t N>
 concept splittable =
     fixed_width_class<T> && ((T::abi_type::size % N) == 0) && requires {
         typename demote_abi_t<typename T::abi_type>;
@@ -187,45 +195,63 @@ private:
     }
 
 public:
-    template <splittable<N> T>
-    requires (unqualified_split_into<T, N> ||
-        unqualified_split_into<canonical_type_t<T>, N>)
+    template <fixed_width_abi A, simd_element_for<A> E>
+    requires splittable<basic_vector<E, A>, N> &&
+        (unqualified_split_into<basic_vector<E, A>, N> ||
+            unqualified_split_outof<basic_vector<E, A>, N>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto operator()(T src) noexcept {
-        if constexpr (unqualified_split_into<T, N>) {
-            using A = split_target_t<N, typename T::abi_type>;
-            if constexpr (canonical_class<T>) {
-                if consteval {
-                    return fallback(src);
-                } else {
-                    return split<A>(internal::abi<T>, src);
-                }
+    static constexpr auto operator()(basic_vector<E, A> src) noexcept {
+        using SA = split_target_t<N, A>;
+        if constexpr (unqualified_split_into<basic_vector<E, A>, N>) {
+            if consteval {
+                return fallback(src);
             } else {
-                return split<A>(internal::abi<T>, src);
+                return split<SA>(internal::abi<A>, src);
             }
         } else {
-            return operator()(dx::to_canonical(src));
+            static_assert(unqualified_split_outof<basic_vector<E, A>, N>);
+            if consteval {
+                return fallback(src);
+            } else {
+                return split(internal::abi<SA>, src);
+            }
+        }
+    }
+
+    template <fixed_width_abi A, simd_element_for<A> E>
+    requires splittable<basic_mask<E, A>, N> &&
+        (unqualified_split_into<basic_mask<E, A>, N> ||
+            unqualified_split_outof<basic_mask<E, A>, N>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto operator()(basic_mask<E, A> src) noexcept {
+        using SA = split_target_t<N, A>;
+        if constexpr (unqualified_split_into<basic_mask<E, A>, N>) {
+            if consteval {
+                return fallback(src);
+            } else {
+                return split<SA>(internal::abi<A>, src);
+            }
+        } else {
+            static_assert(unqualified_split_outof<basic_mask<E, A>, N>);
+            if consteval {
+                return fallback(src);
+            } else {
+                return split(internal::abi<SA>, src);
+            }
         }
     }
 
     template <splittable<N> T>
-    requires (!unqualified_split_into<T, N> &&
-                 !unqualified_split_into<canonical_type_t<T>, N>) &&
-        (unqualified_split_outof<T, N> ||
-            unqualified_split_outof<canonical_type_t<T>, N>)
+    requires extended_class<T> &&
+        (unqualified_extended_split<T, N> ||
+            (decayable_simd_for<T,
+                 operation_category::structural_transformation> &&
+                regular_invocable<split_t, canonical_type_t<T>>))
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto operator()(T src) noexcept {
-        if constexpr (unqualified_split_outof<T, N>) {
-            using A = split_target_t<N, typename T::abi_type>;
-            if constexpr (canonical_class<T>) {
-                if consteval {
-                    return fallback(src);
-                } else {
-                    return split(internal::abi<A>, src);
-                }
-            } else {
-                return split(internal::abi<A>, src);
-            }
+        if constexpr (unqualified_extended_split<T, N>) {
+            using A = split_target_t<N, T>;
+            return split<A>(src);
         } else {
             return operator()(dx::to_canonical(src));
         }

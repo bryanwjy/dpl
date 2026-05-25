@@ -103,7 +103,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T src) noexcept
         -> equivalent_mask_as<make_simd_mask_type_t<T>> auto {
-        if constexpr (requires { to_simd_mask(internal::abi<T>, src); }) {
+        if constexpr (requires { to_simd_mask(src); }) {
             return to_simd_mask(internal::abi<T>, src);
         } else {
             return operator()(dx::to_canonical(src));
@@ -130,7 +130,7 @@ public:
     static constexpr auto operator()(assume_normalized_mask_t tag,
         T src) noexcept -> equivalent_mask_as<make_simd_mask_type_t<T>> auto {
         if constexpr (requires { to_simd_mask(internal::abi<T>, tag, src); }) {
-            return to_simd_mask(internal::abi<T>, tag, src);
+            return to_simd_mask(tag, src);
         } else {
             return operator()(tag, dx::to_canonical(src));
         }

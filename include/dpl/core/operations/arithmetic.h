@@ -16,9 +16,18 @@
 // IWYU pragma: begin_exports
 #include "dpl/core/operations/arithmetic/abs.h"
 #include "dpl/core/operations/arithmetic/add.h"
+#include "dpl/core/operations/arithmetic/addsub.h"
 #include "dpl/core/operations/arithmetic/divide.h"
+#include "dpl/core/operations/arithmetic/fmadd.h"
+#include "dpl/core/operations/arithmetic/fmaddsub.h"
+#include "dpl/core/operations/arithmetic/fmsub.h"
+#include "dpl/core/operations/arithmetic/fmsubadd.h"
+#include "dpl/core/operations/arithmetic/fnmadd.h"
+#include "dpl/core/operations/arithmetic/fnmsub.h"
 #include "dpl/core/operations/arithmetic/multiply.h"
 #include "dpl/core/operations/arithmetic/negate.h"
+#include "dpl/core/operations/arithmetic/result.h"
+#include "dpl/core/operations/arithmetic/subadd.h"
 #include "dpl/core/operations/arithmetic/subtract.h"
 // IWYU pragma: end_exports
 

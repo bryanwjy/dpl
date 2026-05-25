@@ -34,6 +34,8 @@ void element_cast(...) noexcept = delete;
 template <typename>
 void abi_cast(...) noexcept = delete;
 void abi_cast(...) noexcept = delete;
+template <typename>
+void simd_cast(...) noexcept = delete;
 
 template <typename From, typename To>
 concept unqualified_element_castable_to = simd_vector<From> &&
@@ -41,6 +43,20 @@ concept unqualified_element_castable_to = simd_vector<From> &&
         {
             element_cast<To>(internal::abi<From>, arg)
         } -> simd_with<To, typename From::abi_type>;
+    };
+
+template <typename From, typename To>
+concept unqualified_simd_castable_to =
+    simd_vector<From> && simd_vector<To> && requires(From from) {
+        { simd_cast<To>(internal::abi<From>, from) } -> same_as<To>;
+    };
+
+template <typename From, typename To>
+concept unqualified_simd_castable_from =
+    simd_vector<From> && simd_vector<To> && requires(From from) {
+        {
+            simd_cast<typename To::value_type>(internal::abi<To>, from)
+        } -> same_as<To>;
     };
 
 template <simd_element To>
@@ -365,22 +381,43 @@ template <simd_abi ToA, simd_element_for<ToA> ToE>
 struct simd_cast_t<basic_vector<ToE, ToA>> {
 private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(basic_vector<ToE, ToA> from) noexcept {
+    static constexpr basic_vector<ToE, ToA> operator()(
+        basic_vector<ToE, ToA> from) noexcept {
         return from;
     }
 
     template <simd_abi A>
     requires regular_invocable<abi_cast_t<ToA>, basic_vector<ToE, A>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(basic_vector<ToE, A> from) noexcept {
+    static constexpr basic_vector<ToE, ToA> operator()(
+        basic_vector<ToE, A> from) noexcept {
         return abi_cast_t<ToA>::operator()(from);
     }
 
     template <simd_element_for<ToA> E>
     requires regular_invocable<element_cast_t<ToE>, basic_vector<E, ToA>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(basic_vector<E, ToA> from) noexcept {
+    static constexpr basic_vector<ToE, ToA> operator()(
+        basic_vector<E, ToA> from) noexcept {
         return element_cast_t<ToE>::operator()(from);
+    }
+
+    template <common_abi_with<ToA> FromA, simd_element_for<FromA> FromE>
+    requires different_from<FromA, ToA> && different_from<FromE, ToE> &&
+        (unqualified_simd_castable_to<basic_vector<FromE, FromA>,
+             basic_vector<ToE, ToA>> ||
+            unqualified_simd_castable_from<basic_vector<FromE, FromA>,
+                basic_vector<ToE, ToA>>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr basic_vector<ToE, ToA> operator()(
+        basic_vector<FromE, FromA> from) noexcept {
+        if constexpr (unqualified_simd_castable_to<basic_vector<FromE, FromA>,
+                          basic_vector<ToE, ToA>>) {
+            return simd_cast<basic_vector<ToE, ToA>>(
+                internal::abi<FromA>, from);
+        } else {
+            return simd_cast<ToE>(internal::abi<ToA>, from);
+        }
     }
 
     template <extended_vector From>
@@ -396,14 +433,14 @@ private:
             same_as<invoke_result_t<element_cast_t<ToE>, From>,
                 basic_vector<ToE, ToA>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(From from) noexcept {
+    static constexpr basic_vector<ToE, ToA> operator()(From from) noexcept {
         if constexpr (explicitly_convertible_to<From, basic_vector<ToE, ToA>>) {
             return static_cast<basic_vector<ToE, ToA>>(from);
         } else if constexpr (simd_with<From, ToE, ToA>) {
             return dx::to_canonical(from);
         } else if constexpr (same_as<typename From::value_type, ToE>) {
             return abi_cast_t<ToA>::operator()(from);
-        } else {
+        } else if constexpr (same_as<typename From::abi_type, ToA>) {
             return element_cast_t<ToE>::operator()(from);
         }
     }
@@ -430,7 +467,7 @@ public:
             return static_cast<To>(from);
         } else if constexpr (same_as<typename From::value_type, ToE>) {
             return abi_cast_t<ToA>::operator()(from);
-        } else {
+        } else if constexpr (same_as<typename From::abi_type, ToA>) {
             return element_cast_t<ToE>::operator()(from);
         }
     }

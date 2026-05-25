@@ -148,6 +148,15 @@ concept unqualified_concat_from = requires(T arg, Ts... args) {
         concat_target_t<typename T::abi_type, typename Ts::abi_type...>>>;
 };
 
+template <typename T, typename... Ts>
+concept unqualified_extended_concat = requires(T arg, Ts... args) {
+    {
+        concat<concat_target_t<typename T::abi_type, typename Ts::abi_type...>>(
+            arg, args...)
+    } -> equivalent_class_as<rebind_simd_t<T, simd_lane_type_t<T>,
+        concat_target_t<typename T::abi_type, typename Ts::abi_type...>>>;
+};
+
 struct concat_t {
 private:
     template <typename AT, typename E, typename... As>
@@ -197,59 +206,77 @@ private:
         }(iota_sequence<E, AT>);
     }
 
+    static constexpr operation_category policy =
+        operation_category::structural_transformation;
+
 public:
-    template <fixed_width_class T, fixed_width_class... Ts>
-    requires concatable<T, Ts...> &&
-        (unqualified_concat_to<T, Ts...> ||
-            unqualified_concat_to<canonical_type_t<T>, canonical_type_t<Ts>...>)
+    template <typename E, fixed_width_abi A, fixed_width_abi... As>
+    requires (simd_element_for<E, A> && ... && simd_element_for<E, As>) &&
+        concatable<basic_vector<E, A>, basic_vector<E, As>...> &&
+        (unqualified_concat_to<basic_vector<E, A>, basic_vector<E, As>...> ||
+            unqualified_concat_from<basic_vector<E, A>, basic_vector<E, As>...>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(
-        T arg, Ts... args) noexcept {
-        if constexpr (unqualified_concat_to<T, Ts...>) {
-            using To =
-                concat_target_t<typename T::abi_type, typename Ts::abi_type...>;
-            using From =
-                common_abi_t<typename T::abi_type, typename Ts::abi_type...>;
-            if constexpr ((canonical_vector<T> && ... &&
-                              canonical_vector<Ts>)) {
-                if consteval {
-                    return fallback<To>(arg, args...);
-                } else {
-                    return concat<To>(internal::abi<From>, arg, args...);
-                }
+        basic_vector<E, A> arg, basic_vector<E, As>... args) noexcept {
+        using To = concat_target_t<A, As...>;
+        using From = common_abi_t<A, As...>;
+        if constexpr (unqualified_concat_to<basic_vector<E, A>,
+                          basic_vector<E, As>...>) {
+            if consteval {
+                return fallback<To>(arg, args...);
             } else {
                 return concat<To>(internal::abi<From>, arg, args...);
             }
         } else {
-            return operator()(dx::to_canonical(arg), dx::to_canonical(args)...);
+            if consteval {
+                return fallback<To>(arg, args...);
+            } else {
+                return concat<From>(internal::abi<To>, arg, args...);
+            }
+        }
+    }
+
+    template <typename E, fixed_width_abi A, fixed_width_abi... As>
+    requires (simd_element_for<E, A> && ... && simd_element_for<E, As>) &&
+        concatable<basic_mask<E, A>, basic_mask<E, As>...> &&
+        (unqualified_concat_to<basic_mask<E, A>, basic_mask<E, As>...> ||
+            unqualified_concat_from<basic_mask<E, A>, basic_mask<E, As>...>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(
+        basic_mask<E, A> arg, basic_mask<E, As>... args) noexcept {
+        using To = concat_target_t<A, As...>;
+        using From = common_abi_t<A, As...>;
+        if constexpr (unqualified_concat_to<basic_vector<E, A>,
+                          basic_vector<E, As>...>) {
+            if consteval {
+                return fallback<To>(arg, args...);
+            } else {
+                return concat<To>(internal::abi<From>, arg, args...);
+            }
+        } else {
+            if consteval {
+                return fallback<To>(arg, args...);
+            } else {
+                return concat<From>(internal::abi<To>, arg, args...);
+            }
         }
     }
 
     template <fixed_width_class T, fixed_width_class... Ts>
-    requires concatable<T, Ts...> &&
-        (!unqualified_concat_to<T, Ts...> &&
-            !unqualified_concat_to<canonical_type_t<T>,
-                canonical_type_t<Ts>...>) &&
-        (unqualified_concat_from<T, Ts...> ||
-            unqualified_concat_from<canonical_type_t<T>,
-                canonical_type_t<Ts>...>)
+    requires (extended_class<T> || ... || extended_class<Ts>) &&
+        concatable<T, Ts...> &&
+        (unqualified_extended_concat<T, Ts...> ||
+            ((decayable_simd_for<T, concat_t::policy> && ... &&
+                 decayable_simd_for<Ts, concat_t::policy>) &&
+                regular_invocable<concat_t, canonical_type_t<T>,
+                    canonical_type_t<Ts>...>))
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(
         T arg, Ts... args) noexcept {
-        if constexpr (unqualified_concat_from<T, Ts...>) {
-            using To =
-                concat_target_t<typename T::abi_type, typename Ts::abi_type...>;
-            using From =
-                common_abi_t<typename T::abi_type, typename Ts::abi_type...>;
-            if constexpr ((... && canonical_vector<Ts>)) {
-                if consteval {
-                    return fallback<To>(arg, args...);
-                } else {
-                    return concat<From>(internal::abi<To>, arg, args...);
-                }
-            } else {
-                return concat<From>(internal::abi<To>, arg, args...);
-            }
+        using To =
+            concat_target_t<typename T::abi_type, typename Ts::abi_type...>;
+        if constexpr (unqualified_extended_concat<T, Ts...>) {
+            return concat<To>(arg, args...);
         } else {
             return operator()(dx::to_canonical(arg), dx::to_canonical(args)...);
         }
