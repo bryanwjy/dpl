@@ -29,12 +29,12 @@ template <typename T>
 concept unqualified_canonical_bwsr = requires(T val, size_t shift) {
     {
         bwshift_right(internal::abi<T>, val, shift)
-    } -> canonical_shift_result<T>;
+    } -> canonical_bitshift_result<T>;
 };
 
 template <typename T>
 concept unqualified_extended_bwsr = requires(T val, size_t shift) {
-    { bwshift_right(val, shift) } -> extended_shift_result<T>;
+    { bwshift_right(val, shift) } -> extended_bitshift_result<T>;
 };
 
 template <typename T>
@@ -51,12 +51,12 @@ template <typename T, typename V>
 concept unqualified_canonical_bwsri = requires(T val, V shift) {
     {
         bwshift_right(internal::abi<T>, val, shift)
-    } -> canonical_shift_result<T>;
+    } -> canonical_bitshift_result<T>;
 };
 
 template <typename T, typename V>
 concept unqualified_extended_bwsri = requires(T val, V shift) {
-    { bwshift_right(val, shift) } -> extended_shift_result<T>;
+    { bwshift_right(val, shift) } -> extended_bitshift_result<T>;
 };
 
 template <typename T, typename V>

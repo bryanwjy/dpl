@@ -4,9 +4,11 @@
 #include "dpl/config.h"
 
 #if !DPL_MODULES
+#  include "dpl/core/basic/broadcast.h"
 #  include "dpl/core/basic/immediate.h"
 #  include "dpl/core/basic/initialize.h"
 #  include "dpl/core/basic/to_canonical.h"
+#  include "dpl/core/concepts/common_size_with.h"
 #  include "dpl/core/concepts/integral_simd.h"
 #  include "dpl/core/concepts/simd_class.h"
 #  include "dpl/core/concepts/simd_equivalence.h"

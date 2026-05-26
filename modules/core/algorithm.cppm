@@ -28,5 +28,5 @@ import :core.utility;
 #include "dpl/core/algorithm/rotate.h"
 #include "dpl/core/algorithm/shift.h"
 #include "dpl/core/algorithm/slide.h"
-// #include "dpl/core/algorithm/splice.h"
+#include "dpl/core/algorithm/splice.h"
 // IWYU pragma: end_exports

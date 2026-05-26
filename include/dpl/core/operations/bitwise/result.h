@@ -17,11 +17,6 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::internal {
-template <typename T, typename L, typename R, typename A = common_abi_t<L, R>>
-concept canonical_bitwise_result =
-    simd_vector<T> && same_as<typename L::value_type, typename T::value_type> &&
-    same_as<typename R::value_type, typename T::value_type> &&
-    same_abi_as<A, typename T::abi_type>;
 
 template <typename T, typename L, typename R, typename A = common_abi_t<L, R>>
 concept extended_bitwise_result =
@@ -29,15 +24,13 @@ concept extended_bitwise_result =
     same_as<typename R::value_type, typename T::value_type> &&
     common_abi_with<A, typename T::abi_type>;
 
+template <typename T, typename L, typename R, typename A = common_abi_t<L, R>>
+concept canonical_bitwise_result =
+    extended_bitwise_result<T, L, R, A> && same_as<A, typename T::abi_type>;
+
 template <typename T, typename A, typename... Args>
 concept broadcasting_bitwise_result = (... || common_class_with<T, Args>) &&
     common_abi_with<typename T::abi_type, A>;
-
-template <typename T, typename L, typename R, typename A = common_abi_t<L, R>>
-concept canonical_bitwise_mask = simd_mask<T> &&
-    common_size_with<simd_lane_type_t<L>, simd_lane_type_t<T>> &&
-    common_size_with<simd_lane_type_t<R>, simd_lane_type_t<T>> &&
-    same_abi_as<A, typename T::abi_type>;
 
 template <typename T, typename L, typename R, typename A = common_abi_t<L, R>>
 concept extended_bitwise_mask = simd_mask<T> &&
@@ -45,15 +38,18 @@ concept extended_bitwise_mask = simd_mask<T> &&
     common_size_with<simd_lane_type_t<R>, simd_lane_type_t<T>> &&
     common_abi_with<A, typename T::abi_type>;
 
-template <typename T, typename In, typename A = typename In::abi_type>
-concept canonical_shift_result = common_class_with<T, In> &&
-    same_as<simd_lane_type_t<T>, simd_lane_type_t<In>> &&
-    same_abi_as<A, typename T::abi_type>;
+template <typename T, typename L, typename R, typename A = common_abi_t<L, R>>
+concept canonical_bitwise_mask =
+    extended_bitwise_mask<T, L, R, A> && same_as<A, typename T::abi_type>;
 
 template <typename T, typename In, typename A = typename In::abi_type>
-concept extended_shift_result = common_class_with<T, In> &&
+concept extended_bitshift_result = common_class_with<T, In> &&
     same_as<simd_lane_type_t<T>, simd_lane_type_t<In>> &&
     common_abi_with<A, typename T::abi_type>;
+
+template <typename T, typename In, typename A = typename In::abi_type>
+concept canonical_bitshift_result =
+    extended_bitshift_result<T, In, A> && same_as<A, typename T::abi_type>;
 
 } // namespace datapar::internal
 

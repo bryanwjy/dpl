@@ -23,26 +23,85 @@ void rotate_right(...) noexcept = delete;
 template <size_t>
 void rotate_left(...) noexcept = delete;
 void rotate_left(...) noexcept = delete;
+struct rotate_left_t;
+struct rotate_right_t;
 
-template <size_t V, typename L>
-concept unqualified_rotate_righti = requires(L val) {
-    { rotate_right<V>(internal::abi<L>, val) } -> equivalent_class_as<L>;
+template <typename T, typename Arg>
+concept rotate_result = simd_vector<T> && simd_vector<Arg> &&
+    same_as<typename T::value_type, typename Arg::value_type> &&
+    common_abi_with<typename T::abi_type, typename Arg::abi_type>;
+
+template <typename T, typename Arg>
+concept canonical_rotate_result = rotate_result<T, Arg> &&
+    same_as<typename T::abi_type, typename Arg::abi_type>;
+
+template <typename T>
+concept unqualified_canonical_rotate_left = requires(T val, size_t rotate) {
+    {
+        rotate_left(internal::abi<T>, val, rotate)
+    } -> canonical_rotate_result<T>;
 };
 
 template <typename T>
-concept unqualified_rotate_right = requires(T val, size_t lanes) {
-    { rotate_right(internal::abi<T>, val, lanes) } -> equivalent_class_as<T>;
-};
-
-template <size_t V, typename L>
-concept unqualified_rotate_lefti = requires(L val) {
-    { rotate_left<V>(internal::abi<L>, val) } -> equivalent_class_as<L>;
+concept unqualified_extended_rotate_left = requires(T val, size_t rotate) {
+    { rotate_left(val, rotate) } -> rotate_result<T>;
 };
 
 template <typename T>
-concept unqualified_rotate_left = requires(T val, size_t lanes) {
-    { rotate_left(internal::abi<T>, val, lanes) } -> equivalent_class_as<T>;
+concept unqualified_rotate_left = unqualified_extended_rotate_left<T> ||
+    (decayable_vector_for<T, operation_category::lane_permutation> &&
+        unqualified_canonical_rotate_left<canonical_type_t<T>>);
+
+template <typename T, typename N>
+concept unqualified_canonical_rotate_lefti = requires(T val) {
+    {
+        rotate_left<N::value>(internal::abi<T>, val)
+    } -> canonical_rotate_result<T>;
 };
+
+template <typename T, typename N>
+concept unqualified_extended_rotate_lefti = requires(T val) {
+    { rotate_left<N::value>(val) } -> rotate_result<T>;
+};
+
+template <typename T, typename N>
+concept unqualified_rotate_lefti = unqualified_extended_rotate_lefti<T, N> ||
+    (decayable_vector_for<T, operation_category::lane_permutation> &&
+        regular_invocable<rotate_left_t, canonical_type_t<T>, N>);
+
+template <typename T>
+concept unqualified_canonical_rotate_right = requires(T val, size_t rotate) {
+    {
+        rotate_right(internal::abi<T>, val, rotate)
+    } -> canonical_rotate_result<T>;
+};
+
+template <typename T>
+concept unqualified_extended_rotate_right = requires(T val, size_t rotate) {
+    { rotate_right(val, rotate) } -> rotate_result<T>;
+};
+
+template <typename T>
+concept unqualified_rotate_right = unqualified_extended_rotate_right<T> ||
+    (decayable_vector_for<T, operation_category::lane_permutation> &&
+        unqualified_canonical_rotate_right<canonical_type_t<T>>);
+
+template <typename T, typename N>
+concept unqualified_canonical_rotate_righti = requires(T val) {
+    {
+        rotate_right<N::value>(internal::abi<T>, val)
+    } -> canonical_rotate_result<T>;
+};
+
+template <typename T, typename N>
+concept unqualified_extended_rotate_righti = requires(T val) {
+    { rotate_right<N::value>(val) } -> rotate_result<T>;
+};
+
+template <typename T, typename N>
+concept unqualified_rotate_righti = unqualified_extended_rotate_righti<T, N> ||
+    (decayable_vector_for<T, operation_category::lane_permutation> &&
+        regular_invocable<rotate_right_t, canonical_type_t<T>, N>);
 
 struct rotate_right_t {
 private:
@@ -70,73 +129,73 @@ private:
     }
 
 public:
-    template <fixed_width_class L, integral_constant_like R>
+    template <fixed_width_abi A, simd_element_for<A> E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L arg, R lanes) noexcept {
-        static_assert(R::value > 0);
-        constexpr auto V = R::value % simd_abi_traits<L>::size;
-        if constexpr (unqualified_rotate_righti<V, L>) {
-            if constexpr (canonical_class<L>) {
-                if consteval {
-                    return fallbacki<V>(arg);
-                } else {
-                    return rotate_right<V>(internal::abi<L>, arg);
-                }
+    static constexpr basic_vector<E, A> operator()(
+        basic_vector<E, A> val, size_t rotate) noexcept {
+        if constexpr (unqualified_canonical_rotate_right<basic_vector<E, A>>) {
+            if consteval {
+                return fallback(val, rotate);
             } else {
-                return rotate_right<V>(internal::abi<L>, arg);
+                return rotate_right(internal::abi<A>, val, rotate);
             }
-        } else if constexpr (canonical_class<L>) {
-            return fallbacki<V>(arg);
         } else {
-            return operator()(dx::to_canonical(arg), lanes);
+            return fallback(val, rotate);
         }
     }
 
-    template <scalable_class L, integral_constant_like R>
-    requires unqualified_rotate_righti<R::value % simd_abi_traits<L>::size,
-                 L> ||
-        unqualified_rotate_righti<R::value % simd_abi_traits<L>::size,
-            canonical_type_t<L>>
+    template <scalable_abi A, simd_element_for<A> E>
+    requires unqualified_canonical_rotate_right<basic_vector<E, A>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L arg, R lanes) noexcept {
-        static_assert(R::value > 0);
-        constexpr auto V = R::value % simd_abi_traits<L>::size;
-        if constexpr (unqualified_rotate_righti<V, L>) {
-            return rotate_right<V>(internal::abi<L>, arg);
+    static constexpr basic_vector<E, A> operator()(
+        basic_vector<E, A> val, size_t rotate) noexcept {
+        return rotate_right(internal::abi<A>, val, rotate);
+    }
+
+    template <extended_vector T>
+    requires unqualified_rotate_right<T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T val, size_t rotate) noexcept {
+        if constexpr (unqualified_extended_rotate_right<T>) {
+            return rotate_right(val, rotate);
         } else {
-            return rotate_right<V>(internal::abi<L>, dx::to_canonical(arg));
+            return operator()(dx::to_canonical(val), rotate);
         }
     }
 
-    template <fixed_width_class L>
+    template <fixed_width_abi A, simd_element_for<A> E,
+        integral_constant_like N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L arg, size_t lanes) noexcept {
-        if constexpr (unqualified_rotate_right<L>) {
-            if constexpr (canonical_class<L>) {
-                if consteval {
-                    return fallback(arg, lanes);
-                } else {
-                    return rotate_right(internal::abi<L>, arg, lanes);
-                }
+    static constexpr basic_vector<E, A> operator()(
+        basic_vector<E, A> val, N rotate) noexcept {
+        if constexpr (unqualified_canonical_rotate_righti<basic_vector<E, A>,
+                          N>) {
+            if consteval {
+                return fallbacki<N::value>(val);
             } else {
-                return rotate_right(internal::abi<L>, arg, lanes);
+                return rotate_right<N::value>(internal::abi<A>, val);
             }
-        } else if constexpr (canonical_class<L>) {
-            return fallback(arg, lanes);
         } else {
-            return operator()(dx::to_canonical(arg), lanes);
+            return fallbacki<N::value>(val);
         }
     }
 
-    template <scalable_class L>
-    requires unqualified_rotate_right<L> ||
-        unqualified_rotate_right<canonical_type_t<L>>
+    template <scalable_abi A, simd_element_for<A> E, integral_constant_like N>
+    requires unqualified_canonical_rotate_righti<basic_vector<E, A>, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L arg, size_t lanes) noexcept {
-        if constexpr (unqualified_rotate_right<L>) {
-            return rotate_right(internal::abi<L>, arg, lanes);
+    static constexpr basic_vector<E, A> operator()(
+        basic_vector<E, A> val, N rotate) noexcept {
+        return rotate_right<N::value>(internal::abi<A>, val);
+    }
+
+    template <extended_vector T, integral_constant_like N>
+    requires unqualified_rotate_righti<T, N>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T val, N rotate) noexcept {
+        if constexpr (unqualified_extended_rotate_righti<T, N>) {
+            return rotate_right<N::value>(val);
         } else {
-            return rotate_right(internal::abi<L>, dx::to_canonical(arg), lanes);
+            return operator()(dx::to_canonical(val), rotate);
         }
     }
 };
@@ -167,72 +226,73 @@ private:
     }
 
 public:
-    template <fixed_width_class L, integral_constant_like R>
+    template <fixed_width_abi A, simd_element_for<A> E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L arg, R lanes) noexcept {
-        static_assert(R::value > 0);
-        constexpr auto V = R::value % simd_abi_traits<L>::size;
-        if constexpr (unqualified_rotate_lefti<V, L>) {
-            if constexpr (canonical_class<L>) {
-                if consteval {
-                    return fallbacki<V>(arg);
-                } else {
-                    return rotate_left<V>(internal::abi<L>, arg);
-                }
+    static constexpr basic_vector<E, A> operator()(
+        basic_vector<E, A> val, size_t rotate) noexcept {
+        if constexpr (unqualified_canonical_rotate_left<basic_vector<E, A>>) {
+            if consteval {
+                return fallback(val, rotate);
             } else {
-                return rotate_left<V>(internal::abi<L>, arg);
+                return rotate_left(internal::abi<A>, val, rotate);
             }
-        } else if constexpr (canonical_class<L>) {
-            return fallbacki<V>(arg);
         } else {
-            return operator()(dx::to_canonical(arg), lanes);
+            return fallback(val, rotate);
         }
     }
 
-    template <scalable_class L, integral_constant_like R>
-    requires unqualified_rotate_lefti<R::value % simd_abi_traits<L>::size, L> ||
-        unqualified_rotate_lefti<R::value % simd_abi_traits<L>::size,
-            canonical_type_t<L>>
+    template <scalable_abi A, simd_element_for<A> E>
+    requires unqualified_canonical_rotate_left<basic_vector<E, A>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L arg, R lanes) noexcept {
-        static_assert(R::value > 0);
-        constexpr auto V = R::value % simd_abi_traits<L>::size;
-        if constexpr (unqualified_rotate_lefti<V, L>) {
-            return rotate_left<V>(internal::abi<L>, arg);
+    static constexpr basic_vector<E, A> operator()(
+        basic_vector<E, A> val, size_t rotate) noexcept {
+        return rotate_left(internal::abi<A>, val, rotate);
+    }
+
+    template <extended_vector T>
+    requires unqualified_rotate_left<T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T val, size_t rotate) noexcept {
+        if constexpr (unqualified_extended_rotate_left<T>) {
+            return rotate_left(val, rotate);
         } else {
-            return rotate_left<V>(internal::abi<L>, dx::to_canonical(arg));
+            return operator()(dx::to_canonical(val), rotate);
         }
     }
 
-    template <fixed_width_class L>
+    template <fixed_width_abi A, simd_element_for<A> E,
+        integral_constant_like N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L arg, size_t lanes) noexcept {
-        if constexpr (unqualified_rotate_left<L>) {
-            if constexpr (canonical_class<L>) {
-                if consteval {
-                    return fallback(arg, lanes);
-                } else {
-                    return rotate_left(internal::abi<L>, arg, lanes);
-                }
+    static constexpr basic_vector<E, A> operator()(
+        basic_vector<E, A> val, N rotate) noexcept {
+        if constexpr (unqualified_canonical_rotate_lefti<basic_vector<E, A>,
+                          N>) {
+            if consteval {
+                return fallbacki<N::value>(val);
             } else {
-                return rotate_left(internal::abi<L>, arg, lanes);
+                return rotate_left<N::value>(internal::abi<A>, val);
             }
-        } else if constexpr (canonical_class<L>) {
-            return fallback(arg, lanes);
         } else {
-            return operator()(dx::to_canonical(arg), lanes);
+            return fallbacki<N::value>(val);
         }
     }
 
-    template <scalable_class L>
-    requires unqualified_rotate_left<L> ||
-        unqualified_rotate_left<canonical_type_t<L>>
+    template <scalable_abi A, simd_element_for<A> E, integral_constant_like N>
+    requires unqualified_canonical_rotate_lefti<basic_vector<E, A>, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L arg, size_t lanes) noexcept {
-        if constexpr (unqualified_rotate_left<L>) {
-            return rotate_left(internal::abi<L>, arg, lanes);
+    static constexpr basic_vector<E, A> operator()(
+        basic_vector<E, A> val, N rotate) noexcept {
+        return rotate_left<N::value>(internal::abi<A>, val);
+    }
+
+    template <extended_vector T, integral_constant_like N>
+    requires unqualified_rotate_lefti<T, N>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T val, N rotate) noexcept {
+        if constexpr (unqualified_extended_rotate_lefti<T, N>) {
+            return rotate_left<N::value>(val);
         } else {
-            return rotate_left(internal::abi<L>, dx::to_canonical(arg), lanes);
+            return operator()(dx::to_canonical(val), rotate);
         }
     }
 };

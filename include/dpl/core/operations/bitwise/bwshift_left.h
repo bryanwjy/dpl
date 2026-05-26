@@ -27,43 +27,47 @@ struct bwshift_left_t;
 
 template <typename T>
 concept unqualified_canonical_bwsl = requires(T val, size_t shift) {
-    { bwshift_left(internal::abi<T>, val, shift) } -> canonical_shift_result<T>;
+    {
+        bwshift_left(internal::abi<T>, val, shift)
+    } -> canonical_bitshift_result<T>;
 };
 
 template <typename T>
 concept unqualified_extended_bwsl = requires(T val, size_t shift) {
-    { bwshift_left(val, shift) } -> extended_shift_result<T>;
+    { bwshift_left(val, shift) } -> extended_bitshift_result<T>;
 };
 
 template <typename T>
 concept unqualified_bwsl = unqualified_extended_bwsl<T> ||
     (decayable_vector_for<T, operation_category::lane_agnostic> &&
-        unqualified_canonical_bwsl<canonical_type_t<T>>);
+        regular_invocable<bwshift_left_t, canonical_type_t<T>, size_t>);
 
 template <typename T>
 concept unqualified_masksl = unqualified_extended_bwsl<T> ||
     (decayable_mask_for<T, operation_category::lane_permutation> &&
-        unqualified_canonical_bwsl<canonical_type_t<T>>);
+        regular_invocable<bwshift_left_t, canonical_type_t<T>, size_t>);
 
 template <typename T, typename V>
 concept unqualified_canonical_bwsli = requires(T val, V shift) {
-    { bwshift_left(internal::abi<T>, val, shift) } -> canonical_shift_result<T>;
+    {
+        bwshift_left(internal::abi<T>, val, shift)
+    } -> canonical_bitshift_result<T>;
 };
 
 template <typename T, typename V>
 concept unqualified_extended_bwsli = requires(T val, V shift) {
-    { bwshift_left(val, shift) } -> extended_shift_result<T>;
+    { bwshift_left(val, shift) } -> extended_bitshift_result<T>;
 };
 
 template <typename T, typename V>
 concept unqualified_bwsli = unqualified_extended_bwsli<T, V> ||
     (decayable_vector_for<T, operation_category::lane_agnostic> &&
-        unqualified_canonical_bwsli<canonical_type_t<T>, V>);
+        regular_invocable<bwshift_left_t, canonical_type_t<T>, V>);
 
 template <typename T, typename V>
 concept unqualified_masksli = unqualified_extended_bwsli<T, V> ||
     (decayable_mask_for<T, operation_category::lane_permutation> &&
-        unqualified_canonical_bwsli<canonical_type_t<T>, V>);
+        regular_invocable<bwshift_left_t, canonical_type_t<T>, V>);
 
 template <typename L, typename R, typename A = common_abi_t<L, R>>
 concept unqualified_canonical_bwslv = requires(L lhs, R rhs) {
@@ -82,7 +86,8 @@ concept unqualified_bwslv = unqualified_canonical_bwslv<L, R, A> ||
     unqualified_extended_bwslv<L, R, A> ||
     (decayable_vector_for<L, operation_category::lane_agnostic> &&
         decayable_vector_for<R, operation_category::lane_agnostic> &&
-        unqualified_canonical_bwslv<canonical_type_t<L>, canonical_type_t<R>>);
+        regular_invocable<bwshift_left_t, canonical_type_t<L>,
+            canonical_type_t<R>>);
 
 template <typename S, typename C, typename T, typename A = common_abi_t<C, T>>
 concept unqualified_canonical_mbwsl =
