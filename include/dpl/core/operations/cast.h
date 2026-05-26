@@ -45,20 +45,6 @@ concept unqualified_element_castable_to = simd_vector<From> &&
         } -> simd_with<To, typename From::abi_type>;
     };
 
-template <typename From, typename To>
-concept unqualified_simd_castable_to =
-    simd_vector<From> && simd_vector<To> && requires(From from) {
-        { simd_cast<To>(internal::abi<From>, from) } -> same_as<To>;
-    };
-
-template <typename From, typename To>
-concept unqualified_simd_castable_from =
-    simd_vector<From> && simd_vector<To> && requires(From from) {
-        {
-            simd_cast<typename To::value_type>(internal::abi<To>, from)
-        } -> same_as<To>;
-    };
-
 template <simd_element To>
 struct element_cast_t<To> {
 private:
@@ -376,6 +362,20 @@ public:
         }
     }
 };
+
+template <typename From, typename To>
+concept unqualified_simd_castable_to =
+    simd_vector<From> && simd_vector<To> && requires(From from) {
+        { simd_cast<To>(internal::abi<From>, from) } -> same_as<To>;
+    };
+
+template <typename From, typename To>
+concept unqualified_simd_castable_from =
+    simd_vector<From> && simd_vector<To> && requires(From from) {
+        {
+            simd_cast<typename To::value_type>(internal::abi<To>, from)
+        } -> same_as<To>;
+    };
 
 template <simd_abi ToA, simd_element_for<ToA> ToE>
 struct simd_cast_t<basic_vector<ToE, ToA>> {
