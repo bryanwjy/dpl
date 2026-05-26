@@ -36,8 +36,7 @@ concept unqualified_extended_logical_or = requires(L lhs, R rhs) {
 };
 
 template <typename L, typename R, typename A = common_abi_t<L, R>>
-concept unqualified_logical_or = unqualified_canonical_logical_or<L, R, A> ||
-    unqualified_extended_logical_or<L, R, A> ||
+concept unqualified_logical_or = unqualified_extended_logical_or<L, R, A> ||
     (decayable_mask_for<L, operation_category::lane_agnostic> &&
         decayable_mask_for<R, operation_category::lane_agnostic> &&
         regular_invocable<logical_or_t, canonical_type_t<L>,

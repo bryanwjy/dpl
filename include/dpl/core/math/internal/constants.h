@@ -67,7 +67,7 @@ struct underhalf_t : broadcastable_base {
 
 inline constexpr underhalf_t underhalf{};
 
-template <simd_element T>
+template <typename T>
 struct bit_width_of_t : broadcastable_base {
     __DPL_HIDE_FROM_ABI explicit constexpr bit_width_of_t() noexcept = default;
 
@@ -76,7 +76,7 @@ struct bit_width_of_t : broadcastable_base {
         return sizeof(T) * char_bit_v;
     }
 };
-template <simd_element T>
+template <typename T>
 inline constexpr bit_width_of_t<T> bit_width_of{};
 
 struct inv_ln2_t : broadcastable_base {

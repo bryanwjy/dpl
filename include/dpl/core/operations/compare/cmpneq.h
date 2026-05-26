@@ -37,8 +37,7 @@ concept unqualified_extended_cmpneq = requires(L lhs, R rhs) {
 };
 
 template <typename L, typename R, typename A = common_abi_t<L, R>>
-concept unqualified_cmpneq =
-    unqualified_canonical_cmpneq<L, R> || unqualified_extended_cmpneq<L, R> ||
+concept unqualified_cmpneq = unqualified_extended_cmpneq<L, R> ||
     (decayable_vector_for<L, operation_category::lane_agnostic> &&
         decayable_vector_for<R, operation_category::lane_agnostic> &&
         regular_invocable<cmpneq_t, canonical_type_t<L>, canonical_type_t<R>>);

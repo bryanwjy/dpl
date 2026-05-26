@@ -14,8 +14,8 @@
 #  include "dpl/core/concepts/operation_category.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_equivalence.h"
-#  include "dpl/core/concepts/totally_ordered.h"
 #  include "dpl/core/constants/zero.h"
+#  include "dpl/std/concepts/totally_ordered.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -37,8 +37,7 @@ concept unqualified_extended_min = requires(L lhs, R rhs) {
 };
 
 template <typename L, typename R, typename A = common_abi_t<L, R>>
-concept unqualified_min =
-    unqualified_canonical_min<L, R, A> || unqualified_extended_min<L, R, A> ||
+concept unqualified_min = unqualified_extended_min<L, R, A> ||
     (decayable_vector_for<L, operation_category::lane_agnostic> &&
         decayable_vector_for<R, operation_category::lane_agnostic> &&
         regular_invocable<min_t, canonical_type_t<L>, canonical_type_t<R>>);

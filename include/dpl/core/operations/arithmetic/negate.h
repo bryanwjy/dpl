@@ -37,8 +37,7 @@ concept unqualified_extended_negate = requires(T val) {
 };
 
 template <typename T>
-concept unqualified_negate =
-    unqualified_canonical_negate<T> || unqualified_extended_negate<T> ||
+concept unqualified_negate = unqualified_extended_negate<T> ||
     (decayable_vector_for<T, operation_category::lane_agnostic> &&
         regular_invocable<negate_t, canonical_type_t<T>>);
 

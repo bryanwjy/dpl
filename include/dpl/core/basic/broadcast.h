@@ -4,6 +4,8 @@
 #include "dpl/config.h"
 
 #include "dpl/core/basic/broadcastable_base.h"
+#include "dpl/core/basic/broadcasting.h"
+
 #if !DPL_MODULES
 #  include "dpl/core/fwd.h"
 
@@ -121,17 +123,9 @@ public:
     requires regular_invocable<base_type, Arg>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr T operator()(Arg&& arg) noexcept
-    requires constructible_from<T, broadcast_t, Arg> ||
-        explicitly_convertible_to<canonical_type_t<T>, T>
+    requires constructible_from<T, broadcasting_t, Arg>
     {
-        if constexpr (constructible_from<T, broadcast_t, Arg>) {
-
-            constexpr broadcast_t tag{};
-            return T(tag, __DPL forward<Arg>(arg));
-        } else {
-            return static_cast<T>(
-                base_type::operator()( __DPL forward<Arg>(arg)));
-        }
+        return T(dx::broadcasting, __DPL forward<Arg>(arg));
     }
 };
 

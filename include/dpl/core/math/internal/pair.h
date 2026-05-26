@@ -4,6 +4,7 @@
 #include "dpl/config.h"
 
 #include "dpl/core/math/fma.h"
+#include "dpl/core/math/internal/floating_point_simd.h"
 #include "dpl/core/math/rsqrt.h"
 #include "dpl/core/math/sqrt.h"
 
@@ -11,7 +12,6 @@
 #  include "dpl/core/basic/basic_vector.h" // IWYU pragma: export
 #  include "dpl/core/basic/broadcast.h"
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/concepts/simd_element.h"
 #  include "dpl/core/constants/ln2.h"
 #  include "dpl/core/constants/one.h"
 #  include "dpl/core/constants/zero.h"
@@ -33,6 +33,7 @@ constexpr auto cpo(Args... args) noexcept {
 }
 
 template <floating_point T, simd_abi A>
+requires simd_floating_point_for<T, A>
 struct pair {
     using value_type = T;
     using abi_type = A;
@@ -170,16 +171,16 @@ using pair_of = pair<typename T::value_type, typename T::abi_type>;
 
 template <typename T>
 inline constexpr bool is_pair = false;
-template <floating_point T, simd_abi A>
-inline constexpr bool is_pair<pair<T, A>> = true;
+template <simd_abi A, simd_floating_point_for<A> E>
+inline constexpr bool is_pair<pair<E, A>> = true;
 
 template <typename T>
 concept pair_type = is_pair<T> && requires {
     typename T::value_type;
-    requires simd_element<typename T::value_type>;
     typename T::abi_type;
-    requires simd_abi<typename T::abi_type>;
     typename T::element_type;
+    requires simd_abi<typename T::abi_type>;
+    requires simd_element_for<typename T::value_type, typename T::abi_type>;
     requires simd_vector<typename T::element_type>;
     requires same_as<typename T::element_type,
         basic_vector<typename T::value_type, typename T::abi_type>>;
@@ -196,7 +197,8 @@ constexpr pair_of<T>
     };
 }
 
-template <simd_element E, simd_abi A, broadcastable_to<basic_vector<E, A>> T1,
+template <simd_abi A, simd_floating_point_for<A> E,
+    broadcastable_to<basic_vector<E, A>> T1,
     broadcastable_to<basic_vector<E, A>> T2 = dx::zero_t>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 constexpr pair<E, A>
@@ -207,7 +209,7 @@ constexpr pair<E, A>
     };
 }
 
-template <simd_abi A, simd_element E,
+template <simd_abi A, simd_floating_point_for<A> E,
     broadcastable_to<basic_vector<E, A>> T2 = dx::zero_t>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 constexpr pair<E, A>
@@ -219,7 +221,7 @@ constexpr pair<E, A>
     };
 }
 
-template <simd_abi A, floating_point E, simd_element C>
+template <simd_abi A, simd_floating_point_for<A> E, simd_element_for<A> C>
 requires common_size_with<E, C>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 constexpr pair<E, A>
@@ -241,7 +243,7 @@ constexpr T broadcast(C arg) noexcept {
     };
 }
 
-template <simd_abi A, floating_point E>
+template <simd_abi A, simd_floating_point_for<A> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 constexpr pair<E, A>
     DPL_VECTORCALL abs(pair<E, A> arg) noexcept {
@@ -251,7 +253,7 @@ constexpr pair<E, A>
     };
 }
 
-template <simd_abi A, floating_point E>
+template <simd_abi A, simd_floating_point_for<A> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 constexpr pair<E, A>
     DPL_VECTORCALL normalize(pair<E, A> arg) noexcept {
@@ -262,7 +264,7 @@ constexpr pair<E, A>
     };
 }
 
-template <simd_abi A, floating_point E, typename S>
+template <simd_abi A, simd_floating_point_for<A> E, typename S>
 requires requires(pair<E, A> p, S scale) {
     p.upper * scale;
     p.lower * scale;
@@ -276,7 +278,7 @@ constexpr pair<E, A>
     };
 }
 
-template <simd_abi A, floating_point E>
+template <simd_abi A, simd_floating_point_for<A> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 constexpr pair<E, A>
     DPL_VECTORCALL square(pair<E, A> arg) noexcept {
@@ -290,7 +292,7 @@ constexpr pair<E, A>
     };
 }
 
-template <simd_abi A, floating_point E>
+template <simd_abi A, simd_floating_point_for<A> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 constexpr pair<E, A>
     DPL_VECTORCALL rcp(pair<E, A> arg) noexcept {
@@ -302,7 +304,7 @@ constexpr pair<E, A>
     };
 }
 
-template <simd_abi A, floating_point E>
+template <simd_abi A, simd_floating_point_for<A> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 constexpr pair<E, A>
     DPL_VECTORCALL sqrt(pair<E, A> arg) noexcept {
@@ -319,7 +321,8 @@ template <typename T>
 struct single;
 
 template <floating_point E, simd_abi A>
-requires simd_vector<basic_vector<E, A>>
+requires simd_floating_point_for<E, A> &&
+    requires { typename basic_vector<E, A>; }
 struct single<basic_vector<E, A>> {
     using element_type = basic_vector<E, A>;
     element_type value;
@@ -451,6 +454,8 @@ struct element_type_if<T> {
 };
 
 template <floating_point E, simd_abi A>
+requires simd_floating_point_for<E, A> &&
+    requires { typename basic_vector<E, A>; }
 struct fast<basic_vector<E, A>> {
     using element_type = basic_vector<E, A>;
     basic_vector<E, A> value;
@@ -574,23 +579,19 @@ explicit fast(T) -> fast<T>;
 inline constexpr struct ln2_t : dx::ln2_t {
     __DPL_HIDE_FROM_ABI explicit constexpr ln2_t() noexcept = default;
 
-    template <pair_type T>
-    requires common_float_with<typename T::value_type, float>
+    template <simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    constexpr operator T(this ln2_t) noexcept {
-        using A = typename T::abi_type;
-        return T{
+    constexpr operator pair<float, A>(this ln2_t) noexcept {
+        return pair<float, A>{
             .upper = dx::broadcast<A>(0.693145751953125f),
             .lower = dx::broadcast<A>(1.428606765330187045e-06f),
         };
     }
 
-    template <pair_type T>
-    requires common_float_with<typename T::value_type, double>
+    template <simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    constexpr operator T(this ln2_t) noexcept {
-        using A = typename T::abi_type;
-        return T{
+    constexpr operator pair<double, A>(this ln2_t) noexcept {
+        return pair<double, A>{
             .upper =
                 dx::broadcast<A>(0.69314718055966295651160180568695068359375),
             .lower = dx::broadcast<A>(

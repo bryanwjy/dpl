@@ -4,6 +4,7 @@
 #include "dpl/config.h"
 
 #include "dpl/core/basic/broadcast.h"
+#include "dpl/core/basic/broadcasting.h"
 #include "dpl/core/basic/extract.h"
 #include "dpl/core/basic/immediate.h"
 #include "dpl/core/basic/initialize.h"
@@ -65,6 +66,10 @@ public:
 
     __DPL_HIDE_FROM_ABI constexpr basic_mask() noexcept
         : basic_mask(datapar::broadcast<basic_mask>(false)) {}
+
+    __DPL_HIDE_FROM_ABI explicit constexpr basic_mask(
+        broadcasting_t, bool scalar) noexcept
+        : basic_mask(datapar::broadcast<basic_mask>(scalar)) {}
 
     __DPL_HIDE_FROM_ABI constexpr basic_mask(mask_type data) noexcept
         : mask_{data} {}

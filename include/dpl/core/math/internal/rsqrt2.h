@@ -5,6 +5,7 @@
 
 #include "dpl/core/math/fma.h"
 #include "dpl/core/math/internal/accuracy.h" // IWYU pragma: export
+#include "dpl/core/math/internal/floating_point_simd.h"
 #include "dpl/core/math/internal/polynomial.h"
 
 #if !DPL_MODULES
@@ -58,7 +59,7 @@ private:
     };
 
 public:
-    template <floating_point E, simd_abi A, accuracy_tag Tag>
+    template <simd_abi A, simd_floating_point_for<A> E, accuracy_tag Tag>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr basic_vector<E, A>
         DPL_VECTORCALL operator()(Tag, basic_vector<E, A> val) noexcept {

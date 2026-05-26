@@ -44,8 +44,7 @@ concept unqualified_extended_byteswap = requires(T val) {
 };
 
 template <typename T>
-concept unqualified_byteswap =
-    unqualified_canonical_byteswap<T> || unqualified_extended_byteswap<T> ||
+concept unqualified_byteswap = unqualified_extended_byteswap<T> ||
     (decayable_vector_for<T, operation_category::lane_agnostic> &&
         regular_invocable<byteswap_t, canonical_type_t<T>>);
 

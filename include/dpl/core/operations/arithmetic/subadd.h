@@ -51,8 +51,7 @@ concept unqualified_extended_subadd = requires(L lhs, R rhs) {
 };
 
 template <typename L, typename R, typename A = common_abi_t<L, R>>
-concept unqualified_subadd = unqualified_canonical_subadd<L, R, A> ||
-    unqualified_extended_subadd<L, R, A> ||
+concept unqualified_subadd = unqualified_extended_subadd<L, R, A> ||
     (decayable_vector_for<L, operation_category::lane_agnostic> &&
         decayable_vector_for<R, operation_category::lane_agnostic> &&
         regular_invocable<subadd_t, canonical_type_t<L>, canonical_type_t<R>>);

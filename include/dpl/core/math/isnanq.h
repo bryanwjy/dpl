@@ -13,7 +13,6 @@
 #  include "dpl/core/operations/arithmetic/abs.h"
 #  include "dpl/core/operations/bitwise.h"
 #  include "dpl/core/operations/compare.h"
-#  include "dpl/std/bit/bit_cast.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -21,12 +20,22 @@ namespace datapar::internal {
 
 void isnanq(...) noexcept = delete;
 
+template <typename T>
+concept unqualified_canonical_isnanq = requires(T arg) {
+    { isnanq(internal::abi<T>, arg) } -> exact_mask_for<T>;
+};
+
+template <typename T>
+concept unqualified_extended_isnanq = requires(T arg) {
+    { isnanq(arg) } -> compatible_mask_with<T>;
+};
+
 struct isnanq_t {
 private:
-    template <floating_point E, simd_abi A>
+    template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr basic_mask<E, A>
-        DPL_VECTORCALL fallback(basic_vector<E, A> val) noexcept {
+        DPL_VECTORCALL fallback(basic_vector<E, A> arg) noexcept {
         constexpr signed_representation_t<E> signaling_bit =
             signed_representation_t<E>(1) << (dx::mantissa_width_v<E> - 1);
         constexpr signed_representation_t<E> max_snan =
@@ -34,29 +43,41 @@ private:
             signaling_bit;
 
         using sint = signed_representation_t<E>;
-        return dx::cmpgt(dx::reinterpret<sint>(dx::abs(val)), max_snan);
+        return dx::cmpgt(dx::reinterpret<sint>(dx::abs(arg)), max_snan);
     }
 
 public:
-    template <floating_point_simd T>
+    template <fixed_width_abi A, simd_floating_point_for<A> E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr make_simd_mask_type_t<T> operator()(T arg) noexcept {
-        if constexpr (requires {
-                          {
-                              isnanq(internal::abi<T>, arg)
-                          } -> compatible_mask_with<T>;
-                      }) {
-            if constexpr (canonical_vector<T>) {
-                if consteval {
-                    return fallback(arg);
-                } else {
-                    return isnanq(internal::abi<T>, arg);
-                }
+    static constexpr basic_mask<E, A> operator()(
+        basic_vector<E, A> arg) noexcept {
+        if constexpr (unqualified_canonical_isnanq<basic_vector<E, A>>) {
+            if consteval {
+                return fallback(arg);
             } else {
-                return isnanq(internal::abi<T>, arg);
+                return isnanq(internal::abi<A>, arg);
             }
-        } else if constexpr (canonical_vector<T>) {
+        } else {
             return fallback(arg);
+        }
+    }
+
+    template <scalable_abi A, simd_floating_point_for<A> E>
+    requires unqualified_canonical_isnanq<basic_vector<E, A>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr basic_mask<E, A> operator()(
+        basic_vector<E, A> arg) noexcept {
+        return isnanq(internal::abi<A>, arg);
+    }
+
+    template <extended_vector T>
+    requires unqualified_extended_isnanq<T> ||
+        (decayable_vector_for<T, operation_category::lane_agnostic> &&
+            regular_invocable<isnanq_t, canonical_type_t<T>>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T arg) noexcept {
+        if constexpr (unqualified_extended_isnanq<T>) {
+            return isnanq(arg);
         } else {
             return operator()(dx::to_canonical(arg));
         }

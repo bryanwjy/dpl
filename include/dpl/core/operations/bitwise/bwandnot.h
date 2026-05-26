@@ -39,8 +39,7 @@ concept unqualified_extended_bwandnot = requires(L lhs, R rhs) {
 };
 
 template <typename L, typename R, typename A = common_abi_t<L, R>>
-concept unqualified_bwandnot = unqualified_canonical_bwandnot<L, R, A> ||
-    unqualified_extended_bwandnot<L, R, A> ||
+concept unqualified_bwandnot = unqualified_extended_bwandnot<L, R, A> ||
     (decayable_vector_for<L, operation_category::lane_agnostic> &&
         decayable_vector_for<R, operation_category::lane_agnostic> &&
         regular_invocable<bwandnot_t, canonical_type_t<L>,

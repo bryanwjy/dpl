@@ -36,8 +36,7 @@ concept unqualified_extended_popcount = requires(T val) {
 };
 
 template <typename T>
-concept unqualified_popcount =
-    unqualified_canonical_popcount<T> || unqualified_extended_popcount<T> ||
+concept unqualified_popcount = unqualified_extended_popcount<T> ||
     (decayable_vector_for<T, operation_category::lane_agnostic> &&
         regular_invocable<popcount_t, canonical_type_t<T>>);
 
@@ -362,7 +361,6 @@ public:
 
     template <fixed_width_abi A, simd_element_for<A> E,
         const_mask_for<basic_vector<E, A>> Mask>
-    requires arithmetic_type<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<unsigned_representation_t<E>, A> operator()(
         Mask mask, basic_vector<E, A> val) noexcept {
@@ -380,10 +378,9 @@ public:
         }
     }
 
-    template <simd_abi InA, simd_element_for<InA> E,
+    template <scalable_abi InA, simd_element_for<InA> E,
         const_mask_for<basic_vector<E, InA>> Mask>
-    requires (scalable_abi<InA> || !arithmetic_type<E>) &&
-        simd_element_for<E, InA> && imm_zmaskable_args<basic_vector<E, InA>> &&
+    requires imm_zmaskable_args<basic_vector<E, InA>> &&
         unqualified_canonical_impopcount<zero_t, Mask, basic_vector<E, InA>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<unsigned_representation_t<E>, InA> operator()(

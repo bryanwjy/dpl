@@ -33,8 +33,7 @@ concept unqualified_extended_any_of = requires(T val) {
 };
 
 template <typename T, typename A = typename T::abi_type>
-concept unqualified_any_of =
-    unqualified_canonical_any_of<T, A> || unqualified_extended_any_of<T, A> ||
+concept unqualified_any_of = unqualified_extended_any_of<T, A> ||
     (decayable_mask_for<T, operation_category::lane_reduction> &&
         regular_invocable<any_of_t, canonical_type_t<T>>);
 

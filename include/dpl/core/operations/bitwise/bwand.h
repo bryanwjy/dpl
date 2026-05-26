@@ -37,8 +37,7 @@ concept unqualified_extended_bwand = requires(L lhs, R rhs) {
 };
 
 template <typename L, typename R, typename A = common_abi_t<L, R>>
-concept unqualified_bwand = unqualified_canonical_bwand<L, R, A> ||
-    unqualified_extended_bwand<L, R, A> ||
+concept unqualified_bwand = unqualified_extended_bwand<L, R, A> ||
     (decayable_vector_for<L, operation_category::lane_agnostic> &&
         decayable_vector_for<R, operation_category::lane_agnostic> &&
         regular_invocable<bwand_t, canonical_type_t<L>, canonical_type_t<R>>);

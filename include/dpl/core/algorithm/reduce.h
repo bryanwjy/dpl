@@ -10,6 +10,7 @@
 #  include "dpl/core/basic/const_mask.h"
 #  include "dpl/core/basic/immediate.h"
 #  include "dpl/core/basic/to_native_type.h"
+#  include "dpl/core/concepts/compatible_mask_with.h"
 #  include "dpl/core/operations/bit.h"
 #  include "dpl/core/operations/logical.h"
 #  include "dpl/core/operations/reinterpret.h"
@@ -218,8 +219,8 @@ private:
     using mask_type DPL_NODEBUG = make_const_mask_t<T, V>;
 
 public:
-    template <arithmetic_vector T>
-    requires fixed_width_vector<T> && requires {
+    template <fixed_width_vector T>
+    requires requires {
         typename mask_type<T>;
         requires regular_invocable<reduce_t, mask_type<T>, T>;
     }

@@ -40,8 +40,7 @@ concept unqualified_extended_subtract = requires(L lhs, R rhs) {
 };
 
 template <typename L, typename R, typename A = common_abi_t<L, R>>
-concept unqualified_subtract = unqualified_canonical_subtract<L, R, A> ||
-    unqualified_extended_subtract<L, R, A> ||
+concept unqualified_subtract = unqualified_extended_subtract<L, R, A> ||
     (decayable_vector_for<L, operation_category::lane_agnostic> &&
         decayable_vector_for<R, operation_category::lane_agnostic> &&
         regular_invocable<subtract_t, canonical_type_t<L>,

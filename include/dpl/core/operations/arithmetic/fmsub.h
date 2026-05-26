@@ -9,7 +9,6 @@
 #include "dpl/core/operations/arithmetic/subtract.h"
 #include "dpl/core/operations/masked.h"
 #include "dpl/core/operations/operation_base.h"
-#include "dpl/core/operations/transform.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/arithmetic_type.h"
@@ -42,8 +41,7 @@ concept unqualified_extended_fmsub = requires(AT a, BT b, CT c) {
 
 template <typename AT, typename BT, typename CT,
     typename A = common_abi_t<AT, BT, CT>>
-concept unqualified_fmsub = unqualified_canonical_fmsub<AT, BT, CT, A> ||
-    unqualified_extended_fmsub<AT, BT, CT, A> ||
+concept unqualified_fmsub = unqualified_extended_fmsub<AT, BT, CT, A> ||
     (decayable_vector_for<AT, operation_category::lane_agnostic> &&
         decayable_vector_for<BT, operation_category::lane_agnostic> &&
         decayable_vector_for<CT, operation_category::lane_agnostic> &&

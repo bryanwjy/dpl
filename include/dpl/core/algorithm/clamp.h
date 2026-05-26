@@ -7,13 +7,9 @@
 #  include "dpl/core/concepts/decayable.h"
 #  include "dpl/core/concepts/operation_category.h"
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/concepts/simd_equivalence.h"
-#  include "dpl/core/constants/zero.h"
 #  include "dpl/core/operations/arithmetic/result.h"
-#  include "dpl/core/operations/masked.h"
 #  include "dpl/core/operations/minmax.h"
 #  include "dpl/core/operations/operation_base.h"
-#  include "dpl/core/operations/transform.h"
 #  include "dpl/std/concepts/totally_ordered.h"
 #endif
 

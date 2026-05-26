@@ -35,8 +35,7 @@ concept unqualified_extended_abs = requires(T val) {
 };
 
 template <typename T>
-concept unqualified_abs =
-    unqualified_canonical_abs<T> || unqualified_extended_abs<T> ||
+concept unqualified_abs = unqualified_extended_abs<T> ||
     (decayable_vector_for<T, operation_category::lane_agnostic> &&
         unqualified_canonical_abs<canonical_type_t<T>>);
 

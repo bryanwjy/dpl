@@ -3,15 +3,13 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/operations/operation_base.h"
 #include "dpl/core/operations/transform.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/broadcast.h"
 #  include "dpl/core/basic/const_mask.h"
-#  include "dpl/core/concepts/common_arithmetic_with.h"
+#  include "dpl/core/basic/to_canonical.h"
 #  include "dpl/core/concepts/common_size_with.h"
-#  include "dpl/core/concepts/compatible_mask_with.h"
 #  include "dpl/core/concepts/decayable.h"
 #  include "dpl/core/concepts/operation_category.h"
 #  include "dpl/core/concepts/simd_class.h"
@@ -19,11 +17,8 @@
 #  include "dpl/core/constants/all_bits.h"
 #  include "dpl/core/constants/zero.h"
 #  include "dpl/core/type_traits/common_size_type.h"
-#  include "dpl/core/type_traits/make_simd_mask_type.h"
-#  include "dpl/core/type_traits/make_simd_type.h"
 #  include "dpl/std/concepts/integral.h"
 #  include "dpl/std/concepts/invocable.h"
-#  include "dpl/std/type_traits/declval.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -86,8 +81,7 @@ concept unqualified_extended_select = requires(M mask, L lhs, R rhs) {
 
 template <typename M, typename L, typename R,
     typename A = common_abi_t<L, R, M>>
-concept unqualified_select = unqualified_canonical_select<M, L, R, A> ||
-    unqualified_extended_select<M, L, R, A> ||
+concept unqualified_select = unqualified_extended_select<M, L, R, A> ||
     (decayable_vector_for<L, operation_category::lane_agnostic> &&
         decayable_vector_for<R, operation_category::lane_agnostic> &&
         decayable_mask_for<M, operation_category::lane_agnostic> &&
@@ -144,8 +138,7 @@ concept unqualified_extended_bitkeep = requires(M mask, R val) {
 };
 
 template <typename M, typename R, typename A = common_abi_t<R, M>>
-concept unqualified_bitkeep = unqualified_canonical_bitkeep<M, R, A> ||
-    unqualified_extended_bitkeep<M, R, A> ||
+concept unqualified_bitkeep = unqualified_extended_bitkeep<M, R, A> ||
     (decayable_vector_for<R, operation_category::lane_agnostic> &&
         decayable_mask_for<M, operation_category::lane_agnostic> &&
         regular_invocable<select_t, canonical_type_t<M>, canonical_type_t<R>,
@@ -164,8 +157,7 @@ concept unqualified_extended_bitdrop = requires(M mask, R val) {
 };
 
 template <typename M, typename R, typename A = common_abi_t<R, M>>
-concept unqualified_bitdrop = unqualified_canonical_bitdrop<M, R, A> ||
-    unqualified_extended_bitdrop<M, R, A> ||
+concept unqualified_bitdrop = unqualified_extended_bitdrop<M, R, A> ||
     (decayable_vector_for<R, operation_category::lane_agnostic> &&
         decayable_mask_for<M, operation_category::lane_agnostic> &&
         regular_invocable<select_t, canonical_type_t<M>, dx::zero_t,
@@ -184,8 +176,7 @@ concept unqualified_extended_bitfill = requires(M mask, R val) {
 };
 
 template <typename M, typename R, typename A = common_abi_t<R, M>>
-concept unqualified_bitfill = unqualified_canonical_bitfill<M, R, A> ||
-    unqualified_extended_bitfill<M, R, A> ||
+concept unqualified_bitfill = unqualified_extended_bitfill<M, R, A> ||
     (decayable_vector_for<R, operation_category::lane_agnostic> &&
         decayable_mask_for<M, operation_category::lane_agnostic> &&
         regular_invocable<select_t, canonical_type_t<M>, dx::all_bits_t,
@@ -204,8 +195,7 @@ concept unqualified_extended_bitspill = requires(M mask, R val) {
 };
 
 template <typename M, typename R, typename A = common_abi_t<R, M>>
-concept unqualified_bitspill = unqualified_canonical_bitspill<M, R, A> ||
-    unqualified_extended_bitspill<M, R, A> ||
+concept unqualified_bitspill = unqualified_extended_bitspill<M, R, A> ||
     (decayable_vector_for<R, operation_category::lane_agnostic> &&
         decayable_mask_for<M, operation_category::lane_agnostic> &&
         regular_invocable<select_t, canonical_type_t<M>, canonical_type_t<R>,
@@ -261,8 +251,7 @@ concept unqualified_extended_selecti = requires(L lhs, R rhs) {
 };
 
 template <typename M, typename L, typename R, typename A = common_abi_t<L, R>>
-concept unqualified_selecti = unqualified_canonical_selecti<M, L, R, A> ||
-    unqualified_extended_selecti<M, L, R, A> ||
+concept unqualified_selecti = unqualified_extended_selecti<M, L, R, A> ||
     (decayable_vector_for<L, operation_category::lane_agnostic> &&
         decayable_vector_for<R, operation_category::lane_agnostic> &&
         regular_invocable<select_t, M, canonical_type_t<L>,
@@ -304,8 +293,7 @@ concept unqualified_extended_bitkeepi = requires(R val) {
 };
 
 template <typename M, typename R>
-concept unqualified_bitkeepi = unqualified_canonical_bitkeepi<M, R> ||
-    unqualified_extended_bitkeepi<M, R> ||
+concept unqualified_bitkeepi = unqualified_extended_bitkeepi<M, R> ||
     (decayable_simd_for<R, operation_category::lane_agnostic> &&
         regular_invocable<select_t, M, canonical_type_t<R>, dx::zero_t>);
 
@@ -322,8 +310,7 @@ concept unqualified_extended_bitdropi = requires(R val) {
 };
 
 template <typename M, typename R>
-concept unqualified_bitdropi = unqualified_canonical_bitdropi<M, R> ||
-    unqualified_extended_bitdropi<M, R> ||
+concept unqualified_bitdropi = unqualified_extended_bitdropi<M, R> ||
     (decayable_simd_for<R, operation_category::lane_agnostic> &&
         regular_invocable<select_t, M, dx::zero_t, canonical_type_t<R>>);
 
@@ -340,8 +327,7 @@ concept unqualified_extended_bitfilli = requires(R val) {
 };
 
 template <typename M, typename R>
-concept unqualified_bitfilli = unqualified_canonical_bitfilli<M, R> ||
-    unqualified_extended_bitfilli<M, R> ||
+concept unqualified_bitfilli = unqualified_extended_bitfilli<M, R> ||
     (decayable_simd_for<R, operation_category::lane_agnostic> &&
         regular_invocable<select_t, M, dx::all_bits_t, canonical_type_t<R>>);
 
@@ -358,8 +344,7 @@ concept unqualified_extended_bitspilli = requires(R val) {
 };
 
 template <typename M, typename R>
-concept unqualified_bitspilli = unqualified_canonical_bitspilli<M, R> ||
-    unqualified_extended_bitspilli<M, R> ||
+concept unqualified_bitspilli = unqualified_extended_bitspilli<M, R> ||
     (decayable_simd_for<R, operation_category::lane_agnostic> &&
         regular_invocable<select_t, M, canonical_type_t<R>, dx::all_bits_t>);
 

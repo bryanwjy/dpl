@@ -14,8 +14,8 @@
 #  include "dpl/core/concepts/operation_category.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_equivalence.h"
-#  include "dpl/core/concepts/totally_ordered.h"
 #  include "dpl/core/constants/zero.h"
+#  include "dpl/std/concepts/totally_ordered.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -37,8 +37,7 @@ concept unqualified_extended_max = requires(L lhs, R rhs) {
 };
 
 template <typename L, typename R, typename A = common_abi_t<L, R>>
-concept unqualified_max =
-    unqualified_canonical_max<L, R, A> || unqualified_extended_max<L, R, A> ||
+concept unqualified_max = unqualified_extended_max<L, R, A> ||
     (decayable_vector_for<L, operation_category::lane_agnostic> &&
         decayable_vector_for<R, operation_category::lane_agnostic> &&
         regular_invocable<max_t, canonical_type_t<L>, canonical_type_t<R>>);

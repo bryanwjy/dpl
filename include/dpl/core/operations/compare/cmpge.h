@@ -36,8 +36,7 @@ concept unqualified_extended_cmpge = requires(L lhs, R rhs) {
 };
 
 template <typename L, typename R, typename A = common_abi_t<L, R>>
-concept unqualified_cmpge =
-    unqualified_canonical_cmpge<L, R> || unqualified_extended_cmpge<L, R> ||
+concept unqualified_cmpge = unqualified_extended_cmpge<L, R> ||
     (decayable_vector_for<L, operation_category::lane_agnostic> &&
         decayable_vector_for<R, operation_category::lane_agnostic> &&
         regular_invocable<cmpge_t, canonical_type_t<L>, canonical_type_t<R>>);

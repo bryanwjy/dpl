@@ -37,8 +37,7 @@ concept unqualified_extended_add = requires(L lhs, R rhs) {
 };
 
 template <typename L, typename R, typename A = common_abi_t<L, R>>
-concept unqualified_add =
-    unqualified_canonical_add<L, R, A> || unqualified_extended_add<L, R, A> ||
+concept unqualified_add = unqualified_extended_add<L, R, A> ||
     (decayable_vector_for<L, operation_category::lane_agnostic> &&
         decayable_vector_for<R, operation_category::lane_agnostic> &&
         regular_invocable<add_t, canonical_type_t<L>, canonical_type_t<R>>);

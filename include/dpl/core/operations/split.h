@@ -9,6 +9,8 @@
 #  include "dpl/core/basic/initialize.h"
 #  include "dpl/core/basic/load.h"
 #  include "dpl/core/basic/store.h"
+#  include "dpl/core/concepts/decayable.h"
+#  include "dpl/core/concepts/operation_category.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_class.h"
 #  include "dpl/core/concepts/simd_equivalence.h"

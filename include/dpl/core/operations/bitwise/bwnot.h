@@ -39,8 +39,7 @@ concept unqualified_extended_bwnot = requires(T val) {
 };
 
 template <typename T>
-concept unqualified_bwnot =
-    unqualified_canonical_bwnot<T> || unqualified_extended_bwnot<T> ||
+concept unqualified_bwnot = unqualified_extended_bwnot<T> ||
     (decayable_vector_for<T, operation_category::lane_agnostic> &&
         regular_invocable<bwnot_t, canonical_type_t<T>>);
 

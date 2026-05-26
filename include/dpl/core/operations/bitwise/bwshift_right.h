@@ -38,14 +38,12 @@ concept unqualified_extended_bwsr = requires(T val, size_t shift) {
 };
 
 template <typename T>
-concept unqualified_bwsr =
-    unqualified_canonical_bwsr<T> || unqualified_extended_bwsr<T> ||
+concept unqualified_bwsr = unqualified_extended_bwsr<T> ||
     (decayable_vector_for<T, operation_category::lane_agnostic> &&
         regular_invocable<bwshift_right_t, canonical_type_t<T>, size_t>);
 
 template <typename T>
-concept unqualified_masksr =
-    unqualified_canonical_bwsr<T> || unqualified_extended_bwsr<T> ||
+concept unqualified_masksr = unqualified_extended_bwsr<T> ||
     (decayable_mask_for<T, operation_category::lane_permutation> &&
         regular_invocable<bwshift_right_t, canonical_type_t<T>, size_t>);
 
@@ -62,14 +60,12 @@ concept unqualified_extended_bwsri = requires(T val, V shift) {
 };
 
 template <typename T, typename V>
-concept unqualified_bwsri =
-    unqualified_canonical_bwsri<T, V> || unqualified_extended_bwsri<T, V> ||
+concept unqualified_bwsri = unqualified_extended_bwsri<T, V> ||
     (decayable_vector_for<T, operation_category::lane_agnostic> &&
         regular_invocable<bwshift_right_t, canonical_type_t<T>, V>);
 
 template <typename T, typename V>
-concept unqualified_masksri =
-    unqualified_canonical_bwsri<T, V> || unqualified_extended_bwsri<T, V> ||
+concept unqualified_masksri = unqualified_extended_bwsri<T, V> ||
     (decayable_mask_for<T, operation_category::lane_permutation> &&
         regular_invocable<bwshift_right_t, canonical_type_t<T>, V>);
 

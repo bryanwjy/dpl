@@ -5,7 +5,6 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/const_mask.h"
-#  include "dpl/core/concepts/compatible_mask_with.h"
 #  include "dpl/core/operations/select.h"
 #  include "dpl/std/concepts/invocable.h"
 #  include "dpl/std/type_traits/is_invocable.h"

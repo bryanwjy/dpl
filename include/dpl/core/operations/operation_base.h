@@ -9,6 +9,7 @@
 #  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/broadcastable_to.h"
 #  include "dpl/core/concepts/common_abi_with.h"
+#  include "dpl/core/type_traits/rebind_simd.h"
 #  include "dpl/std/type_traits/type_identity.h"
 #endif
 

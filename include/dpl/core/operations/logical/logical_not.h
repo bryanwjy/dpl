@@ -34,8 +34,7 @@ concept unqualified_extended_logical_not = requires(T val) {
 };
 
 template <typename T, typename A = typename T::abi_type>
-concept unqualified_logical_not = unqualified_canonical_logical_not<T, A> ||
-    unqualified_extended_logical_not<T, A> ||
+concept unqualified_logical_not = unqualified_extended_logical_not<T, A> ||
     (decayable_mask_for<T, operation_category::lane_agnostic> &&
         regular_invocable<logical_not_t, canonical_type_t<T>>);
 
