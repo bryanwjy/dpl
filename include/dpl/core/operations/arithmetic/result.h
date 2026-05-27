@@ -14,17 +14,16 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::internal {
-template <typename T, typename L, typename R, typename A = common_abi_t<L, R>>
-concept canonical_arithmetic_result =
-    simd_vector<T> && same_as<typename L::value_type, typename T::value_type> &&
-    same_as<typename R::value_type, typename T::value_type> &&
-    same_abi_as<A, typename T::abi_type>;
 
 template <typename T, typename L, typename R, typename A = common_abi_t<L, R>>
 concept extended_arithmetic_result =
     simd_vector<T> && same_as<typename L::value_type, typename T::value_type> &&
     same_as<typename R::value_type, typename T::value_type> &&
     common_abi_with<typename T::abi_type, A>;
+
+template <typename T, typename L, typename R, typename A = common_abi_t<L, R>>
+concept canonical_arithmetic_result =
+    extended_arithmetic_result<T, L, R, A> && same_as<A, typename T::abi_type>;
 
 template <typename T, typename A>
 concept broadcasting_arithmetic_result =

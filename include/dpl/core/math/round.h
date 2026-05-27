@@ -27,15 +27,43 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 namespace mx = datapar::fmath;
 
+struct round_t;
+
 template <typename T>
-concept unqualified_cmath_round = requires(T val) {
-    { round(internal::abi<T>, val) } -> equivalent_simd_as<T>;
+concept unqualified_canonical_cmath_round = requires(T val) {
+    {
+        round(internal::abi<T>, val)
+    } -> canonical_arithmetic_result<T, T, typename T::abi_type>;
+};
+
+template <typename T>
+concept unqualified_extended_cmath_round = requires(T val) {
+    { round(val) } -> extended_arithmetic_result<T, T, typename T::abi_type>;
+};
+
+template <typename T>
+concept unqualified_cmath_round = unqualified_extended_cmath_round<T> ||
+    (decayable_vector_for<T, operation_category::lane_agnostic> &&
+        regular_invocable<round_t, canonical_type_t<T>>);
+
+template <typename T, rounding_flags R>
+concept unqualified_canonical_round = requires(T val) {
+    {
+        round(internal::abi<T>, val, rounding_v<R>)
+    } -> canonical_arithmetic_result<T, T, typename T::abi_type>;
 };
 
 template <typename T, rounding_flags R>
-concept unqualified_round = requires(T val) {
-    { round(internal::abi<T>, val, rounding_v<R>) } -> equivalent_simd_as<T>;
+concept unqualified_extended_round = requires(T val) {
+    {
+        round(val, rounding_v<R>)
+    } -> extended_arithmetic_result<T, T, typename T::abi_type>;
 };
+
+template <typename T, rounding_flags R>
+concept unqualified_round = unqualified_extended_round<T, R> ||
+    (decayable_vector_for<T, operation_category::lane_agnostic> &&
+        regular_invocable<round_t, canonical_type_t<T>, rounding_t<R>>);
 
 struct round_t {
 private:
@@ -82,57 +110,86 @@ private:
             auto i = dx::floor(x);
             auto one = dx::broadcast<E, A>(dx::one);
             auto fr = x - i;
-            x += dx::select(fr > mx::half, one, dx::zero);
+            x = dx::add(x, fr > mx::half, x, one);
+
             // there are bit tricks alternatives to casting available but
             // they usually just add more instructions
             using sint = signed_representation_t<E>;
-            auto const iseven =
-                (dx::element_cast<sint>(i) & dx::one) == dx::zero;
-            i += dx::select(iseven, dx::zero, one);
-
+            auto const isodd = (dx::element_cast<sint>(i) & dx::one) == dx::one;
+            i = dx::add(i, isodd, i, one);
             return dx::select(isfinite && dx::abs(val) < mx::maxint,
-                dx::copysign(i, finite), //
-                val);
+                dx::copysign(i, finite), val);
         }
     }
 
 public:
-    template <floating_point_simd T>
+    template <fixed_width_abi A, simd_element_for<A> E>
+    requires floating_point<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(T val) noexcept {
-        if constexpr (unqualified_cmath_round<T>) {
-            if constexpr (canonical_vector<T>) {
-                if not consteval {
-                    return round(internal::abi<T>, val);
-                } else {
-                    return fallback(val);
-                }
+    static constexpr basic_vector<E, A> operator()(
+        basic_vector<E, A> val) noexcept {
+        if constexpr (unqualified_canonical_cmath_round<basic_vector<E, A>>) {
+            if consteval {
+                return fallback(val);
             } else {
-                return round(internal::abi<T>, val);
+                return round(internal::abi<A>, val);
             }
-        } else if constexpr (canonical_vector<T>) {
+        } else {
             return fallback(val);
+        }
+    }
+
+    template <simd_abi A, simd_element_for<A> E>
+    requires (scalable_abi<A> || !floating_point<E>) &&
+        unqualified_canonical_cmath_round<basic_vector<E, A>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr basic_vector<E, A> operator()(
+        basic_vector<E, A> val) noexcept {
+        return round(internal::abi<A>, val);
+    }
+
+    template <extended_vector T>
+    requires unqualified_cmath_round<T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T val) noexcept {
+        if constexpr (unqualified_extended_cmath_round<T>) {
+            return round(val);
         } else {
             return operator()(dx::to_canonical(val));
         }
     }
 
-    template <floating_point_simd T, rounding_flags R>
+    template <fixed_width_abi A, simd_element_for<A> E, rounding_flags R>
+    requires floating_point<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(T val, rounding_t<R> flags) noexcept {
-        if constexpr (unqualified_round<T, R>) {
-            if constexpr (canonical_vector<T>) {
-                if not consteval {
-                    return round(internal::abi<T>, val, flags);
-                } else {
-                    return fallback(val, flags);
-                }
+    static constexpr basic_vector<E, A> operator()(
+        basic_vector<E, A> val, rounding_t<R> flags) noexcept {
+        if constexpr (unqualified_canonical_round<basic_vector<E, A>, R>) {
+            if consteval {
+                return fallback(val, flags);
             } else {
-                return round(internal::abi<T>, val, flags);
+                return round(internal::abi<A>, val, flags);
             }
-
-        } else if constexpr (canonical_vector<T>) {
+        } else {
             return fallback(val, flags);
+        }
+    }
+
+    template <simd_abi A, simd_element_for<A> E, rounding_flags R>
+    requires (scalable_abi<A> || !floating_point<E>) &&
+        unqualified_canonical_round<basic_vector<E, A>, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr basic_vector<E, A> operator()(
+        basic_vector<E, A> val, rounding_t<R> flags) noexcept {
+        return round(internal::abi<A>, val, flags);
+    }
+
+    template <extended_vector T, rounding_flags R>
+    requires unqualified_round<T, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T val, rounding_t<R> flags) noexcept {
+        if constexpr (unqualified_extended_round<T, R>) {
+            return round(val, flags);
         } else {
             return operator()(dx::to_canonical(val), flags);
         }

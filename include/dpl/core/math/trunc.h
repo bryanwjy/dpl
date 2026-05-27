@@ -24,14 +24,45 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 namespace mx = datapar::fmath;
 
-template <typename T>
-concept unqualified_trunc =
-    requires(T val) { round(internal::abi<T>, val, rounding::to_zero); };
+struct trunc_t;
 
 template <typename T>
-concept unqualified_trunc_noexc = requires(T val) {
-    round(internal::abi<T>, val, rounding::to_zero | rounding::no_exc);
+concept unqualified_canonical_trunc = requires(T val) {
+    {
+        round(internal::abi<T>, val, rounding::to_zero)
+    } -> canonical_arithmetic_result<T, T, typename T::abi_type>;
 };
+
+template <typename T>
+concept unqualified_extended_trunc = requires(T val) {
+    {
+        round(val, rounding::to_zero)
+    } -> extended_arithmetic_result<T, T, typename T::abi_type>;
+};
+
+template <typename T>
+concept unqualified_trunc = unqualified_extended_trunc<T> ||
+    (decayable_vector_for<T, operation_category::lane_agnostic> &&
+        regular_invocable<trunc_t, canonical_type_t<T>>);
+
+template <typename T>
+concept unqualified_canonical_truncne = requires(T val) {
+    {
+        round(internal::abi<T>, val, rounding::to_zero | rounding::no_exc)
+    } -> equivalent_simd_as<T>;
+};
+
+template <typename T>
+concept unqualified_extended_truncne = requires(T val) {
+    {
+        round(val, rounding::to_zero | rounding::no_exc)
+    } -> equivalent_simd_as<T>;
+};
+
+template <typename T>
+concept unqualified_truncne = unqualified_extended_trunc<T> ||
+    (decayable_vector_for<T, operation_category::lane_agnostic> &&
+        regular_invocable<trunc_t, canonical_type_t<T>, rounding::no_exc_t>);
 
 struct trunc_t {
 private:
@@ -57,46 +88,77 @@ private:
     }
 
 public:
-    template <floating_point_simd T>
+    template <fixed_width_abi A, simd_element_for<A> E>
+    requires floating_point<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(T val) noexcept {
-        if constexpr (unqualified_trunc<T>) {
-            if constexpr (canonical_vector<T>) {
-                if not consteval {
-                    return round(internal::abi<T>, val, rounding::to_zero);
-                } else {
-                    return fallback(val);
-                }
+    static constexpr basic_vector<E, A> operator()(
+        basic_vector<E, A> val) noexcept {
+        if constexpr (unqualified_canonical_trunc<basic_vector<E, A>>) {
+            if consteval {
+                return fallback(val);
             } else {
-                return round(internal::abi<T>, val, rounding::to_zero);
+                return round(internal::abi<A>, val, rounding::to_zero);
             }
-        } else if constexpr (canonical_vector<T>) {
+        } else {
             return fallback(val);
+        }
+    }
+
+    template <simd_abi A, simd_element_for<A> E>
+    requires (scalable_abi<A> || !floating_point<E>) &&
+        unqualified_canonical_trunc<basic_vector<E, A>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr basic_vector<E, A> operator()(
+        basic_vector<E, A> val) noexcept {
+        return round(internal::abi<A>, val, rounding::to_zero);
+    }
+
+    template <extended_vector T>
+    requires unqualified_trunc<T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T val) noexcept {
+        if constexpr (unqualified_extended_trunc<T>) {
+            return round(val, rounding::to_zero);
         } else {
             return operator()(dx::to_canonical(val));
         }
     }
 
-    template <floating_point_simd T>
+    template <fixed_width_abi A, simd_element_for<A> E>
+    requires floating_point<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(
-        T val, rounding::no_exc_t tag [[maybe_unused]]) noexcept {
-        if constexpr (unqualified_trunc_noexc<T>) {
-            if constexpr (canonical_vector<T>) {
-                if not consteval {
-                    return round(internal::abi<T>, val,
-                        rounding::to_zero | rounding::no_exc);
-                } else {
-                    return fallback(val);
-                }
+    static constexpr basic_vector<E, A> operator()(
+        basic_vector<E, A> val, rounding::no_exc_t) noexcept {
+        if constexpr (unqualified_canonical_truncne<basic_vector<E, A>>) {
+            if consteval {
+                return fallback(val);
             } else {
-                return round(internal::abi<T>, val,
+                return round(internal::abi<A>, val,
                     rounding::to_zero | rounding::no_exc);
             }
-        } else if constexpr (canonical_vector<T>) {
-            return fallback(val);
         } else {
-            return operator()(dx::to_canonical(val), tag);
+            return fallback(val);
+        }
+    }
+
+    template <simd_abi A, simd_element_for<A> E>
+    requires (scalable_abi<A> || !floating_point<E>) &&
+        unqualified_canonical_truncne<basic_vector<E, A>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr basic_vector<E, A> operator()(
+        basic_vector<E, A> val, rounding::no_exc_t) noexcept {
+        return round(
+            internal::abi<A>, val, rounding::to_zero | rounding::no_exc);
+    }
+
+    template <extended_vector T>
+    requires unqualified_truncne<T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T val, rounding::no_exc_t) noexcept {
+        if constexpr (unqualified_extended_trunc<T>) {
+            return round(val, rounding::to_zero | rounding::no_exc);
+        } else {
+            return operator()(dx::to_canonical(val), rounding::no_exc);
         }
     }
 };

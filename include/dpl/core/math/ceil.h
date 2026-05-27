@@ -23,14 +23,45 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 namespace mx = datapar::fmath;
 
-template <typename T>
-concept unqualified_ceil =
-    requires(T val) { round(internal::abi<T>, val, rounding::to_pos_inf); };
+struct ceil_t;
 
 template <typename T>
-concept unqualified_ceil_noexc = requires(T val) {
-    round(internal::abi<T>, val, rounding::to_pos_inf | rounding::no_exc);
+concept unqualified_canonical_ceil = requires(T val) {
+    {
+        round(internal::abi<T>, val, rounding::to_pos_inf)
+    } -> canonical_arithmetic_result<T, T, typename T::abi_type>;
 };
+
+template <typename T>
+concept unqualified_extended_ceil = requires(T val) {
+    {
+        round(val, rounding::to_pos_inf)
+    } -> extended_arithmetic_result<T, T, typename T::abi_type>;
+};
+
+template <typename T>
+concept unqualified_ceil = unqualified_extended_ceil<T> ||
+    (decayable_vector_for<T, operation_category::lane_agnostic> &&
+        regular_invocable<ceil_t, canonical_type_t<T>>);
+
+template <typename T>
+concept unqualified_canonical_ceilne = requires(T val) {
+    {
+        round(internal::abi<T>, val, rounding::to_pos_inf | rounding::no_exc)
+    } -> equivalent_simd_as<T>;
+};
+
+template <typename T>
+concept unqualified_extended_ceilne = requires(T val) {
+    {
+        round(val, rounding::to_pos_inf | rounding::no_exc)
+    } -> equivalent_simd_as<T>;
+};
+
+template <typename T>
+concept unqualified_ceilne = unqualified_extended_ceil<T> ||
+    (decayable_vector_for<T, operation_category::lane_agnostic> &&
+        regular_invocable<ceil_t, canonical_type_t<T>, rounding::no_exc_t>);
 
 struct ceil_t {
 private:
@@ -41,52 +72,83 @@ private:
         auto const isfinite = dx::isfinite(val);
         auto const finite = dx::select(isfinite, val, dx::zero);
         auto fr = finite - dx::trunc(finite);
-        fr -= dx::select(fr > dx::zero, dx::broadcast<E, A>(dx::one), dx::zero);
+        fr = dx::subtract(fr, fr > dx::zero, fr, dx::broadcast<E, A>(dx::one));
         return dx::select(isfinite && dx::abs(val) < mx::maxint,
             dx::copysign(finite - fr, finite), val);
     }
 
 public:
-    template <floating_point_simd T>
+    template <fixed_width_abi A, simd_element_for<A> E>
+    requires floating_point<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(T val) noexcept {
-        if constexpr (unqualified_ceil<T>) {
-            if constexpr (canonical_vector<T>) {
-                if not consteval {
-                    return round(internal::abi<T>, val, rounding::to_pos_inf);
-                } else {
-                    return fallback(val);
-                }
+    static constexpr basic_vector<E, A> operator()(
+        basic_vector<E, A> val) noexcept {
+        if constexpr (unqualified_canonical_ceil<basic_vector<E, A>>) {
+            if consteval {
+                return fallback(val);
             } else {
-                return round(internal::abi<T>, val, rounding::to_pos_inf);
+                return round(internal::abi<A>, val, rounding::to_pos_inf);
             }
-        } else if constexpr (canonical_vector<T>) {
+        } else {
             return fallback(val);
+        }
+    }
+
+    template <simd_abi A, simd_element_for<A> E>
+    requires (scalable_abi<A> || !floating_point<E>) &&
+        unqualified_canonical_ceil<basic_vector<E, A>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr basic_vector<E, A> operator()(
+        basic_vector<E, A> val) noexcept {
+        return round(internal::abi<A>, val, rounding::to_pos_inf);
+    }
+
+    template <extended_vector T>
+    requires unqualified_ceil<T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T val) noexcept {
+        if constexpr (unqualified_extended_ceil<T>) {
+            return round(val, rounding::to_pos_inf);
         } else {
             return operator()(dx::to_canonical(val));
         }
     }
 
-    template <floating_point_simd T>
+    template <fixed_width_abi A, simd_element_for<A> E>
+    requires floating_point<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(
-        T val, rounding::no_exc_t tag [[maybe_unused]]) noexcept {
-        if constexpr (unqualified_ceil_noexc<T>) {
-            if constexpr (canonical_vector<T>) {
-                if not consteval {
-                    return round(internal::abi<T>, val,
-                        rounding::to_pos_inf | rounding::no_exc);
-                } else {
-                    return fallback(val);
-                }
+    static constexpr basic_vector<E, A> operator()(
+        basic_vector<E, A> val, rounding::no_exc_t) noexcept {
+        if constexpr (unqualified_canonical_ceilne<basic_vector<E, A>>) {
+            if consteval {
+                return fallback(val);
             } else {
-                return round(internal::abi<T>, val,
+                return round(internal::abi<A>, val,
                     rounding::to_pos_inf | rounding::no_exc);
             }
-        } else if constexpr (canonical_vector<T>) {
-            return fallback(val);
         } else {
-            return operator()(dx::to_canonical(val), tag);
+            return fallback(val);
+        }
+    }
+
+    template <simd_abi A, simd_element_for<A> E>
+    requires (scalable_abi<A> || !floating_point<E>) &&
+        unqualified_canonical_ceilne<basic_vector<E, A>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr basic_vector<E, A> operator()(
+        basic_vector<E, A> val, rounding::no_exc_t) noexcept {
+        return round(
+            internal::abi<A>, val, rounding::to_pos_inf | rounding::no_exc);
+    }
+
+    template <extended_vector T>
+    requires unqualified_ceilne<T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T val, rounding::no_exc_t) noexcept {
+        if constexpr (unqualified_extended_ceil<T>) {
+            return round(val, rounding::to_pos_inf | rounding::no_exc);
+        } else {
+            return operator()(dx::to_canonical(val), rounding::no_exc);
         }
     }
 };
