@@ -75,6 +75,12 @@ template <typename T, typename U, typename A = typename U::abi_type>
 using canonical_or_zero_t DPL_NODEBUG = conditional_t<is_same_v<T, zero_t>, T,
     basic_vector<simd_lane_type_t<U>, A>>;
 
+template <typename A, typename Op, typename S, typename... Args, typename M>
+consteval auto to_const_mask(M mask) noexcept {
+    using T = operation_result_t<Op, Args...>;
+    return dx::to_compatible_const_mask<canonical_if_zero_t<S, T, A>>(mask);
+}
+
 template <typename S, typename M, typename... Args>
 concept maskable_args =
     simd_vector<S> && simd_mask<M> && (... && simd_vector<Args>) &&

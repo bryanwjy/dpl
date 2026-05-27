@@ -95,11 +95,11 @@ template <typename S, typename M, typename AT, typename BT, typename CT,
     typename A = common_abi_t<
         canonical_if_zero_t<S, operation_result_t<fnmsub_t, AT, BT, CT>>,
         operation_result_t<fnmsub_t, AT, BT, CT>>>
-concept unqualified_canonical_imfnmsub = requires(S src, AT a, BT b, CT c) {
+concept unqualified_canonical_imfnmsub = requires(
+    S src, M mask, AT a, BT b, CT c) {
     {
-        fnmsub<const_mask_v<
-            canonical_if_zero_t<S, operation_result_t<fnmsub_t, AT, BT, CT>, A>,
-            M>>(internal::abi<A>, src, dx::masked_operation, a, b, c)
+        fnmsub(internal::abi<A>, src,
+            internal::to_const_mask<A, fnmsub_t, S, AT, BT, CT>(mask), a, b, c)
     } -> equivalent_simd_as<
         canonical_if_zero_t<S, operation_result_t<fnmsub_t, AT, BT, CT>, A>>;
 };
@@ -108,11 +108,11 @@ template <typename S, typename M, typename AT, typename BT, typename CT,
     typename A = common_abi_t<
         canonical_if_zero_t<S, operation_result_t<fnmsub_t, AT, BT, CT>>,
         operation_result_t<fnmsub_t, AT, BT, CT>>>
-concept unqualified_extended_imfnmsub = requires(S src, AT a, BT b, CT c) {
+concept unqualified_extended_imfnmsub = requires(
+    S src, M mask, AT a, BT b, CT c) {
     {
-        fnmsub<const_mask_v<
-            canonical_if_zero_t<S, operation_result_t<fnmsub_t, AT, BT, CT>, A>,
-            M>>(src, dx::masked_operation, a, b, c)
+        fnmsub(src, internal::to_const_mask<A, fnmsub_t, S, AT, BT, CT>(mask),
+            a, b, c)
     } -> equivalent_simd_as<
         canonical_if_zero_t<S, operation_result_t<fnmsub_t, AT, BT, CT>, A>>;
 };
@@ -366,9 +366,9 @@ public:
             if consteval {
                 return internal::masked<fnmsub_t>(src, mask, a, b, c);
             } else {
-                constexpr auto V = const_mask_v<basic_vector<E, A>, Mask>;
-                return fnmsub<V>(
-                    internal::abi<A>, src, masked_operation, a, b, c);
+                return fnmsub(internal::abi<A>, src,
+                    dx::to_compatible_const_mask<basic_vector<E, A>>(mask), a,
+                    b, c);
             }
         } else {
             return internal::masked<fnmsub_t>(src, mask, a, b, c);
@@ -392,8 +392,8 @@ public:
     static constexpr basic_vector<E, SA> operator()(basic_vector<E, SA> src,
         Mask mask, basic_vector<E, AA> a, basic_vector<E, BA> b,
         basic_vector<E, CA> c) noexcept {
-        constexpr auto V = const_mask_v<basic_vector<E, SA>, Mask>;
-        return fnmsub<V>(internal::abi<SA>, src, dx::masked_operation, a, b, c);
+        return fnmsub(internal::abi<SA>, src,
+            dx::to_compatible_const_mask<basic_vector<E, SA>>(mask), a, b, c);
     }
 
     template <simd_vector S, const_mask_for<S> Mask, simd_vector AT,
@@ -406,8 +406,7 @@ public:
     static constexpr auto operator()(
         S src, Mask mask, AT a, BT b, CT c) noexcept {
         if constexpr (unqualified_extended_imfnmsub<S, Mask, AT, BT, CT>) {
-            constexpr auto V = const_mask_v<S, Mask>;
-            return fnmsub<V>(src, dx::masked_operation, a, b, c);
+            return fnmsub(src, dx::to_compatible_const_mask<S>(mask), a, b, c);
         } else {
             return operator()(dx::to_canonical(src), mask, dx::to_canonical(a),
                 dx::to_canonical(b), dx::to_canonical(c));
@@ -427,9 +426,9 @@ public:
             if consteval {
                 return internal::masked<fnmsub_t>(mask, a, b, c);
             } else {
-                constexpr auto V = const_mask_v<basic_vector<E, A>, Mask>;
-                return fnmsub<V>(
-                    internal::abi<A>, dx::zero, masked_operation, a, b, c);
+                return fnmsub(internal::abi<A>, dx::zero,
+                    dx::to_compatible_const_mask<basic_vector<E, A>>(mask), a,
+                    b, c);
             }
         } else {
             return operator()(dx::zero_v<basic_vector<E, A>>, mask, a, b, c);
@@ -453,9 +452,8 @@ public:
         Mask mask, basic_vector<E, AA> a, basic_vector<E, BA> b,
         basic_vector<E, CA> c) noexcept {
         using A = common_abi_t<AA, BA, CA>;
-        constexpr auto V = const_mask_v<basic_vector<E, A>, Mask>;
-        return fnmsub<V>(
-            internal::abi<A>, dx::zero, dx::masked_operation, a, b, c);
+        return fnmsub(internal::abi<A>, dx::zero,
+            dx::to_compatible_const_mask<basic_vector<E, A>>(mask), a, b, c);
     }
 
     template <simd_vector AT, simd_vector BT, simd_vector CT,
@@ -468,8 +466,8 @@ public:
     static constexpr auto operator()(Mask mask, AT a, BT b, CT c) noexcept {
         using S = operation_result_t<fnmsub_t, AT, BT, CT>;
         if constexpr (unqualified_extended_imfnmsub<zero_t, Mask, AT, BT, CT>) {
-            constexpr auto V = const_mask_v<S, Mask>;
-            return fnmsub<V>(dx::zero, masked_operation, a, b, c);
+            return fnmsub(
+                dx::zero, dx::to_compatible_const_mask<S>(mask), a, b, c);
         } else {
             return operator()(dx::to_compatible_const_mask<S>(mask),
                 dx::to_canonical(a), dx::to_canonical(b), dx::to_canonical(c));

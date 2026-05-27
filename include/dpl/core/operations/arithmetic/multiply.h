@@ -4,7 +4,6 @@
 #include "dpl/config.h"
 
 // IWYU pragma: always_keep
-
 #include "dpl/core/operations/arithmetic/result.h"
 #include "dpl/core/operations/masked.h"
 #include "dpl/core/operations/operation_base.h"
@@ -46,89 +45,91 @@ concept unqualified_multiply = unqualified_extended_multiply<L, R, A> ||
         regular_invocable<multiply_t, canonical_type_t<L>,
             canonical_type_t<R>>);
 
-template <typename Op, typename S, typename C, typename L, typename R,
+template <typename S, typename C, typename L, typename R,
     typename A = common_abi_t<L, R, C>>
 concept unqualified_canonical_mmultiply =
     requires(S src, C mask, L lhs, R rhs) {
         {
             multiply(internal::abi<A>, src, mask, lhs, rhs)
         } -> equivalent_simd_as<
-            canonical_if_zero_t<S, operation_result_t<Op, L, R>, A>>;
+            canonical_if_zero_t<S, operation_result_t<multiply_t, L, R>, A>>;
     };
 
-template <typename Op, typename S, typename C, typename L, typename R,
+template <typename S, typename C, typename L, typename R,
     typename A = common_abi_t<L, R, C>>
 concept unqualified_extended_mmultiply = requires(S src, C mask, L lhs, R rhs) {
     {
         multiply(src, mask, lhs, rhs)
     } -> equivalent_simd_as<
-        canonical_if_zero_t<S, operation_result_t<Op, L, R>, A>>;
+        canonical_if_zero_t<S, operation_result_t<multiply_t, L, R>, A>>;
 };
 
-template <typename Op, typename S, typename C, typename L, typename R,
+template <typename S, typename C, typename L, typename R,
     typename A = common_abi_t<L, R, C>>
 concept decayable_mmultiply =
     decayable_vector_for<
-        canonical_if_zero_t<S, operation_result_t<Op, L, R>, A>,
+        canonical_if_zero_t<S, operation_result_t<multiply_t, L, R>, A>,
         operation_category::lane_agnostic> &&
     decayable_mask_for<C, operation_category::lane_agnostic> &&
     decayable_vector_for<L, operation_category::lane_agnostic> &&
     decayable_vector_for<R, operation_category::lane_agnostic> &&
-    requires(canonical_if_zero_t<S, operation_result_t<Op, L, R>, A> s,
+    requires(multiply_t op,
+        canonical_if_zero_t<S, operation_result_t<multiply_t, L, R>, A> s,
         canonical_type_t<C> c, canonical_type_t<L> l,
-        canonical_type_t<R> r) { Op::operator()(s, c, l, r); };
+        canonical_type_t<R> r) { op(s, c, l, r); };
 
-template <typename Op, typename S, typename C, typename L, typename R,
+template <typename S, typename C, typename L, typename R,
     typename A = common_abi_t<L, R, C>>
 concept extended_mmultiply = unqualified_extended_mmultiply<S, C, L, R, A> ||
-    decayable_mmultiply<Op, S, C, L, R, A>;
+    decayable_mmultiply<S, C, L, R, A>;
 
-template <typename Op, typename S, typename M, typename L, typename R,
-    typename A =
-        common_abi_t<canonical_if_zero_t<S, operation_result_t<Op, L, R>>,
-            operation_result_t<Op, L, R>>>
-concept unqualified_canonical_immultiply = requires(S src, L lhs, R rhs) {
-    {
-        multiply<const_mask_v<
-            canonical_if_zero_t<S, operation_result_t<Op, L, R>, A>, M>>(
-            internal::abi<A>, src, dx::masked_operation, lhs, rhs)
-    } -> equivalent_simd_as<
-        canonical_if_zero_t<S, operation_result_t<Op, L, R>, A>>;
-};
+template <typename S, typename M, typename L, typename R,
+    typename A = common_abi_t<
+        canonical_if_zero_t<S, operation_result_t<multiply_t, L, R>>,
+        operation_result_t<multiply_t, L, R>>>
+concept unqualified_canonical_immultiply =
+    requires(S src, M mask, L lhs, R rhs) {
+        {
+            multiply(internal::abi<A>, src,
+                internal::to_const_mask<A, multiply_t, S, L, R>(mask), lhs, rhs)
+        } -> equivalent_simd_as<
+            canonical_if_zero_t<S, operation_result_t<multiply_t, L, R>, A>>;
+    };
 
-template <typename Op, typename S, typename M, typename L, typename R,
-    typename A =
-        common_abi_t<canonical_if_zero_t<S, operation_result_t<Op, L, R>>,
-            operation_result_t<Op, L, R>>>
-concept unqualified_extended_immultiply = requires(S src, L lhs, R rhs) {
-    {
-        multiply<const_mask_v<
-            canonical_if_zero_t<S, operation_result_t<Op, L, R>, A>, M>>(
-            src, dx::masked_operation, lhs, rhs)
-    } -> equivalent_simd_as<
-        canonical_if_zero_t<S, operation_result_t<Op, L, R>, A>>;
-};
+template <typename S, typename M, typename L, typename R,
+    typename A = common_abi_t<
+        canonical_if_zero_t<S, operation_result_t<multiply_t, L, R>>,
+        operation_result_t<multiply_t, L, R>>>
+concept unqualified_extended_immultiply =
+    requires(S src, M mask, L lhs, R rhs) {
+        {
+            multiply(src, internal::to_const_mask<A, multiply_t, S, L, R>(mask),
+                lhs, rhs)
+        } -> equivalent_simd_as<
+            canonical_if_zero_t<S, operation_result_t<multiply_t, L, R>, A>>;
+    };
 
-template <typename Op, typename S, typename M, typename L, typename R,
-    typename A =
-        common_abi_t<canonical_if_zero_t<S, operation_result_t<Op, L, R>>,
-            operation_result_t<Op, L, R>>>
+template <typename S, typename M, typename L, typename R,
+    typename A = common_abi_t<
+        canonical_if_zero_t<S, operation_result_t<multiply_t, L, R>>,
+        operation_result_t<multiply_t, L, R>>>
 concept decayable_immultiply =
     decayable_vector_for<
-        canonical_if_zero_t<S, operation_result_t<Op, L, R>, A>,
+        canonical_if_zero_t<S, operation_result_t<multiply_t, L, R>, A>,
         operation_category::lane_agnostic> &&
     decayable_vector_for<L, operation_category::lane_agnostic> &&
     decayable_vector_for<R, operation_category::lane_agnostic> &&
-    requires(canonical_if_zero_t<S, operation_result_t<Op, L, R>, A> s, M mask,
-        canonical_type_t<L> l,
-        canonical_type_t<R> r) { Op::operator()(s, mask, l, r); };
+    requires(multiply_t op,
+        canonical_if_zero_t<S, operation_result_t<multiply_t, L, R>, A> s,
+        M mask, canonical_type_t<L> l,
+        canonical_type_t<R> r) { op(s, mask, l, r); };
 
-template <typename Op, typename S, typename M, typename L, typename R,
-    typename A =
-        common_abi_t<canonical_if_zero_t<S, operation_result_t<Op, L, R>>,
-            operation_result_t<Op, L, R>>>
+template <typename S, typename M, typename L, typename R,
+    typename A = common_abi_t<
+        canonical_if_zero_t<S, operation_result_t<multiply_t, L, R>>,
+        operation_result_t<multiply_t, L, R>>>
 concept extended_immultiply = unqualified_extended_immultiply<S, M, L, R, A> ||
-    decayable_immultiply<Op, S, M, L, R, A>;
+    decayable_immultiply<S, M, L, R, A>;
 
 struct multiply_t : binary_operation_base<multiply_t> {
 private:
@@ -216,9 +217,9 @@ public:
     static constexpr basic_vector<E, A> operator()(basic_vector<E, A> src,
         basic_mask<MaskE, A> mask, basic_vector<E, A> lhs,
         basic_vector<E, A> rhs) noexcept {
-        if constexpr (unqualified_canonical_mmultiply<multiply_t,
-                          basic_vector<E, A>, basic_mask<MaskE, A>,
-                          basic_vector<E, A>, basic_vector<E, A>>) {
+        if constexpr (unqualified_canonical_mmultiply<basic_vector<E, A>,
+                          basic_mask<MaskE, A>, basic_vector<E, A>,
+                          basic_vector<E, A>>) {
             if consteval {
                 return internal::masked<multiply_t>(src, mask, lhs, rhs);
             } else {
@@ -236,7 +237,7 @@ public:
         simd_element_for<E, LA> && simd_element_for<E, RA> &&
         maskable_args<basic_vector<E, SA>, basic_mask<MaskE, SA>,
             basic_vector<E, LA>, basic_vector<E, RA>> &&
-        unqualified_canonical_mmultiply<multiply_t, basic_vector<E, SA>,
+        unqualified_canonical_mmultiply<basic_vector<E, SA>,
             basic_mask<MaskE, SA>, basic_vector<E, LA>, basic_vector<E, RA>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, SA> operator()(basic_vector<E, SA> src,
@@ -248,12 +249,10 @@ public:
     template <simd_vector S, simd_mask Mask, simd_vector L, simd_vector R>
     requires (extended_vector<S> || extended_mask<Mask> || extended_vector<L> ||
                  extended_vector<R>) &&
-        maskable_args<S, Mask, L, R> &&
-        extended_mmultiply<multiply_t, S, Mask, L, R>
+        maskable_args<S, Mask, L, R> && extended_mmultiply<S, Mask, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(S src, Mask mask, L lhs, R rhs) noexcept {
-        if constexpr (unqualified_extended_mmultiply<multiply_t, S, Mask, L,
-                          R>) {
+        if constexpr (unqualified_extended_mmultiply<S, Mask, L, R>) {
             return multiply(src, mask, lhs, rhs);
         } else {
             return operator()(dx::to_canonical(src), dx::to_canonical(mask),
@@ -267,7 +266,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A> operator()(basic_mask<MaskE, A> mask,
         basic_vector<E, A> lhs, basic_vector<E, A> rhs) noexcept {
-        if constexpr (unqualified_canonical_mmultiply<multiply_t, zero_t,
+        if constexpr (unqualified_canonical_mmultiply<zero_t,
                           basic_mask<MaskE, A>, basic_vector<E, A>,
                           basic_vector<E, A>>) {
             if consteval {
@@ -288,8 +287,8 @@ public:
         simd_element_for<E, LA> && simd_element_for<E, RA> &&
         zmaskable_args<basic_mask<MaskE, SA>, basic_vector<E, LA>,
             basic_vector<E, RA>> &&
-        unqualified_canonical_mmultiply<multiply_t, zero_t,
-            basic_mask<MaskE, SA>, basic_vector<E, LA>, basic_vector<E, RA>>
+        unqualified_canonical_mmultiply<zero_t, basic_mask<MaskE, SA>,
+            basic_vector<E, LA>, basic_vector<E, RA>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(basic_mask<MaskE, SA> mask,
         basic_vector<E, LA> lhs, basic_vector<E, RA> rhs) noexcept {
@@ -300,12 +299,10 @@ public:
     template <simd_mask Mask, simd_vector L, simd_vector R>
     requires (extended_mask<Mask> || extended_vector<L> ||
                  extended_vector<R>) &&
-        zmaskable_args<Mask, L, R> &&
-        extended_mmultiply<multiply_t, zero_t, Mask, L, R>
+        zmaskable_args<Mask, L, R> && extended_mmultiply<zero_t, Mask, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(Mask mask, L lhs, R rhs) noexcept {
-        if constexpr (unqualified_extended_mmultiply<multiply_t, zero_t, Mask,
-                          L, R>) {
+        if constexpr (unqualified_extended_mmultiply<zero_t, Mask, L, R>) {
             return multiply(mask, lhs, rhs);
         } else {
             return operator()(dx::to_canonical(mask), dx::to_canonical(lhs),
@@ -328,15 +325,14 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A> operator()(basic_vector<E, A> src,
         Mask mask, basic_vector<E, A> lhs, basic_vector<E, A> rhs) noexcept {
-        if constexpr (unqualified_canonical_immultiply<multiply_t,
-                          basic_vector<E, A>, Mask, basic_vector<E, A>,
-                          basic_vector<E, A>>) {
+        if constexpr (unqualified_canonical_immultiply<basic_vector<E, A>, Mask,
+                          basic_vector<E, A>, basic_vector<E, A>>) {
             if consteval {
                 return internal::masked<multiply_t>(src, mask, lhs, rhs);
             } else {
-                constexpr auto V = const_mask_v<basic_vector<E, A>, Mask>;
-                return multiply<V>(
-                    internal::abi<A>, src, masked_operation, lhs, rhs);
+                return multiply(internal::abi<A>, src,
+                    dx::to_compatible_const_mask<basic_vector<E, A>>(mask), lhs,
+                    rhs);
             }
         } else {
             return internal::masked<multiply_t>(src, mask, lhs, rhs);
@@ -352,26 +348,24 @@ public:
         simd_element_for<E, LA> && simd_element_for<E, RA> &&
         imm_maskable_args<basic_vector<E, SA>, basic_vector<E, LA>,
             basic_vector<E, RA>> &&
-        unqualified_canonical_immultiply<multiply_t, basic_vector<E, SA>, Mask,
+        unqualified_canonical_immultiply<basic_vector<E, SA>, Mask,
             basic_vector<E, LA>, basic_vector<E, RA>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, SA> operator()(basic_vector<E, SA> src,
         Mask mask, basic_vector<E, LA> lhs, basic_vector<E, RA> rhs) noexcept {
-        constexpr auto V = const_mask_v<basic_vector<E, SA>, Mask>;
-        return multiply<V>(internal::abi<SA>, src, masked_operation, lhs, rhs);
+        return multiply(internal::abi<SA>, src,
+            dx::to_compatible_const_mask<basic_vector<E, SA>>(mask), lhs, rhs);
     }
 
     template <simd_vector S, const_mask_for<S> Mask, simd_vector L,
         simd_vector R>
     requires (extended_vector<S> || extended_vector<L> || extended_vector<R>) &&
-        imm_maskable_args<S, L, R> &&
-        extended_immultiply<multiply_t, S, Mask, L, R>
+        imm_maskable_args<S, L, R> && extended_immultiply<S, Mask, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(S src, Mask mask, L lhs, R rhs) noexcept {
-        if constexpr (unqualified_extended_immultiply<multiply_t, S, Mask, L,
-                          R>) {
-            constexpr auto V = const_mask_v<S, Mask>;
-            return multiply<V>(src, masked_operation, lhs, rhs);
+        if constexpr (unqualified_extended_immultiply<S, Mask, L, R>) {
+            return multiply(
+                src, dx::to_compatible_const_mask<S>(mask), lhs, rhs);
         } else {
             return operator()(dx::to_canonical(src), mask,
                 dx::to_canonical(lhs), dx::to_canonical(rhs));
@@ -384,14 +378,14 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A> operator()(
         Mask mask, basic_vector<E, A> lhs, basic_vector<E, A> rhs) noexcept {
-        if constexpr (unqualified_canonical_immultiply<multiply_t, zero_t, Mask,
+        if constexpr (unqualified_canonical_immultiply<zero_t, Mask,
                           basic_vector<E, A>, basic_vector<E, A>>) {
             if consteval {
                 return internal::masked<multiply_t>(mask, lhs, rhs);
             } else {
-                constexpr auto V = const_mask_v<basic_vector<E, A>, Mask>;
-                return multiply<V>(
-                    internal::abi<A>, dx::zero, masked_operation, lhs, rhs);
+                return multiply(internal::abi<A>, dx::zero,
+                    dx::to_compatible_const_mask<basic_vector<E, A>>(mask), lhs,
+                    rhs);
             }
         } else {
             return operator()(dx::zero_v<basic_vector<E, A>>, mask, lhs, rhs);
@@ -405,29 +399,26 @@ public:
                  !arithmetic_type<E>) &&
         simd_element_for<E, LA> && simd_element_for<E, RA> &&
         imm_zmaskable_args<basic_vector<E, LA>, basic_vector<E, RA>> &&
-        unqualified_canonical_immultiply<multiply_t, zero_t, Mask,
-            basic_vector<E, LA>, basic_vector<E, RA>>
+        unqualified_canonical_immultiply<zero_t, Mask, basic_vector<E, LA>,
+            basic_vector<E, RA>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, common_abi_t<LA, RA>> operator()(
         Mask mask, basic_vector<E, LA> lhs, basic_vector<E, RA> rhs) noexcept {
         using A = common_abi_t<LA, RA>;
-        constexpr auto V = const_mask_v<basic_vector<E, A>, Mask>;
-        return multiply<V>(
-            internal::abi<A>, dx::zero, masked_operation, lhs, rhs);
+        return multiply(internal::abi<A>, dx::zero,
+            dx::to_compatible_const_mask<basic_vector<E, A>>(mask), lhs, rhs);
     }
 
     template <simd_vector L, simd_vector R,
         const_mask_for<operation_result_t<multiply_t, L, R>> Mask>
     requires (extended_vector<L> || extended_vector<R>) &&
-        imm_zmaskable_args<L, R> &&
-        extended_immultiply<multiply_t, zero_t, Mask, L, R>
+        imm_zmaskable_args<L, R> && extended_immultiply<zero_t, Mask, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(Mask mask, L lhs, R rhs) noexcept {
         using S = operation_result_t<multiply_t, L, R>;
-        if constexpr (unqualified_extended_immultiply<multiply_t, zero_t, Mask,
-                          L, R>) {
-            constexpr auto V = const_mask_v<S, Mask>;
-            return multiply<V>(dx::zero, masked_operation, lhs, rhs);
+        if constexpr (unqualified_extended_immultiply<zero_t, Mask, L, R>) {
+            return multiply(
+                dx::zero, dx::to_compatible_const_mask<S>(mask), lhs, rhs);
         } else {
             return operator()(dx::to_compatible_const_mask<S>(mask),
                 dx::to_canonical(lhs), dx::to_canonical(rhs));
@@ -443,38 +434,6 @@ public:
         return operator()(mask, lhs, rhs);
     }
 };
-
-// TODO
-
-/**
- * Multiplies integral elements in the upper half of the vector
- * to produce a result that is twice the width of the argument
- * integral.
- */
-struct wmulhi_t : binary_operation_base<wmulhi_t> {};
-
-/**
- * Multiplies integral elements in the lower half of the vector
- * to produce a result that is twice the width of the argument
- * integral.
- */
-struct wmullo_t : binary_operation_base<wmullo_t> {};
-
-/**
- * Multiplies integral elements in the upper half of the vector
- * to produce an intermediate integral that is twice the width
- * of the argument integral. Stores the upper bits of the
- * intermediate result in the destination
- */
-struct mulhi_t : binary_operation_base<mulhi_t> {};
-
-/**
- * Multiplies integral elements in the lower half of the vector
- * to produce an intermediate integral that is twice the width
- * of the argument integral. Stores the lower bits of the
- * intermediate result in the destination
- */
-struct mullo_t : binary_operation_base<mullo_t> {};
 
 } // namespace datapar::internal
 

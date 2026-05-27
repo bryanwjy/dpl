@@ -103,24 +103,23 @@ template <typename S, typename M, typename L, typename R,
     typename A = common_abi_t<
         canonical_if_zero_t<S, operation_result_t<bwornot_t, L, R>>,
         operation_result_t<bwornot_t, L, R>>>
-concept unqualified_canonical_imbwornot = requires(S src, L lhs, R rhs) {
-    {
-        bwornot<const_mask_v<
-            canonical_if_zero_t<S, operation_result_t<bwornot_t, L, R>, A>, M>>(
-            internal::abi<A>, src, dx::masked_operation, lhs, rhs)
-    } -> equivalent_simd_as<
-        canonical_if_zero_t<S, operation_result_t<bwornot_t, L, R>, A>>;
-};
+concept unqualified_canonical_imbwornot =
+    requires(S src, M mask, L lhs, R rhs) {
+        {
+            bwornot(internal::abi<A>, src,
+                internal::to_const_mask<A, bwornot_t, S, L, R>(mask), lhs, rhs)
+        } -> equivalent_simd_as<
+            canonical_if_zero_t<S, operation_result_t<bwornot_t, L, R>, A>>;
+    };
 
 template <typename S, typename M, typename L, typename R,
     typename A = common_abi_t<
         canonical_if_zero_t<S, operation_result_t<bwornot_t, L, R>>,
         operation_result_t<bwornot_t, L, R>>>
-concept unqualified_extended_imbwornot = requires(S src, L lhs, R rhs) {
+concept unqualified_extended_imbwornot = requires(S src, M mask, L lhs, R rhs) {
     {
-        bwornot<const_mask_v<
-            canonical_if_zero_t<S, operation_result_t<bwornot_t, L, R>, A>, M>>(
-            src, dx::masked_operation, lhs, rhs)
+        bwornot(
+            src, internal::to_const_mask<A, bwornot_t, S, L, R>(mask), lhs, rhs)
     } -> equivalent_simd_as<
         canonical_if_zero_t<S, operation_result_t<bwornot_t, L, R>, A>>;
 };
@@ -398,9 +397,9 @@ public:
             if consteval {
                 return internal::masked<bwornot_t>(src, mask, lhs, rhs);
             } else {
-                constexpr auto V = const_mask_v<basic_vector<E, A>, Mask>;
-                return bwornot<V>(
-                    internal::abi<A>, src, masked_operation, lhs, rhs);
+                return bwornot(internal::abi<A>, src,
+                    dx::to_compatible_const_mask<basic_vector<E, A>>(mask), lhs,
+                    rhs);
             }
         } else {
             return internal::masked<bwornot_t>(src, mask, lhs, rhs);
@@ -421,8 +420,8 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, SA> operator()(basic_vector<E, SA> src,
         Mask mask, basic_vector<E, LA> lhs, basic_vector<E, RA> rhs) noexcept {
-        constexpr auto V = const_mask_v<basic_vector<E, SA>, Mask>;
-        return bwornot<V>(internal::abi<SA>, src, masked_operation, lhs, rhs);
+        return bwornot(internal::abi<SA>, src,
+            dx::to_compatible_const_mask<basic_vector<E, SA>>(mask), lhs, rhs);
     }
 
     template <simd_vector S, const_mask_for<S> Mask, simd_vector L,
@@ -432,8 +431,8 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(S src, Mask mask, L lhs, R rhs) noexcept {
         if constexpr (unqualified_extended_imbwornot<S, Mask, L, R>) {
-            constexpr auto V = const_mask_v<S, Mask>;
-            return bwornot<V>(src, masked_operation, lhs, rhs);
+            return bwornot(
+                src, dx::to_compatible_const_mask<S>(mask), lhs, rhs);
         } else {
             return operator()(dx::to_canonical(src), mask,
                 dx::to_canonical(lhs), dx::to_canonical(rhs));
@@ -445,14 +444,14 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A> operator()(
         Mask mask, basic_vector<E, A> lhs, basic_vector<E, A> rhs) noexcept {
-        if constexpr (unqualified_canonical_imbwornot<dx::zero_t, Mask,
+        if constexpr (unqualified_canonical_imbwornot<zero_t, Mask,
                           basic_vector<E, A>, basic_vector<E, A>>) {
             if consteval {
                 return internal::masked<bwornot_t>(mask, lhs, rhs);
             } else {
-                constexpr auto V = const_mask_v<basic_vector<E, A>, Mask>;
-                return bwornot<V>(
-                    internal::abi<A>, dx::zero, masked_operation, lhs, rhs);
+                return bwornot(internal::abi<A>, dx::zero,
+                    dx::to_compatible_const_mask<basic_vector<E, A>>(mask), lhs,
+                    rhs);
             }
         } else {
             return operator()(dx::zero_v<basic_vector<E, A>>, mask, lhs, rhs);
@@ -465,27 +464,26 @@ public:
     requires (different_from<LA, RA> || scalable_abi<LA> || scalable_abi<RA>) &&
         simd_element_for<E, LA> && simd_element_for<E, RA> &&
         imm_zmaskable_args<basic_vector<E, LA>, basic_vector<E, RA>> &&
-        unqualified_canonical_imbwornot<dx::zero_t, Mask, basic_vector<E, LA>,
+        unqualified_canonical_imbwornot<zero_t, Mask, basic_vector<E, LA>,
             basic_vector<E, RA>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, common_abi_t<LA, RA>> operator()(
         Mask mask, basic_vector<E, LA> lhs, basic_vector<E, RA> rhs) noexcept {
         using A = common_abi_t<LA, RA>;
-        constexpr auto V = const_mask_v<basic_vector<E, A>, Mask>;
-        return bwornot<V>(
-            internal::abi<A>, dx::zero, masked_operation, lhs, rhs);
+        return bwornot(internal::abi<A>, dx::zero,
+            dx::to_compatible_const_mask<basic_vector<E, A>>(mask), lhs, rhs);
     }
 
     template <simd_vector L, simd_vector R,
         const_mask_for<operation_result_t<bwornot_t, L, R>> Mask>
     requires (extended_vector<L> || extended_vector<R>) &&
-        imm_zmaskable_args<L, R> && extended_imbwornot<dx::zero_t, Mask, L, R>
+        imm_zmaskable_args<L, R> && extended_imbwornot<zero_t, Mask, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(Mask mask, L lhs, R rhs) noexcept {
         using S = operation_result_t<bwornot_t, L, R>;
-        if constexpr (unqualified_extended_imbwornot<dx::zero_t, Mask, L, R>) {
-            constexpr auto V = const_mask_v<S, Mask>;
-            return bwornot<V>(dx::zero, masked_operation, lhs, rhs);
+        if constexpr (unqualified_extended_imbwornot<zero_t, Mask, L, R>) {
+            return bwornot(
+                dx::zero, dx::to_compatible_const_mask<S>(mask), lhs, rhs);
         } else {
             return operator()(dx::to_compatible_const_mask<S>(mask),
                 dx::to_canonical(lhs), dx::to_canonical(rhs));

@@ -70,18 +70,22 @@ concept extended_mcmple =
     unqualified_extended_mcmple<C, L, R, A> || decayable_mcmple<C, L, R, A>;
 
 template <typename M, typename L, typename R, typename A = common_abi_t<L, R>>
-concept unqualified_canonical_imcmple = requires(L lhs, R rhs) {
+concept unqualified_canonical_imcmple = requires(M mask, L lhs, R rhs) {
     {
-        cmple<const_mask_v<operation_result_t<cmple_t, L, R>, M>>(
-            internal::abi<A>, dx::masked_operation, lhs, rhs)
+        cmple(internal::abi<A>,
+            dx::to_compatible_const_mask<operation_result_t<cmple_t, L, R>>(
+                mask),
+            lhs, rhs)
     } -> canonical_compare_result<L, R>;
 };
 
 template <typename M, typename L, typename R, typename A = common_abi_t<L, R>>
-concept unqualified_extended_imcmple = requires(L lhs, R rhs) {
+concept unqualified_extended_imcmple = requires(M mask, L lhs, R rhs) {
     {
         cmple<const_mask_v<operation_result_t<cmple_t, L, R>, M>>(
-            dx::masked_operation, lhs, rhs)
+            dx::to_compatible_const_mask<operation_result_t<cmple_t, L, R>>(
+                mask),
+            lhs, rhs)
     } -> extended_compare_result<L, R>;
 };
 
@@ -221,9 +225,9 @@ public:
             if consteval {
                 return internal::masked<cmple_t>(mask, lhs, rhs);
             } else {
-                constexpr auto V = const_mask_v<basic_vector<E, A>, Mask>;
-                return cmple<V>(
-                    internal::abi<A>, dx::masked_operation, lhs, rhs);
+                return cmple(internal::abi<A>,
+                    dx::to_compatible_const_mask<basic_mask<E, A>>(mask), lhs,
+                    rhs);
             }
         } else {
             return internal::masked<cmple_t>(mask, lhs, rhs);
@@ -243,8 +247,8 @@ public:
     static constexpr basic_mask<E, common_abi_t<LA, RA>> operator()(
         Mask mask, basic_vector<E, LA> lhs, basic_vector<E, RA> rhs) noexcept {
         using A = common_abi_t<LA, RA>;
-        constexpr auto V = const_mask_v<basic_vector<E, A>, Mask>;
-        return cmple<V>(internal::abi<A>, dx::masked_operation, lhs, rhs);
+        return cmple(internal::abi<A>,
+            dx::to_compatible_const_mask<basic_mask<E, A>>(mask), lhs, rhs);
     }
 
     template <simd_vector L, simd_vector R,
@@ -255,8 +259,7 @@ public:
     static constexpr auto operator()(Mask mask, L lhs, R rhs) noexcept {
         using S = operation_result_t<cmple_t, L, R>;
         if constexpr (unqualified_extended_imcmple<Mask, L, R>) {
-            constexpr auto V = const_mask_v<S, Mask>;
-            return cmple<V>(dx::masked_operation, lhs, rhs);
+            return cmple(dx::to_compatible_const_mask<S>(mask), lhs, rhs);
         } else {
             return operator()(dx::to_compatible_const_mask<S>(mask),
                 dx::to_canonical(lhs), dx::to_canonical(rhs));

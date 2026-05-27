@@ -83,11 +83,10 @@ template <typename S, typename M, typename L, typename R,
     typename A =
         common_abi_t<canonical_if_zero_t<S, operation_result_t<max_t, L, R>>,
             operation_result_t<max_t, L, R>>>
-concept unqualified_canonical_immax = requires(S src, L lhs, R rhs) {
+concept unqualified_canonical_immax = requires(S src, M mask, L lhs, R rhs) {
     {
-        max<const_mask_v<
-            canonical_if_zero_t<S, operation_result_t<max_t, L, R>, A>, M>>(
-            internal::abi<A>, src, dx::masked_operation, lhs, rhs)
+        max(internal::abi<A>, src,
+            internal::to_const_mask<A, max_t, S, L, R>(mask), lhs, rhs)
     } -> equivalent_simd_as<
         canonical_if_zero_t<S, operation_result_t<max_t, L, R>, A>>;
 };
@@ -96,11 +95,9 @@ template <typename S, typename M, typename L, typename R,
     typename A =
         common_abi_t<canonical_if_zero_t<S, operation_result_t<max_t, L, R>>,
             operation_result_t<max_t, L, R>>>
-concept unqualified_extended_immax = requires(S src, L lhs, R rhs) {
+concept unqualified_extended_immax = requires(S src, M mask, L lhs, R rhs) {
     {
-        max<const_mask_v<
-            canonical_if_zero_t<S, operation_result_t<max_t, L, R>, A>, M>>(
-            src, dx::masked_operation, lhs, rhs)
+        max(src, internal::to_const_mask<A, max_t, S, L, R>(mask), lhs, rhs)
     } -> equivalent_simd_as<
         canonical_if_zero_t<S, operation_result_t<max_t, L, R>, A>>;
 };
@@ -323,9 +320,9 @@ public:
             if consteval {
                 return internal::masked<max_t>(src, mask, lhs, rhs);
             } else {
-                constexpr auto V = const_mask_v<basic_vector<E, A>, Mask>;
-                return max<V>(
-                    internal::abi<A>, src, masked_operation, lhs, rhs);
+                return max(internal::abi<A>, src,
+                    dx::to_compatible_const_mask<basic_vector<E, A>>(mask), lhs,
+                    rhs);
             }
         } else {
             return internal::masked<max_t>(src, mask, lhs, rhs);
@@ -346,8 +343,8 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, SA> operator()(basic_vector<E, SA> src,
         Mask mask, basic_vector<E, LA> lhs, basic_vector<E, RA> rhs) noexcept {
-        constexpr auto V = const_mask_v<basic_vector<E, SA>, Mask>;
-        return max<V>(internal::abi<SA>, src, masked_operation, lhs, rhs);
+        return max(internal::abi<SA>, src,
+            dx::to_compatible_const_mask<basic_vector<E, SA>>(mask), lhs, rhs);
     }
 
     template <simd_vector S, const_mask_for<S> Mask, simd_vector L,
@@ -357,8 +354,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(S src, Mask mask, L lhs, R rhs) noexcept {
         if constexpr (unqualified_extended_immax<S, Mask, L, R>) {
-            constexpr auto V = const_mask_v<S, Mask>;
-            return max<V>(src, masked_operation, lhs, rhs);
+            return max(src, dx::to_compatible_const_mask<S>(mask), lhs, rhs);
         } else {
             return operator()(dx::to_canonical(src), mask,
                 dx::to_canonical(lhs), dx::to_canonical(rhs));
@@ -376,9 +372,9 @@ public:
             if consteval {
                 return internal::masked<max_t>(mask, lhs, rhs);
             } else {
-                constexpr auto V = const_mask_v<basic_vector<E, A>, Mask>;
-                return max<V>(
-                    internal::abi<A>, dx::zero, masked_operation, lhs, rhs);
+                return max(internal::abi<A>, dx::zero,
+                    dx::to_compatible_const_mask<basic_vector<E, A>>(mask), lhs,
+                    rhs);
             }
         } else {
             return operator()(dx::zero_v<basic_vector<E, A>>, mask, lhs, rhs);
@@ -398,8 +394,8 @@ public:
     static constexpr basic_vector<E, common_abi_t<LA, RA>> operator()(
         Mask mask, basic_vector<E, LA> lhs, basic_vector<E, RA> rhs) noexcept {
         using A = common_abi_t<LA, RA>;
-        constexpr auto V = const_mask_v<basic_vector<E, A>, Mask>;
-        return max<V>(internal::abi<A>, dx::zero, masked_operation, lhs, rhs);
+        return max(internal::abi<A>, dx::zero,
+            dx::to_compatible_const_mask<basic_vector<E, A>>(mask), lhs, rhs);
     }
 
     template <simd_vector L, simd_vector R,
@@ -410,8 +406,8 @@ public:
     static constexpr auto operator()(Mask mask, L lhs, R rhs) noexcept {
         using S = operation_result_t<max_t, L, R>;
         if constexpr (unqualified_extended_immax<zero_t, Mask, L, R>) {
-            constexpr auto V = const_mask_v<S, Mask>;
-            return max<V>(dx::zero, masked_operation, lhs, rhs);
+            return max(
+                dx::zero, dx::to_compatible_const_mask<S>(mask), lhs, rhs);
         } else {
             return operator()(dx::to_compatible_const_mask<S>(mask),
                 dx::to_canonical(lhs), dx::to_canonical(rhs));

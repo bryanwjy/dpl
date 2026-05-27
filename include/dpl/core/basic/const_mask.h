@@ -27,33 +27,32 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
 DPL_EXPORT template <size_t W, bit_type_t<W> V>
-struct basic_const_mask;
+struct const_mask;
 
 DPL_EXPORT template <size_t W, bit_type_t<W> V>
-inline constexpr bool enable_const_mask<basic_const_mask<W, V>> = true;
+inline constexpr bool enable_const_mask<const_mask<W, V>> = true;
 
 DPL_EXPORT template <size_t W, bit_type_t<W> V>
-struct basic_const_mask {
+struct const_mask {
     using value_type = bit_type_t<W>;
-    using type = basic_const_mask;
+    using type = const_mask;
     static constexpr size_t width = W;
     static constexpr value_type value =
         (V & static_cast<value_type>((1ll << W) - 1));
     __DPL_HIDE_FROM_ABI constexpr operator immediate<value>(
-        this basic_const_mask) noexcept {
+        this const_mask) noexcept {
         return imm<value>;
     }
     __DPL_HIDE_FROM_ABI constexpr operator value_type(
-        this basic_const_mask) noexcept {
+        this const_mask) noexcept {
         return value;
     }
     __DPL_HIDE_FROM_ABI constexpr value_type operator+(
-        this basic_const_mask) noexcept {
+        this const_mask) noexcept {
         return value;
     }
 
-    __DPL_HIDE_FROM_ABI constexpr operator bitset<W>(
-        this basic_const_mask) noexcept {
+    __DPL_HIDE_FROM_ABI constexpr operator bitset<W>(this const_mask) noexcept {
         return bitset<W>(value);
     }
 
@@ -61,23 +60,23 @@ struct basic_const_mask {
         return value;
     }
 
-    __DPL_HIDE_FROM_ABI consteval basic_const_mask() noexcept = default;
+    __DPL_HIDE_FROM_ABI consteval const_mask() noexcept = default;
 
-    template <integral auto Vin>
-    requires (Vin == V)
-    __DPL_HIDE_FROM_ABI constexpr basic_const_mask(immediate<Vin>) noexcept {}
+    template <different_from<const_mask> T>
+    requires integral_constant_like<T> && (T::value == V)
+    __DPL_HIDE_FROM_ABI constexpr const_mask(T) noexcept {}
 
-    __DPL_HIDE_FROM_ABI constexpr basic_const_mask(zero_t) noexcept
+    __DPL_HIDE_FROM_ABI constexpr const_mask(zero_t) noexcept
     requires (V == 0)
     {}
 
-    __DPL_HIDE_FROM_ABI constexpr basic_const_mask(all_bits_t) noexcept
-    requires (__DPL countr_one(V) == __DPL char_bit_v * sizeof(V))
+    __DPL_HIDE_FROM_ABI constexpr const_mask(all_bits_t) noexcept
+    requires (__DPL popcount(V) == __DPL char_bit_v * sizeof(V))
     {}
 
     template <size_t W2>
-    __DPL_HIDE_FROM_ABI constexpr basic_const_mask(
-        basic_const_mask<W2, static_cast<bit_type_t<W2>>(value)>) noexcept {}
+    __DPL_HIDE_FROM_ABI constexpr const_mask(
+        const_mask<W2, static_cast<bit_type_t<W2>>(value)>) noexcept {}
 
     template <simd_abi A, simd_element_for<A> E>
     requires (simd_abi_traits<E, A>::size == W)
@@ -89,92 +88,86 @@ struct basic_const_mask {
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    constexpr bool operator==(this basic_const_mask, all_bits_t) noexcept {
+    constexpr bool operator==(this const_mask, all_bits_t) noexcept {
         return __DPL popcount(value) == static_cast<int>(W);
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    constexpr bool operator!=(this basic_const_mask, all_bits_t) noexcept {
+    constexpr bool operator!=(this const_mask, all_bits_t) noexcept {
         return __DPL popcount(value) == static_cast<int>(W);
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    constexpr bool operator==(this basic_const_mask, zero_t) noexcept {
+    constexpr bool operator==(this const_mask, zero_t) noexcept {
         return (value & static_cast<value_type>(W - 1)) == 0;
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    constexpr bool operator!=(this basic_const_mask, zero_t) noexcept {
+    constexpr bool operator!=(this const_mask, zero_t) noexcept {
         return (value & static_cast<value_type>(W - 1)) != 0;
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    constexpr auto operator~(this basic_const_mask) noexcept {
+    constexpr auto operator~(this const_mask) noexcept {
         constexpr auto mask = static_cast<value_type>((1 << W) - 1);
         constexpr auto nvalue = ~value;
-        return basic_const_mask<W, nvalue & mask>{};
+        return const_mask<W, nvalue & mask>{};
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    friend constexpr bool operator==(all_bits_t, basic_const_mask) noexcept {
+    friend constexpr bool operator==(all_bits_t, const_mask) noexcept {
         return __DPL popcount(value) == static_cast<int>(W);
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    friend constexpr bool operator!=(all_bits_t, basic_const_mask) noexcept {
+    friend constexpr bool operator!=(all_bits_t, const_mask) noexcept {
         return __DPL popcount(value) == static_cast<int>(W);
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    friend constexpr bool operator==(zero_t, basic_const_mask) noexcept {
+    friend constexpr bool operator==(zero_t, const_mask) noexcept {
         return (value & static_cast<value_type>(W - 1)) == 0;
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    friend constexpr bool operator!=(zero_t, basic_const_mask) noexcept {
+    friend constexpr bool operator!=(zero_t, const_mask) noexcept {
         return (value & static_cast<value_type>(W - 1)) != 0;
     }
 
     template <size_t W2, bit_type_t<W2> V2>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    constexpr bool operator==(
-        this basic_const_mask, basic_const_mask<W2, V2>) noexcept {
-        return basic_const_mask<W2, V2>::value == value;
+    constexpr bool operator==(this const_mask, const_mask<W2, V2>) noexcept {
+        return const_mask<W2, V2>::value == value;
     }
 
     template <size_t W2, bit_type_t<W2> V2>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    constexpr bool operator!=(
-        this basic_const_mask, basic_const_mask<W2, V2>) noexcept {
-        return basic_const_mask<W2, V2>::value != value;
+    constexpr bool operator!=(this const_mask, const_mask<W2, V2>) noexcept {
+        return const_mask<W2, V2>::value != value;
     }
 
     template <size_t W2, bit_type_t<W2> V2>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    constexpr bool operator<(
-        this basic_const_mask, basic_const_mask<W2, V2>) noexcept {
-        return basic_const_mask<W2, V2>::value < value;
+    constexpr bool operator<(this const_mask, const_mask<W2, V2>) noexcept {
+        return const_mask<W2, V2>::value < value;
     }
 
     template <size_t W2, bit_type_t<W2> V2>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    constexpr bool operator<=(
-        this basic_const_mask, basic_const_mask<W2, V2>) noexcept {
-        return basic_const_mask<W2, V2>::value <= value;
+    constexpr bool operator<=(this const_mask, const_mask<W2, V2>) noexcept {
+        return const_mask<W2, V2>::value <= value;
     }
 
     template <size_t W2, bit_type_t<W2> V2>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    constexpr bool operator>(
-        this basic_const_mask, basic_const_mask<W2, V2>) noexcept {
-        return basic_const_mask<W2, V2>::value > value;
+    constexpr bool operator>(this const_mask, const_mask<W2, V2>) noexcept {
+        return const_mask<W2, V2>::value > value;
     }
 
     template <size_t W2, bit_type_t<W2> V2>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    constexpr bool operator>=(
-        this basic_const_mask, basic_const_mask<W2, V2>) noexcept {
-        return basic_const_mask<W2, V2>::value >= value;
+    constexpr bool operator>=(this const_mask, const_mask<W2, V2>) noexcept {
+        return const_mask<W2, V2>::value >= value;
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
@@ -182,51 +175,47 @@ struct basic_const_mask {
         return (static_cast<value_type>(1zu << idx) & value) > 0;
     }
 
-    friend consteval auto all_of(basic_const_mask val) noexcept {
+    friend consteval auto all_of(const_mask val) noexcept {
         return val == all_bits_t{};
     }
 
-    friend consteval auto any_of(basic_const_mask val) noexcept {
+    friend consteval auto any_of(const_mask val) noexcept {
         return val != zero_t{};
     }
 
-    friend consteval auto none_of(basic_const_mask val) noexcept {
+    friend consteval auto none_of(const_mask val) noexcept {
         return val == zero_t{};
     }
 
-    friend consteval auto some_of(basic_const_mask val) noexcept {
+    friend consteval auto some_of(const_mask val) noexcept {
         return any_of(val) && !all_of(val);
     }
 
-    friend consteval auto popcount(basic_const_mask) noexcept {
+    friend consteval auto popcount(const_mask) noexcept {
         return __DPL popcount(value);
     }
 
-    friend consteval auto countr_zero(basic_const_mask) noexcept {
+    friend consteval auto countr_zero(const_mask) noexcept {
         auto const count = __DPL countr_zero(value);
         return count < W ? count : W;
     }
 
-    friend consteval auto countr_one(basic_const_mask) noexcept {
+    friend consteval auto countr_one(const_mask) noexcept {
         auto const count = __DPL countr_one(value);
         return count < W ? count : W;
     }
 
-    friend consteval auto countl_one(basic_const_mask) noexcept {
+    friend consteval auto countl_one(const_mask) noexcept {
         constexpr auto mask = static_cast<value_type>(-1ll << width);
         auto const remainder = sizeof(value_type) * char_bit_v - width;
         return __DPL countl_one(value | mask) - remainder;
     }
 
-    friend consteval auto countl_zero(basic_const_mask) noexcept {
+    friend consteval auto countl_zero(const_mask) noexcept {
         auto const offset = sizeof(value_type) * char_bit_v - W;
         return __DPL countl_zero(value) - offset;
     }
 };
-
-DPL_EXPORT template <size_t W, convertible_to<bit_type_t<W>> auto V>
-using const_mask DPL_NODEBUG =
-    basic_const_mask<W, static_cast<bit_type_t<W>>(V)>;
 
 template <typename C, auto>
 struct make_const_mask {};
@@ -239,19 +228,36 @@ struct make_const_mask<C, V> {
     using type DPL_NODEBUG = const_mask<simd_abi_traits<C>::size, V>;
 };
 
-DPL_EXPORT template <typename M, typename T>
-concept const_mask_for =
-    fixed_width_class<T> && integral_constant_like<M> && requires(M mask) {
-        typename basic_const_mask<simd_abi_traits<T>::size, M::value>;
+template <typename M, typename T>
+concept const_mask_from_constant =
+    integral_constant_like<M> && requires(M mask) {
+        typename const_mask<simd_abi_traits<T>::size, M::value>;
         requires convertible_to<M,
-            basic_const_mask<simd_abi_traits<T>::size, M::value>>;
+            const_mask<simd_abi_traits<T>::size, M::value>>;
     };
+
+DPL_EXPORT template <typename M, typename T>
+concept const_mask_for = fixed_width_class<T> &&
+    (const_mask_from_constant<M, T> || same_as<datapar::zero_t, M> ||
+        same_as<datapar::all_bits_t, M>);
 
 DPL_EXPORT template <fixed_width_class T, const_mask_for<T> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr auto to_compatible_const_mask(M mask) noexcept {
-    return static_cast<basic_const_mask<simd_abi_traits<T>::size, M::value>>(
-        mask);
+    return static_cast<const_mask<simd_abi_traits<T>::size, M::value>>(mask);
+}
+
+DPL_EXPORT template <fixed_width_class T>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+constexpr auto to_compatible_const_mask(datapar::zero_t) noexcept {
+    return const_mask<simd_abi_traits<T>::size, 0>();
+}
+
+DPL_EXPORT template <fixed_width_class T>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+constexpr auto to_compatible_const_mask(datapar::all_bits_t) noexcept {
+    constexpr auto V = static_cast<bit_type_t<simd_abi_traits<T>::size>>(-1);
+    return const_mask<simd_abi_traits<T>::size, V>();
 }
 
 template <fixed_width_class T, const_mask_for<T> M>
