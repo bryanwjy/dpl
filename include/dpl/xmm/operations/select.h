@@ -27,190 +27,165 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::xmm {
 
-template <typename L, typename R>
-using ternary_result_t DPL_NODEBUG =
-    __DPL decay_t<decltype(false ? __DPL declval<L>()
-                                   : __DPL declval<R>())>;
-
-template <typename L, typename R>
-struct ternary_type {};
-template <typename L, typename R>
-using ternary_type_t DPL_NODEBUG = typename ternary_type<L, R>::type;
-
-template <simd_vector L, simd_element R>
-struct ternary_type<L, R> : ternary_type<typename L::value_type, R> {};
-
-template <simd_element L, simd_vector R>
-struct ternary_type<L, R> : ternary_type<L, typename R::value_type> {};
-
-template <simd_vector L, simd_vector R>
-struct ternary_type<L, R> :
-    ternary_type<typename L::value_type, typename R::value_type> {};
-
-template <simd_element L, simd_element R>
-requires requires {
-    typename ternary_result_t<L, R>;
-    requires common_arithmetic_with<ternary_result_t<L, R>, L>;
-    requires common_arithmetic_with<ternary_result_t<L, R>, R>;
-}
-struct ternary_type<L, R> {
-    using type DPL_NODEBUG = ternary_result_t<L, R>;
-};
-
-DPL_EXPORT template <template_barrier_t = __DPL template_barrier, simd_element C,
-    simd_element T, simd_element F>
-requires common_size_with<T, F> && common_size_with<T, C> &&
-    common_size_with<F, C> &&
-    common_size_with<ternary_type_t<T, F>, common_size_type_t<T, F>>
+DPL_EXPORT template <simd_element_for<abi_tag> C, simd_element_for<abi_tag> E>
+requires common_size_with<C, E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<ternary_type_t<T, F>>
+inline simd<E>
     DPL_VECTORCALL select(
-        mask<C> condition, simd<T> if_true, simd<F> or_else) noexcept {
-    using V = ternary_type_t<T, F>;
-    if constexpr (common_float_with<float, V>) {
-        return _mm_blendv_ps(
-            +or_else, +if_true, +xmm::reinterpret<float>(condition));
-    } else if constexpr (common_float_with<double, V>) {
-        return _mm_blendv_pd(
-            +or_else, +if_true, +xmm::reinterpret<double>(condition));
-    } else if constexpr (common_size_with<float, V>) {
-        return xmm::reinterpret<V>(
-            xmm::select(condition, xmm::reinterpret<float>(if_true),
-                xmm::reinterpret<float>(or_else)));
-    } else if constexpr (common_size_with<double, V>) {
-        return xmm::reinterpret<V>(
-            xmm::select(condition, xmm::reinterpret<double>(if_true),
-                xmm::reinterpret<double>(or_else)));
-    } else if constexpr (common_integral_with<V, int16>) {
-        return _mm_blendv_epi8(
-            +or_else, +if_true, +xmm::reinterpret<int16>(condition));
-    } else if constexpr (common_size_with<int16, V>) {
-        return xmm::reinterpret<V>(
-            xmm::select(condition, xmm::reinterpret<int16>(if_true),
-                xmm::reinterpret<int16>(or_else)));
+        mask<C> condition, simd<E> lhs, simd<E> rhs) noexcept {
+    if constexpr (same_as<E, float>) {
+        return _mm_blendv_ps(+rhs, +lhs, +xmm::reinterpret<float>(condition));
+    } else if constexpr (same_as<E, double>) {
+        return _mm_blendv_pd(+rhs, +lhs, +xmm::reinterpret<double>(condition));
+    } else if constexpr (common_size_with<E, float>) {
+        return xmm::reinterpret<E>(xmm::select(condition,
+            xmm::reinterpret<float>(lhs), xmm::reinterpret<float>(rhs)));
+    } else if constexpr (common_size_with<E, double>) {
+        return xmm::reinterpret<E>(xmm::select(condition,
+            xmm::reinterpret<double>(lhs), xmm::reinterpret<double>(rhs)));
+    } else if constexpr (common_size_with<E, int16>) {
+        return xmm::reinterpret<E>(simd<int16>(_mm_blendv_epi8(
+            +xmm::reinterpret<int16>(rhs), +xmm::reinterpret<int16>(lhs),
+            +xmm::reinterpret<int16>(condition))));
     } else {
-        static_assert(sizeof(T) == sizeof(int8));
-        return _mm_blendv_epi8(+or_else, +if_true, +condition);
+        static_assert(common_size_with<E, int8>);
+        return xmm::reinterpret<E>(simd<int8>(_mm_blendv_epi8(
+            +xmm::reinterpret<int8>(rhs), +xmm::reinterpret<int8>(lhs),
+            +xmm::reinterpret<int8>(condition))));
     }
 }
 
-DPL_EXPORT template <template_barrier_t = __DPL template_barrier, simd_element C,
-    simd_element T, simd_element F>
-requires common_size_with<T, F> && common_size_with<T, C> &&
-    common_size_with<F, C>
+DPL_EXPORT template <simd_element_for<abi_tag> C, simd_element_for<abi_tag> L,
+    simd_element_for<abi_tag> R>
+requires common_size_with<L, R> && common_size_with<L, C> &&
+    common_size_with<R, C>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline mask<common_size_type_t<T, F>>
+inline mask<common_size_type_t<L, R>>
     DPL_VECTORCALL select(
-        mask<C> condition, mask<T> if_true, mask<F> or_else) noexcept {
-    using V = common_size_type_t<T, F>;
-    return +xmm::select(condition, simd<V>(+xmm::reinterpret<V>(if_true)),
-        simd<V>(+xmm::reinterpret<V>(or_else)));
+        mask<C> condition, mask<L> lhs, mask<R> rhs) noexcept {
+    using E = common_size_type_t<L, R>;
+    return +xmm::select(condition, simd<E>(+xmm::reinterpret<E>(lhs)),
+        simd<E>(+xmm::reinterpret<E>(rhs)));
 }
 
-DPL_EXPORT template <template_barrier_t = __DPL template_barrier, simd_element C,
-    simd_element T, simd_element F>
-DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-inline auto select(
-    abi_tag tag, mask<C> condition, simd<T> if_true, simd<F> or_else) noexcept
-requires requires { xmm::select(condition, if_true, or_else); }
-{
-    return xmm::select(condition, if_true, or_else);
-}
-
-DPL_EXPORT template <template_barrier_t = __DPL template_barrier, simd_element C,
-    simd_element T, simd_element F>
-DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-inline auto select(
-    abi_tag tag, mask<C> condition, mask<T> if_true, mask<F> or_else) noexcept
-requires requires { xmm::select(condition, if_true, or_else); }
-{
-    return xmm::select(condition, if_true, or_else);
-}
-
-namespace details {
-template <auto M>
-inline constexpr auto imm16 = xmm::initialize<uint8>(M);
-} // namespace details
-
-DPL_EXPORT template <integral auto C, simd_element T, simd_element F>
-requires common_size_with<T, F> &&
-    common_size_with<ternary_type_t<T, F>, common_size_type_t<T, F>>
+DPL_EXPORT template <bit_type_t<2> V, sized_element<8> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<ternary_type_t<T, F>> select(
-    simd<T> if_true, simd<F> or_else) noexcept {
-    using V = ternary_type_t<T, F>;
-    constexpr const_mask<simd_abi_traits<V, abi_tag>::size, C> mask{};
-    constexpr auto imm8 = static_cast<int>(mask);
-    if constexpr (common_float_with<float, V>) {
-        return _mm_blend_ps(+or_else, +if_true, imm8);
-    } else if constexpr (common_float_with<double, V>) {
-        return _mm_blend_pd(+or_else, +if_true, imm8);
-    } else if constexpr (common_size_with<float, V>) {
-        return xmm::reinterpret<V>(
-            xmm::select<C>(xmm::reinterpret<float>(if_true),
-                xmm::reinterpret<float>(or_else)));
-    } else if constexpr (common_size_with<double, V>) {
-        return xmm::reinterpret<V>(
-            xmm::select<C>(xmm::reinterpret<double>(if_true),
-                xmm::reinterpret<double>(or_else)));
-    } else if constexpr (common_integral_with<V, int16>) {
-        return _mm_blend_epi16(+or_else, +if_true, imm8);
-    } else if constexpr (common_size_with<int16, V>) {
-        return xmm::reinterpret<V>(
-            xmm::select<C>(xmm::reinterpret<int16>(if_true),
-                xmm::reinterpret<int16>(or_else)));
+inline simd<E> select(
+    const_mask<2, V> condition, simd<E> lhs, simd<E> rhs) noexcept {
+    constexpr auto imm = static_cast<int>(condition());
+    if constexpr (same_as<double, E>) {
+        return _mm_blend_pd(+rhs, +lhs, imm);
     } else {
-        static_assert(sizeof(T) == sizeof(int8));
-        return _mm_blendv_epi8(+or_else, +if_true, +details::imm16<mask>);
+        return xmm::reinterpret<E>(xmm::select(condition,
+            xmm::reinterpret<double>(lhs), xmm::reinterpret<double>(rhs)));
     }
 }
 
-DPL_EXPORT template <integral auto C, simd_element T, simd_element F>
-requires common_size_with<T, F>
+DPL_EXPORT template <bit_type_t<4> V, sized_element<4> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline mask<common_size_type_t<T, F>> select(
-    mask<T> if_true, mask<F> or_else) noexcept {
-    using V = common_size_type_t<T, F>;
-    return +xmm::select<C>(simd<V>(+xmm::reinterpret<V>(if_true)),
-        simd<V>(+xmm::reinterpret<V>(or_else)));
+inline simd<E> select(
+    const_mask<4, V> condition, simd<E> lhs, simd<E> rhs) noexcept {
+    constexpr auto imm = static_cast<int>(condition());
+    if constexpr (same_as<float, E>) {
+        return _mm_blend_ps(+rhs, +lhs, imm);
+    } else {
+        return xmm::reinterpret<E>(xmm::select(condition,
+            xmm::reinterpret<float>(lhs), xmm::reinterpret<float>(rhs)));
+    }
 }
 
-template <simd_class T, const_mask_for<T> M>
-inline constexpr auto imm_mask_v =
-    decltype(datapar::to_compatible_const_mask<T>(M{}))::value;
-
-DPL_EXPORT template <template_barrier_t = __DPL template_barrier, simd_element T,
-    common_size_with<T> F, const_mask_for<simd<T>> C>
+DPL_EXPORT template <bit_type_t<8> V, sized_element<2> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline auto select(C, simd<T> if_true, simd<F> or_else) noexcept
-requires requires { xmm::select<imm_mask_v<T, C>>(if_true, or_else); }
-{
-    return xmm::select<imm_mask_v<T, C>>(if_true, or_else);
+inline simd<E> select(
+    const_mask<8, V> condition, simd<E> lhs, simd<E> rhs) noexcept {
+    constexpr auto imm = static_cast<int>(condition());
+    if constexpr (same_as<int16, E>) {
+        return _mm_blend_epi16(+rhs, +lhs, imm);
+    } else {
+        return xmm::reinterpret<E>(xmm::select(condition,
+            xmm::reinterpret<int16>(lhs), xmm::reinterpret<int16>(rhs)));
+    }
 }
 
-DPL_EXPORT template <template_barrier_t = __DPL template_barrier, simd_element T,
-    common_size_with<T> F, const_mask_for<mask<T>> C>
+DPL_EXPORT template <bit_type_t<16> V, sized_element<1> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline auto select(C, mask<T> if_true, mask<F> or_else) noexcept
-requires requires { xmm::select<imm_mask_v<T, C>>(if_true, or_else); }
-{
-    return xmm::select<imm_mask_v<T, C>>(if_true, or_else);
+inline simd<E> select(
+    const_mask<16, V> condition, simd<E> lhs, simd<E> rhs) noexcept {
+    constexpr auto imm = static_cast<int>(condition());
+    if constexpr (same_as<int8, E>) {
+        constexpr auto imm = xmm::initialize<int8>(bitset<16>(V));
+        return _mm_blendv_epi8(+rhs, +lhs, +imm);
+    } else {
+        return xmm::reinterpret<E>(xmm::select(condition,
+            xmm::reinterpret<int8>(lhs), xmm::reinterpret<int8>(rhs)));
+    }
 }
 
-DPL_EXPORT template <integral auto C, simd_element T, simd_element F>
+DPL_EXPORT template <simd_element_for<abi_tag> L, simd_element_for<abi_tag> R,
+    bit_type_t<simd_abi_traits<abi_tag, L>::size> V>
+requires common_size_with<L, R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline auto select(abi_tag tag, simd<T> if_true, simd<F> or_else) noexcept
-requires requires { xmm::select<C>(if_true, or_else); }
-{
-    return xmm::select<C>(if_true, or_else);
+inline mask<common_size_type_t<L, R>> select(
+    const_mask<simd_abi_traits<abi_tag, L>::size, V> condition, mask<L> lhs,
+    mask<R> rhs) noexcept {
+    using E = common_size_type_t<L, R>;
+    return +xmm::select(condition, simd<E>(+xmm::reinterpret<E>(lhs)),
+        simd<E>(+xmm::reinterpret<E>(rhs)));
 }
 
-DPL_EXPORT template <integral auto C, simd_element T, simd_element F>
+DPL_EXPORT template <integral auto V, simd_element_for<abi_tag> L,
+    simd_element_for<abi_tag> R>
+requires common_size_with<L, R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline auto select(abi_tag tag, mask<T> if_true, mask<F> or_else) noexcept
-requires requires { xmm::select<C>(if_true, or_else); }
+inline auto select(mask<L> lhs, mask<R> rhs) noexcept {
+    using mask_type = const_mask<simd_abi_traits<abi_tag, L>::size, V>;
+    return xmm::select(mask_type(), lhs, rhs);
+}
+
+DPL_EXPORT template <integral auto V, simd_element_for<abi_tag> E>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+inline auto select(simd<E> lhs, simd<E> rhs) noexcept {
+    using mask_type = const_mask<simd_abi_traits<abi_tag, E>::size, V>;
+    return xmm::select(mask_type(), lhs, rhs);
+}
+
+DPL_EXPORT template <simd_element_for<abi_tag> C, simd_element_for<abi_tag> E>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+inline auto select(
+    abi_tag tag, mask<C> condition, simd<E> lhs, simd<E> rhs) noexcept
+requires requires { xmm::select(condition, lhs, rhs); }
 {
-    return xmm::select<C>(if_true, or_else);
+    return xmm::select(condition, lhs, rhs);
+}
+
+DPL_EXPORT template <simd_element_for<abi_tag> C, simd_element_for<abi_tag> L,
+    simd_element_for<abi_tag> R>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+inline auto select(
+    abi_tag tag, mask<C> condition, mask<L> lhs, mask<R> rhs) noexcept
+requires requires { xmm::select(condition, lhs, rhs); }
+{
+    return xmm::select(condition, lhs, rhs);
+}
+
+DPL_EXPORT template <simd_element_for<abi_tag> L, simd_element_for<abi_tag> R,
+    bit_type_t<simd_abi_traits<abi_tag, L>::size> V>
+requires common_size_with<L, R>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+inline mask<common_size_type_t<L, R>> select(abi_tag tag,
+    const_mask<simd_abi_traits<abi_tag, L>::size, V> condition, mask<L> lhs,
+    mask<R> rhs) noexcept {
+    using E = common_size_type_t<L, R>;
+    return xmm::select(condition, lhs, rhs);
+}
+
+DPL_EXPORT template <simd_element_for<abi_tag> E,
+    bit_type_t<simd_abi_traits<abi_tag, E>::size> V>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+inline simd<E> select(abi_tag tag,
+    const_mask<simd_abi_traits<abi_tag, E>::size, V> condition, simd<E> lhs,
+    simd<E> rhs) noexcept {
+    return xmm::select(condition, lhs, rhs);
 }
 
 } // namespace datapar::xmm

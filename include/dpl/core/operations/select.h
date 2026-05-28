@@ -24,8 +24,6 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void select(...) noexcept = delete;
-template <auto>
-void select(...) noexcept = delete;
 
 struct select_t;
 
@@ -202,28 +200,24 @@ concept unqualified_bitspill = unqualified_extended_bitspill<M, R, A> ||
             dx::all_bits_t>);
 
 template <typename T, typename L, typename R, typename A = common_abi_t<L, R>>
-concept canonical_selecti_vector =
-    simd_vector<T> && same_as<typename L::value_type, typename T::value_type> &&
-    same_as<typename R::value_type, typename T::value_type> &&
-    same_abi_as<A, typename T::abi_type>;
-
-template <typename T, typename L, typename R, typename A = common_abi_t<L, R>>
 concept extended_selecti_vector =
     simd_vector<T> && same_as<typename L::value_type, typename T::value_type> &&
     same_as<typename R::value_type, typename T::value_type> &&
     common_abi_with<A, typename T::abi_type>;
 
 template <typename T, typename L, typename R, typename A = common_abi_t<L, R>>
-concept canonical_selecti_mask = simd_mask<T> &&
-    common_size_with<typename L::value_type, typename T::value_type> &&
-    common_size_with<typename R::value_type, typename T::value_type> &&
-    same_abi_as<A, typename T::abi_type>;
+concept canonical_selecti_vector =
+    extended_selecti_vector<T, L, R, A> && same_as<A, typename T::abi_type>;
 
 template <typename T, typename L, typename R, typename A = common_abi_t<L, R>>
 concept extended_selecti_mask = simd_mask<T> &&
     common_size_with<typename L::value_type, typename T::value_type> &&
     common_size_with<typename R::value_type, typename T::value_type> &&
     common_abi_with<A, typename T::abi_type>;
+
+template <typename T, typename L, typename R, typename A = common_abi_t<L, R>>
+concept canonical_selecti_mask =
+    extended_selecti_mask<T, L, R, A> && same_as<A, typename T::abi_type>;
 
 template <typename M, typename L, typename R>
 consteval auto select_mask() noexcept {
@@ -239,14 +233,14 @@ consteval auto select_mask() noexcept {
 template <typename M, typename L, typename R, typename A = common_abi_t<L, R>>
 concept unqualified_canonical_selecti = requires(L lhs, R rhs) {
     {
-        select<internal::select_mask<M, L, R>()()>(internal::abi<A>, lhs, rhs)
+        select(internal::abi<A>, internal::select_mask<M, L, R>(), lhs, rhs)
     } -> canonical_selecti_vector<L, R, A>;
 };
 
 template <typename M, typename L, typename R, typename A = common_abi_t<L, R>>
 concept unqualified_extended_selecti = requires(L lhs, R rhs) {
     {
-        select<internal::select_mask<M, L, R>()()>(lhs, rhs)
+        select(internal::select_mask<M, L, R>(), lhs, rhs)
     } -> extended_selecti_vector<L, R, A>;
 };
 
@@ -260,14 +254,14 @@ concept unqualified_selecti = unqualified_extended_selecti<M, L, R, A> ||
 template <typename M, typename L, typename R, typename A = common_abi_t<L, R>>
 concept unqualified_canonical_mask_selecti = requires(L lhs, R rhs) {
     {
-        select<internal::select_mask<M, L, R>()()>(internal::abi<A>, lhs, rhs)
+        select(internal::abi<A>, internal::select_mask<M, L, R>(), lhs, rhs)
     } -> canonical_selecti_mask<L, R, A>;
 };
 
 template <typename M, typename L, typename R, typename A = common_abi_t<L, R>>
 concept unqualified_extended_mask_selecti = requires(L lhs, R rhs) {
     {
-        select<internal::select_mask<M, L, R>()()>(lhs, rhs)
+        select(internal::select_mask<M, L, R>(), lhs, rhs)
     } -> extended_selecti_mask<L, R, A>;
 };
 
@@ -281,15 +275,18 @@ concept unqualified_mask_selecti =
             canonical_type_t<R>>);
 
 template <typename M, typename R>
-concept unqualified_canonical_bitkeepi = requires(R val) {
+concept unqualified_canonical_bitkeepi = requires(M mask, R val) {
     {
-        select<const_mask_v<R, M>>(internal::abi<R>, val, dx::zero)
-    } -> equivalent_simd_as<R>;
+        select(internal::abi<R>, dx::to_compatible_const_mask<R>(mask), val,
+            dx::zero)
+    } -> canonical_selecti_vector<R, R, typename R::abi_type>;
 };
 
 template <typename M, typename R>
-concept unqualified_extended_bitkeepi = requires(R val) {
-    { select<const_mask_v<R, M>>(val, dx::zero) } -> equivalent_simd_as<R>;
+concept unqualified_extended_bitkeepi = requires(M mask, R val) {
+    {
+        select(dx::to_compatible_const_mask<R>(mask), val, dx::zero)
+    } -> extended_selecti_vector<R, R, typename R::abi_type>;
 };
 
 template <typename M, typename R>
@@ -298,15 +295,18 @@ concept unqualified_bitkeepi = unqualified_extended_bitkeepi<M, R> ||
         regular_invocable<select_t, M, canonical_type_t<R>, dx::zero_t>);
 
 template <typename M, typename R>
-concept unqualified_canonical_bitdropi = requires(R val) {
+concept unqualified_canonical_bitdropi = requires(M mask, R val) {
     {
-        select<const_mask_v<R, M>>(internal::abi<R>, dx::zero, val)
-    } -> equivalent_simd_as<R>;
+        select(internal::abi<R>, dx::to_compatible_const_mask<R>(mask),
+            dx::zero, val)
+    } -> canonical_selecti_vector<R, R, typename R::abi_type>;
 };
 
 template <typename M, typename R>
-concept unqualified_extended_bitdropi = requires(R val) {
-    { select<const_mask_v<R, M>>(dx::zero, val) } -> equivalent_simd_as<R>;
+concept unqualified_extended_bitdropi = requires(M mask, R val) {
+    {
+        select(dx::to_compatible_const_mask<R>(mask), dx::zero, val)
+    } -> extended_selecti_vector<R, R, typename R::abi_type>;
 };
 
 template <typename M, typename R>
@@ -315,15 +315,18 @@ concept unqualified_bitdropi = unqualified_extended_bitdropi<M, R> ||
         regular_invocable<select_t, M, dx::zero_t, canonical_type_t<R>>);
 
 template <typename M, typename R>
-concept unqualified_canonical_bitfilli = requires(R val) {
+concept unqualified_canonical_bitfilli = requires(M mask, R val) {
     {
-        select<const_mask_v<R, M>>(internal::abi<R>, dx::all_bits, val)
-    } -> equivalent_simd_as<R>;
+        select(internal::abi<R>, dx::to_compatible_const_mask<R>(mask),
+            dx::all_bits, val)
+    } -> canonical_selecti_vector<R, R, typename R::abi_type>;
 };
 
 template <typename M, typename R>
-concept unqualified_extended_bitfilli = requires(R val) {
-    { select<const_mask_v<R, M>>(dx::all_bits, val) } -> equivalent_simd_as<R>;
+concept unqualified_extended_bitfilli = requires(M mask, R val) {
+    {
+        select(dx::to_compatible_const_mask<R>(mask), dx::all_bits, val)
+    } -> extended_selecti_vector<R, R, typename R::abi_type>;
 };
 
 template <typename M, typename R>
@@ -332,15 +335,18 @@ concept unqualified_bitfilli = unqualified_extended_bitfilli<M, R> ||
         regular_invocable<select_t, M, dx::all_bits_t, canonical_type_t<R>>);
 
 template <typename M, typename R>
-concept unqualified_canonical_bitspilli = requires(R val) {
+concept unqualified_canonical_bitspilli = requires(M mask, R val) {
     {
-        select<const_mask_v<R, M>>(internal::abi<R>, val, dx::all_bits)
-    } -> equivalent_simd_as<R>;
+        select(internal::abi<R>, dx::to_compatible_const_mask<R>(mask), val,
+            dx::all_bits)
+    } -> canonical_selecti_vector<R, R, typename R::abi_type>;
 };
 
 template <typename M, typename R>
-concept unqualified_extended_bitspilli = requires(R val) {
-    { select<const_mask_v<R, M>>(val, dx::all_bits) } -> equivalent_simd_as<R>;
+concept unqualified_extended_bitspilli = requires(M mask, R val) {
+    {
+        select(dx::to_compatible_const_mask<R>(mask), val, dx::all_bits)
+    } -> extended_selecti_vector<R, R, typename R::abi_type>;
 };
 
 template <typename M, typename R>
@@ -741,14 +747,15 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A> operator()(
         M mask, basic_vector<E, A> lhs, basic_vector<E, A> rhs) noexcept {
-        constexpr auto V =
-            dx::to_compatible_const_mask<basic_vector<E, A>>(mask)();
+        constexpr auto cmask =
+            dx::to_compatible_const_mask<basic_vector<E, A>>(mask);
+        constexpr auto V = cmask();
         if constexpr (unqualified_canonical_selecti<M, basic_vector<E, A>,
                           basic_vector<E, A>>) {
             if consteval {
                 return fallbacki<V>(lhs, rhs);
             } else {
-                return select<V>(internal::abi<A>, lhs, rhs);
+                return select(internal::abi<A>, cmask, lhs, rhs);
             }
         } else {
             return fallbacki<V>(lhs, rhs);
@@ -768,8 +775,8 @@ public:
         using A = common_abi_t<LA, RA>;
         using L = basic_vector<E, LA>;
         using R = basic_vector<E, RA>;
-        constexpr auto V = internal::select_mask<M, L, R>()();
-        return select<V>(internal::abi<A>, mask, lhs, rhs);
+        constexpr auto cmask = internal::select_mask<M, L, R>();
+        return select(internal::abi<A>, cmask, lhs, rhs);
     }
 
     template <const_mask_like M, fixed_width_vector L, fixed_width_vector R>
@@ -779,8 +786,8 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, L lhs, R rhs) noexcept {
         if constexpr (unqualified_extended_selecti<M, L, R>) {
-            constexpr auto V = internal::select_mask<M, L, R>()();
-            return select<V>(lhs, rhs);
+            constexpr auto cmask = internal::select_mask<M, L, R>();
+            return select(cmask, lhs, rhs);
         } else {
             return operator()(
                 mask, dx::to_canonical(lhs), dx::to_canonical(rhs));
@@ -792,14 +799,15 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_mask<E, A> operator()(
         M mask, basic_mask<E, A> lhs, basic_mask<E, A> rhs) noexcept {
-        constexpr auto V =
-            dx::to_compatible_const_mask<basic_mask<E, A>>(mask)();
+        constexpr auto cmask =
+            dx::to_compatible_const_mask<basic_vector<E, A>>(mask);
+        constexpr auto V = cmask();
         if constexpr (unqualified_canonical_mask_selecti<M, basic_mask<E, A>,
                           basic_mask<E, A>>) {
             if consteval {
                 return fallbacki<V>(lhs, rhs);
             } else {
-                return select<V>(internal::abi<A>, lhs, rhs);
+                return select(internal::abi<A>, cmask, lhs, rhs);
             }
         } else {
             return fallbacki<V>(lhs, rhs);
@@ -818,8 +826,8 @@ public:
         using A = common_abi_t<LA, RA>;
         using L = basic_mask<E, LA>;
         using R = basic_mask<E, RA>;
-        constexpr auto V = internal::select_mask<M, L, R>()();
-        return select<V>(internal::abi<A>, mask, lhs, rhs);
+        constexpr auto cmask = internal::select_mask<M, L, R>();
+        return select(internal::abi<A>, cmask, lhs, rhs);
     }
 
     template <typename M, fixed_width_mask L, fixed_width_mask R>
@@ -828,8 +836,8 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, L lhs, R rhs) noexcept {
         if constexpr (unqualified_extended_selecti<M, L, R>) {
-            constexpr auto V = internal::select_mask<M, L, R>()();
-            return select<V>(lhs, rhs);
+            constexpr auto cmask = internal::select_mask<M, L, R>();
+            return select(cmask, lhs, rhs);
         } else {
             return operator()(
                 mask, dx::to_canonical(lhs), dx::to_canonical(rhs));
@@ -845,8 +853,9 @@ public:
             if consteval {
                 return operator()(mask, dx::broadcast<E, A>(tag), val);
             } else {
-                constexpr auto V = const_mask_v<basic_vector<E, A>, M>;
-                return select<V>(internal::abi<A>, tag, val);
+                constexpr auto cmask =
+                    dx::to_compatible_const_mask<basic_vector<E, A>>(mask);
+                return select(internal::abi<A>, cmask, tag, val);
             }
         } else {
             return operator()(mask, dx::broadcast<E, A>(tag), val);
@@ -862,8 +871,9 @@ public:
             if consteval {
                 return operator()(mask, dx::broadcast<E, A>(false_type{}), val);
             } else {
-                constexpr auto V = const_mask_v<basic_mask<E, A>, M>;
-                return select<V>(internal::abi<A>, tag, val);
+                constexpr auto cmask =
+                    dx::to_compatible_const_mask<basic_vector<E, A>>(mask);
+                return select(internal::abi<A>, cmask, tag, val);
             }
         } else {
             return operator()(mask, dx::broadcast<E, A>(false_type{}), val);
@@ -876,8 +886,8 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, dx::zero_t tag, R fval) noexcept {
         if constexpr (unqualified_extended_bitdropi<M, R>) {
-            constexpr auto V = const_mask_v<R, M>;
-            return select<V>(tag, fval);
+            constexpr auto cmask = dx::to_compatible_const_mask<R>(mask);
+            return select(cmask, tag, fval);
         } else {
             return operator()(mask, tag, dx::to_canonical(fval));
         }
@@ -892,8 +902,9 @@ public:
             if consteval {
                 return operator()(mask, val, dx::broadcast<E, A>(tag));
             } else {
-                constexpr auto V = const_mask_v<basic_vector<E, A>, M>;
-                return select<V>(internal::abi<A>, val, tag);
+                constexpr auto cmask =
+                    dx::to_compatible_const_mask<basic_vector<E, A>>(mask);
+                return select(internal::abi<A>, cmask, val, tag);
             }
         } else {
             return operator()(mask, val, dx::broadcast<E, A>(tag));
@@ -909,8 +920,9 @@ public:
             if consteval {
                 return operator()(mask, val, dx::broadcast<E, A>(false_type{}));
             } else {
-                constexpr auto V = const_mask_v<basic_mask<E, A>, M>;
-                return select<V>(internal::abi<A>, val, tag);
+                constexpr auto cmask =
+                    dx::to_compatible_const_mask<basic_vector<E, A>>(mask);
+                return select(internal::abi<A>, cmask, val, tag);
             }
         } else {
             return operator()(mask, val, dx::broadcast<E, A>(false_type{}));
@@ -923,8 +935,8 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, R val, dx::zero_t tag) noexcept {
         if constexpr (unqualified_extended_bitkeepi<M, R>) {
-            constexpr auto V = const_mask_v<R, M>;
-            return select<V>(val, tag);
+            constexpr auto cmask = dx::to_compatible_const_mask<R>(mask);
+            return select(cmask, val, tag);
         } else {
             return operator()(mask, dx::to_canonical(val), tag);
         }
@@ -939,8 +951,9 @@ public:
             if consteval {
                 return operator()(mask, dx::broadcast<E, A>(tag), val);
             } else {
-                constexpr auto V = const_mask_v<basic_vector<E, A>, M>;
-                return select<V>(internal::abi<A>, tag, val);
+                constexpr auto cmask =
+                    dx::to_compatible_const_mask<basic_vector<E, A>>(mask);
+                return select(internal::abi<A>, cmask, tag, val);
             }
         } else {
             return operator()(mask, dx::broadcast<E, A>(tag), val);
@@ -956,8 +969,9 @@ public:
             if consteval {
                 return operator()(mask, dx::broadcast<E, A>(true_type{}), val);
             } else {
-                constexpr auto V = const_mask_v<basic_mask<E, A>, M>;
-                return select<V>(internal::abi<A>, tag, val);
+                constexpr auto cmask =
+                    dx::to_compatible_const_mask<basic_vector<E, A>>(mask);
+                return select(internal::abi<A>, cmask, tag, val);
             }
         } else {
             return operator()(mask, dx::broadcast<E, A>(true_type{}), val);
@@ -971,8 +985,8 @@ public:
     static constexpr auto operator()(
         M mask, dx::all_bits_t tag, R val) noexcept {
         if constexpr (unqualified_extended_bitfilli<M, R>) {
-            constexpr auto V = const_mask_v<R, M>;
-            return select<V>(tag, val);
+            constexpr auto cmask = dx::to_compatible_const_mask<R>(mask);
+            return select(cmask, tag, val);
         } else {
             return operator()(mask, tag, dx::to_canonical(val));
         }
@@ -987,8 +1001,9 @@ public:
             if consteval {
                 return operator()(mask, val, dx::broadcast<E, A>(tag));
             } else {
-                constexpr auto V = const_mask_v<basic_vector<E, A>, M>;
-                return select<V>(internal::abi<A>, val, tag);
+                constexpr auto cmask =
+                    dx::to_compatible_const_mask<basic_vector<E, A>>(mask);
+                return select(internal::abi<A>, cmask, val, tag);
             }
         } else {
             return operator()(mask, val, dx::broadcast<E, A>(tag));
@@ -1004,8 +1019,9 @@ public:
             if consteval {
                 return operator()(mask, val, dx::broadcast<E, A>(true_type{}));
             } else {
-                constexpr auto V = const_mask_v<basic_mask<E, A>, M>;
-                return select<V>(internal::abi<A>, val, tag);
+                constexpr auto cmask =
+                    dx::to_compatible_const_mask<basic_vector<E, A>>(mask);
+                return select(internal::abi<A>, cmask, val, tag);
             }
         } else {
             return operator()(mask, val, dx::broadcast<E, A>(true_type{}));
@@ -1019,8 +1035,8 @@ public:
     static constexpr auto operator()(
         M mask, R val, dx::all_bits_t tag) noexcept {
         if constexpr (unqualified_extended_bitspilli<M, R>) {
-            constexpr auto V = const_mask_v<R, M>;
-            return select<V>(val, tag);
+            constexpr auto cmask = dx::to_compatible_const_mask<R>(mask);
+            return select(cmask, val, tag);
         } else {
             return operator()(mask, dx::to_canonical(val), tag);
         }
@@ -1076,29 +1092,31 @@ public:
             select_t::selective_cast<L, R>(rhs));
     }
     {
-        constexpr auto V = [](M mask) {
+        constexpr auto cmask = [](M mask) {
             if constexpr (simd_class<L>) {
-                return dx::to_compatible_const_mask<L>(mask)();
+                return dx::to_compatible_const_mask<L>(mask);
             } else {
-                return dx::to_compatible_const_mask<R>(mask)();
+                return dx::to_compatible_const_mask<R>(mask);
             }
         }(mask);
 
         using A = decltype(selective_abi<L, R>());
         if constexpr ((canonical_class<L> || canonical_class<R>)) {
-            if constexpr (requires { select<V>(internal::abi<A>, lhs, rhs); }) {
+            if constexpr (requires {
+                              select(internal::abi<A>, cmask, lhs, rhs);
+                          }) {
                 if consteval {
                     return operator()(mask, select_t::selective_cast<L, R>(lhs),
                         select_t::selective_cast<L, R>(rhs));
                 } else {
-                    return select<V>(internal::abi<A>, lhs, rhs);
+                    return select(internal::abi<A>, cmask, lhs, rhs);
                 }
             } else {
                 return operator()(mask, select_t::selective_cast<L, R>(lhs),
                     select_t::selective_cast<L, R>(rhs));
             }
-        } else if constexpr (requires { select<V>(lhs, rhs); }) {
-            return select<V>(lhs, rhs);
+        } else if constexpr (requires { select(cmask, lhs, rhs); }) {
+            return select(cmask, lhs, rhs);
         } else if constexpr (simd_class<L>) {
             return operator()(mask, dx::to_canonical(lhs), rhs);
         } else {

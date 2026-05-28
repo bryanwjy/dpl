@@ -49,7 +49,7 @@ struct convert_t;
 template <integral_cast_target_like<int64> To>
 struct convert_t<To> {
     template <arithmetic_type E>
-    requires integral<E> || unscoped_enumeration<E>
+    requires integral<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static inline simd<To>
         DPL_VECTORCALL operator()(simd<E> src) noexcept {

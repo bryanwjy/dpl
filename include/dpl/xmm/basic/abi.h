@@ -80,22 +80,22 @@ DPL_EXPORT struct abi_tag {
     static constexpr size_t size = 16;
     static constexpr size_t alignment = 16;
 
-    template <simd_element E>
+    template <typename E>
     requires requires {
         typename native_vector_t<E>;
         requires native_vector_type<typename xmm::native_vector_t<E>>;
     }
     using native_vector = typename xmm::native_vector_t<E>;
-    template <simd_element E>
+    template <typename E>
     requires requires { typename native_vector<E>; }
     using native_mask = native_vector<E>;
 };
 
 DPL_EXPORT inline constexpr abi_tag abi{};
 
-DPL_EXPORT template <simd_element E>
+DPL_EXPORT template <typename E>
 using simd DPL_NODEBUG = dx::basic_vector<E, abi_tag>;
-DPL_EXPORT template <simd_element E>
+DPL_EXPORT template <typename E>
 using mask DPL_NODEBUG = dx::basic_mask<E, abi_tag>;
 
 template <typename T>
@@ -112,6 +112,8 @@ using front_t DPL_NODEBUG =
     dpl::conditional_t<(... && !is_same_v<Ts, T0>), T0, T0>;
 } // namespace details
 
+template <typename E, size_t N>
+concept sized_element = sizeof(E) == N && simd_element_for<E, abi_tag>;
 } // namespace datapar::xmm
 
 namespace datapar {
