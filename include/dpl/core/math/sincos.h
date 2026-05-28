@@ -388,63 +388,127 @@ protected:
 };
 
 void sin(...) noexcept = delete;
-void cos(...) noexcept = delete;
-template <auto>
-void sincos(...) noexcept = delete;
+
+struct sin_t;
+
+template <typename T>
+concept unqualified_canonical_sin = requires(T val) {
+    {
+        sin(internal::abi<T>, val)
+    } -> canonical_arithmetic_result<T, T, typename T::abi_type>;
+};
+
+template <typename T>
+concept unqualified_extended_sin = requires(T val) {
+    { sin(val) } -> extended_arithmetic_result<T, T, typename T::abi_type>;
+};
+
+template <typename T>
+concept unqualified_sin = unqualified_extended_sin<T> ||
+    (decayable_vector_for<T, operation_category::lane_agnostic> &&
+        regular_invocable<sin_t, canonical_type_t<T>>);
 
 struct sin_t : private internal::sincos_base {
 
-    template <floating_point_simd T>
+    template <fixed_width_abi A, simd_element_for<A> E>
+    requires same_as<E, float> || same_as<E, double>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(T val) noexcept {
-        if constexpr (requires {
-                          {
-                              sin(internal::abi<T>, val)
-                          } -> equivalent_simd_as<T>;
-                      }) {
-            if constexpr (canonical_vector<T>) {
-                if not consteval {
-                    return sin(internal::abi<T>, val);
-                } else {
-                    return internal::sincos_base::fallback<0>(val);
-                }
+    static constexpr basic_vector<E, A> operator()(
+        basic_vector<E, A> val) noexcept {
+        if constexpr (unqualified_canonical_sin<basic_vector<E, A>>) {
+            if consteval {
+                return internal::sincos_base::fallback<0>(val);
             } else {
-                return sin(internal::abi<T>, val);
+                return sin(internal::abi<A>, val);
             }
-        } else if constexpr (canonical_vector<T>) {
+        } else {
             return internal::sincos_base::fallback<0>(val);
+        }
+    }
+
+    template <simd_abi A, simd_element_for<A> E>
+    requires (scalable_abi<A> || (!same_as<E, float> && !same_as<E, double>)) &&
+        unqualified_canonical_sin<basic_vector<E, A>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr basic_vector<E, A> operator()(
+        basic_vector<E, A> val) noexcept {
+        return sin(internal::abi<A>, val);
+    }
+
+    template <extended_vector T>
+    requires unqualified_sin<T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T val) noexcept {
+        if constexpr (unqualified_extended_sin<T>) {
+            return sin(val);
         } else {
             return operator()(dx::to_canonical(val));
         }
     }
 };
+
+void cos(...) noexcept = delete;
+
+struct cos_t;
+
+template <typename T>
+concept unqualified_canonical_cos = requires(T val) {
+    {
+        cos(internal::abi<T>, val)
+    } -> canonical_arithmetic_result<T, T, typename T::abi_type>;
+};
+
+template <typename T>
+concept unqualified_extended_cos = requires(T val) {
+    { cos(val) } -> extended_arithmetic_result<T, T, typename T::abi_type>;
+};
+
+template <typename T>
+concept unqualified_cos = unqualified_extended_cos<T> ||
+    (decayable_vector_for<T, operation_category::lane_agnostic> &&
+        regular_invocable<cos_t, canonical_type_t<T>>);
 
 struct cos_t : private internal::sincos_base {
 
-    template <floating_point_simd T>
+    template <fixed_width_abi A, simd_element_for<A> E>
+    requires same_as<E, float> || same_as<E, double>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(T val) noexcept {
-        if constexpr (requires {
-                          {
-                              cos(internal::abi<T>, val)
-                          } -> equivalent_simd_as<T>;
-                      }) {
-            if constexpr (canonical_vector<T>) {
-                if not consteval {
-                    return cos(internal::abi<T>, val);
-                } else {
-                    return internal::sincos_base::fallback<-1>(val);
-                }
+    static constexpr basic_vector<E, A> operator()(
+        basic_vector<E, A> val) noexcept {
+        if constexpr (unqualified_canonical_cos<basic_vector<E, A>>) {
+            if consteval {
+                return internal::sincos_base::fallback<0>(val);
             } else {
-                return cos(internal::abi<T>, val);
+                return cos(internal::abi<A>, val);
             }
-        } else if constexpr (canonical_vector<T>) {
-            return internal::sincos_base::fallback<-1>(val);
+        } else {
+            return internal::sincos_base::fallback<0>(val);
+        }
+    }
+
+    template <simd_abi A, simd_element_for<A> E>
+    requires (scalable_abi<A> || !(same_as<E, float> || same_as<E, double>)) &&
+        unqualified_canonical_cos<basic_vector<E, A>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr basic_vector<E, A> operator()(
+        basic_vector<E, A> val) noexcept {
+        return cos(internal::abi<A>, val);
+    }
+
+    template <extended_vector T>
+    requires unqualified_cos<T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T val) noexcept {
+        if constexpr (unqualified_extended_cos<T>) {
+            return cos(val);
         } else {
             return operator()(dx::to_canonical(val));
         }
     }
 };
+
+template <auto>
+void sincos(...) noexcept = delete;
 
 template <integral auto V>
 struct sincosi_t : private internal::sincos_base {

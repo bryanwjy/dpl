@@ -27,10 +27,24 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void exp(...) noexcept = delete;
 
+struct exp_t;
+
 template <typename T>
-concept unqualified_exp = floating_point_simd<T> && requires(T val) {
-    { exp(internal::abi<T>, val) } -> equivalent_simd_as<T>;
+concept unqualified_canonical_exp = requires(T val) {
+    {
+        exp(internal::abi<T>, val)
+    } -> canonical_arithmetic_result<T, T, typename T::abi_type>;
 };
+
+template <typename T>
+concept unqualified_extended_exp = requires(T val) {
+    { exp(val) } -> extended_arithmetic_result<T, T, typename T::abi_type>;
+};
+
+template <typename T>
+concept unqualified_exp = unqualified_extended_exp<T> ||
+    (decayable_vector_for<T, operation_category::lane_agnostic> &&
+        regular_invocable<exp_t, canonical_type_t<T>>);
 
 struct exp_t {
 private:
@@ -123,25 +137,37 @@ private:
     }
 
 public:
-    template <floating_point_simd T>
+    template <simd_abi A, simd_element_for<A> E>
+    requires floating_point<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(T val) noexcept {
-        if constexpr (requires {
-                          {
-                              exp(internal::abi<T>, val)
-                          } -> equivalent_simd_as<T>;
-                      }) {
-            if constexpr (canonical_vector<T>) {
-                if not consteval {
-                    return exp(internal::abi<T>, val);
-                } else {
-                    return fallback(val);
-                }
+    static constexpr basic_vector<E, A> operator()(
+        basic_vector<E, A> val) noexcept {
+        if constexpr (unqualified_canonical_exp<basic_vector<E, A>>) {
+            if consteval {
+                return fallback(val);
             } else {
-                return exp(internal::abi<T>, val);
+                return exp(internal::abi<A>, val);
             }
-        } else if constexpr (canonical_vector<T>) {
+        } else {
             return fallback(val);
+        }
+    }
+
+    template <simd_abi A, simd_element_for<A> E>
+    requires (!floating_point<E>) &&
+        unqualified_canonical_exp<basic_vector<E, A>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr basic_vector<E, A> operator()(
+        basic_vector<E, A> val) noexcept {
+        return exp(internal::abi<A>, val);
+    }
+
+    template <extended_vector T>
+    requires unqualified_exp<T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T val) noexcept {
+        if constexpr (unqualified_extended_exp<T>) {
+            return exp(val);
         } else {
             return operator()(dx::to_canonical(val));
         }

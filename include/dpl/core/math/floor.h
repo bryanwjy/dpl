@@ -78,7 +78,7 @@ private:
     }
 
 public:
-    template <fixed_width_abi A, simd_element_for<A> E>
+    template <simd_abi A, simd_element_for<A> E>
     requires floating_point<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A> operator()(
@@ -95,7 +95,7 @@ public:
     }
 
     template <simd_abi A, simd_element_for<A> E>
-    requires (scalable_abi<A> || !floating_point<E>) &&
+    requires (!floating_point<E>) &&
         unqualified_canonical_floor<basic_vector<E, A>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A> operator()(
@@ -114,7 +114,7 @@ public:
         }
     }
 
-    template <fixed_width_abi A, simd_element_for<A> E>
+    template <simd_abi A, simd_element_for<A> E>
     requires floating_point<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A> operator()(
@@ -132,7 +132,7 @@ public:
     }
 
     template <simd_abi A, simd_element_for<A> E>
-    requires (scalable_abi<A> || !floating_point<E>) &&
+    requires (!floating_point<E>) &&
         unqualified_canonical_floorne<basic_vector<E, A>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A> operator()(

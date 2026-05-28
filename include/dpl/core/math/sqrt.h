@@ -28,6 +28,25 @@ namespace mx = datapar::fmath;
 
 void sqrt(...) noexcept = delete;
 
+struct sqrt_t;
+
+template <typename T>
+concept unqualified_canonical_sqrt = requires(T val) {
+    {
+        sqrt(internal::abi<T>, val)
+    } -> canonical_arithmetic_result<T, T, typename T::abi_type>;
+};
+
+template <typename T>
+concept unqualified_extended_sqrt = requires(T val) {
+    { sqrt(val) } -> extended_arithmetic_result<T, T, typename T::abi_type>;
+};
+
+template <typename T>
+concept unqualified_sqrt = unqualified_extended_sqrt<T> ||
+    (decayable_vector_for<T, operation_category::lane_agnostic> &&
+        regular_invocable<sqrt_t, canonical_type_t<T>>);
+
 struct sqrt_t {
 private:
     template <simd_element E, simd_abi A>
@@ -52,25 +71,37 @@ private:
     }
 
 public:
-    template <floating_point_simd T>
+    template <simd_abi A, simd_element_for<A> E>
+    requires floating_point<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(T val) noexcept {
-        if constexpr (requires {
-                          {
-                              sqrt(internal::abi<T>, val)
-                          } -> equivalent_simd_as<T>;
-                      }) {
-            if constexpr (canonical_vector<T>) {
-                if not consteval {
-                    return sqrt(internal::abi<T>, val);
-                } else {
-                    return fallback(val);
-                }
+    static constexpr basic_vector<E, A> operator()(
+        basic_vector<E, A> val) noexcept {
+        if constexpr (unqualified_canonical_sqrt<basic_vector<E, A>>) {
+            if consteval {
+                return fallback(val);
             } else {
-                return sqrt(internal::abi<T>, val);
+                return sqrt(internal::abi<A>, val);
             }
-        } else if constexpr (canonical_vector<T>) {
+        } else {
             return fallback(val);
+        }
+    }
+
+    template <simd_abi A, simd_element_for<A> E>
+    requires (!floating_point<E>) &&
+        unqualified_canonical_sqrt<basic_vector<E, A>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr basic_vector<E, A> operator()(
+        basic_vector<E, A> val) noexcept {
+        return sqrt(internal::abi<A>, val);
+    }
+
+    template <extended_vector T>
+    requires unqualified_sqrt<T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T val) noexcept {
+        if constexpr (unqualified_extended_sqrt<T>) {
+            return sqrt(val);
         } else {
             return operator()(dx::to_canonical(val));
         }

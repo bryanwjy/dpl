@@ -236,10 +236,24 @@ concept frexp_result_type = requires {
         decltype(make_frexp_t<L, R>::exp)>;
 };
 
-template <typename T, typename O>
-concept unqualified_frexp = requires(T val) {
-    { frexp(internal::abi<T>, val, O{}) } -> frexp_result_type<T, O>;
+void frexp(...) noexcept = delete;
+
+struct frexp_t;
+
+template <typename T, typename O, typename A = typename T::abi_type>
+concept unqualified_canonical_frexp = requires(T val, O opt) {
+    { frexp(internal::abi<A>, val, opt) } -> frexp_result_type<T, O>;
 };
+
+template <typename T, typename O, typename A = typename T::abi_type>
+concept unqualified_extended_frexp = requires(T val, O opt) {
+    { frexp(val, opt) } -> frexp_result_type<T, O>;
+};
+
+template <typename T, typename O, typename A = typename T::abi_type>
+concept unqualified_frexp = unqualified_extended_frexp<T, O, A> ||
+    (decayable_vector_for<T, operation_category::lane_agnostic> &&
+        regular_invocable<frexp_t, canonical_type_t<T>, O>);
 
 struct frexp_t {
 private:
@@ -363,45 +377,47 @@ private:
     }
 
 public:
-    template <floating_point_simd T>
+    template <simd_vector T>
+    requires floating_point<typename T::value_type>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(T val) noexcept {
         return operator()(val, frexp_copysign | frexp_cmath | frexp_integral);
     }
 
-    template <floating_point_simd T, frexp_options Opt>
+    template <simd_abi A, simd_element_for<A> E, frexp_options Opt>
+    requires floating_point<E> &&
+        (Opt() == frexp_cmath || Opt() == frexp_reduced)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(T val, Opt opt) noexcept
-    requires (opt == frexp_cmath || opt == frexp_reduced)
-    {
-        if constexpr (unqualified_frexp<T, Opt>) {
-            if constexpr (canonical_vector<T>) {
-                if consteval {
-                    return fallback(val, opt);
-                } else {
-                    return frexp(internal::abi<T>, val, opt);
-                }
+    static constexpr basic_vector<E, A> operator()(
+        basic_vector<E, A> val, Opt opt) noexcept {
+        if constexpr (unqualified_canonical_frexp<basic_vector<E, A>, Opt>) {
+            if consteval {
+                return fallback(val);
             } else {
-                return frexp(internal::abi<T>, val, opt);
+                return frexp(internal::abi<A>, val, opt);
             }
-        } else if constexpr (canonical_vector<T>) {
-            return fallback(val, opt);
         } else {
-            return operator()(dx::to_canonical(val), opt);
+            return fallback(val);
         }
     }
 
-    template <floating_point_simd T, frexp_options Opt>
-    requires (unqualified_frexp<T, Opt> ||
-        unqualified_frexp<canonical_type_t<T>, Opt>)
+    template <simd_abi A, simd_element_for<A> E, frexp_options Opt>
+    requires (!floating_point<E>) &&
+        unqualified_canonical_frexp<basic_vector<E, A>, Opt>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(T val, Opt opt) noexcept
-    requires (!Opt::has(frexp_cmath) && !Opt::has(frexp_reduced))
-    {
-        if constexpr (unqualified_frexp<T, Opt>) {
-            return frexp(internal::abi<T>, val, opt);
+    static constexpr basic_vector<E, A> operator()(
+        basic_vector<E, A> val, Opt opt) noexcept {
+        return frexp(internal::abi<A>, val, opt);
+    }
+
+    template <extended_vector T, frexp_options Opt>
+    requires unqualified_frexp<T, Opt>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T val, Opt opt) noexcept {
+        if constexpr (unqualified_extended_frexp<T, Opt>) {
+            return frexp(val, opt);
         } else {
-            return frexp(internal::abi<T>, dx::to_canonical(val), opt);
+            return operator()(dx::to_canonical(val), opt);
         }
     }
 };

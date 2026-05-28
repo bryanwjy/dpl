@@ -39,7 +39,7 @@ private:
     }
 
 public:
-    template <fixed_width_abi A, simd_floating_point_for<A> E>
+    template <simd_abi A, simd_floating_point_for<A> E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_mask<E, A> operator()(
         basic_vector<E, A> arg) noexcept {
@@ -54,8 +54,9 @@ public:
         }
     }
 
-    template <scalable_abi A, simd_floating_point_for<A> E>
-    requires unqualified_canonical_isnormal<basic_vector<E, A>>
+    template <simd_abi A, simd_element_for<A> E>
+    requires (!floating_point<E>) &&
+        unqualified_canonical_isnormal<basic_vector<E, A>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_mask<E, A> operator()(
         basic_vector<E, A> arg) noexcept {

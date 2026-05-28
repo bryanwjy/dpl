@@ -21,8 +21,6 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void add(...) noexcept = delete;
-template <auto>
-void add(...) noexcept = delete;
 
 struct add_t;
 

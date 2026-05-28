@@ -14,6 +14,7 @@
 #  include "dpl/core/type_traits/rebind_simd.h"
 #  include "dpl/core/type_traits/simd_traits.h"
 #  include "dpl/std/concepts/same_as.h"
+#  include "dpl/std/utility/forward.h"
 #endif
 
 #include "dpl/core/operations/bit.h"
@@ -30,6 +31,21 @@ namespace datapar::internal {
 
 template <typename T>
 inline constexpr bool is_negated_mask_specialization = false;
+
+template <simd_mask T>
+class negated_mask;
+
+template <typename T>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+constexpr negated_mask<remove_cvref_t<T>> make_negated_mask(T&& val) noexcept {
+    return negated_mask<remove_cvref_t<T>>(__DPL forward<T>(val));
+}
+
+template <typename T>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+constexpr auto make_negated_mask(negated_mask<T> const& val) noexcept {
+    return !val;
+}
 
 template <simd_mask T>
 class negated_mask {
@@ -108,7 +124,8 @@ public:
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     friend constexpr bool any_of(negated_mask self) noexcept {
-        return !dx::none_of(internal::abi<T>, !self);
+        return internal::make_negated_mask(
+            dx::none_of(internal::abi<T>, !self));
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -129,9 +146,9 @@ public:
     template <simd_mask U>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     friend constexpr auto bwand(negated_mask self, negated_mask<U> arg) noexcept
-    requires requires { !dx::bwor(!self, !arg); }
+    requires requires { internal::make_negated_mask(dx::bwor(!self, !arg)); }
     {
-        return !dx::bwor(!self, !arg);
+        return internal::make_negated_mask(dx::bwor(!self, !arg));
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -142,9 +159,9 @@ public:
     template <simd_mask U>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     friend constexpr auto bwor(negated_mask self, negated_mask<U> arg) noexcept
-    requires requires { !dx::bwand(!self, !arg); }
+    requires requires { internal::make_negated_mask(dx::bwand(!self, !arg)); }
     {
-        return !dx::bwand(!self, !arg);
+        return internal::make_negated_mask(dx::bwand(!self, !arg));
     }
 
     template <simd_mask U>
@@ -195,27 +212,33 @@ public:
     requires (!internal::is_negated_mask_specialization<M>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     friend constexpr auto bwxor(negated_mask self, M arg) noexcept
-    requires requires { !dx::bwxor(!self, arg); }
+    requires requires { internal::make_negated_mask(dx::bwxor(!self, arg)); }
     {
-        return !dx::bwxor(!self, arg);
+        return internal::make_negated_mask(dx::bwxor(!self, arg));
     }
 
     template <simd_mask M>
     requires (!internal::is_negated_mask_specialization<M>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     friend constexpr auto bwandnot(negated_mask self, M arg) noexcept
-    requires requires { !dx::bwor(negated_mask<M>(arg), self); }
+    requires requires {
+        internal::make_negated_mask(dx::bwor(negated_mask<M>(arg), self));
+    }
     {
-        return !dx::bwor(negated_mask<M>(arg), self);
+        return internal::make_negated_mask(
+            dx::bwor(negated_mask<M>(arg), self));
     }
 
     template <simd_mask M>
     requires (!internal::is_negated_mask_specialization<M>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     friend constexpr auto bwornot(negated_mask self, M arg) noexcept
-    requires requires { !dx::bwand(negated_mask<M>(arg), self); }
+    requires requires {
+        internal::make_negated_mask(dx::bwand(negated_mask<M>(arg), self));
+    }
     {
-        return !dx::bwand(negated_mask<M>(arg), self);
+        return internal::make_negated_mask(
+            dx::bwand(negated_mask<M>(arg), self));
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -249,9 +272,9 @@ public:
     template <simd_element_for<abi_type> TE>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     friend constexpr auto reinterpret(negated_mask self) noexcept
-    requires requires { !dx::reinterpret<TE>(!self); }
+    requires requires { dx::reinterpret<TE>(!self); }
     {
-        return !dx::reinterpret<TE>(!self);
+        return internal::make_negated_mask(dx::reinterpret<TE>(!self));
     }
 
 private:

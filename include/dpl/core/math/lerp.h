@@ -86,7 +86,7 @@ private:
     }
 
 public:
-    template <fixed_width_abi A, simd_element_for<A> E>
+    template <simd_abi A, simd_element_for<A> E>
     requires floating_point<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A> operator()(basic_vector<E, A> a,
@@ -108,8 +108,7 @@ public:
     requires common_abi_with<common_abi_t<AA, BA>, CA> &&
         simd_element_for<E, AA> && simd_element_for<E, BA> &&
         simd_element_for<E, CA> &&
-        (scalable_abi<AA> || scalable_abi<BA> || scalable_abi<CA> ||
-            different_from<AA, BA> || different_from<AA, CA> ||
+        (different_from<AA, BA> || different_from<AA, CA> ||
             different_from<BA, CA> || !floating_point<E>) &&
         unqualified_canonical_lerp<basic_vector<E, AA>, basic_vector<E, BA>,
             basic_vector<E, CA>>

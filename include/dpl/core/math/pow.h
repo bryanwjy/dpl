@@ -26,10 +26,23 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void pow(...) noexcept = delete;
 
+struct pow_t;
+
 template <typename L, typename R, typename A = common_abi_t<L, R>>
-concept unqualified_pow = requires(L lhs, R rhs) {
-    { pow(internal::abi<A>, lhs, rhs) } -> arithmetic_result<L, R>;
+concept unqualified_canonical_pow = requires(L lhs, R rhs) {
+    { pow(internal::abi<A>, lhs, rhs) } -> canonical_arithmetic_result<L, L, A>;
 };
+
+template <typename L, typename R, typename A = common_abi_t<L, R>>
+concept unqualified_extended_pow = requires(L lhs, R rhs) {
+    { pow(lhs, rhs) } -> extended_arithmetic_result<L, L, A>;
+};
+
+template <typename L, typename R, typename A = common_abi_t<L, R>>
+concept unqualified_pow = unqualified_extended_pow<L, R, A> ||
+    (decayable_vector_for<L, operation_category::lane_agnostic> &&
+        decayable_vector_for<R, operation_category::lane_agnostic> &&
+        regular_invocable<pow_t, canonical_type_t<L>, canonical_type_t<R>>);
 
 struct pow_t : binary_operation_base<pow_t> {
 private:
@@ -182,7 +195,7 @@ private:
             dx::frexp(absl, frexp_reduced | frexp_floating_point);
         auto result = pow_t::exp2(rhs * (pow_t::log2(fr) + exp));
 
-        constexpr auto inf = dx::infinity_v<decltype(result)>;
+        constexpr auto inf = dx::broadcast<E, A>(dx::infinity);
 
         auto const efx = dx::fixup(dx::sign(absl - dx::one, rhs), inf,
             fpfix::condition<fpfix::negative, dx::zero> |
@@ -197,11 +210,11 @@ private:
                 dx::trunc(rhs) == rhs && dx::abs(rhs) < fmath::maxint;
         };
 
-        result = dx::select(dx::isinf(lhs) || islhs_zero,
-            dx::negate(is_odd(rhs) && lhs < dx::zero,
-                dx::select(
-                    dx::signbit(rhs) ^ islhs_zero, dx::zero, dx::infinity)),
-            result);
+        auto const invalid =
+            dx::select(dx::signbit(rhs) ^ islhs_zero, dx::zero, inf);
+        auto const negated =
+            dx::negate(invalid, is_odd(rhs) && lhs < dx::zero, invalid);
+        result = dx::select(dx::isinf(lhs) || islhs_zero, negated, result);
         result =
             dx::select(dx::isnan(lhs) || dx::isnan(rhs), dx::all_bits, result);
 
@@ -209,40 +222,41 @@ private:
     }
 
 public:
-    template <floating_point_simd L, common_float_simd_with<L> R>
-    requires same_abi_simd_as<L, R>
+    template <simd_abi A, simd_element_for<A> E>
+    requires floating_point<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L lhs, R rhs) noexcept {
-        using A = typename L::abi_type; // Same ABI, just pick one
-        if constexpr (unqualified_pow<L, R, A>) {
-            if constexpr (canonical_vector<L> && canonical_vector<R>) {
-                if consteval {
-                    return fallback(lhs, rhs);
-                } else {
-                    return pow(internal::abi<A>, lhs, rhs);
-                }
+    static constexpr basic_vector<E, A> operator()(
+        basic_vector<E, A> lhs, basic_vector<E, A> rhs) noexcept {
+        if constexpr (unqualified_canonical_pow<basic_vector<E, A>,
+                          basic_vector<E, A>>) {
+            if consteval {
+                return fallback(lhs, rhs);
             } else {
                 return pow(internal::abi<A>, lhs, rhs);
             }
-        } else if constexpr (canonical_vector<L> && canonical_vector<R>) {
-            return fallback(lhs, rhs);
         } else {
-            return operator()(dx::to_canonical(lhs), dx::to_canonical(rhs));
+            return fallback(lhs, rhs);
         }
     }
 
-    template <floating_point_simd L, common_float_simd_with<L> R>
-    requires (!same_abi_simd_as<L, R>) &&
-        (unqualified_pow<L, R> ||
-            unqualified_pow<canonical_type_t<L>, canonical_type_t<R>>)
+    template <simd_abi LA, common_abi_with<LA> RA, typename E>
+    requires simd_element_for<E, LA> && simd_element_for<E, RA> &&
+        (different_from<LA, RA> || !floating_point<E>) &&
+        unqualified_canonical_pow<basic_vector<E, LA>, basic_vector<E, RA>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr basic_vector<E, common_abi_t<LA, RA>> operator()(
+        basic_vector<E, LA> lhs, basic_vector<E, RA> rhs) noexcept {
+        return pow(internal::abi<common_abi_t<LA, RA>>, lhs, rhs);
+    }
+
+    template <simd_vector L, simd_vector R>
+    requires (extended_vector<L> || extended_vector<R>) && unqualified_pow<L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs) noexcept {
-        using A = common_abi_t<L, R>;
-        if constexpr (unqualified_pow<L, R>) {
-            return pow(internal::abi<A>, lhs, rhs);
+        if constexpr (unqualified_extended_pow<L, R>) {
+            return pow(lhs, rhs);
         } else {
-            return pow(
-                internal::abi<A>, dx::to_canonical(lhs), dx::to_canonical(rhs));
+            return operator()(dx::to_canonical(lhs), dx::to_canonical(rhs));
         }
     }
 

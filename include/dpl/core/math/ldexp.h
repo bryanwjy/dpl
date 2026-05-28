@@ -21,11 +21,33 @@
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
-void ldexp(...) noexcept = delete;
-
 template <typename T>
 concept ldexp_integral =
-    integral_simd<T> && signed_integral<typename T::value_type>;
+    simd_vector<T> && signed_integral<typename T::value_type>;
+
+void ldexp(...) noexcept = delete;
+
+struct ldexp_t;
+
+template <typename T, typename I, typename A = common_abi_t<T, I>>
+concept unqualified_canonical_ldexp = requires(T val, I exp) {
+    {
+        ldexp(internal::abi<T>, val, exp)
+    } -> canonical_arithmetic_result<T, T, typename T::abi_type>;
+};
+
+template <typename T, typename I, typename A = common_abi_t<T, I>>
+concept unqualified_extended_ldexp = requires(T val, I exp) {
+    {
+        ldexp(val, exp)
+    } -> extended_arithmetic_result<T, T, typename T::abi_type>;
+};
+
+template <typename T, typename I, typename A = common_abi_t<T, I>>
+concept unqualified_ldexp = unqualified_extended_ldexp<T, I, A> ||
+    (decayable_vector_for<T, operation_category::lane_agnostic> &&
+        decayable_vector_for<I, operation_category::lane_agnostic> &&
+        regular_invocable<ldexp_t, canonical_type_t<T>, canonical_type_t<I>>);
 
 struct ldexp_t : binary_operation_base<ldexp_t> {
     friend binary_operation_base<ldexp_t>;
@@ -65,7 +87,7 @@ struct ldexp_t : binary_operation_base<ldexp_t> {
             __DPL popcount(static_cast<unsigned>(exp_bias)) - 1;
         constexpr auto lshift = imm<chunk>;
         constexpr auto rshift = imm<chunk - 2>;
-        auto const sign = signbit(exp);
+        auto const sign = ldexp_t::signbit(exp);
         auto m = (((sign + exp) >> lshift) - sign) << rshift;
         exp = exp - (m << imm<2>);
 
@@ -86,26 +108,43 @@ struct ldexp_t : binary_operation_base<ldexp_t> {
         rebind_simd_t<T, signed_representation_t<typename T::value_type>>;
 
 public:
-    template <floating_point_simd T, ldexp_integral I>
-    requires common_size_simd_with<T, I> && same_abi_simd_as<T, I>
+    template <simd_abi A, simd_element_for<A> E, simd_element_for<A> I>
+    requires signed_integral<I> && floating_point<E> && common_size_with<E, I>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr basic_vector<E, A> operator()(
+        basic_vector<E, A> num, basic_vector<I, A> exp) noexcept {
+        if constexpr (unqualified_canonical_ldexp<basic_vector<E, A>,
+                          basic_vector<I, A>, A>) {
+            if consteval {
+                return ldexp_t::fallback(num, exp);
+            } else {
+                return ldexp(internal::abi<A>, num, exp);
+            }
+        } else {
+            return ldexp_t::fallback(num, exp);
+        }
+    }
+
+    template <simd_abi LA, simd_element_for<LA> E, simd_abi RA,
+        simd_element_for<RA> I>
+    requires signed_integral<I> && common_size_with<E, I> &&
+        (!floating_point<E> || different_from<LA, RA>) &&
+        unqualified_canonical_ldexp<basic_vector<E, LA>, basic_vector<I, RA>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr basic_vector<E, common_abi_t<LA, RA>> operator()(
+        basic_vector<E, LA> num, basic_vector<I, RA> exp) noexcept {
+        using A = common_abi_t<LA, RA>;
+        return ldexp(internal::abi<A>, num, exp);
+    }
+
+    template <simd_vector T, simd_vector I>
+    requires signed_integral<typename I::value_type> &&
+        common_size_with<typename T::value_type, typename I::value_type> &&
+        (extended_vector<T> || extended_vector<I>) && unqualified_ldexp<T, I>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T num, I exp) noexcept {
-        if constexpr (requires {
-                          {
-                              ldexp(internal::abi<T>, num, exp)
-                          } -> equivalent_simd_as<T>;
-                      }) {
-            if constexpr (canonical_vector<T> && canonical_vector<I>) {
-                if consteval {
-                    return fallback(num, exp);
-                } else {
-                    return ldexp(internal::abi<T>, num, exp);
-                }
-            } else {
-                return ldexp(internal::abi<T>, num, exp);
-            }
-        } else if constexpr (canonical_vector<T> && canonical_vector<I>) {
-            return fallback(num, exp);
+        if constexpr (unqualified_extended_ldexp<T, I>) {
+            return ldexp(num, exp);
         } else {
             return operator()(dx::to_canonical(num), dx::to_canonical(exp));
         }

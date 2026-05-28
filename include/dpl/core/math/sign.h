@@ -57,8 +57,7 @@ private:
         if constexpr (floating_point<E>) {
             return left ^ (right & dx::msb);
         } else {
-            auto const negated =
-                dx::select(right < dx::zero, dx::negate(left), left);
+            auto const negated = dx::negate(left, right < dx::zero, left);
             return dx::select(right == dx::zero, dx::zero, negated);
         }
     }

@@ -28,14 +28,29 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::internal {
-
 void fixup(...) noexcept = delete;
 
-template <typename A, typename L, typename R, typename T>
-concept unqualified_fixup = floating_point_simd<L> && floating_point_simd<R> &&
-    requires(L left, R right, T conditions) {
-        fixup(internal::abi<A>, left, right, conditions);
-    };
+struct fixup_t;
+
+template <typename T, typename C, typename A = typename T::abi_type>
+concept unqualified_canonical_fixup = requires(T val, C conditions) {
+    {
+        fixup(internal::abi<A>, val, val, conditions)
+    } -> canonical_arithmetic_result<T, T, typename T::abi_type>;
+};
+
+template <typename T, typename C, typename A = typename T::abi_type>
+concept unqualified_extended_fixup = requires(T val, C conditions) {
+    {
+        fixup(val, val, conditions)
+    } -> canonical_arithmetic_result<T, T, typename T::abi_type>;
+};
+
+template <typename T, typename C, typename A = typename T::abi_type>
+concept unqualified_fixup = unqualified_extended_fixup<T, C, A> ||
+    (decayable_vector_for<T, operation_category::lane_agnostic> &&
+        regular_invocable<fixup_t, canonical_type_t<T>, canonical_type_t<T>,
+            C>);
 
 struct fixup_t {
 private:
@@ -296,24 +311,45 @@ private:
     }
 
 public:
-    template <floating_point_simd T,
+    template <simd_abi A, simd_element_for<A> E, fpfix::condition_set_for<E> F>
+    requires floating_point<E> &&
+        fpfix::result_subset_of<F, E, dx::nan, dx::zero, -dx::zero,
+            dx::infinity, -dx::infinity>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr basic_vector<E, A> operator()(basic_vector<E, A> src,
+        basic_vector<E, A> result, F conditions) noexcept {
+        if constexpr (unqualified_canonical_fixup<basic_vector<E, A>, F>) {
+            if consteval {
+                return fallback(src, result, conditions);
+            } else {
+                return fixup(internal::abi<A>, src, result, conditions);
+            }
+        } else {
+            return fallback(src, result, conditions);
+        }
+    }
+
+    template <simd_abi A, simd_element_for<A> E, fpfix::condition_set_for<E> F>
+    requires fpfix::result_subset_of<F, E, dx::nan, dx::zero, -dx::zero,
+                 dx::infinity, -dx::infinity> &&
+        (!floating_point<E>) &&
+        unqualified_canonical_fixup<basic_vector<E, A>, F>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr basic_vector<E, A> operator()(basic_vector<E, A> src,
+        basic_vector<E, A> result, F conditions) noexcept {
+        return fixup(internal::abi<A>, src, result, conditions);
+    }
+
+    template <extended_vector T,
         fpfix::condition_set_for<typename T::value_type> F>
     requires fpfix::result_subset_of<F, typename T::value_type, dx::nan,
-        dx::zero, -dx::zero, dx::infinity, -dx::infinity>
+                 dx::zero, -dx::zero, dx::infinity, -dx::infinity> &&
+        unqualified_fixup<T, F>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T src, T result, F conditions) noexcept {
-        if constexpr (unqualified_fixup<T, T, T, F>) {
-            if constexpr (canonical_vector<T>) {
-                if not consteval {
-                    return fixup(internal::abi<T>, src, result, conditions);
-                } else {
-                    return fallback(src, result, conditions);
-                }
-            } else {
-                return fixup(internal::abi<T>, src, result, conditions);
-            }
-        } else if constexpr (canonical_vector<T>) {
-            return fallback(src, result, conditions);
+    static constexpr auto operator()(
+        T src, type_identity_t<T> result, F conditions) noexcept {
+        if constexpr (unqualified_extended_fixup<T, F>) {
+            return fixup(src, result, conditions);
         } else {
             return operator()(
                 dx::to_canonical(src), dx::to_canonical(result), conditions);

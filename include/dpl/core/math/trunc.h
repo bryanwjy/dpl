@@ -80,15 +80,15 @@ private:
             return dx::select(exp < margin, dx::one, exp);
         }(mx::ilogb(mx::compliance::unsafe, val) + margin);
 
-        auto const m = dx::all_bits_v<decltype(val)> >> exp;
-        auto const result = dx::select(m, dx::zero, val);
+        auto const m = dx::broadcast<E, A>(dx::all_bits) >> exp;
+        auto const result = dx::bwandnot(val, m);
         return dx::select(exp >= width ||
                 dx::bwand(dx::reinterpret<uint>(val), m) == dx::zero,
             val, result);
     }
 
 public:
-    template <fixed_width_abi A, simd_element_for<A> E>
+    template <simd_abi A, simd_element_for<A> E>
     requires floating_point<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A> operator()(
@@ -105,7 +105,7 @@ public:
     }
 
     template <simd_abi A, simd_element_for<A> E>
-    requires (scalable_abi<A> || !floating_point<E>) &&
+    requires (!floating_point<E>) &&
         unqualified_canonical_trunc<basic_vector<E, A>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A> operator()(
@@ -124,7 +124,7 @@ public:
         }
     }
 
-    template <fixed_width_abi A, simd_element_for<A> E>
+    template <simd_abi A, simd_element_for<A> E>
     requires floating_point<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A> operator()(
@@ -142,7 +142,7 @@ public:
     }
 
     template <simd_abi A, simd_element_for<A> E>
-    requires (scalable_abi<A> || !floating_point<E>) &&
+    requires (!floating_point<E>) &&
         unqualified_canonical_truncne<basic_vector<E, A>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A> operator()(
