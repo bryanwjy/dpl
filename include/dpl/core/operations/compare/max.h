@@ -156,7 +156,7 @@ private:
     static constexpr auto DPL_VECTORCALL fallback(
         basic_vector<E, A> lhs, basic_vector<E, A> rhs) noexcept {
         return internal::transform<basic_vector<E, A>>(
-            [](E lhs, E rhs) { return lhs < rhs ? lhs : rhs; }, lhs, rhs);
+            [](E lhs, E rhs) { return lhs < rhs ? rhs : lhs; }, lhs, rhs);
     }
 
 public:

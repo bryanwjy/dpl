@@ -21,6 +21,8 @@ consteval dpl::bfloat16 operator""_bf16(long double val) noexcept {
 #  define BF16(X) X##bf16
 #endif
 
+static_assert(dpp::floor(dpp::broadcast<float, abi>(-1.5f))[0] == -2.0f);
+
 constexpr auto min(auto lhs, auto rhs) noexcept {
     return lhs < rhs ? lhs : rhs;
 }

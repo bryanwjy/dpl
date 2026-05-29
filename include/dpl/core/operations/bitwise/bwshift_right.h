@@ -500,7 +500,7 @@ public:
     //
 
     template <fixed_width_abi A, simd_element_for<A> LE, simd_element_for<A> RE>
-    requires common_size_with<LE, RE> && integral<LE>
+    requires common_size_with<LE, RE> && integral<RE>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<LE, A> operator()(
         basic_vector<LE, A> val, basic_vector<RE, A> shift) noexcept {
@@ -518,8 +518,9 @@ public:
 
     template <simd_abi LA, simd_element_for<LA> LE, common_abi_with<LA> RA,
         simd_element_for<RA> RE>
-    requires unqualified_canonical_bwsrv<basic_vector<LE, LA>,
-        basic_vector<RE, RA>>
+    requires (scalable_abi<LA> || scalable_abi<RA> || different_from<LA, RA>) &&
+        integral<RE> &&
+        unqualified_canonical_bwsrv<basic_vector<LE, LA>, basic_vector<RE, RA>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<LE, common_abi_t<LA, RA>> operator()(
         basic_vector<LE, LA> val, basic_vector<RE, RA> shift) noexcept {

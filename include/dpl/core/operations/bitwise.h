@@ -60,36 +60,73 @@ public:
     }
 
     template <typename R>
+    requires regular_invocable<internal::bwshift_left_t, D, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    constexpr invoke_result_t<internal::bwshift_left_t, D, R> operator<<(
+        this D lhs, R rhs) noexcept
+    requires simd_vector<D>
+    {
+        return datapar::bwshift_left(lhs, rhs);
+    }
+
+    template <typename R>
+    requires regular_invocable<internal::bwshift_right_t, D, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    constexpr invoke_result_t<internal::bwshift_right_t, D, R> operator>>(
+        this D lhs, R rhs) noexcept
+    requires simd_vector<D>
+    {
+        return datapar::bwshift_right(lhs, rhs);
+    }
+
+    template <typename R>
     requires regular_invocable<internal::bwor_t, D, R> &&
-        regular_invocable<internal::reinterpret_t<D>,
-            invoke_result_t<internal::bwor_t, D, R>>
+        assignable_from<D&, invoke_result_t<internal::bwor_t, D, R>>
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
         constexpr D& operator|=(this D& lhs, R rhs) noexcept
     requires simd_vector<D>
     {
-        return lhs = datapar::reinterpret<D>(datapar::bwor(lhs, rhs));
+        return lhs = datapar::bwor(lhs, rhs);
     }
 
     template <typename R>
     requires regular_invocable<internal::bwand_t, D, R> &&
-        regular_invocable<internal::reinterpret_t<D>,
-            invoke_result_t<internal::bwand_t, D, R>>
+        assignable_from<D&, invoke_result_t<internal::bwand_t, D, R>>
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
         constexpr D& operator&=(this D& lhs, R rhs) noexcept
     requires simd_vector<D>
     {
-        return lhs = datapar::reinterpret<D>(datapar::bwand(lhs, rhs));
+        return lhs = datapar::bwand(lhs, rhs);
     }
 
     template <typename R>
     requires regular_invocable<internal::bwxor_t, D, R> &&
-        regular_invocable<internal::reinterpret_t<D>,
-            invoke_result_t<internal::bwxor_t, D, R>>
+        assignable_from<D&, invoke_result_t<internal::bwxor_t, D, R>>
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
         constexpr D& operator^=(this D& lhs, R rhs) noexcept
     requires simd_vector<D>
     {
-        return lhs = datapar::reinterpret<D>(datapar::bwxor(lhs, rhs));
+        return lhs = datapar::bwxor(lhs, rhs);
+    }
+
+    template <typename R>
+    requires regular_invocable<internal::bwshift_left_t, D, R> &&
+        assignable_from<D&, invoke_result_t<internal::bwshift_left_t, D, R>>
+        DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
+        constexpr D& operator<<=(this D& lhs, R rhs) noexcept
+    requires simd_vector<D>
+    {
+        return lhs = datapar::bwshift_left(lhs, rhs);
+    }
+
+    template <typename R>
+    requires regular_invocable<internal::bwshift_right_t, D, R> &&
+        assignable_from<D&, invoke_result_t<internal::bwshift_right_t, D, R>>
+        DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
+        constexpr D& operator>>=(this D& lhs, R rhs) noexcept
+    requires simd_vector<D>
+    {
+        return lhs = datapar::bwshift_right(lhs, rhs);
     }
 
     template <typename L>
@@ -149,24 +186,69 @@ constexpr invoke_result_t<internal::bwxor_t, L, R> operator^(
 }
 
 DPL_EXPORT template <typename L, typename R>
-DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
-constexpr auto operator|=(L& lhs, R rhs) noexcept
-    -> enable_if_t<equivalent_simd_as<L, decltype(lhs | rhs)>, L&> {
-    return lhs = datapar::reinterpret<L>(lhs | rhs);
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+constexpr invoke_result_t<internal::bwshift_left_t, L, R> operator<<(
+    L lhs, R rhs) noexcept {
+    return datapar::bwshift_left(lhs, rhs);
 }
 
 DPL_EXPORT template <typename L, typename R>
-DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
-constexpr auto operator&=(L& lhs, R rhs) noexcept
-    -> enable_if_t<equivalent_simd_as<L, decltype(lhs & rhs)>, L&> {
-    return lhs = datapar::reinterpret<L>(lhs & rhs);
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+constexpr invoke_result_t<internal::bwshift_right_t, L, R> operator>>(
+    L lhs, R rhs) noexcept {
+    return datapar::bwshift_right(lhs, rhs);
 }
 
 DPL_EXPORT template <typename L, typename R>
+requires requires {
+    typename invoke_result_t<internal::bwor_t, L, R>;
+    requires assignable_from<L&, invoke_result_t<internal::bwor_t, L, R>>;
+}
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
-constexpr auto operator^=(L& lhs, R rhs) noexcept
-    -> enable_if_t<equivalent_simd_as<L, decltype(lhs ^ rhs)>, L&> {
-    return lhs = datapar::reinterpret<L>(lhs ^ rhs);
+constexpr L& operator|=(L& lhs, R rhs) noexcept {
+    return lhs = lhs | rhs;
+}
+
+DPL_EXPORT template <typename L, typename R>
+requires requires {
+    typename invoke_result_t<internal::bwand_t, L, R>;
+    requires assignable_from<L&, invoke_result_t<internal::bwand_t, L, R>>;
+}
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
+constexpr L& operator&=(L& lhs, R rhs) noexcept {
+    return lhs = lhs & rhs;
+}
+
+DPL_EXPORT template <typename L, typename R>
+requires requires {
+    typename invoke_result_t<internal::bwxor_t, L, R>;
+    requires assignable_from<L&, invoke_result_t<internal::bwxor_t, L, R>>;
+}
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
+constexpr L& operator^=(L& lhs, R rhs) noexcept {
+    return lhs = lhs ^ rhs;
+}
+
+DPL_EXPORT template <typename L, typename R>
+requires requires {
+    typename invoke_result_t<internal::bwshift_left_t, L, R>;
+    requires assignable_from<L&,
+        invoke_result_t<internal::bwshift_left_t, L, R>>;
+}
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
+constexpr L& operator<<=(L& lhs, R rhs) noexcept {
+    return lhs = (lhs << rhs);
+}
+
+DPL_EXPORT template <typename L, typename R>
+requires requires {
+    typename invoke_result_t<internal::bwshift_right_t, L, R>;
+    requires assignable_from<L&,
+        invoke_result_t<internal::bwshift_right_t, L, R>>;
+}
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
+constexpr L& operator&=(L& lhs, R rhs) noexcept {
+    return lhs = (lhs >> rhs);
 }
 
 DPL_EXPORT template <typename T>

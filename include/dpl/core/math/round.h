@@ -65,9 +65,11 @@ concept unqualified_round = unqualified_extended_round<T, R> ||
     (decayable_vector_for<T, operation_category::lane_agnostic> &&
         regular_invocable<round_t, canonical_type_t<T>, rounding_t<R>>);
 
-struct round_t {
+struct round_t : mx::masked_operation<round_t> {
 private:
-    template <floating_point E, simd_abi A>
+    friend mx::masked_operation<round_t>;
+
+    template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(
         basic_vector<E, A> val) noexcept {
@@ -84,7 +86,7 @@ private:
             dx::copysign(x - fr, finite), val);
     }
 
-    template <floating_point E, simd_abi A, rounding_flags R>
+    template <typename E, typename A, rounding_flags R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(
         basic_vector<E, A> val, rounding_t<R>) noexcept {
@@ -120,6 +122,87 @@ private:
             return dx::select(isfinite && dx::abs(val) < mx::maxint,
                 dx::copysign(i, finite), val);
         }
+    }
+
+    template <simd_vector S, typename M, simd_vector T>
+    requires mx::maskable_operator<round_t, S, M, T> &&
+        mx::canonical_operator_args<S, M, T> && requires(S src, M mask, T val) {
+            round(internal::abi<T>, src, mask, val);
+        }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(S src, M mask, T val) noexcept {
+        return round(internal::abi<T>, src, mask, val);
+    }
+
+    template <simd_vector S, typename M, simd_vector T>
+    requires mx::maskable_operator<round_t, S, M, T> &&
+        (!mx::canonical_operator_args<S, M, T>) &&
+        requires(S src, M mask, T val) { round(src, mask, val); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(S src, M mask, T val) noexcept {
+        return round(src, mask, val);
+    }
+
+    template <typename M, simd_vector T>
+    requires mx::maskable_zoperator<round_t, M, T> &&
+        mx::canonical_zoperator_args<round_t, M, T> && requires(M mask, T val) {
+            round(internal::abi<T>, dx::zero, mask, val);
+        }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
+        return round(internal::abi<T>, dx::zero, mask, val);
+    }
+
+    template <typename M, simd_vector T>
+    requires mx::maskable_zoperator<round_t, M, T> &&
+        (!mx::canonical_zoperator_args<round_t, M, T>) &&
+        requires(M mask, T val) { round(dx::zero, mask, val); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
+        return round(dx::zero, mask, val);
+    }
+
+    template <simd_vector S, typename M, simd_vector T, rounding_flags R>
+    requires mx::maskable_operator<round_t, S, M, T, rounding_t<R>> &&
+        mx::canonical_operator_args<S, M, T, rounding_t<R>> &&
+        requires(S src, M mask, T val) {
+            round(internal::abi<T>, src, mask, val, rounding_v<R>);
+        }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(
+        S src, M mask, T val, rounding_t<R> flags) noexcept {
+        return round(internal::abi<T>, src, mask, val, flags);
+    }
+
+    template <simd_vector S, typename M, simd_vector T, rounding_flags R>
+    requires mx::maskable_operator<round_t, S, M, T> &&
+        (!mx::canonical_operator_args<S, M, T>) &&
+        requires(S src, M mask, T val) { round(src, mask, val, rounding_v<R>); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(
+        S src, M mask, T val, rounding_t<R> flags) noexcept {
+        return round(src, mask, val, flags);
+    }
+
+    template <typename M, simd_vector T, rounding_flags R>
+    requires mx::maskable_zoperator<round_t, M, T> &&
+        mx::canonical_zoperator_args<round_t, M, T> && requires(M mask, T val) {
+            round(internal::abi<T>, dx::zero, mask, val, rounding_v<R>);
+        }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(
+        M mask, T val, rounding_t<R> flags) noexcept {
+        return round(internal::abi<T>, dx::zero, mask, val, flags);
+    }
+
+    template <typename M, simd_vector T, rounding_flags R>
+    requires mx::maskable_zoperator<round_t, M, T> &&
+        (!mx::canonical_zoperator_args<round_t, M, T>) &&
+        requires(M mask, T val) { round(dx::zero, mask, val, rounding_v<R>); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(
+        M mask, T val, rounding_t<R> flags) noexcept {
+        return round(dx::zero, mask, val, flags);
     }
 
 public:
@@ -194,6 +277,8 @@ public:
             return operator()(dx::to_canonical(val), flags);
         }
     }
+
+    using mx::masked_operation<round_t>::operator();
 };
 } // namespace datapar::internal
 
