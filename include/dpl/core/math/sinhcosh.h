@@ -25,14 +25,14 @@ class sinhcosh_base {
 private:
     template <floating_point E>
     static constexpr auto polynomial = []() {
-        if constexpr (common_float_with<E, float>) {
+        if constexpr (same_as<E, float>) {
             return fmath::polynomial<0.4166637361e-1f, //
                 0.8333456703e-2f,                      //
                 0.1394256484e-2f,                      //
                 0.1980960224e-3f                       //
                 >{};
         } else {
-            static_assert(common_float_with<E, double>);
+            static_assert(same_as<E, double>);
             return fmath::polynomial<0.4166666666666669905e-1,
                 0.8333333333333347095e-2, 0.1388888888886763255e-2,
                 0.1984126984148071858e-3, 0.2480158735605815065e-4,
@@ -50,10 +50,10 @@ private:
     template <floating_point E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto is_exp_underflow(basic_vector<E, A> val) noexcept {
-        if constexpr (common_float_with<E, float>) {
+        if constexpr (same_as<E, float>) {
             return val < -103.97208f;
         } else {
-            static_assert(common_float_with<E, double>);
+            static_assert(same_as<E, double>);
             return val < -745.133;
         }
     }
@@ -101,30 +101,35 @@ private:
 public:
     __DPL_HIDE_FROM_ABI constexpr ~sinhcosh_base() = default;
 
-    template <integral auto V, floating_point E, simd_abi A>
+    template <floating_point E, simd_abi A, typename OpMask>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr basic_vector<E, A>
-        DPL_VECTORCALL fallback(basic_vector<E, A> const arg) noexcept {
+        DPL_VECTORCALL fallback(
+            basic_vector<E, A> const arg, OpMask opmask) noexcept {
         using simdf = basic_vector<E, A>;
 
         auto const absarg = dx::abs(arg);
-        auto const pair = [](fmath::pair<E, A> p) {
+        auto const pair = [&](fmath::pair<E, A> p) {
             auto const inv_p = fmath::rcp(p);
-
-            if constexpr (V == -1) {
+            if constexpr (simd_mask<OpMask>) {
+                return p -
+                    fmath::make_pair(
+                        dx::negate(inv_p.upper, opmask, inv_p.upper),
+                        dx::negate(inv_p.lower, opmask, inv_p.lower));
+            } else if constexpr (dx::all_of(opmask)) {
                 return p + inv_p;
-            } else if constexpr (V == 0) {
+            } else if constexpr (dx::none_of(opmask)) {
                 return p - inv_p;
             } else {
-                static constexpr make_const_mask_t<simdf, V> mask;
                 return p -
-                    fmath::make_pair(dx::negate(inv_p.upper, mask, inv_p.upper),
-                        dx::negate(inv_p.lower, mask, inv_p.lower));
+                    fmath::make_pair(
+                        dx::negate(inv_p.upper, opmask, inv_p.upper),
+                        dx::negate(inv_p.lower, opmask, inv_p.lower));
             }
         }(exp(absarg));
 
         auto result = (pair.upper + pair.lower) * fmath::half;
-        if constexpr (common_float_with<E, float>) {
+        if constexpr (same_as<E, float>) {
             result = dx::select(
                 (absarg <= 89.0f) & dx::isfinite(result), result, dx::infinity);
         } else {
@@ -132,10 +137,12 @@ public:
                 (absarg <= 710.0) & dx::isfinite(result), result, dx::infinity);
         }
 
-        if constexpr (V == 0) {
+        if constexpr (simd_mask<M>) {
+            result = dx::sign(result, dx::select(opmask, dx::zero, arg));
+        } else if constexpr (dx::none_of(opmask)) {
             result = dx::sign(result, arg);
-        } else if constexpr (V != -1) {
-            result = dx::sign(result, dx::selecti<V>(dx::zero, arg));
+        } else if constexpr (dx::some_of(opmask)) {
+            result = dx::sign(result, dx::select(opmask, dx::zero, arg));
         }
 
         return dx::select(dx::isnan(arg), dx::all_bits, result);
@@ -170,14 +177,16 @@ struct sinh_t : private internal::sinhcosh_base {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A> operator()(
         basic_vector<E, A> val) noexcept {
+        constexpr auto opmask =
+            dx::to_compatible_const_mask<basic_vector<E, A>>(dx::zero);
         if constexpr (unqualified_canonical_sinh<basic_vector<E, A>>) {
             if consteval {
-                return internal::sinhcosh_base::fallback<0>(val);
+                return internal::sinhcosh_base::fallback(val, opmask);
             } else {
                 return sinh(internal::abi<A>, val);
             }
         } else {
-            return internal::sinhcosh_base::fallback<0>(val);
+            return internal::sinhcosh_base::fallback(val, opmask);
         }
     }
 
@@ -230,20 +239,21 @@ struct cosh_t : private internal::sinhcosh_base {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A> operator()(
         basic_vector<E, A> val) noexcept {
-        constexpr auto V = -1;
+        constexpr auto opmask =
+            dx::to_compatible_const_mask<basic_vector<E, A>>(dx::all_bits);
         if constexpr (unqualified_canonical_cosh<basic_vector<E, A>>) {
             if consteval {
-                return internal::sinhcosh_base::fallback<V>(val);
+                return internal::sinhcosh_base::fallback(val, opmask);
             } else {
                 return cosh(internal::abi<A>, val);
             }
         } else {
-            return internal::sinhcosh_base::fallback<V>(val);
+            return internal::sinhcosh_base::fallback(val, opmask);
         }
     }
 
     template <simd_abi A, simd_element_for<A> E>
-    requires (scalable_abi<A> || !(same_as<E, float> || same_as<E, double>)) &&
+    requires (!same_as<E, float> && !same_as<E, double>) &&
         unqualified_canonical_cosh<basic_vector<E, A>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A> operator()(
@@ -263,33 +273,140 @@ struct cosh_t : private internal::sinhcosh_base {
     }
 };
 
-template <auto>
 void sinhcosh(...) noexcept = delete;
+
+struct sinhcosh_t;
+
+template <typename L, typename OpMask, typename A = common_abi_t<R, M>>
+concept unqualified_canonical_sinhcosh = requires(L val, OpMask op) {
+    {
+        sinhcosh(internal::abi<A>, val, op)
+    } -> canonical_arithmetic_result<L, L, A>;
+};
+
+template <typename L, typename OpMask, typename A = common_abi_t<R, M>>
+concept unqualified_extended_sinhcosh = requires(L val, OpMask op) {
+    { sinhcosh(val, op) } -> extended_arithmetic_result<L, L, A>;
+};
+
+template <typename L, typename OpMask, typename A = common_abi_t<L, OpMask>>
+concept unqualified_sinhcosh = unqualified_extended_sinhcosh<L, OpMask, A> ||
+    (decayable_vector_for<L, operation_category::lane_agnostic> &&
+        decayable_mask_for<OpMask, operation_category::lane_agnostic> &&
+        regular_invocable<sinhcosh_t, canonical_type_t<L>,
+            canonical_type_t<OpMask>>);
+
+template <typename L, typename OpMask>
+concept unqualified_canonical_sinhcoshi = requires(L val, OpMask op) {
+    {
+        sinhcosh(internal::abi<L>, val, dx::to_compatible_const_mask<L>(op))
+    } -> canonical_arithmetic_result<L, L, typename L::abi_type>;
+};
+
+template <typename L, typename OpMask>
+concept unqualified_extended_sinhcoshi = requires(L val, OpMask op) {
+    {
+        sinhcosh(val, dx::to_compatible_const_mask<L>(op))
+    } -> extended_arithmetic_result<L, L, typename L::abi_type>;
+};
+
+template <typename L, typename OpMask>
+concept unqualified_sinhcoshi = unqualified_extended_sinhcoshi<L, OpMask> ||
+    (decayable_simd_for<L, operation_category::lane_agnostic> &&
+        regular_invocable<sinhcosh_t, canonical_type_t<L>, OpMask>);
+
+struct sinhcosh_t : private internal::sinhcosh_base {
+public:
+    template <simd_abi A, simd_element_for<A> E,
+        const_mask_for<basic_vector<E, A>> OpMask>
+    requires same_as<E, float> || same_as<E, double>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr basic_vector<E, A> operator()(
+        basic_vector<E, A> val, OpMask op) noexcept {
+        constexpr auto opmask =
+            dx::to_compatible_const_mask<basic_vector<E, A>>(op);
+        if constexpr (unqualified_canonical_sinhcoshi<basic_vector<E, A>,
+                          OpMask>) {
+            if consteval {
+                return internal::sinhcosh_base::fallback(mask, opmask);
+            } else {
+                return sinhcosh(internal::abi<A>, val, opmask);
+            }
+        } else {
+            return internal::sinhcosh_base::fallback(mask, opmask);
+        }
+    }
+
+    template <simd_abi A, simd_element_for<A> E,
+        const_mask_for<basic_vector<E, A>> OpMask>
+    requires (!same_as<E, float> && !same_as<E, double>) &&
+        unqualified_canonical_sinhcoshi<basic_vector<E, A>, OpMask>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr basic_vector<E, A> operator()(
+        basic_vector<E, A> val, OpMask op) noexcept {
+        return sinhcosh(internal::abi<A>, val, op);
+    }
+
+    template <extended_vector L, const_mask_for<L> OpMask>
+    requires unqualified_sinhcoshi<L, OpMask>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(L val, OpMask op) noexcept {
+        if constexpr (unqualified_extended_sinhcoshi<L, OpMask>) {
+            constexpr auto opmask = dx::to_compatible_const_mask<OpMask>(op);
+            return sinhcosh(val, opmask);
+        } else {
+            return operator()(dx::to_canonical(val), op);
+        }
+    }
+
+    template <simd_abi A, simd_element_for<A> E, simd_element_for<A> O>
+    requires (same_as<E, float> || same_as<E, double>) && common_size_with<O, E>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr basic_vector<E, A> operator()(
+        basic_vector<E, A> val, basic_mask<O, A> op) noexcept {
+        if constexpr (unqualified_canonical_sinhcosh<basic_vector<E, A>,
+                          basic_mask<O, A>>) {
+            if consteval {
+                return internal::sinhcosh_base::fallback(mask, op);
+            } else {
+                return sinhcosh(internal::abi<A>, val, op);
+            }
+        } else {
+            return internal::sinhcosh_base::fallback(mask, op);
+        }
+    }
+
+    template <simd_abi A, simd_element_for<A> E, simd_element_for<A> O>
+    requires (!same_as<E, float> && !same_as<E, double>) &&
+        common_size_with<O, E> &&
+        unqualified_canonical_sinhcosh<basic_vector<E, A>, basic_mask<O, A>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr basic_vector<E, A> operator()(
+        basic_vector<E, A> val, basic_mask<O, A> op) noexcept {
+        return sinhcosh(internal::abi<A>, val, op);
+    }
+
+    template <simd_vector L, compatible_mask_with<L> O>
+    requires (extended_vector<L> || extended_mask<O>) &&
+        unqualified_sinhcosh<L, O>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(L val, O op) noexcept {
+        if constexpr (unqualified_extended_sinhcosh<L, O>) {
+            return sinhcosh(val, op);
+        } else {
+            return operator()(dx::to_canonical(val), dx::to_canonical(op));
+        }
+    }
+};
 
 template <integral auto V>
 struct sinhcoshi_t : private internal::sinhcosh_base {
-    template <floating_point_simd T>
+    template <simd_vector T>
+    requires regular_invocable<sinhcosh_t, T, make_const_mask_t<T, V>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(T val) noexcept {
-        if constexpr (requires {
-                          {
-                              sinhcosh<V>(internal::abi<T>, val)
-                          } -> equivalent_simd_as<T>;
-                      }) {
-            if constexpr (canonical_vector<T>) {
-                if not consteval {
-                    return sinhcosh<V>(internal::abi<T>, val);
-                } else {
-                    return internal::sinhcosh_base::fallback<V>(val);
-                }
-            } else {
-                return sinhcosh<V>(internal::abi<T>, val);
-            }
-        } else if constexpr (canonical_vector<T>) {
-            return internal::sinhcosh_base::fallback<V>(val);
-        } else {
-            return operator()(dx::to_canonical(val));
-        }
+    static constexpr auto operator()(T val) noexcept {
+        constexpr make_const_mask_t<T, V> op{};
+        return sinhcosh_t::operator()(val, op);
     }
 };
 } // namespace datapar::internal
@@ -298,6 +415,7 @@ namespace datapar {
 inline namespace cpo {
 DPL_EXPORT inline constexpr internal::sinh_t sinh{};
 DPL_EXPORT inline constexpr internal::cosh_t cosh{};
+DPL_EXPORT inline constexpr internal::sinhcosh_t sinhcosh{};
 DPL_EXPORT template <integral auto V>
 inline constexpr internal::sinhcoshi_t<V> sinhcoshi{};
 } // namespace cpo
