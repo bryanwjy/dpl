@@ -4,6 +4,8 @@
 #include "dpl/config.h"
 
 #include "dpl/core/math/internal/floating_point_simd.h"
+#include "dpl/core/math/internal/masked_op.h"
+
 #if !DPL_MODULES
 #  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/compatible_mask_with.h"
@@ -28,14 +30,35 @@ concept unqualified_extended_isnormal = requires(T arg) {
     { isnormal(arg) } -> compatible_mask_with<T>;
 };
 
-struct isnormal_t {
+struct isnormal_t : private mx::masked_predicate<isnormal_t> {
 private:
+    friend mx::masked_predicate<isnormal_t>;
+
     template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr basic_mask<E, A>
         DPL_VECTORCALL fallback(basic_vector<E, A> arg) noexcept {
         auto const val = dx::bwand(arg, dx::infinity);
         return val != dx::infinity && val > dx::zero;
+    }
+
+    template <typename M, simd_vector T>
+    requires mx::maskable_predicate<isnormal_t, M, T> &&
+        mx::canonical_predicate_args<isnormal_t, M, T> &&
+        requires(
+            M mask, T val) { isnormal(internal::abi<T>, dx::zero, mask, val); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
+        return isnormal(internal::abi<T>, dx::zero, mask, val);
+    }
+
+    template <typename M, simd_vector T>
+    requires mx::maskable_predicate<isnormal_t, M, T> &&
+        (!mx::canonical_predicate_args<isnormal_t, M, T>) &&
+        requires(M mask, T val) { isnormal(dx::zero, mask, val); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
+        return isnormal(dx::zero, mask, val);
     }
 
 public:
@@ -75,6 +98,8 @@ public:
             return operator()(dx::to_canonical(arg));
         }
     }
+
+    using mx::masked_predicate<isnormal_t>::operator();
 };
 } // namespace datapar::internal
 

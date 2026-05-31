@@ -3,6 +3,8 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/math/internal/fwd.h" // IWYU pragma: export
+
 #if !DPL_MODULES
 #  include "dpl/std/type_traits/is_base_of.h"
 #endif

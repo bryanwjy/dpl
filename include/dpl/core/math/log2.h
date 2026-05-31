@@ -6,6 +6,7 @@
 #include "dpl/core/math/fixup.h"
 #include "dpl/core/math/frexp.h"
 #include "dpl/core/math/internal/floating_point_simd.h"
+#include "dpl/core/math/internal/masked_op.h"
 #include "dpl/core/math/internal/pair.h"
 #include "dpl/core/math/internal/polynomial.h"
 
@@ -44,8 +45,10 @@ concept unqualified_log2 = unqualified_extended_log2<T> ||
     (decayable_vector_for<T, operation_category::lane_agnostic> &&
         regular_invocable<log2_t, canonical_type_t<T>>);
 
-struct log2_t {
+struct log2_t : private mx::masked_operation<log2_t> {
 private:
+    friend mx::masked_operation<log2_t>;
+
     template <floating_point E, simd_abi A>
     requires (dx::digits_v<E> <= dx::digits_v<float>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
@@ -105,6 +108,43 @@ private:
                 fpfix::condition<fpfix::nan, fpfix::revert>);
     }
 
+    template <simd_vector S, typename M, simd_vector T>
+    requires mx::maskable_operator<log2_t, S, M, T> &&
+        mx::canonical_operator_args<S, M, T> && requires(S src, M mask, T val) {
+            log2(internal::abi<T>, src, mask, val);
+        }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(S src, M mask, T val) noexcept {
+        return log2(internal::abi<T>, src, mask, val);
+    }
+
+    template <simd_vector S, typename M, simd_vector T>
+    requires mx::maskable_operator<log2_t, S, M, T> &&
+        (!mx::canonical_operator_args<S, M, T>) &&
+        requires(S src, M mask, T val) { log2(src, mask, val); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(S src, M mask, T val) noexcept {
+        return log2(src, mask, val);
+    }
+
+    template <typename M, simd_vector T>
+    requires mx::maskable_zoperator<log2_t, M, T> &&
+        mx::canonical_zoperator_args<log2_t, M, T> &&
+        requires(M mask, T val) { log2(internal::abi<T>, dx::zero, mask, val); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
+        return log2(internal::abi<T>, dx::zero, mask, val);
+    }
+
+    template <typename M, simd_vector T>
+    requires mx::maskable_zoperator<log2_t, M, T> &&
+        (!mx::canonical_zoperator_args<log2_t, M, T>) &&
+        requires(M mask, T val) { log2(dx::zero, mask, val); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
+        return log2(dx::zero, mask, val);
+    }
+
 public:
     template <simd_abi A, simd_element_for<A> E>
     requires floating_point<E>
@@ -141,6 +181,7 @@ public:
             return operator()(dx::to_canonical(val));
         }
     }
+    using mx::masked_operation<log2_t>::operator();
 };
 } // namespace datapar::internal
 

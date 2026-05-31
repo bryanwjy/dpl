@@ -3,6 +3,8 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/math/internal/fwd.h" // IWYU pragma: export
+
 #include "dpl/core/math/fma.h"
 #if !DPL_MODULES
 #  include "dpl/core/basic/immediate.h"
@@ -19,7 +21,6 @@ DPL_DISABLE_WARNING("-Wc++26-extensions")
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::fmath {
-namespace dx = __DPL datapar;
 namespace estrin {
 struct unintialized_t {};
 

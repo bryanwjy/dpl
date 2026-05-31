@@ -6,6 +6,7 @@
 #include "dpl/core/math/internal/floating_point_simd.h"
 #include "dpl/core/math/internal/ilogb.h"
 #include "dpl/core/math/internal/ldexp.h"
+#include "dpl/core/math/internal/masked_op.h"
 #include "dpl/core/math/internal/pair.h"
 #include "dpl/core/math/internal/polynomial.h"
 #include "dpl/core/math/round.h"
@@ -170,8 +171,51 @@ concept unqualified_sinh = unqualified_extended_sinh<T> ||
     (decayable_vector_for<T, operation_category::lane_agnostic> &&
         regular_invocable<sinh_t, canonical_type_t<T>>);
 
-struct sinh_t : private internal::sinhcosh_base {
+struct sinh_t :
+    private internal::sinhcosh_base,
+    private mx::masked_operation<sinh_t> {
 
+private:
+    friend mx::masked_operation<sinh_t>;
+
+    template <simd_vector S, typename M, simd_vector T>
+    requires mx::maskable_operator<sinh_t, S, M, T> &&
+        mx::canonical_operator_args<S, M, T> && requires(S src, M mask, T val) {
+            sinh(internal::abi<T>, src, mask, val);
+        }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(S src, M mask, T val) noexcept {
+        return sinh(internal::abi<T>, src, mask, val);
+    }
+
+    template <simd_vector S, typename M, simd_vector T>
+    requires mx::maskable_operator<sinh_t, S, M, T> &&
+        (!mx::canonical_operator_args<S, M, T>) &&
+        requires(S src, M mask, T val) { sinh(src, mask, val); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(S src, M mask, T val) noexcept {
+        return sinh(src, mask, val);
+    }
+
+    template <typename M, simd_vector T>
+    requires mx::maskable_zoperator<sinh_t, M, T> &&
+        mx::canonical_zoperator_args<sinh_t, M, T> &&
+        requires(M mask, T val) { sinh(internal::abi<T>, dx::zero, mask, val); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
+        return sinh(internal::abi<T>, dx::zero, mask, val);
+    }
+
+    template <typename M, simd_vector T>
+    requires mx::maskable_zoperator<sinh_t, M, T> &&
+        (!mx::canonical_zoperator_args<sinh_t, M, T>) &&
+        requires(M mask, T val) { sinh(dx::zero, mask, val); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
+        return sinh(dx::zero, mask, val);
+    }
+
+public:
     template <fixed_width_abi A, simd_element_for<A> E>
     requires same_as<E, float> || same_as<E, double>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -209,6 +253,8 @@ struct sinh_t : private internal::sinhcosh_base {
             return operator()(dx::to_canonical(val));
         }
     }
+
+    using mx::masked_operation<sinh_t>::operator();
 };
 
 void cosh(...) noexcept = delete;
@@ -232,8 +278,50 @@ concept unqualified_cosh = unqualified_extended_cosh<T> ||
     (decayable_vector_for<T, operation_category::lane_agnostic> &&
         regular_invocable<cosh_t, canonical_type_t<T>>);
 
-struct cosh_t : private internal::sinhcosh_base {
+struct cosh_t :
+    private internal::sinhcosh_base,
+    private mx::masked_operation<cosh_t> {
+private:
+    friend mx::masked_operation<cosh_t>;
 
+    template <simd_vector S, typename M, simd_vector T>
+    requires mx::maskable_operator<cosh_t, S, M, T> &&
+        mx::canonical_operator_args<S, M, T> && requires(S src, M mask, T val) {
+            cosh(internal::abi<T>, src, mask, val);
+        }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(S src, M mask, T val) noexcept {
+        return cosh(internal::abi<T>, src, mask, val);
+    }
+
+    template <simd_vector S, typename M, simd_vector T>
+    requires mx::maskable_operator<cosh_t, S, M, T> &&
+        (!mx::canonical_operator_args<S, M, T>) &&
+        requires(S src, M mask, T val) { cosh(src, mask, val); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(S src, M mask, T val) noexcept {
+        return cosh(src, mask, val);
+    }
+
+    template <typename M, simd_vector T>
+    requires mx::maskable_zoperator<cosh_t, M, T> &&
+        mx::canonical_zoperator_args<cosh_t, M, T> &&
+        requires(M mask, T val) { cosh(internal::abi<T>, dx::zero, mask, val); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
+        return cosh(internal::abi<T>, dx::zero, mask, val);
+    }
+
+    template <typename M, simd_vector T>
+    requires mx::maskable_zoperator<cosh_t, M, T> &&
+        (!mx::canonical_zoperator_args<cosh_t, M, T>) &&
+        requires(M mask, T val) { cosh(dx::zero, mask, val); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
+        return cosh(dx::zero, mask, val);
+    }
+
+public:
     template <fixed_width_abi A, simd_element_for<A> E>
     requires same_as<E, float> || same_as<E, double>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -271,6 +359,7 @@ struct cosh_t : private internal::sinhcosh_base {
             return operator()(dx::to_canonical(val));
         }
     }
+    using mx::masked_operation<cosh_t>::operator();
 };
 
 void sinhcosh(...) noexcept = delete;
@@ -315,7 +404,61 @@ concept unqualified_sinhcoshi = unqualified_extended_sinhcoshi<L, OpMask> ||
     (decayable_simd_for<L, operation_category::lane_agnostic> &&
         regular_invocable<sinhcosh_t, canonical_type_t<L>, OpMask>);
 
-struct sinhcosh_t : private internal::sinhcosh_base {
+struct sinhcosh_t :
+    private internal::sinhcosh_base,
+    private mx::masked_operation<sinhcosh_t> {
+private:
+    friend mx::masked_operation<sinhcosh_t>;
+
+    template <simd_vector S, typename M, simd_vector T,
+        const_mask_for<T> OpMask>
+    requires mx::maskable_operator<sinhcosh_t, S, M, T, OpMask> &&
+        mx::canonical_operator_args<S, M, T, OpMask> &&
+        requires(S src, M mask, T val, OpMask opmask) {
+            sinhcosh(internal::abi<T>, src, mask, val, opmask);
+        }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(
+        S src, M mask, T val, OpMask opmask) noexcept {
+        return sinhcosh(internal::abi<T>, src, mask, val, opmask);
+    }
+
+    template <simd_vector S, typename M, simd_vector T>
+    requires mx::maskable_operator<sinhcosh_t, S, M, T, OpMask> &&
+        (!mx::canonical_operator_args<S, M, T, OpMask>) &&
+        requires(S src, M mask, T val, OpMask opmask) {
+            sinhcosh(src, mask, val, opmask);
+        }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(
+        S src, M mask, T val, OpMask opmask) noexcept {
+        return sinhcosh(src, mask, val, opmask);
+    }
+
+    template <typename M, simd_vector T>
+    requires mx::maskable_zoperator<sinhcosh_t, M, T, OpMask> &&
+        mx::canonical_zoperator_args<sinhcosh_t, M, T, OpMask> &&
+        requires(M mask, T val, OpMask opmask) {
+            sinhcosh(internal::abi<T>, dx::zero, mask, val, opmask);
+        }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(
+        M mask, T val, OpMask opmask) noexcept {
+        return sinhcosh(internal::abi<T>, dx::zero, mask, val, opmask);
+    }
+
+    template <typename M, simd_vector T>
+    requires mx::maskable_zoperator<sinhcosh_t, M, T, OpMask> &&
+        (!mx::canonical_zoperator_args<sinhcosh_t, M, T, OpMask>) &&
+        requires(M mask, T val, OpMask opmask) {
+            sinhcosh(dx::zero, mask, val, opmask);
+        }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(
+        M mask, T val, OpMask opmask) noexcept {
+        return sinhcosh(dx::zero, mask, val, opmask);
+    }
+
 public:
     template <simd_abi A, simd_element_for<A> E,
         const_mask_for<basic_vector<E, A>> OpMask>
@@ -397,10 +540,37 @@ public:
             return operator()(dx::to_canonical(val), dx::to_canonical(op));
         }
     }
+
+    using mx::masked_operation<sinhcosh_t>::operator();
 };
 
 template <integral auto V>
-struct sinhcoshi_t : private internal::sinhcosh_base {
+struct sinhcoshi_t :
+    private internal::sinhcosh_base,
+    private mx::masked_operation<sinhcoshi_t<V>> {
+private:
+    friend mx::masked_operation<sinhcoshi_t<V>>;
+    template <simd_vector S, typename M, simd_vector T>
+    requires mx::maskable_operator<sinhcoshi_t, S, M, T> &&
+        requires(S src, M mask, T val, make_const_mask_t<T, V> opmask) {
+            sinhcosh_t::operator()(src, mask, val, opmask);
+        }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(S src, M mask, T val) noexcept {
+        return sinhcosh_t::operator()(src, mask, val);
+    }
+
+    template <typename M, simd_vector T>
+    requires mx::maskable_zoperator<sinhcoshi_t, M, T> &&
+        requires(M mask, T val, make_const_mask_t<T, V> opmask) {
+            sinhcosh_t::operator()(mask, val, opmask);
+        }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
+        return sinhcosh_t::operator()(mask, val, opmask);
+    }
+
+public:
     template <simd_vector T>
     requires regular_invocable<sinhcosh_t, T, make_const_mask_t<T, V>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -408,6 +578,8 @@ struct sinhcoshi_t : private internal::sinhcosh_base {
         constexpr make_const_mask_t<T, V> op{};
         return sinhcosh_t::operator()(val, op);
     }
+
+    using mx::masked_operation<sinhcoshi_t<V>>::operator();
 };
 } // namespace datapar::internal
 

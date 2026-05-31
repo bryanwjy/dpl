@@ -3,6 +3,8 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/math/internal/fwd.h" // IWYU pragma: export
+
 #if !DPL_MODULES
 #  include "dpl/core/concepts/simd_equivalence.h"
 #  include "dpl/core/concepts/simd_vector.h"

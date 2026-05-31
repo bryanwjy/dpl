@@ -4,6 +4,7 @@
 #include "dpl/config.h"
 
 #include "dpl/core/math/internal/floating_point_simd.h"
+#include "dpl/core/math/internal/masked_op.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/integral_simd.h"
@@ -49,8 +50,11 @@ concept unqualified_ldexp = unqualified_extended_ldexp<T, I, A> ||
         decayable_vector_for<I, operation_category::lane_agnostic> &&
         regular_invocable<ldexp_t, canonical_type_t<T>, canonical_type_t<I>>);
 
-struct ldexp_t : binary_operation_base<ldexp_t> {
+struct ldexp_t :
+    private binary_operation_base<ldexp_t>,
+    private mx::masked_operation<ldexp_t> {
     friend binary_operation_base<ldexp_t>;
+    friend mx::masked_operation<ldexp_t>;
 
     template <simd_abi A, typename L, typename R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -107,6 +111,49 @@ struct ldexp_t : binary_operation_base<ldexp_t> {
     using int_simd DPL_NODEBUG =
         rebind_simd_t<T, signed_representation_t<typename T::value_type>>;
 
+    template <simd_vector S, typename M, simd_vector L, simd_vector R>
+    requires mx::maskable_operator<ldexp_t, S, M, L, R> &&
+        mx::canonical_operator_args<S, M, L, R> &&
+        requires(S src, M mask, L lhs, R rhs) {
+            ldexp(internal::abi<common_abi_t<L, R>>, src, mask, lhs, rhs);
+        }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(
+        S src, M mask, L lhs, R rhs) noexcept {
+        return ldexp(internal::abi<common_abi_t<L, R>>, src, mask, lhs, rhs);
+    }
+
+    template <simd_vector S, typename M, simd_vector L, simd_vector R>
+    requires mx::maskable_operator<ldexp_t, S, M, L, R> &&
+        (!mx::canonical_operator_args<S, M, L, R>) &&
+        requires(S src, M mask, L lhs, R rhs) { ldexp(src, mask, lhs, rhs); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(
+        S src, M mask, L lhs, R rhs) noexcept {
+        return ldexp(src, mask, lhs, rhs);
+    }
+
+    template <typename M, simd_vector L, simd_vector R>
+    requires mx::maskable_zoperator<ldexp_t, M, L, R> &&
+        mx::canonical_zoperator_args<ldexp_t, M, L, R> &&
+        requires(M mask, L lhs, R rhs) {
+            ldexp(internal::abi<common_abi_t<L, R>>, dx::zero, mask, lhs, rhs);
+        }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(M mask, L lhs, R rhs) noexcept {
+        return ldexp(
+            internal::abi<common_abi_t<L, R>>, dx::zero, mask, lhs, rhs);
+    }
+
+    template <typename M, simd_vector L, simd_vector R>
+    requires mx::maskable_zoperator<ldexp_t, M, L, R> &&
+        (!mx::canonical_zoperator_args<ldexp_t, M, L, R>) &&
+        requires(M mask, L lhs, R rhs) { ldexp(dx::zero, mask, lhs, rhs); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(M mask, L lhs, R rhs) noexcept {
+        return ldexp(dx::zero, mask, lhs, rhs);
+    }
+
 public:
     template <simd_abi A, simd_element_for<A> E, simd_element_for<A> I>
     requires signed_integral<I> && floating_point<E> && common_size_with<E, I>
@@ -151,6 +198,7 @@ public:
     }
 
     using binary_operation_base<ldexp_t>::operator();
+    using mx::masked_operation<ldexp_t>::operator();
 };
 } // namespace datapar::internal
 

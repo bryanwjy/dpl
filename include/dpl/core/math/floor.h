@@ -6,6 +6,7 @@
 #include "dpl/core/math/copysign.h"
 #include "dpl/core/math/internal/constants.h"
 #include "dpl/core/math/internal/floating_point_simd.h"
+#include "dpl/core/math/internal/masked_op.h"
 #include "dpl/core/math/isfinite.h"
 #include "dpl/core/math/trunc.h"
 
@@ -21,7 +22,6 @@
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
-namespace mx = datapar::fmath;
 
 struct floor_t;
 

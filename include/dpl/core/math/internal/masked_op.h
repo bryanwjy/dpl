@@ -3,6 +3,8 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/math/internal/fwd.h" // IWYU pragma: export
+
 #include "dpl/core/math/fma.h"
 #include "dpl/core/math/internal/accuracy.h" // IWYU pragma: export
 #include "dpl/core/math/internal/floating_point_simd.h"
@@ -193,6 +195,15 @@ public:
         } else {
             return operator()(fmath::decay(mask), fmath::decay(args)...);
         }
+    }
+
+    template <typename M, typename... Args>
+    requires maskable_zoperator<D, M, Args...> &&
+        requires(M mask, Args... args) { operator()(mask, args...); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(
+        dx::zero_t, M mask, Args... args) noexcept {
+        return operator()(mask, args...);
     }
 };
 

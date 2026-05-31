@@ -4,6 +4,7 @@
 #include "dpl/config.h"
 
 #include "dpl/core/math/internal/floating_point_simd.h"
+#include "dpl/core/math/internal/masked_op.h"
 #include "dpl/core/math/isfinite.h"
 #include "dpl/core/math/isinf.h"
 #include "dpl/core/math/isnan.h"
@@ -52,8 +53,9 @@ concept unqualified_fixup = unqualified_extended_fixup<T, C, A> ||
         regular_invocable<fixup_t, canonical_type_t<T>, canonical_type_t<T>,
             C>);
 
-struct fixup_t {
+struct fixup_t : private mx::masked_operation<fixup_t> {
 private:
+    friend mx::masked_operation<fixup_t>;
     struct sets {
         static constexpr auto finite_gezero =
             fpfix::positive | fpfix::zero | fpfix::one;
@@ -310,6 +312,55 @@ private:
         return result;
     }
 
+    template <simd_vector S, typename M, simd_vector T,
+        fpfix::condition_set_for<typename T::value_type> F>
+    requires mx::maskable_operator<fixup_t, S, M, T, F> &&
+        mx::canonical_operator_args<S, M, T, F> &&
+        requires(S src, M mask, T val, F flags) {
+            fixup(internal::abi<T>, src, mask, val, flags);
+        }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(
+        S src, M mask, T val, F flags) noexcept {
+        return fixup(internal::abi<T>, src, mask, val, flags);
+    }
+
+    template <simd_vector S, typename M, simd_vector T,
+        fpfix::condition_set_for<typename T::value_type> F>
+    requires mx::maskable_operator<fixup_t, S, M, T, F> &&
+        (!mx::canonical_operator_args<S, M, T, F>) &&
+        requires(
+            S src, M mask, T val, F flags) { fixup(src, mask, val, flags); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(
+        S src, M mask, T val, F flags) noexcept {
+        return fixup(src, mask, val, flags);
+    }
+
+    template <typename M, simd_vector T,
+        fpfix::condition_set_for<typename T::value_type> F>
+    requires mx::maskable_zoperator<fixup_t, M, T, F> &&
+        mx::canonical_zoperator_args<fixup_t, M, T, F> &&
+        requires(M mask, T val, F flags) {
+            fixup(internal::abi<T>, dx::zero, mask, val, flags);
+        }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(
+        M mask, T val, F flags) noexcept {
+        return fixup(internal::abi<T>, dx::zero, mask, val, flags);
+    }
+
+    template <typename M, simd_vector T,
+        fpfix::condition_set_for<typename T::value_type> F>
+    requires mx::maskable_zoperator<fixup_t, M, T, F> &&
+        (!mx::canonical_zoperator_args<fixup_t, M, T, F>) &&
+        requires(M mask, T val, F flags) { fixup(dx::zero, mask, val, flags); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(
+        M mask, T val, F flags) noexcept {
+        return fixup(dx::zero, mask, val, flags);
+    }
+
 public:
     template <simd_abi A, simd_element_for<A> E, fpfix::condition_set_for<E> F>
     requires floating_point<E> &&
@@ -355,6 +406,8 @@ public:
                 dx::to_canonical(src), dx::to_canonical(result), conditions);
         }
     }
+
+    using mx::masked_operation<fixup_t>::operator();
 };
 } // namespace datapar::internal
 

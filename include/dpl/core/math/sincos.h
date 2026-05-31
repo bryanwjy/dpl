@@ -5,6 +5,7 @@
 
 #include "dpl/core/math/internal/floating_point_simd.h"
 #include "dpl/core/math/internal/ilogb.h"
+#include "dpl/core/math/internal/masked_op.h"
 #include "dpl/core/math/internal/pair.h"
 #include "dpl/core/math/internal/polynomial.h"
 #include "dpl/core/math/internal/rempi_table.h"
@@ -485,8 +486,50 @@ concept unqualified_sin = unqualified_extended_sin<T> ||
     (decayable_vector_for<T, operation_category::lane_agnostic> &&
         regular_invocable<sin_t, canonical_type_t<T>>);
 
-struct sin_t : private internal::sincos_base {
+struct sin_t :
+    private internal::sincos_base,
+    private mx::masked_operation<sin_t> {
+private:
+    friend mx::masked_operation<sin_t>;
 
+    template <simd_vector S, typename M, simd_vector T>
+    requires mx::maskable_operator<sin_t, S, M, T> &&
+        mx::canonical_operator_args<S, M, T> && requires(S src, M mask, T val) {
+            sin(internal::abi<T>, src, mask, val);
+        }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(S src, M mask, T val) noexcept {
+        return sin(internal::abi<T>, src, mask, val);
+    }
+
+    template <simd_vector S, typename M, simd_vector T>
+    requires mx::maskable_operator<sin_t, S, M, T> &&
+        (!mx::canonical_operator_args<S, M, T>) &&
+        requires(S src, M mask, T val) { sin(src, mask, val); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(S src, M mask, T val) noexcept {
+        return sin(src, mask, val);
+    }
+
+    template <typename M, simd_vector T>
+    requires mx::maskable_zoperator<sin_t, M, T> &&
+        mx::canonical_zoperator_args<sin_t, M, T> &&
+        requires(M mask, T val) { sin(internal::abi<T>, dx::zero, mask, val); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
+        return sin(internal::abi<T>, dx::zero, mask, val);
+    }
+
+    template <typename M, simd_vector T>
+    requires mx::maskable_zoperator<sin_t, M, T> &&
+        (!mx::canonical_zoperator_args<sin_t, M, T>) &&
+        requires(M mask, T val) { sin(dx::zero, mask, val); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
+        return sin(dx::zero, mask, val);
+    }
+
+public:
     template <fixed_width_abi A, simd_element_for<A> E>
     requires same_as<E, float> || same_as<E, double>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -524,6 +567,8 @@ struct sin_t : private internal::sincos_base {
             return operator()(dx::to_canonical(val));
         }
     }
+
+    using mx::masked_operation<sin_t>::operator();
 };
 
 void cos(...) noexcept = delete;
@@ -547,8 +592,49 @@ concept unqualified_cos = unqualified_extended_cos<T> ||
     (decayable_vector_for<T, operation_category::lane_agnostic> &&
         regular_invocable<cos_t, canonical_type_t<T>>);
 
-struct cos_t : private internal::sincos_base {
+struct cos_t :
+    private internal::sincos_base,
+    private mx::masked_operation<cos_t> {
+private:
+    friend mx::masked_operation<cos_t>;
+    template <simd_vector S, typename M, simd_vector T>
+    requires mx::maskable_operator<cos_t, S, M, T> &&
+        mx::canonical_operator_args<S, M, T> && requires(S src, M mask, T val) {
+            cos(internal::abi<T>, src, mask, val);
+        }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(S src, M mask, T val) noexcept {
+        return cos(internal::abi<T>, src, mask, val);
+    }
 
+    template <simd_vector S, typename M, simd_vector T>
+    requires mx::maskable_operator<cos_t, S, M, T> &&
+        (!mx::canonical_operator_args<S, M, T>) &&
+        requires(S src, M mask, T val) { cos(src, mask, val); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(S src, M mask, T val) noexcept {
+        return cos(src, mask, val);
+    }
+
+    template <typename M, simd_vector T>
+    requires mx::maskable_zoperator<cos_t, M, T> &&
+        mx::canonical_zoperator_args<cos_t, M, T> &&
+        requires(M mask, T val) { cos(internal::abi<T>, dx::zero, mask, val); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
+        return cos(internal::abi<T>, dx::zero, mask, val);
+    }
+
+    template <typename M, simd_vector T>
+    requires mx::maskable_zoperator<cos_t, M, T> &&
+        (!mx::canonical_zoperator_args<cos_t, M, T>) &&
+        requires(M mask, T val) { cos(dx::zero, mask, val); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
+        return cos(dx::zero, mask, val);
+    }
+
+public:
     template <fixed_width_abi A, simd_element_for<A> E>
     requires same_as<E, float> || same_as<E, double>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -586,6 +672,8 @@ struct cos_t : private internal::sincos_base {
             return operator()(dx::to_canonical(val));
         }
     }
+
+    using mx::masked_operation<cos_t>::operator();
 };
 
 void sincos(...) noexcept = delete;
@@ -630,7 +718,61 @@ concept unqualified_sincosi = unqualified_extended_sincosi<L, OpMask> ||
     (decayable_simd_for<L, operation_category::lane_agnostic> &&
         regular_invocable<sincos_t, canonical_type_t<L>, OpMask>);
 
-struct sincos_t : private internal::sincos_base {
+struct sincos_t :
+    private internal::sincos_base,
+    private mx::masked_operation<sincos_t> {
+private:
+    friend mx::masked_operation<sincos_t>;
+
+    template <simd_vector S, typename M, simd_vector T,
+        const_mask_for<T> OpMask>
+    requires mx::maskable_operator<sincos_t, S, M, T, OpMask> &&
+        mx::canonical_operator_args<S, M, T, OpMask> &&
+        requires(S src, M mask, T val, OpMask opmask) {
+            sincos(internal::abi<T>, src, mask, val, opmask);
+        }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(
+        S src, M mask, T val, OpMask opmask) noexcept {
+        return sincos(internal::abi<T>, src, mask, val, opmask);
+    }
+
+    template <simd_vector S, typename M, simd_vector T>
+    requires mx::maskable_operator<sincos_t, S, M, T, OpMask> &&
+        (!mx::canonical_operator_args<S, M, T, OpMask>) &&
+        requires(S src, M mask, T val, OpMask opmask) {
+            sincos(src, mask, val, opmask);
+        }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(
+        S src, M mask, T val, OpMask opmask) noexcept {
+        return sincos(src, mask, val, opmask);
+    }
+
+    template <typename M, simd_vector T>
+    requires mx::maskable_zoperator<sincos_t, M, T, OpMask> &&
+        mx::canonical_zoperator_args<sincos_t, M, T, OpMask> &&
+        requires(M mask, T val, OpMask opmask) {
+            sincos(internal::abi<T>, dx::zero, mask, val, opmask);
+        }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(
+        M mask, T val, OpMask opmask) noexcept {
+        return sincos(internal::abi<T>, dx::zero, mask, val, opmask);
+    }
+
+    template <typename M, simd_vector T>
+    requires mx::maskable_zoperator<sincos_t, M, T, OpMask> &&
+        (!mx::canonical_zoperator_args<sincos_t, M, T, OpMask>) &&
+        requires(M mask, T val, OpMask opmask) {
+            sincos(dx::zero, mask, val, opmask);
+        }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(
+        M mask, T val, OpMask opmask) noexcept {
+        return sincos(dx::zero, mask, val, opmask);
+    }
+
 public:
     template <simd_abi A, simd_element_for<A> E,
         const_mask_for<basic_vector<E, A>> OpMask>
@@ -712,10 +854,38 @@ public:
             return operator()(dx::to_canonical(val), dx::to_canonical(op));
         }
     }
+
+    using mx::masked_operation<sincos_t>::operator();
 };
 
 template <integral auto V>
-struct sincosi_t : private internal::sincos_base {
+struct sincosi_t :
+    private internal::sincos_base,
+    private mx::masked_operation<sincosi_t<V>> {
+private:
+    friend mx::masked_operation<sincosi_t<V>>;
+
+    template <simd_vector S, typename M, simd_vector T>
+    requires mx::maskable_operator<sincosi_t, S, M, T> &&
+        requires(S src, M mask, T val, make_const_mask_t<T, V> opmask) {
+            sincos_t::operator()(src, mask, val, opmask);
+        }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(S src, M mask, T val) noexcept {
+        return sincos_t::operator()(src, mask, val);
+    }
+
+    template <typename M, simd_vector T>
+    requires mx::maskable_zoperator<sincosi_t, M, T> &&
+        requires(M mask, T val, make_const_mask_t<T, V> opmask) {
+            sincos_t::operator()(mask, val, opmask);
+        }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
+        return sincos_t::operator()(mask, val, opmask);
+    }
+
+public:
     template <simd_vector T>
     requires regular_invocable<sincos_t, T, make_const_mask_t<T, V>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -723,6 +893,8 @@ struct sincosi_t : private internal::sincos_base {
         constexpr make_const_mask_t<T, V> op{};
         return sincos_t::operator()(val, op);
     }
+
+    using mx::masked_operation<sincosi_t<V>>::operator();
 };
 
 } // namespace datapar::internal

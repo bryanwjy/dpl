@@ -7,6 +7,7 @@
 #include "dpl/core/math/internal/accuracy.h"
 #include "dpl/core/math/internal/floating_point_simd.h"
 #include "dpl/core/math/internal/ldexp.h"
+#include "dpl/core/math/internal/masked_op.h"
 #include "dpl/core/math/internal/rsqrt2.h"
 #include "dpl/core/math/isfinite.h"
 
@@ -24,7 +25,6 @@
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
-namespace mx = datapar::fmath;
 
 void sqrt(...) noexcept = delete;
 
@@ -47,8 +47,10 @@ concept unqualified_sqrt = unqualified_extended_sqrt<T> ||
     (decayable_vector_for<T, operation_category::lane_agnostic> &&
         regular_invocable<sqrt_t, canonical_type_t<T>>);
 
-struct sqrt_t {
+struct sqrt_t : private mx::masked_operation<sqrt_t> {
 private:
+    friend mx::masked_operation<sqrt_t>;
+
     template <simd_element E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(
@@ -68,6 +70,43 @@ private:
 
         return dx::select(dx::isfinite(val) && val != dx::zero,
             dx::select(val < dx::zero, dx::all_bits, result), val);
+    }
+
+    template <simd_vector S, typename M, simd_vector T>
+    requires mx::maskable_operator<sqrt_t, S, M, T> &&
+        mx::canonical_operator_args<S, M, T> && requires(S src, M mask, T val) {
+            sqrt(internal::abi<T>, src, mask, val);
+        }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(S src, M mask, T val) noexcept {
+        return sqrt(internal::abi<T>, src, mask, val);
+    }
+
+    template <simd_vector S, typename M, simd_vector T>
+    requires mx::maskable_operator<sqrt_t, S, M, T> &&
+        (!mx::canonical_operator_args<S, M, T>) &&
+        requires(S src, M mask, T val) { sqrt(src, mask, val); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(S src, M mask, T val) noexcept {
+        return sqrt(src, mask, val);
+    }
+
+    template <typename M, simd_vector T>
+    requires mx::maskable_zoperator<sqrt_t, M, T> &&
+        mx::canonical_zoperator_args<sqrt_t, M, T> &&
+        requires(M mask, T val) { sqrt(internal::abi<T>, dx::zero, mask, val); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
+        return sqrt(internal::abi<T>, dx::zero, mask, val);
+    }
+
+    template <typename M, simd_vector T>
+    requires mx::maskable_zoperator<sqrt_t, M, T> &&
+        (!mx::canonical_zoperator_args<sqrt_t, M, T>) &&
+        requires(M mask, T val) { sqrt(dx::zero, mask, val); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
+        return sqrt(dx::zero, mask, val);
     }
 
 public:
@@ -106,6 +145,7 @@ public:
             return operator()(dx::to_canonical(val));
         }
     }
+    using mx::masked_operation<sqrt_t>::operator();
 };
 } // namespace datapar::internal
 

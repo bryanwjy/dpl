@@ -3,6 +3,8 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/math/internal/fwd.h" // IWYU pragma: export
+
 #include "dpl/core/math/fma.h"
 #include "dpl/core/math/internal/accuracy.h" // IWYU pragma: export
 #include "dpl/core/math/internal/floating_point_simd.h"
@@ -17,7 +19,6 @@
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::fmath {
-namespace dx = __DPL datapar;
 
 /**
  * Approximates 1 / sqrt( 2x ) where x is in the interval [0.5,1)

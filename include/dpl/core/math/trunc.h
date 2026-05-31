@@ -6,6 +6,7 @@
 #include "dpl/core/math/internal/compliance.h"
 #include "dpl/core/math/internal/floating_point_simd.h"
 #include "dpl/core/math/internal/ilogb.h"
+#include "dpl/core/math/internal/masked_op.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/basic_type.h"
@@ -22,7 +23,6 @@
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
-namespace mx = datapar::fmath;
 
 struct trunc_t;
 

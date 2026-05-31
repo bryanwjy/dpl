@@ -22,7 +22,6 @@
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
-namespace mx = datapar::fmath;
 
 struct ceil_t;
 
@@ -64,7 +63,7 @@ concept unqualified_ceilne = unqualified_extended_ceil<T> ||
     (decayable_vector_for<T, operation_category::lane_agnostic> &&
         regular_invocable<ceil_t, canonical_type_t<T>, rounding::no_exc_t>);
 
-struct ceil_t : mx::masked_operation<ceil_t> {
+struct ceil_t : private mx::masked_operation<ceil_t> {
 private:
     friend mx::masked_operation<ceil_t>;
     static constexpr auto noexc = rounding::to_pos_inf | rounding::no_exc;

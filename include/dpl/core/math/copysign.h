@@ -4,6 +4,7 @@
 #include "dpl/config.h"
 
 #include "dpl/core/math/internal/floating_point_simd.h"
+#include "dpl/core/math/internal/masked_op.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/basic_type.h"
@@ -38,14 +39,60 @@ concept unqualified_copysign = unqualified_extended_copysign<L, R, A> ||
         regular_invocable<copysign_t, canonical_type_t<L>,
             canonical_type_t<R>>);
 
-struct copysign_t {
+struct copysign_t : private mx::masked_operation<copysign_t> {
 private:
+    friend mx::masked_operation<copysign_t>;
+
     template <floating_point E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr basic_vector<E, A>
         DPL_VECTORCALL fallback(
             basic_vector<E, A> magnitude, basic_vector<E, A> sign) noexcept {
         return dx::bwor(dx::abs(magnitude), dx::bwand(dx::msb, sign));
+    }
+
+    template <simd_vector S, typename M, simd_vector L, simd_vector R>
+    requires mx::maskable_operator<copysign_t, S, M, L, R> &&
+        mx::canonical_operator_args<S, M, L, R> &&
+        requires(S src, M mask, L lhs, R rhs) {
+            copysign(internal::abi<common_abi_t<L, R>>, src, mask, lhs, rhs);
+        }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(
+        S src, M mask, L lhs, R rhs) noexcept {
+        return copysign(internal::abi<common_abi_t<L, R>>, src, mask, lhs, rhs);
+    }
+
+    template <simd_vector S, typename M, simd_vector L, simd_vector R>
+    requires mx::maskable_operator<copysign_t, S, M, L, R> &&
+        (!mx::canonical_operator_args<S, M, L, R>) &&
+        requires(S src, M mask, L lhs, R rhs) { copysign(src, mask, lhs, rhs); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(
+        S src, M mask, L lhs, R rhs) noexcept {
+        return copysign(src, mask, lhs, rhs);
+    }
+
+    template <typename M, simd_vector L, simd_vector R>
+    requires mx::maskable_zoperator<copysign_t, M, L, R> &&
+        mx::canonical_zoperator_args<copysign_t, M, L, R> &&
+        requires(M mask, L lhs, R rhs) {
+            copysign(
+                internal::abi<common_abi_t<L, R>>, dx::zero, mask, lhs, rhs);
+        }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(M mask, L lhs, R rhs) noexcept {
+        return copysign(
+            internal::abi<common_abi_t<L, R>>, dx::zero, mask, lhs, rhs);
+    }
+
+    template <typename M, simd_vector L, simd_vector R>
+    requires mx::maskable_zoperator<copysign_t, M, L, R> &&
+        (!mx::canonical_zoperator_args<copysign_t, M, L, R>) &&
+        requires(M mask, L lhs, R rhs) { copysign(dx::zero, mask, lhs, rhs); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(M mask, L lhs, R rhs) noexcept {
+        return copysign(dx::zero, mask, lhs, rhs);
     }
 
 public:
@@ -113,6 +160,8 @@ public:
             return operator()(magnitude, dx::to_canonical(sign));
         }
     }
+
+    using mx::masked_operation<copysign_t>::operator();
 };
 
 } // namespace datapar::internal

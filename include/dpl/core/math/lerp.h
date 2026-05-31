@@ -3,6 +3,8 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/math/internal/masked_op.h"
+
 #if !DPL_MODULES
 #  include "dpl/core/concepts/decayable.h"
 #  include "dpl/core/concepts/operation_category.h"
@@ -46,9 +48,12 @@ concept unqualified_lerp = unqualified_canonical_lerp<AT, BT, CT, A> ||
         regular_invocable<lerp_t, canonical_type_t<AT>, canonical_type_t<BT>,
             canonical_type_t<CT>>);
 
-struct lerp_t : ternary_operation_base<lerp_t> {
+struct lerp_t :
+    private ternary_operation_base<lerp_t>,
+    private mx::masked_operation<lerp_t> {
 private:
     friend ternary_operation_base<lerp_t>;
+    friend mx::masked_operation<lerp_t>;
 
     template <simd_abi A, typename AT, typename BT, typename CT>
     requires ((canonical_vector<AT> || !simd_vector<AT>) &&
@@ -83,6 +88,55 @@ private:
     static constexpr auto DPL_VECTORCALL fallback(basic_vector<E, A> start,
         basic_vector<E, A> end, basic_vector<E, A> scale) noexcept {
         return dx::fmadd(scale, dx::subtract(end, start), start);
+    }
+
+    template <simd_vector S, typename M, simd_vector AT, simd_vector BT,
+        simd_vector CT>
+    requires mx::maskable_operator<lerp_t, S, M, AT, BT, CT> &&
+        mx::canonical_operator_args<S, M, AT, BT, CT> &&
+        requires(S src, M mask, AT a, BT b, CT c) {
+            lerp(internal::abi<common_abi_t<AT, BT, CT>>, src, mask, a, b, c);
+        }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(
+        S src, M mask, AT a, BT b, CT c) noexcept {
+        return lerp(
+            internal::abi<common_abi_t<AT, BT, CT>>, src, mask, a, b, c);
+    }
+
+    template <simd_vector S, typename M, simd_vector AT, simd_vector BT,
+        simd_vector CT>
+    requires mx::maskable_operator<lerp_t, S, M, AT, BT, CT> &&
+        (!mx::canonical_operator_args<S, M, AT, BT, CT>) &&
+        requires(S src, M mask, AT a, BT b, CT c) { lerp(src, mask, a, b, c); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(
+        S src, M mask, AT a, BT b, CT c) noexcept {
+        return lerp(src, mask, a, b, c);
+    }
+
+    template <typename M, simd_vector AT, simd_vector BT, simd_vector CT>
+    requires mx::maskable_zoperator<lerp_t, M, AT, BT, CT> &&
+        mx::canonical_zoperator_args<lerp_t, M, AT, BT, CT> &&
+        requires(M mask, AT a, BT b, CT c) {
+            lerp(internal::abi<common_abi_t<AT, BT, CT>>, dx::zero, mask, a, b,
+                c);
+        }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(
+        M mask, AT a, BT b, CT c) noexcept {
+        return lerp(
+            internal::abi<common_abi_t<AT, BT, CT>>, dx::zero, mask, a, b, c);
+    }
+
+    template <typename M, simd_vector AT, simd_vector BT, simd_vector CT>
+    requires mx::maskable_zoperator<lerp_t, M, AT, BT, CT> &&
+        (!mx::canonical_zoperator_args<lerp_t, M, AT, BT, CT>) &&
+        requires(M mask, AT a, BT b, CT c) { lerp(dx::zero, mask, a, b, c); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(
+        M mask, AT a, BT b, CT c) noexcept {
+        return lerp(dx::zero, mask, a, b, c);
     }
 
 public:
@@ -134,6 +188,7 @@ public:
     }
 
     using ternary_operation_base<lerp_t>::operator();
+    using mx::masked_operation<lerp_t>::operator();
 };
 
 } // namespace datapar::internal

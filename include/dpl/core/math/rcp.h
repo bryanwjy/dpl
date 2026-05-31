@@ -6,6 +6,7 @@
 #include "dpl/core/math/fixup.h"
 #include "dpl/core/math/fma.h"
 #include "dpl/core/math/internal/floating_point_simd.h"
+#include "dpl/core/math/internal/masked_op.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/basic_type.h"
@@ -41,8 +42,10 @@ concept unqualified_rcp = unqualified_extended_rcp<T> ||
     (decayable_vector_for<T, operation_category::lane_agnostic> &&
         regular_invocable<rcp_t, canonical_type_t<T>>);
 
-struct rcp_t {
+struct rcp_t : private mx::masked_operation<rcp_t> {
 private:
+    friend mx::masked_operation<rcp_t>;
+
     template <floating_point E>
     static constexpr auto useed = []() {
         if constexpr (common_float_with<E, double>) {
@@ -84,6 +87,43 @@ private:
                 fpfix::condition<fpfix::zero, fpfix::signed_inf>);
     }
 
+    template <simd_vector S, typename M, simd_vector T>
+    requires mx::maskable_operator<rcp_t, S, M, T> &&
+        mx::canonical_operator_args<S, M, T> && requires(S src, M mask, T val) {
+            rcp(internal::abi<T>, src, mask, val);
+        }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(S src, M mask, T val) noexcept {
+        return rcp(internal::abi<T>, src, mask, val);
+    }
+
+    template <simd_vector S, typename M, simd_vector T>
+    requires mx::maskable_operator<rcp_t, S, M, T> &&
+        (!mx::canonical_operator_args<S, M, T>) &&
+        requires(S src, M mask, T val) { rcp(src, mask, val); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(S src, M mask, T val) noexcept {
+        return rcp(src, mask, val);
+    }
+
+    template <typename M, simd_vector T>
+    requires mx::maskable_zoperator<rcp_t, M, T> &&
+        mx::canonical_zoperator_args<rcp_t, M, T> &&
+        requires(M mask, T val) { rcp(internal::abi<T>, dx::zero, mask, val); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
+        return rcp(internal::abi<T>, dx::zero, mask, val);
+    }
+
+    template <typename M, simd_vector T>
+    requires mx::maskable_zoperator<rcp_t, M, T> &&
+        (!mx::canonical_zoperator_args<rcp_t, M, T>) &&
+        requires(M mask, T val) { rcp(dx::zero, mask, val); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
+        return rcp(dx::zero, mask, val);
+    }
+
 public:
     template <simd_abi A, simd_element_for<A> E>
     requires floating_point<E>
@@ -120,6 +160,8 @@ public:
             return operator()(dx::to_canonical(val));
         }
     }
+
+    using mx::masked_operation<rcp_t>::operator();
 };
 } // namespace datapar::internal
 

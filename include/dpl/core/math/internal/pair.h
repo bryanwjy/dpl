@@ -3,6 +3,8 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/math/internal/fwd.h" // IWYU pragma: export
+
 #include "dpl/core/math/fma.h"
 #include "dpl/core/math/internal/floating_point_simd.h"
 #include "dpl/core/math/rsqrt.h"
@@ -23,7 +25,6 @@
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::fmath {
-namespace dx = __DPL datapar;
 
 template <typename T, typename... Args>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)

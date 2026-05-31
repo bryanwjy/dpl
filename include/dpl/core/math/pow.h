@@ -6,6 +6,7 @@
 #include "dpl/core/math/fixup.h"
 #include "dpl/core/math/frexp.h"
 #include "dpl/core/math/internal/floating_point_simd.h"
+#include "dpl/core/math/internal/masked_op.h"
 #include "dpl/core/math/internal/pair.h"
 #include "dpl/core/math/internal/polynomial.h"
 #include "dpl/core/math/round.h"
@@ -44,9 +45,12 @@ concept unqualified_pow = unqualified_extended_pow<L, R, A> ||
         decayable_vector_for<R, operation_category::lane_agnostic> &&
         regular_invocable<pow_t, canonical_type_t<L>, canonical_type_t<R>>);
 
-struct pow_t : binary_operation_base<pow_t> {
+struct pow_t :
+    private binary_operation_base<pow_t>,
+    private mx::masked_operation<pow_t> {
 private:
     friend binary_operation_base<pow_t>;
+    friend mx::masked_operation<pow_t>;
 
     template <simd_abi A, typename L, typename R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -221,6 +225,48 @@ private:
         return dx::select(rhs == dx::zero || lhs == dx::one, dx::one, result);
     }
 
+    template <simd_vector S, typename M, simd_vector L, simd_vector R>
+    requires mx::maskable_operator<pow_t, S, M, L, R> &&
+        mx::canonical_operator_args<S, M, L, R> &&
+        requires(S src, M mask, L lhs, R rhs) {
+            pow(internal::abi<common_abi_t<L, R>>, src, mask, lhs, rhs);
+        }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(
+        S src, M mask, L lhs, R rhs) noexcept {
+        return pow(internal::abi<common_abi_t<L, R>>, src, mask, lhs, rhs);
+    }
+
+    template <simd_vector S, typename M, simd_vector L, simd_vector R>
+    requires mx::maskable_operator<pow_t, S, M, L, R> &&
+        (!mx::canonical_operator_args<S, M, L, R>) &&
+        requires(S src, M mask, L lhs, R rhs) { pow(src, mask, lhs, rhs); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(
+        S src, M mask, L lhs, R rhs) noexcept {
+        return pow(src, mask, lhs, rhs);
+    }
+
+    template <typename M, simd_vector L, simd_vector R>
+    requires mx::maskable_zoperator<pow_t, M, L, R> &&
+        mx::canonical_zoperator_args<pow_t, M, L, R> &&
+        requires(M mask, L lhs, R rhs) {
+            pow(internal::abi<common_abi_t<L, R>>, dx::zero, mask, lhs, rhs);
+        }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(M mask, L lhs, R rhs) noexcept {
+        return pow(internal::abi<common_abi_t<L, R>>, dx::zero, mask, lhs, rhs);
+    }
+
+    template <typename M, simd_vector L, simd_vector R>
+    requires mx::maskable_zoperator<pow_t, M, L, R> &&
+        (!mx::canonical_zoperator_args<pow_t, M, L, R>) &&
+        requires(M mask, L lhs, R rhs) { pow(dx::zero, mask, lhs, rhs); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(M mask, L lhs, R rhs) noexcept {
+        return pow(dx::zero, mask, lhs, rhs);
+    }
+
 public:
     template <simd_abi A, simd_element_for<A> E>
     requires floating_point<E>
@@ -261,6 +307,7 @@ public:
     }
 
     using binary_operation_base<pow_t>::operator();
+    using mx::masked_operation<pow_t>::operator();
 };
 } // namespace datapar::internal
 

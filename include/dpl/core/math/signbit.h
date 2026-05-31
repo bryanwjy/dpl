@@ -30,8 +30,10 @@ concept unqualified_extended_signbit = requires(T arg) {
     { signbit(arg) } -> compatible_mask_with<T>;
 };
 
-struct signbit_t {
+struct signbit_t : private mx::masked_predicate<signbit_t> {
 private:
+    friend mx::masked_predicate<signbit_t>;
+
     template <floating_point E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr basic_mask<E, A>
@@ -39,6 +41,25 @@ private:
         using sint = signed_representation_t<E>;
         return dx::reinterpret<E>(
             dx::cmplt(dx::reinterpret<sint>(arg), dx::zero));
+    }
+
+    template <typename M, simd_vector T>
+    requires mx::maskable_predicate<signbit_t, M, T> &&
+        mx::canonical_predicate_args<signbit_t, M, T> &&
+        requires(
+            M mask, T val) { signbit(internal::abi<T>, dx::zero, mask, val); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
+        return signbit(internal::abi<T>, dx::zero, mask, val);
+    }
+
+    template <typename M, simd_vector T>
+    requires mx::maskable_predicate<signbit_t, M, T> &&
+        (!mx::canonical_predicate_args<signbit_t, M, T>) &&
+        requires(M mask, T val) { signbit(dx::zero, mask, val); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
+        return signbit(dx::zero, mask, val);
     }
 
 public:
@@ -78,6 +99,8 @@ public:
             return operator()(dx::to_canonical(arg));
         }
     }
+
+    using mx::masked_predicate<signbit_t>::operator();
 };
 } // namespace datapar::internal
 

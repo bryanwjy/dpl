@@ -3,6 +3,8 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/math/internal/fwd.h" // IWYU pragma: export
+
 #include "dpl/core/math/internal/compliance.h" // IWYU pragma: export
 
 #if !DPL_MODULES

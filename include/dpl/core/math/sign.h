@@ -4,6 +4,8 @@
 #include "dpl/config.h"
 
 #include "dpl/core/math/internal/floating_point_simd.h"
+#include "dpl/core/math/internal/masked_op.h"
+
 #if !DPL_MODULES
 #  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/simd_abi.h"
@@ -38,9 +40,12 @@ concept unqualified_sign =
  * For floating point elements, the result is unaffected by 0.0 but a
  * -0.0 value on the right will negate the left.
  */
-struct sign_t : binary_operation_base<sign_t> {
+struct sign_t :
+    private binary_operation_base<sign_t>,
+    private mx::masked_operation<sign_t> {
 private:
     friend binary_operation_base<sign_t>;
+    friend mx::masked_operation<sign_t>;
 
     template <simd_abi A, typename L, typename R>
     requires requires(L lhs, R rhs) { sign(internal::abi<A>, lhs, rhs); }
@@ -60,6 +65,43 @@ private:
             auto const negated = dx::negate(left, right < dx::zero, left);
             return dx::select(right == dx::zero, dx::zero, negated);
         }
+    }
+
+    template <simd_vector S, typename M, simd_vector T>
+    requires mx::maskable_operator<sign_t, S, M, T> &&
+        mx::canonical_operator_args<S, M, T> && requires(S src, M mask, T val) {
+            sign(internal::abi<T>, src, mask, val);
+        }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(S src, M mask, T val) noexcept {
+        return sign(internal::abi<T>, src, mask, val);
+    }
+
+    template <simd_vector S, typename M, simd_vector T>
+    requires mx::maskable_operator<sign_t, S, M, T> &&
+        (!mx::canonical_operator_args<S, M, T>) &&
+        requires(S src, M mask, T val) { sign(src, mask, val); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(S src, M mask, T val) noexcept {
+        return sign(src, mask, val);
+    }
+
+    template <typename M, simd_vector T>
+    requires mx::maskable_zoperator<sign_t, M, T> &&
+        mx::canonical_zoperator_args<sign_t, M, T> &&
+        requires(M mask, T val) { sign(internal::abi<T>, dx::zero, mask, val); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
+        return sign(internal::abi<T>, dx::zero, mask, val);
+    }
+
+    template <typename M, simd_vector T>
+    requires mx::maskable_zoperator<sign_t, M, T> &&
+        (!mx::canonical_zoperator_args<sign_t, M, T>) &&
+        requires(M mask, T val) { sign(dx::zero, mask, val); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
+        return sign(dx::zero, mask, val);
     }
 
 public:
@@ -101,6 +143,7 @@ public:
     }
 
     using binary_operation_base<sign_t>::operator();
+    using mx::masked_operation<sign_t>::operator();
 };
 } // namespace datapar::internal
 

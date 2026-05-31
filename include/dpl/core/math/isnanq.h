@@ -4,6 +4,8 @@
 #include "dpl/config.h"
 
 #include "dpl/core/math/internal/floating_point_simd.h"
+#include "dpl/core/math/internal/masked_op.h"
+
 #if !DPL_MODULES
 #  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/compatible_mask_with.h"
@@ -30,8 +32,10 @@ concept unqualified_extended_isnanq = requires(T arg) {
     { isnanq(arg) } -> compatible_mask_with<T>;
 };
 
-struct isnanq_t {
+struct isnanq_t : private mx::masked_predicate<isnanq_t> {
 private:
+    friend mx::masked_predicate<isnanq_t>;
+
     template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr basic_mask<E, A>
@@ -44,6 +48,25 @@ private:
 
         using sint = signed_representation_t<E>;
         return dx::cmpgt(dx::reinterpret<sint>(dx::abs(arg)), max_snan);
+    }
+
+    template <typename M, simd_vector T>
+    requires mx::maskable_predicate<isnanq_t, M, T> &&
+        mx::canonical_predicate_args<isnanq_t, M, T> &&
+        requires(
+            M mask, T val) { isnanq(internal::abi<T>, dx::zero, mask, val); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
+        return isnanq(internal::abi<T>, dx::zero, mask, val);
+    }
+
+    template <typename M, simd_vector T>
+    requires mx::maskable_predicate<isnanq_t, M, T> &&
+        (!mx::canonical_predicate_args<isnanq_t, M, T>) &&
+        requires(M mask, T val) { isnanq(dx::zero, mask, val); }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
+        return isnanq(dx::zero, mask, val);
     }
 
 public:
@@ -83,6 +106,8 @@ public:
             return operator()(dx::to_canonical(arg));
         }
     }
+
+    using mx::masked_predicate<isnanq_t>::operator();
 };
 } // namespace datapar::internal
 
