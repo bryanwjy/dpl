@@ -208,63 +208,60 @@ public:
         }
     }
 
-    template <fixed_width_abi A, simd_element_for<A> E,
-        common_size_with<E> MaskE>
+    template <fixed_width_abi A, simd_element_for<A> E, simd_element_for<A> ME>
+    requires common_size_with<E, ME>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<unsigned_representation_t<E>, A> operator()(
-        basic_vector<unsigned_representation_t<E>, A> pass,
-        basic_mask<MaskE, A> mask, basic_vector<E, A> val) noexcept {
+        basic_vector<unsigned_representation_t<E>, A> src,
+        basic_mask<ME, A> mask, basic_vector<E, A> val) noexcept {
         if constexpr (unqualified_canonical_mcountl_one<
                           basic_vector<unsigned_representation_t<E>, A>,
-                          basic_mask<MaskE, A>, basic_vector<E, A>>) {
+                          basic_mask<ME, A>, basic_vector<E, A>>) {
             if consteval {
-                return internal::masked<countl_one_t>(pass, mask, val);
+                return internal::masked<countl_one_t>(src, mask, val);
             } else {
-                return countl_one(internal::abi<A>, pass, mask, val);
+                return countl_one(internal::abi<A>, src, mask, val);
             }
         } else {
-            return internal::masked<countl_one_t>(pass, mask, val);
+            return internal::masked<countl_one_t>(src, mask, val);
         }
     }
 
-    template <simd_abi A1, simd_element_for<A1> E, common_size_with<E> MaskE,
-        simd_abi A2>
-    requires (different_from<A1, A2> || scalable_abi<A1> || scalable_abi<A2>) &&
-        simd_element_for<E, A2> &&
-        maskable_args<basic_vector<unsigned_representation_t<E>, A1>,
-            basic_mask<MaskE, A1>, basic_vector<E, A2>> &&
+    template <simd_abi MA, simd_element_for<MA> ME, simd_abi TA,
+        simd_element_for<TA> E>
+    requires (different_from<MA, TA> || scalable_abi<MA> || scalable_abi<TA>) &&
+        maskable_args<basic_vector<unsigned_representation_t<E>, MA>,
+            basic_mask<ME, MA>, basic_vector<E, TA>> &&
         unqualified_canonical_mcountl_one<
-            basic_vector<unsigned_representation_t<E>, A1>,
-            basic_mask<MaskE, A1>, basic_vector<E, A2>>
+            basic_vector<unsigned_representation_t<E>, MA>, basic_mask<ME, MA>,
+            basic_vector<E, TA>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A1> operator()(basic_vector<E, A1> pass,
-        basic_mask<MaskE, A1> mask, basic_vector<E, A2> val) noexcept {
-        return countl_one(internal::abi<A1>, pass, mask, val);
+    static constexpr basic_vector<E, MA> operator()(basic_vector<E, MA> src,
+        basic_mask<ME, MA> mask, basic_vector<E, TA> val) noexcept {
+        return countl_one(internal::abi<MA>, src, mask, val);
     }
 
-    template <simd_vector Pass, simd_mask Mask, simd_vector Arg>
-    requires extended_vector_bit<Pass, Arg> &&
-        (extended_vector<Pass> || extended_mask<Mask> ||
-            extended_vector<Arg>) &&
-        maskable_args<Pass, Mask, Arg> &&
-        extended_mcountl_one<countl_one_t, Pass, Mask, Arg>
+    template <simd_vector S, simd_mask M, simd_vector T>
+    requires extended_vector_bit<S, T> &&
+        (extended_vector<S> || extended_mask<M> || extended_vector<T>) &&
+        maskable_args<S, M, T> && extended_mcountl_one<countl_one_t, S, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(Pass pass, Mask mask, Arg arg) noexcept {
-        if constexpr (unqualified_extended_mcountl_one<Pass, Mask, Arg>) {
-            return countl_one(pass, mask, arg);
+    static constexpr auto operator()(S src, M mask, T val) noexcept {
+        if constexpr (unqualified_extended_mcountl_one<S, M, T>) {
+            return countl_one(src, mask, val);
         } else {
-            return operator()(dx::to_canonical(pass), dx::to_canonical(mask),
-                dx::to_canonical(arg));
+            return operator()(dx::to_canonical(src), dx::to_canonical(mask),
+                dx::to_canonical(val));
         }
     }
 
-    template <fixed_width_abi A, simd_element_for<A> E,
-        common_size_with<E> MaskE>
+    template <fixed_width_abi A, simd_element_for<A> E, simd_element_for<A> ME>
+    requires common_size_with<E, ME>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<unsigned_representation_t<E>, A> operator()(
-        basic_mask<MaskE, A> mask, basic_vector<E, A> val) noexcept {
+        basic_mask<ME, A> mask, basic_vector<E, A> val) noexcept {
         if constexpr (unqualified_canonical_mcountl_one<zero_t,
-                          basic_mask<MaskE, A>, basic_vector<E, A>>) {
+                          basic_mask<ME, A>, basic_vector<E, A>>) {
             if consteval {
                 return internal::masked<countl_one_t>(mask, val);
             } else {
@@ -275,99 +272,96 @@ public:
         }
     }
 
-    template <simd_abi A1, simd_element_for<A1> E, common_size_with<E> MaskE,
-        simd_abi A2>
-    requires (different_from<A1, A2> || scalable_abi<A1> || scalable_abi<A2>) &&
-        simd_element_for<E, A2> &&
-        zmaskable_args<basic_mask<MaskE, A1>, basic_vector<E, A2>> &&
-        unqualified_canonical_mcountl_one<dx::zero_t, basic_mask<MaskE, A1>,
-            basic_vector<E, A2>>
+    template <simd_abi MA, simd_element_for<MA> ME, simd_abi TA,
+        simd_element_for<TA> E>
+    requires (different_from<MA, TA> || scalable_abi<MA> || scalable_abi<TA>) &&
+        zmaskable_args<basic_mask<ME, MA>, basic_vector<E, TA>> &&
+        unqualified_canonical_mcountl_one<dx::zero_t, basic_mask<ME, MA>,
+            basic_vector<E, TA>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
-        basic_mask<MaskE, A1> mask, basic_vector<E, A2> val) noexcept {
-        return countl_one(internal::abi<A1>, dx::zero, mask, val);
+        basic_mask<ME, MA> mask, basic_vector<E, TA> val) noexcept {
+        return countl_one(internal::abi<MA>, dx::zero, mask, val);
     }
 
-    template <simd_mask Mask, simd_vector Arg>
-    requires (extended_mask<Mask> || extended_vector<Arg>) &&
-        zmaskable_args<Mask, Arg> &&
-        extended_mcountl_one<countl_one_t, zero_t, Mask, Arg>
+    template <simd_mask M, simd_vector T>
+    requires (extended_mask<M> || extended_vector<T>) && zmaskable_args<M, T> &&
+        extended_mcountl_one<countl_one_t, zero_t, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(Mask mask, Arg arg) noexcept {
-        if constexpr (unqualified_extended_mcountl_one<dx::zero_t, Mask, Arg>) {
-            return countl_one(mask, arg);
+    static constexpr auto operator()(M mask, T val) noexcept {
+        if constexpr (unqualified_extended_mcountl_one<dx::zero_t, M, T>) {
+            return countl_one(mask, val);
         } else {
-            return operator()(dx::to_canonical(mask), dx::to_canonical(arg));
+            return operator()(dx::to_canonical(mask), dx::to_canonical(val));
         }
     }
 
-    template <simd_mask Mask, simd_vector Arg>
-    requires requires(
-        Mask mask, Arg arg) { countl_one_t::operator()(mask, arg); }
+    template <simd_mask M, simd_vector T>
+    requires requires(M mask, T val) { countl_one_t::operator()(mask, val); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(dx::zero_t, Mask mask, Arg arg) noexcept {
-        return operator()(mask, arg);
+    static constexpr auto operator()(dx::zero_t, M mask, T val) noexcept {
+        return operator()(mask, val);
     }
 
     template <fixed_width_abi A, simd_element_for<A> E,
-        const_mask_for<basic_vector<E, A>> Mask>
+        const_mask_for<basic_vector<E, A>> M>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<unsigned_representation_t<E>, A> operator()(
-        basic_vector<unsigned_representation_t<E>, A> pass, Mask mask,
+        basic_vector<unsigned_representation_t<E>, A> src, M mask,
         basic_vector<E, A> val) noexcept {
         if constexpr (unqualified_canonical_imcountl_one<
-                          basic_vector<unsigned_representation_t<E>, A>, Mask,
+                          basic_vector<unsigned_representation_t<E>, A>, M,
                           basic_vector<E, A>>) {
             if consteval {
-                return internal::masked<countl_one_t>(pass, mask, val);
+                return internal::masked<countl_one_t>(src, mask, val);
             } else {
-                return countl_one(internal::abi<A>, pass,
+                return countl_one(internal::abi<A>, src,
                     dx::to_compatible_const_mask<basic_vector<E, A>>(mask),
                     val);
             }
         } else {
-            return internal::masked<countl_one_t>(pass, mask, val);
+            return internal::masked<countl_one_t>(src, mask, val);
         }
     }
 
-    template <simd_abi SA, simd_abi InA, simd_element_for<InA> E,
-        const_mask_for<basic_vector<unsigned_representation_t<E>, SA>> Mask>
+    template <simd_abi SA, simd_abi TA, simd_element_for<TA> E,
+        const_mask_for<basic_vector<unsigned_representation_t<E>, SA>> M>
     requires simd_element_for<unsigned_representation_t<E>, SA> &&
-        (different_from<SA, InA> || scalable_abi<SA> || scalable_abi<InA>) &&
+        (different_from<SA, TA> || scalable_abi<SA> || scalable_abi<TA>) &&
         imm_maskable_args<basic_vector<unsigned_representation_t<E>, SA>,
-            basic_vector<E, InA>> &&
+            basic_vector<E, TA>> &&
         unqualified_canonical_imcountl_one<
-            basic_vector<unsigned_representation_t<E>, SA>, Mask,
-            basic_vector<E, InA>>
+            basic_vector<unsigned_representation_t<E>, SA>, M,
+            basic_vector<E, TA>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<unsigned_representation_t<E>, SA> operator()(
-        basic_vector<unsigned_representation_t<E>, SA> pass, Mask mask,
-        basic_vector<E, InA> val) noexcept {
-        return countl_one(internal::abi<SA>, pass,
+        basic_vector<unsigned_representation_t<E>, SA> src, M mask,
+        basic_vector<E, TA> val) noexcept {
+        return countl_one(internal::abi<SA>, src,
             dx::to_compatible_const_mask<basic_vector<E, SA>>(mask), val);
     }
 
-    template <simd_vector S, const_mask_for<S> Mask, simd_vector Arg>
+    template <simd_vector S, const_mask_for<S> M, simd_vector Arg>
     requires extended_vector_bit<S, Arg> &&
         (extended_vector<S> || extended_vector<Arg>) &&
         imm_maskable_args<S, Arg> &&
-        extended_imcountl_one<countl_one_t, S, Mask, Arg>
+        extended_imcountl_one<countl_one_t, S, M, Arg>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(S pass, Mask mask, Arg arg) noexcept {
-        if constexpr (unqualified_extended_mcountl_one<S, Mask, Arg>) {
-            return countl_one(pass, dx::to_compatible_const_mask<S>(mask), arg);
+    static constexpr auto operator()(S src, M mask, Arg arg) noexcept {
+        if constexpr (unqualified_extended_mcountl_one<S, M, Arg>) {
+            return countl_one(src, dx::to_compatible_const_mask<S>(mask), arg);
         } else {
-            return operator()(dx::to_canonical(pass),
+            return operator()(dx::to_canonical(src),
                 dx::to_compatible_const_mask<S>(mask), dx::to_canonical(arg));
         }
     }
 
     template <fixed_width_abi A, simd_element_for<A> E,
-        const_mask_for<basic_vector<E, A>> Mask>
+        const_mask_for<basic_vector<E, A>> M>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<unsigned_representation_t<E>, A> operator()(
-        Mask mask, basic_vector<E, A> val) noexcept {
-        if constexpr (unqualified_canonical_imcountl_one<zero_t, Mask,
+        M mask, basic_vector<E, A> val) noexcept {
+        if constexpr (unqualified_canonical_imcountl_one<zero_t, M,
                           basic_vector<E, A>>) {
             if consteval {
                 return internal::masked<countl_one_t>(mask, val);
@@ -381,37 +375,36 @@ public:
         }
     }
 
-    template <scalable_abi InA, simd_element_for<InA> E,
-        const_mask_for<basic_vector<E, InA>> Mask>
-    requires imm_zmaskable_args<basic_vector<E, InA>> &&
-        unqualified_canonical_imcountl_one<zero_t, Mask, basic_vector<E, InA>>
+    template <scalable_abi TA, simd_element_for<TA> E,
+        const_mask_for<basic_vector<E, TA>> M>
+    requires imm_zmaskable_args<basic_vector<E, TA>> &&
+        unqualified_canonical_imcountl_one<zero_t, M, basic_vector<E, TA>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<unsigned_representation_t<E>, InA> operator()(
-        Mask mask, basic_vector<E, InA> val) noexcept {
-        return countl_one(internal::abi<InA>, dx::zero,
-            dx::to_compatible_const_mask<basic_vector<E, InA>>(mask), val);
+    static constexpr basic_vector<unsigned_representation_t<E>, TA> operator()(
+        M mask, basic_vector<E, TA> val) noexcept {
+        return countl_one(internal::abi<TA>, dx::zero,
+            dx::to_compatible_const_mask<basic_vector<E, TA>>(mask), val);
     }
 
-    template <extended_vector Arg, const_mask_for<Arg> Mask>
-    requires imm_zmaskable_args<Arg> &&
-        extended_imcountl_one<countl_one_t, zero_t, Mask, Arg>
+    template <extended_vector T, const_mask_for<T> M>
+    requires imm_zmaskable_args<T> &&
+        extended_imcountl_one<countl_one_t, zero_t, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(Mask mask, Arg arg) noexcept {
-        if constexpr (unqualified_extended_imcountl_one<zero_t, Mask, Arg>) {
+    static constexpr auto operator()(M mask, T val) noexcept {
+        if constexpr (unqualified_extended_imcountl_one<zero_t, M, T>) {
             return countl_one(
-                dx::zero, dx::to_compatible_const_mask<Arg>(mask), arg);
+                dx::zero, dx::to_compatible_const_mask<T>(mask), val);
         } else {
             return operator()(
-                dx::to_compatible_const_mask<Arg>(mask), dx::to_canonical(arg));
+                dx::to_compatible_const_mask<T>(mask), dx::to_canonical(val));
         }
     }
 
-    template <simd_vector Arg, const_mask_for<Arg> Mask>
-    requires requires(
-        Mask mask, Arg arg) { countl_one_t::operator()(mask, arg); }
+    template <simd_vector T, const_mask_for<T> M>
+    requires requires(M mask, T val) { countl_one_t::operator()(mask, val); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(dx::zero_t, Mask mask, Arg arg) noexcept {
-        return operator()(mask, arg);
+    static constexpr auto operator()(dx::zero_t, M mask, T val) noexcept {
+        return operator()(mask, val);
     }
 };
 } // namespace datapar::internal

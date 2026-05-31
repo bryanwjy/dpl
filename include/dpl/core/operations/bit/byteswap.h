@@ -156,161 +156,163 @@ public:
         }
     }
 
-    template <fixed_width_abi A, simd_element_for<A> E,
-        common_size_with<E> MaskE>
+    template <fixed_width_abi A, simd_element_for<A> E, common_size_with<E> ME>
     requires integral<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(basic_vector<E, A> pass,
-        basic_mask<MaskE, A> mask, basic_vector<E, A> val) noexcept {
+    static constexpr basic_vector<E, A> operator()(basic_vector<E, A> src,
+        basic_mask<ME, A> mask, basic_vector<E, A> val) noexcept {
         if constexpr (unqualified_canonical_mbyteswap<basic_vector<E, A>,
-                          basic_mask<MaskE, A>, basic_vector<E, A>>) {
+                          basic_mask<ME, A>, basic_vector<E, A>>) {
             if consteval {
-                return internal::masked<byteswap_t>(pass, mask, val);
+                return internal::masked<byteswap_t>(src, mask, val);
             } else {
-                return byteswap(internal::abi<A>, pass, mask, val);
+                return byteswap(internal::abi<A>, src, mask, val);
             }
         } else {
-            return internal::masked<byteswap_t>(pass, mask, val);
+            return internal::masked<byteswap_t>(src, mask, val);
         }
     }
 
-    template <simd_abi A1, simd_element_for<A1> E, common_size_with<E> MaskE,
-        simd_abi A2>
-    requires (different_from<A1, A2> || scalable_abi<A1> || scalable_abi<A2> ||
-                 !integral<E>) &&
-        simd_element_for<E, A2> &&
-        maskable_args<basic_vector<E, A1>, basic_mask<MaskE, A1>,
-            basic_vector<E, A2>> &&
-        unqualified_canonical_mbyteswap<basic_vector<E, A1>,
-            basic_mask<MaskE, A1>, basic_vector<E, A2>>
+    template <simd_abi SA, simd_element_for<SA> E, simd_abi TA,
+        simd_element_for<SA> ME>
+    requires common_size_with<E, ME> &&
+        (different_from<SA, TA> || scalable_abi<SA> || scalable_abi<TA> ||
+            !integral<E>) &&
+        simd_element_for<E, TA> &&
+        maskable_args<basic_vector<E, SA>, basic_mask<ME, SA>,
+            basic_vector<E, TA>> &&
+        unqualified_canonical_mbyteswap<basic_vector<E, SA>, basic_mask<ME, SA>,
+            basic_vector<E, TA>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A1> operator()(basic_vector<E, A1> pass,
-        basic_mask<MaskE, A1> mask, basic_vector<E, A2> val) noexcept {
-        return byteswap(internal::abi<A1>, pass, mask, val);
+    static constexpr basic_vector<E, SA> operator()(basic_vector<E, SA> src,
+        basic_mask<ME, SA> mask, basic_vector<E, TA> val) noexcept {
+        return byteswap(internal::abi<SA>, src, mask, val);
     }
 
-    template <simd_vector Pass, simd_mask Mask, simd_vector Arg>
-    requires (extended_vector<Pass> || extended_mask<Mask> ||
+    template <simd_vector Pass, simd_mask M, simd_vector Arg>
+    requires (extended_vector<Pass> || extended_mask<M> ||
                  extended_vector<Arg>) &&
-        maskable_args<Pass, Mask, Arg> &&
-        extended_mbyteswap<byteswap_t, Pass, Mask, Arg>
+        maskable_args<Pass, M, Arg> &&
+        extended_mbyteswap<byteswap_t, Pass, M, Arg>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(Pass pass, Mask mask, Arg arg) noexcept {
-        if constexpr (unqualified_extended_mbyteswap<Pass, Mask, Arg>) {
-            return byteswap(pass, mask, arg);
+    static constexpr auto operator()(Pass src, M mask, Arg arg) noexcept {
+        if constexpr (unqualified_extended_mbyteswap<Pass, M, Arg>) {
+            return byteswap(src, mask, arg);
         } else {
-            return operator()(dx::to_canonical(pass), dx::to_canonical(mask),
+            return operator()(dx::to_canonical(src), dx::to_canonical(mask),
                 dx::to_canonical(arg));
         }
     }
 
-    template <fixed_width_abi A, simd_element_for<A> E,
-        common_size_with<E> MaskE>
-    requires integral<E>
+    template <fixed_width_abi A, simd_element_for<A> E, simd_element_for<A> ME>
+    requires common_size_with<E, ME> && integral<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(
-        basic_mask<MaskE, A> mask, basic_vector<E, A> val) noexcept {
-        if constexpr (unqualified_canonical_mbyteswap<zero_t,
-                          basic_mask<MaskE, A>, basic_vector<E, A>>) {
+    static constexpr basic_vector<unsigned_representation_t<E>, A> operator()(
+        basic_vector<unsigned_representation_t<E>, A> src,
+        basic_mask<ME, A> mask, basic_vector<E, A> val) noexcept {
+        if constexpr (unqualified_canonical_mbyteswap<
+                          basic_vector<unsigned_representation_t<E>, A>,
+                          basic_mask<ME, A>, basic_vector<E, A>>) {
             if consteval {
-                return internal::masked<byteswap_t>(mask, val);
+                return internal::masked<byteswap_t>(src, mask, val);
             } else {
-                return byteswap(internal::abi<A>, dx::zero, mask, val);
+                return byteswap(internal::abi<A>, src, mask, val);
             }
         } else {
-            return operator()(dx::zero_v<basic_vector<E, A>>, mask, val);
+            return internal::masked<byteswap_t>(src, mask, val);
         }
     }
 
-    template <simd_abi A1, simd_element_for<A1> E, common_size_with<E> MaskE,
-        simd_abi A2>
-    requires (different_from<A1, A2> || scalable_abi<A1> || scalable_abi<A2> ||
-                 !integral<E>) &&
-        simd_element_for<E, A2> &&
-        zmaskable_args<basic_mask<MaskE, A1>, basic_vector<E, A2>> &&
-        unqualified_canonical_mbyteswap<dx::zero_t, basic_mask<MaskE, A1>,
-            basic_vector<E, A2>>
+    template <simd_abi MA, simd_element_for<MA> ME, simd_abi TA,
+        simd_element_for<TA> E>
+    requires common_size_with<E, ME> && integral<E> &&
+        (different_from<MA, TA> || scalable_abi<MA> || scalable_abi<TA>) &&
+        simd_element_for<E, TA> &&
+        maskable_args<basic_vector<unsigned_representation_t<E>, MA>,
+            basic_mask<ME, MA>, basic_vector<E, TA>> &&
+        unqualified_canonical_mbyteswap<
+            basic_vector<unsigned_representation_t<E>, MA>, basic_mask<ME, MA>,
+            basic_vector<E, TA>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        basic_mask<MaskE, A1> mask, basic_vector<E, A2> val) noexcept {
-        return byteswap(internal::abi<A1>, dx::zero, mask, val);
+    static constexpr basic_vector<E, MA> operator()(basic_vector<E, MA> src,
+        basic_mask<ME, MA> mask, basic_vector<E, TA> val) noexcept {
+        return byteswap(internal::abi<MA>, src, mask, val);
     }
 
-    template <simd_mask Mask, simd_vector Arg>
-    requires (extended_mask<Mask> || extended_vector<Arg>) &&
-        zmaskable_args<Mask, Arg> &&
-        extended_mbyteswap<byteswap_t, zero_t, Mask, Arg>
+    template <simd_mask M, simd_vector Arg>
+    requires (extended_mask<M> || extended_vector<Arg>) &&
+        zmaskable_args<M, Arg> && extended_mbyteswap<byteswap_t, zero_t, M, Arg>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(Mask mask, Arg arg) noexcept {
-        if constexpr (unqualified_extended_mbyteswap<dx::zero_t, Mask, Arg>) {
+    static constexpr auto operator()(M mask, Arg arg) noexcept {
+        if constexpr (unqualified_extended_mbyteswap<dx::zero_t, M, Arg>) {
             return byteswap(mask, arg);
         } else {
             return operator()(dx::to_canonical(mask), dx::to_canonical(arg));
         }
     }
 
-    template <simd_mask Mask, simd_vector Arg>
-    requires requires(Mask mask, Arg arg) { byteswap_t::operator()(mask, arg); }
+    template <simd_mask M, simd_vector Arg>
+    requires requires(M mask, Arg arg) { byteswap_t::operator()(mask, arg); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(dx::zero_t, Mask mask, Arg arg) noexcept {
+    static constexpr auto operator()(dx::zero_t, M mask, Arg arg) noexcept {
         return operator()(mask, arg);
     }
 
     template <fixed_width_abi A, simd_element_for<A> E,
-        const_mask_for<basic_vector<E, A>> Mask>
+        const_mask_for<basic_vector<E, A>> M>
     requires integral<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A> operator()(
-        basic_vector<E, A> pass, Mask mask, basic_vector<E, A> val) noexcept {
-        if constexpr (unqualified_canonical_imbyteswap<basic_vector<E, A>, Mask,
+        basic_vector<E, A> src, M mask, basic_vector<E, A> val) noexcept {
+        if constexpr (unqualified_canonical_imbyteswap<basic_vector<E, A>, M,
                           basic_vector<E, A>>) {
             if consteval {
-                return internal::masked<byteswap_t>(pass, mask, val);
+                return internal::masked<byteswap_t>(src, mask, val);
             } else {
-                return byteswap(internal::abi<A>, pass,
+                return byteswap(internal::abi<A>, src,
                     dx::to_compatible_const_mask<basic_vector<E, A>>(mask),
                     val);
             }
         } else {
-            return internal::masked<byteswap_t>(pass, mask, val);
+            return internal::masked<byteswap_t>(src, mask, val);
         }
     }
 
     template <simd_abi SA, simd_element_for<SA> E,
-        const_mask_for<basic_vector<E, SA>> Mask, simd_abi InA>
-    requires (different_from<SA, InA> || scalable_abi<SA> ||
-                 scalable_abi<InA> || !integral<E>) &&
-        simd_element_for<E, InA> &&
-        imm_maskable_args<basic_vector<E, SA>, basic_vector<E, InA>> &&
-        unqualified_canonical_imbyteswap<basic_vector<E, SA>, Mask,
-            basic_vector<E, InA>>
+        const_mask_for<basic_vector<E, SA>> M, simd_abi TA>
+    requires (different_from<SA, TA> || scalable_abi<SA> || scalable_abi<TA> ||
+                 !integral<E>) &&
+        simd_element_for<E, TA> &&
+        imm_maskable_args<basic_vector<E, SA>, basic_vector<E, TA>> &&
+        unqualified_canonical_imbyteswap<basic_vector<E, SA>, M,
+            basic_vector<E, TA>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, SA> operator()(basic_vector<E, SA> pass,
-        Mask mask, basic_vector<E, InA> val) noexcept {
-        return byteswap(internal::abi<SA>, pass,
+    static constexpr basic_vector<E, SA> operator()(
+        basic_vector<E, SA> src, M mask, basic_vector<E, TA> val) noexcept {
+        return byteswap(internal::abi<SA>, src,
             dx::to_compatible_const_mask<basic_vector<E, SA>>(mask), val);
     }
 
-    template <simd_vector S, const_mask_for<S> Mask, simd_vector T>
+    template <simd_vector S, const_mask_for<S> M, simd_vector T>
     requires (extended_vector<S> || extended_vector<T>) &&
-        imm_maskable_args<S, T> && extended_imbyteswap<byteswap_t, S, Mask, T>
+        imm_maskable_args<S, T> && extended_imbyteswap<byteswap_t, S, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(S pass, Mask mask, T arg) noexcept {
-        if constexpr (unqualified_extended_mbyteswap<S, Mask, T>) {
-            return byteswap(pass, dx::to_compatible_const_mask<S>(mask), arg);
+    static constexpr auto operator()(S src, M mask, T arg) noexcept {
+        if constexpr (unqualified_extended_mbyteswap<S, M, T>) {
+            return byteswap(src, dx::to_compatible_const_mask<S>(mask), arg);
         } else {
-            return operator()(dx::to_canonical(pass),
+            return operator()(dx::to_canonical(src),
                 dx::to_compatible_const_mask<S>(mask), dx::to_canonical(arg));
         }
     }
 
     template <fixed_width_abi A, simd_element_for<A> E,
-        const_mask_for<basic_vector<E, A>> Mask>
+        const_mask_for<basic_vector<E, A>> M>
     requires integral<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A> operator()(
-        Mask mask, basic_vector<E, A> val) noexcept {
-        if constexpr (unqualified_canonical_imbyteswap<zero_t, Mask,
+        M mask, basic_vector<E, A> val) noexcept {
+        if constexpr (unqualified_canonical_imbyteswap<zero_t, M,
                           basic_vector<E, A>>) {
             if consteval {
                 return internal::masked<byteswap_t>(mask, val);
@@ -324,24 +326,24 @@ public:
         }
     }
 
-    template <simd_abi InA, simd_element_for<InA> E,
-        const_mask_for<basic_vector<E, InA>> Mask>
-    requires (scalable_abi<InA> || !integral<E>) && simd_element_for<E, InA> &&
-        imm_zmaskable_args<basic_vector<E, InA>> &&
-        unqualified_canonical_imbyteswap<zero_t, Mask, basic_vector<E, InA>>
+    template <simd_abi TA, simd_element_for<TA> E,
+        const_mask_for<basic_vector<E, TA>> M>
+    requires (scalable_abi<TA> || !integral<E>) && simd_element_for<E, TA> &&
+        imm_zmaskable_args<basic_vector<E, TA>> &&
+        unqualified_canonical_imbyteswap<zero_t, M, basic_vector<E, TA>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, InA> operator()(
-        Mask mask, basic_vector<E, InA> val) noexcept {
-        return byteswap(internal::abi<InA>, dx::zero,
-            dx::to_compatible_const_mask<basic_vector<E, InA>>(mask), val);
+    static constexpr basic_vector<E, TA> operator()(
+        M mask, basic_vector<E, TA> val) noexcept {
+        return byteswap(internal::abi<TA>, dx::zero,
+            dx::to_compatible_const_mask<basic_vector<E, TA>>(mask), val);
     }
 
-    template <extended_vector T, const_mask_for<T> Mask>
+    template <extended_vector T, const_mask_for<T> M>
     requires imm_zmaskable_args<T> &&
-        extended_imbyteswap<byteswap_t, zero_t, Mask, T>
+        extended_imbyteswap<byteswap_t, zero_t, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(Mask mask, T arg) noexcept {
-        if constexpr (unqualified_extended_imbyteswap<zero_t, Mask, T>) {
+    static constexpr auto operator()(M mask, T arg) noexcept {
+        if constexpr (unqualified_extended_imbyteswap<zero_t, M, T>) {
             return byteswap(
                 dx::zero, dx::to_compatible_const_mask<T>(mask), arg);
         } else {
@@ -350,10 +352,10 @@ public:
         }
     }
 
-    template <simd_vector T, const_mask_for<T> Mask>
-    requires requires(Mask mask, T arg) { byteswap_t::operator()(mask, arg); }
+    template <simd_vector T, const_mask_for<T> M>
+    requires requires(M mask, T arg) { byteswap_t::operator()(mask, arg); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(dx::zero_t, Mask mask, T arg) noexcept {
+    static constexpr auto operator()(dx::zero_t, M mask, T arg) noexcept {
         return operator()(mask, arg);
     }
 };
