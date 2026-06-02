@@ -134,6 +134,18 @@ constexpr mask<E> broadcast(same_as<bool> auto scalar) noexcept {
     return xmm::broadcast<E>(xmm::abi, scalar);
 }
 
+DPL_EXPORT template <simd_element_for<abi_tag> E>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+constexpr simd<E> broadcast(dx::zero_t zero) noexcept {
+    return xmm::broadcast<E>(xmm::abi, zero);
+}
+
+DPL_EXPORT template <simd_element_for<abi_tag> E>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+constexpr mask<E> broadcast(dx::all_bits_t all) noexcept {
+    return xmm::broadcast<E>(xmm::abi, all);
+}
+
 } // namespace datapar::xmm
 
 DPL_DEFAULT_NAMESPACE_END

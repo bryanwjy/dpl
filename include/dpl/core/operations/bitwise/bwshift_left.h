@@ -472,15 +472,6 @@ public:
         }
     }
 
-    template <scalable_abi A, simd_element_for<A> E,
-        integral_constant_like Shift>
-    requires unqualified_canonical_bwsli<basic_vector<E, A>, Shift>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(
-        basic_vector<E, A> val, Shift shift) noexcept {
-        return bwshift_left(internal::abi<A>, val, shift);
-    }
-
     template <fixed_width_abi A, simd_element_for<A> E,
         integral_constant_like Shift>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -495,15 +486,6 @@ public:
         } else {
             return operator()(val, Shift::value);
         }
-    }
-
-    template <scalable_abi A, simd_element_for<A> E,
-        integral_constant_like Shift>
-    requires unqualified_canonical_bwsli<basic_mask<E, A>, Shift>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_mask<E, A> operator()(
-        basic_mask<E, A> val, Shift shift) noexcept {
-        return bwshift_left(internal::abi<A>, val, shift);
     }
 
     template <extended_vector T, integral_constant_like Shift>

@@ -22,11 +22,10 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 template <size_t...>
 void permute(...) noexcept = delete;
-template <size_t>
-void broadcast_lane(...) noexcept = delete;
 
 template <size_t... Is>
 struct permutei_t;
+struct permute_t;
 
 template <typename T, typename Arg>
 concept permute_result = simd_vector<T> && simd_vector<Arg> &&
@@ -56,7 +55,7 @@ template <typename Op, typename S, typename C, typename T,
 concept unqualified_canonical_mpermutei = requires(S src, C mask, T val) {
     {
         Op::native(internal::abi<A>, src, mask, val)
-    } -> equivalent_simd_as<canonical_if_zero_t<S, T, A>>;
+    } -> canonical_permute_result<canonical_if_zero_t<S, T, A>>;
 };
 
 template <typename Op, typename S, typename C, typename T,
@@ -64,7 +63,7 @@ template <typename Op, typename S, typename C, typename T,
 concept unqualified_extended_mpermutei = requires(S src, C mask, T val) {
     {
         Op::native(src, mask, val)
-    } -> equivalent_simd_as<canonical_if_zero_t<S, T, A>>;
+    } -> permute_result<canonical_if_zero_t<S, T, A>>;
 };
 
 template <typename Op, typename S, typename C, typename T,
@@ -87,7 +86,7 @@ concept unqualified_canonical_impermutei = requires(S src, M mask, T val) {
     {
         Op::native(internal::abi<A>, src,
             internal::to_const_mask<A, permutei_t, S, T>(mask), val)
-    } -> equivalent_simd_as<canonical_if_zero_t<S, T, A>>;
+    } -> canonical_permute_result<canonical_if_zero_t<S, T, A>>;
 };
 
 template <typename Op, typename S, typename M, typename T,
@@ -95,7 +94,7 @@ template <typename Op, typename S, typename M, typename T,
 concept unqualified_extended_impermutei = requires(S src, M mask, T val) {
     {
         Op::native(src, internal::to_const_mask<A, permutei_t, S, T>(mask), val)
-    } -> equivalent_simd_as<canonical_if_zero_t<S, T, A>>;
+    } -> permute_result<canonical_if_zero_t<S, T, A>>;
 };
 
 template <typename Op, typename S, typename M, typename T,
@@ -880,143 +879,13 @@ public:
         return operator()(mask, lhs, rhs);
     }
 };
-
-template <size_t I>
-struct broadcast_lanei_t;
-
-template <typename T, size_t I>
-concept unqualified_canonical_broadcast_lanei = requires(T val) {
-    { broadcast_lane<I>(internal::abi<T>, val) } -> canonical_permute_result<T>;
-};
-
-template <typename T, size_t I>
-concept unqualified_extended_broadcast_lanei = requires(T val) {
-    { broadcast_lane<I>(val) } -> permute_result<T>;
-};
-
-template <typename T, size_t I>
-concept unqualified_broadcast_lanei =
-    unqualified_extended_broadcast_lanei<T, I> ||
-    (decayable_vector_for<T, operation_category::lane_permutation> &&
-        regular_invocable<broadcast_lanei_t<I>, T>);
-
-template <size_t I>
-struct broadcast_lanei_t {
-private:
-    template <typename E, typename A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_vector<E, A>
-        DPL_VECTORCALL fallback(basic_vector<E, A> arg) noexcept {
-        return [&]<size_t... Is>(index_sequence<Is...>) {
-            return permutei_t<((Is / Is) * I)...>::operator()(arg);
-        }(iota_sequence<E, A>);
-    }
-
-public:
-    template <fixed_width_abi A, simd_element_for<A> E>
-    requires (I < simd_abi_traits<A, E>::size)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(
-        basic_vector<E, A> arg) noexcept {
-        if constexpr (unqualified_canonical_broadcast_lanei<basic_vector<E, A>,
-                          I>) {
-            if consteval {
-                return fallback(arg);
-            } else {
-                return broadcast_lane<I>(internal::abi<A>, arg);
-            }
-        } else {
-            return fallback(arg);
-        }
-    }
-
-    template <fixed_width_vector T>
-    requires (I < simd_abi_traits<T>::size) && unqualified_broadcast_lanei<T, I>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T arg) noexcept {
-        if constexpr (unqualified_extended_broadcast_lanei<T, I>) {
-            return broadcast_lane<I>(arg);
-        } else {
-            return operator()(dx::to_canonical(arg));
-        }
-    }
-};
-
-struct broadcast_lane_t;
-
-template <typename T>
-concept unqualified_canonical_broadcast_lane = requires(T val, size_t idx) {
-    {
-        broadcast_lane(internal::abi<T>, val, idx)
-    } -> canonical_permute_result<T>;
-};
-
-template <typename T>
-concept unqualified_extended_broadcast_lane = requires(T val, size_t idx) {
-    { broadcast_lane(val, idx) } -> permute_result<T>;
-};
-
-template <typename T>
-concept unqualified_broadcast_lane = unqualified_extended_broadcast_lane<T> ||
-    (decayable_vector_for<T, operation_category::lane_permutation> &&
-        regular_invocable<broadcast_lane_t, T>);
-
-struct broadcast_lane_t {
-private:
-    template <typename E, typename A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_vector<E, A>
-        DPL_VECTORCALL fallback(basic_vector<E, A> arg, size_t idx) noexcept {
-        return dx::broadcast<E, A>(arg[idx]);
-    }
-
-public:
-    template <fixed_width_abi A, simd_element_for<A> E>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(
-        basic_vector<E, A> val, size_t idx) noexcept {
-        if constexpr (unqualified_canonical_broadcast_lane<
-                          basic_vector<E, A>>) {
-            if consteval {
-                return fallback(val, idx);
-            } else {
-                return broadcast_lane(internal::abi<A>, val, idx);
-            }
-        } else {
-            return fallback(val, idx);
-        }
-    }
-
-    template <scalable_abi A, simd_element_for<A> E>
-    requires unqualified_canonical_broadcast_lane<basic_vector<E, A>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(
-        basic_vector<E, A> val, size_t idx) noexcept {
-        return broadcast_lane(internal::abi<A>, val, idx);
-    }
-
-    template <extended_vector T>
-    requires unqualified_broadcast_lane<T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T val, size_t idx) noexcept {
-        if constexpr (unqualified_extended_broadcast_lane<T>) {
-            return broadcast_lane(val, idx);
-        } else {
-            return operator()(dx::to_canonical(val), idx);
-        }
-    }
-};
-
 } // namespace datapar::internal
 
 namespace datapar {
 inline namespace cpo {
 DPL_EXPORT template <size_t... Is>
 inline constexpr internal::permutei_t<Is...> permutei{};
-DPL_EXPORT template <size_t I>
-inline constexpr internal::broadcast_lanei_t<I> broadcast_lanei{};
 DPL_EXPORT inline constexpr internal::permute_t permute{};
-DPL_EXPORT inline constexpr internal::broadcast_lane_t broadcast_lane{};
 } // namespace cpo
 } // namespace datapar
 DPL_DEFAULT_NAMESPACE_END

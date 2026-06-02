@@ -458,83 +458,12 @@ public:
     }
 };
 
-template <auto V>
-struct scan_sumi_t {};
-template <auto V>
-struct exscan_sumi_t {};
-
-template <integral auto V>
-struct exscan_sumi_t<V> {
-private:
-    template <typename T>
-    using mask_type DPL_NODEBUG = const_mask<simd_abi_traits<T>::size, V>;
-
-public:
-    template <typename S, simd_vector R, typename I>
-    requires requires {
-        typename canonical_if_zero_t<S, R>;
-        typename mask_type<canonical_if_zero_t<S, R>>;
-        requires regular_invocable<exscan_sum_t, S,
-            mask_type<canonical_if_zero_t<S, R>>, R, I>;
-    }
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(S src, R val, I init) noexcept {
-        constexpr mask_type<canonical_if_zero_t<S, R>> cmask{};
-        return exscan_sum_t::operator()(src, cmask, val, init);
-    }
-
-    template <simd_vector T, typename I>
-    requires requires {
-        typename mask_type<T>;
-        requires regular_invocable<exscan_sum_t, dx::zero_t, T, I>;
-    }
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T val, I init) noexcept {
-        constexpr mask_type<T> cmask{};
-        return exscan_sum_t::operator()(cmask, val, init);
-    }
-};
-
-template <integral auto V>
-struct scan_sumi_t<V> {
-private:
-    template <typename T>
-    using mask_type DPL_NODEBUG = const_mask<simd_abi_traits<T>::size, V>;
-
-public:
-    template <typename S, simd_vector R>
-    requires requires {
-        typename canonical_if_zero_t<S, R>;
-        typename mask_type<canonical_if_zero_t<S, R>>;
-        requires regular_invocable<scan_sum_t, S,
-            mask_type<canonical_if_zero_t<S, R>>, R>;
-    }
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(S src, R val) noexcept {
-        constexpr mask_type<canonical_if_zero_t<S, R>> mask{};
-        return scan_sum_t::operator()(src, mask, val);
-    }
-
-    template <simd_vector T>
-    requires requires {
-        typename mask_type<T>;
-        requires regular_invocable<scan_sum_t, dx::zero_t, T>;
-    }
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T val) noexcept {
-        constexpr mask_type<T> mask{};
-        return scan_sum_t::operator()(mask, val);
-    }
-};
-
 } // namespace datapar::internal
 
 namespace datapar {
-DPL_EXPORT template <auto V>
-inline constexpr internal::scan_sumi_t<V> scan_sumi{};
+
 DPL_EXPORT inline constexpr internal::scan_sum_t scan_sum{};
-DPL_EXPORT template <auto V>
-inline constexpr internal::exscan_sumi_t<V> exscan_sumi{};
+
 DPL_EXPORT inline constexpr internal::exscan_sum_t exscan_sum{};
 } // namespace datapar
 
