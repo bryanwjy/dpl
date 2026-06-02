@@ -4,19 +4,13 @@
 #include "dpl/config.h"
 
 #include "dpl/core/algorithm/internal/scan.h"
-#include "dpl/core/algorithm/shift.h"
-#include "dpl/core/algorithm/slide.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/basic/immediate.h"
 #  include "dpl/core/concepts/common_abi_with.h"
-#  include "dpl/core/concepts/decayable.h"
-#  include "dpl/core/concepts/operation_category.h"
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/operations/bit.h"
+#  include "dpl/core/operations/permute.h"
 #  include "dpl/core/operations/select.h"
-#  include "dpl/core/type_traits/array_for.h"
-#  include "dpl/core/type_traits/basic_type.h"
+#  include "dpl/core/type_traits/abi_type.h"
 #  include "dpl/core/type_traits/simd_abi_traits.h"
 #  include "dpl/std/concepts/invocable.h"
 #endif

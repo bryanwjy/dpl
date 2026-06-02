@@ -12,8 +12,6 @@
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/operations/compare/max.h"
 #  include "dpl/core/type_traits/abi_type.h"
-#  include "dpl/core/type_traits/simd_abi_traits.h"
-#  include "dpl/std/concepts/invocable.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -171,20 +169,19 @@ public:
         if constexpr (same_as<abi_type_t<T>, abi_type_t<M>>) {
             if constexpr (unqualified_canonical_mexscan_max<zero_t, M, T, I>) {
                 if consteval {
-                    return operator()(
-                        dx::broadcast<S>(dx::zero), mask, val, init);
+                    return exscan_max_t::fallback(dx::zero, mask, val, init);
                 } else {
                     return exscan_max(
                         internal::abi<A>, dx::zero, mask, val, init);
                 }
             } else {
-                return operator()(dx::broadcast<S>(dx::zero), mask, val, init);
+                return exscan_max_t::fallback(dx::zero, mask, val, init);
             }
         } else if constexpr (unqualified_canonical_mexscan_max<zero_t, M, T,
                                  I>) {
             return exscan_max(internal::abi<A>, dx::zero, mask, val, init);
         } else {
-            return operator()(dx::broadcast<S>(dx::zero), mask, val, init);
+            return exscan_max_t::fallback(dx::zero, mask, val, init);
         }
     }
 
@@ -197,7 +194,7 @@ public:
             return exscan_max(dx::zero, mask, val, init);
         } else {
             using S = broadcast_type<M, T>;
-            return operator()(dx::broadcast<S>(dx::zero), mask, val, init);
+            return exscan_max_t::fallback(dx::zero, mask, val, init);
         }
     }
 
@@ -245,7 +242,7 @@ public:
         if constexpr (unqualified_extended_imexscan_max<S, M, T, I>) {
             return exscan_max(src, cmask, val, init);
         } else {
-            return exscan_max_t::fallback(src, cmask, val, init);
+            return exscan_max_t::fallbacki(src, cmask, val, init);
         }
     }
 
@@ -254,15 +251,15 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, T val, I init) noexcept {
         using A = abi_type_t<T>;
+        constexpr auto cmask = dx::to_compatible_const_mask<T>(mask);
         if constexpr (unqualified_canonical_imexscan_max<zero_t, M, T, I>) {
             if consteval {
-                return operator()(dx::broadcast<T>(dx::zero), mask, val, init);
+                return exscan_max_t::fallbacki(dx::zero, cmask, val, init);
             } else {
-                constexpr auto cmask = dx::to_compatible_const_mask<T>(mask);
                 return exscan_max(internal::abi<A>, dx::zero, cmask, val, init);
             }
         } else {
-            return operator()(dx::broadcast<T>(dx::zero), mask, val, init);
+            return exscan_max_t::fallbacki(dx::zero, cmask, val, init);
         }
     }
 
@@ -270,11 +267,11 @@ public:
     requires const_mask_for<M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, T val, I init) noexcept {
+        constexpr auto cmask = dx::to_compatible_const_mask<T>(mask);
         if constexpr (unqualified_extended_imexscan_max<zero_t, M, T, I>) {
-            return exscan_max(
-                dx::zero, dx::to_compatible_const_mask<T>(mask), val, init);
+            return exscan_max(dx::zero, cmask, val, init);
         } else {
-            return operator()(dx::broadcast<T>(dx::zero), mask, val, init);
+            return exscan_max_t::fallbacki(dx::zero, cmask, val, init);
         }
     }
 
@@ -287,6 +284,16 @@ public:
         dx::zero_t, M mask, T val, I init) noexcept {
         return operator()(mask, val, init);
     }
+};
+
+template <typename T>
+concept unqualified_canonical_scan_max = requires(T val) {
+    { scan_max(internal::abi<T>, val) } -> canonical_arithmetic_result<T>;
+};
+
+template <typename T>
+concept unqualified_extended_scan_max = requires(T val) {
+    { scan_max(val) } -> extended_arithmetic_result<T>;
 };
 
 template <typename S, typename M, typename T, typename A = common_abi_t<M, T>>
@@ -335,20 +342,16 @@ struct scan_max_t : private scan_base {
             src);
     }
 
-    template <typename M, typename T>
-    using broadcast_type DPL_NODEBUG =
-        rebind_simd_t<T, simd_lane_type_t<T>, typename M::abi_type>;
-
 public:
     template <simd_abi A, simd_element_for<A> E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A> operator()(
         basic_vector<E, A> val) noexcept {
-        if constexpr (unqualified_canonical_scan_sum<basic_vector<E, A>>) {
+        if constexpr (unqualified_canonical_scan_max<basic_vector<E, A>>) {
             if consteval {
                 return scan_base::inclusive(val, dx::max);
             } else {
-                return scan_sum(internal::abi<A>, val);
+                return scan_max(internal::abi<A>, val);
             }
         } else {
             return scan_base::inclusive(val, dx::max);
@@ -356,11 +359,10 @@ public:
     }
 
     template <extended_vector T>
-    requires extended_scan_sum<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T val) noexcept {
-        if constexpr (unqualified_extended_scan_sum<T>) {
-            return scan_sum(val);
+        if constexpr (unqualified_extended_scan_max<T>) {
+            return scan_max(val);
         } else {
             return scan_base::inclusive(val, dx::max);
         }
@@ -406,22 +408,21 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, T val) noexcept {
         using A = abi_type_t<M>;
-        using S = broadcast_type<M, T>;
         if constexpr (same_as<abi_type_t<T>, abi_type_t<M>>) {
             if constexpr (unqualified_canonical_mscan_max<zero_t, M, T>) {
                 if consteval {
-                    return operator()(dx::broadcast<S>(dx::zero), mask, val);
+                    return scan_max_t::fallback(dx::zero, mask, val);
                 } else {
                     return scan_max(internal::abi<A>, dx::zero, mask, val);
                 }
             } else {
-                return operator()(dx::broadcast<S>(dx::zero), mask, val);
+                return scan_max_t::fallback(dx::zero, mask, val);
             }
         } else if constexpr (unqualified_canonical_mscan_max<zero_t, M, T>) {
             return scan_max(internal::abi<A>, dx::zero, mask, val);
         } else {
 
-            return operator()(dx::broadcast<S>(dx::zero), mask, val);
+            return scan_max_t::fallback(dx::zero, mask, val);
         }
     }
 
@@ -432,8 +433,7 @@ public:
         if constexpr (unqualified_extended_mscan_max<zero_t, M, T>) {
             return scan_max(dx::zero, mask, val);
         } else {
-            using S = broadcast_type<M, T>;
-            return operator()(dx::broadcast<S>(dx::zero), mask, val);
+            return scan_max_t::fallback(dx::zero, mask, val);
         }
     }
 
@@ -485,15 +485,15 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, T val) noexcept {
         using A = abi_type_t<T>;
+        constexpr auto cmask = dx::to_compatible_const_mask<T>(mask);
         if constexpr (unqualified_canonical_imscan_max<zero_t, M, T>) {
             if consteval {
-                return operator()(dx::broadcast<T>(dx::zero), mask, val);
+                return scan_max_t::fallbacki(dx::zero, cmask, val);
             } else {
-                constexpr auto cmask = dx::to_compatible_const_mask<T>(mask);
                 return scan_max(internal::abi<A>, dx::zero, cmask, val);
             }
         } else {
-            return operator()(dx::broadcast<T>(dx::zero), mask, val);
+            return scan_max_t::fallbacki(dx::zero, cmask, val);
         }
     }
 
@@ -501,15 +501,15 @@ public:
     requires const_mask_for<M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, T val) noexcept {
+        constexpr auto cmask = dx::to_compatible_const_mask<T>(mask);
         if constexpr (unqualified_extended_imscan_max<zero_t, M, T>) {
-            return scan_max(
-                dx::zero, dx::to_compatible_const_mask<T>(mask), val);
+            return scan_max(dx::zero, cmask, val);
         } else {
-            return operator()(dx::broadcast<T>(dx::zero), mask, val);
+            return scan_max_t::fallbacki(dx::zero, cmask, val);
         }
     }
 
-    template <typename M, extended_vector T>
+    template <typename M, simd_vector T>
     requires const_mask_for<M, T> &&
         requires(M mask, T val) { scan_max_t::operator()(mask, val); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)

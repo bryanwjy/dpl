@@ -11,8 +11,6 @@
 #  include "dpl/core/concepts/common_abi_with.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/type_traits/abi_type.h"
-#  include "dpl/core/type_traits/simd_abi_traits.h"
-#  include "dpl/std/concepts/invocable.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -135,20 +133,19 @@ public:
         if constexpr (same_as<abi_type_t<T>, abi_type_t<M>>) {
             if constexpr (unqualified_canonical_mexscan_sum<zero_t, M, T, I>) {
                 if consteval {
-                    return operator()(
-                        dx::broadcast<S>(dx::zero), mask, val, init);
+                    return exscan_sum_t::fallback(dx::zero, mask, val, init);
                 } else {
                     return exscan_sum(
                         internal::abi<A>, dx::zero, mask, val, init);
                 }
             } else {
-                return operator()(dx::broadcast<S>(dx::zero), mask, val, init);
+                return exscan_sum_t::fallback(dx::zero, mask, val, init);
             }
         } else if constexpr (unqualified_canonical_mexscan_sum<zero_t, M, T,
                                  I>) {
             return exscan_sum(internal::abi<A>, dx::zero, mask, val, init);
         } else {
-            return operator()(dx::broadcast<S>(dx::zero), mask, val, init);
+            return exscan_sum_t::fallback(dx::zero, mask, val, init);
         }
     }
 
@@ -161,7 +158,7 @@ public:
             return exscan_sum(dx::zero, mask, val, init);
         } else {
             using S = broadcast_type<M, T>;
-            return operator()(dx::broadcast<S>(dx::zero), mask, val, init);
+            return exscan_sum_t::fallback(dx::zero, mask, val, init);
         }
     }
 
@@ -209,7 +206,7 @@ public:
         if constexpr (unqualified_extended_imexscan_sum<S, M, T, I>) {
             return exscan_sum(src, cmask, val, init);
         } else {
-            return exscan_sum_t::fallback(src, cmask, val, init);
+            return exscan_sum_t::fallbacki(src, cmask, val, init);
         }
     }
 
@@ -218,15 +215,16 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, T val, I init) noexcept {
         using A = abi_type_t<T>;
+        constexpr auto cmask = dx::to_compatible_const_mask<T>(mask);
         if constexpr (unqualified_canonical_imexscan_sum<zero_t, M, T, I>) {
             if consteval {
-                return operator()(dx::broadcast<T>(dx::zero), mask, val, init);
+                return exscan_sum_t::fallbacki(dx::zero, mask, val, init);
             } else {
-                constexpr auto cmask = dx::to_compatible_const_mask<T>(mask);
+
                 return exscan_sum(internal::abi<A>, dx::zero, cmask, val, init);
             }
         } else {
-            return operator()(dx::broadcast<T>(dx::zero), mask, val, init);
+            return exscan_sum_t::fallbacki(dx::zero, mask, val, init);
         }
     }
 
@@ -234,11 +232,11 @@ public:
     requires const_mask_for<M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, T val, I init) noexcept {
+        constexpr auto cmask = dx::to_compatible_const_mask<T>(mask);
         if constexpr (unqualified_extended_imexscan_sum<zero_t, M, T, I>) {
-            return exscan_sum(
-                dx::zero, dx::to_compatible_const_mask<T>(mask), val, init);
+            return exscan_sum(dx::zero, cmask, val, init);
         } else {
-            return operator()(dx::broadcast<T>(dx::zero), mask, val, init);
+            return exscan_sum_t::fallbacki(dx::zero, cmask, val, init);
         }
     }
 
@@ -350,18 +348,18 @@ public:
         if constexpr (same_as<abi_type_t<T>, abi_type_t<M>>) {
             if constexpr (unqualified_canonical_mscan_sum<zero_t, M, T>) {
                 if consteval {
-                    return operator()(dx::broadcast<S>(dx::zero), mask, val);
+                    return scan_sum_t::fallback(dx::zero, mask, val);
                 } else {
                     return scan_sum(internal::abi<A>, dx::zero, mask, val);
                 }
             } else {
-                return operator()(dx::broadcast<S>(dx::zero), mask, val);
+                return scan_sum_t::fallback(dx::zero, mask, val);
             }
         } else if constexpr (unqualified_canonical_mscan_sum<zero_t, M, T>) {
             return scan_sum(internal::abi<A>, dx::zero, mask, val);
         } else {
 
-            return operator()(dx::broadcast<S>(dx::zero), mask, val);
+            return scan_sum_t::fallback(dx::zero, mask, val);
         }
     }
 
@@ -425,15 +423,15 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, T val) noexcept {
         using A = abi_type_t<T>;
+        constexpr auto cmask = dx::to_compatible_const_mask<T>(mask);
         if constexpr (unqualified_canonical_imscan_sum<zero_t, M, T>) {
             if consteval {
-                return operator()(dx::broadcast<T>(dx::zero), mask, val);
+                return scan_sum_t::fallbacki(dx::zero, cmask, val);
             } else {
-                constexpr auto cmask = dx::to_compatible_const_mask<T>(mask);
                 return scan_sum(internal::abi<A>, dx::zero, cmask, val);
             }
         } else {
-            return operator()(dx::broadcast<T>(dx::zero), mask, val);
+            return scan_sum_t::fallbacki(dx::zero, cmask, val);
         }
     }
 
@@ -445,11 +443,11 @@ public:
             return scan_sum(
                 dx::zero, dx::to_compatible_const_mask<T>(mask), val);
         } else {
-            return operator()(dx::broadcast<T>(dx::zero), mask, val);
+            return scan_sum_t::fallbacki(dx::zero, mask, val);
         }
     }
 
-    template <typename M, extended_vector T>
+    template <typename M, simd_vector T>
     requires const_mask_for<M, T> &&
         requires(M mask, T val) { scan_sum_t::operator()(mask, val); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)

@@ -12,10 +12,10 @@
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/operations/compare/max.h"
 #  include "dpl/core/type_traits/abi_type.h"
-#  include "dpl/core/type_traits/simd_abi_traits.h"
 #  include "dpl/std/concepts/invocable.h"
 #  include "dpl/std/type_traits/is_invocable.h"
 #endif
+
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 template <typename F, typename T>
@@ -46,7 +46,7 @@ concept unqualified_canonical_mexscan =
     requires(S src, M mask, T val, I init, BinaryOp && (*op)()) {
         {
             exscan(internal::abi<A>, src, mask, val, init, op())
-        } -> equivalent_simd_as<canonical_if_zero_t<S, T, A>>;
+        } -> canonical_arithmetic_result<canonical_if_zero_t<S, T, A>>;
     };
 
 template <typename S, typename M, typename T, typename I, typename BinaryOp,
@@ -55,7 +55,7 @@ concept unqualified_extended_mexscan =
     requires(S src, M mask, T val, I init, BinaryOp && (*op)()) {
         {
             exscan(src, mask, val, init, op())
-        } -> equivalent_simd_as<canonical_if_zero_t<S, T, A>>;
+        } -> extended_arithmetic_result<canonical_if_zero_t<S, T, A>>;
     };
 
 template <typename S, typename M, typename T, typename I, typename BinaryOp,
@@ -65,7 +65,7 @@ concept unqualified_canonical_imexscan = requires(
     {
         exscan(internal::abi<A>, src,
             internal::to_const_mask<A, exscan_t, S, T>(mask), val, init, op())
-    } -> equivalent_simd_as<canonical_if_zero_t<S, T, A>>;
+    } -> canonical_arithmetic_result<canonical_if_zero_t<S, T, A>>;
 };
 
 template <typename S, typename M, typename T, typename I, typename BinaryOp,
@@ -75,7 +75,7 @@ concept unqualified_extended_imexscan =
         {
             exscan(src, internal::to_const_mask<A, exscan_t, S, T>(mask), val,
                 init, op())
-        } -> equivalent_simd_as<canonical_if_zero_t<S, T, A>>;
+        } -> extended_arithmetic_result<canonical_if_zero_t<S, T, A>>;
     };
 
 struct exscan_t : private scan_base {
@@ -189,27 +189,26 @@ public:
     static constexpr auto operator()(M mask, T val, I init, Op&& op) noexcept(
         is_nothrow_invocable_v<Op, T, T>) {
         using A = abi_type_t<M>;
-        using S = broadcast_type<M, T>;
         if constexpr (same_as<abi_type_t<T>, abi_type_t<M>>) {
             if constexpr (unqualified_canonical_mexscan<zero_t, M, T, I, Op>) {
                 if consteval {
-                    return operator()(dx::broadcast<S>(dx::zero), mask, val,
-                        init, __DPL forward<Op>(op));
+                    return exscan_t::fallback(
+                        dx::zero, mask, val, init, __DPL forward<Op>(op));
                 } else {
                     return exscan(internal::abi<A>, dx::zero, mask, val, init,
                         __DPL forward<Op>(op));
                 }
             } else {
-                return operator()(dx::broadcast<S>(dx::zero), mask, val, init,
-                    __DPL forward<Op>(op));
+                return exscan_t::fallback(
+                    dx::zero, mask, val, init, __DPL forward<Op>(op));
             }
         } else if constexpr (unqualified_canonical_mexscan<zero_t, M, T, I,
                                  Op>) {
             return exscan(internal::abi<A>, dx::zero, mask, val, init,
                 __DPL forward<Op>(op));
         } else {
-            return operator()(dx::broadcast<S>(dx::zero), mask, val, init,
-                __DPL forward<Op>(op));
+            return exscan_t::fallback(
+                dx::zero, mask, val, init, __DPL forward<Op>(op));
         }
     }
 
@@ -222,9 +221,8 @@ public:
         if constexpr (unqualified_extended_mexscan<zero_t, M, T, I, Op>) {
             return exscan(dx::zero, mask, val, init, __DPL forward<Op>(op));
         } else {
-            using S = broadcast_type<M, T>;
-            return operator()(dx::broadcast<S>(dx::zero), mask, val, init,
-                __DPL forward<Op>(op));
+            return exscan_t::fallback(
+                dx::zero, mask, val, init, __DPL forward<Op>(op));
         }
     }
 
@@ -280,7 +278,7 @@ public:
         if constexpr (unqualified_extended_imexscan<S, M, T, I, Op>) {
             return exscan(src, cmask, val, init, __DPL forward<Op>(op));
         } else {
-            return exscan_t::fallback(
+            return exscan_t::fallbacki(
                 src, cmask, val, init, __DPL forward<Op>(op));
         }
     }
@@ -292,18 +290,18 @@ public:
     static constexpr auto operator()(M mask, T val, I init, Op&& op) noexcept(
         is_nothrow_invocable_v<Op, T, T>) {
         using A = abi_type_t<T>;
+        constexpr auto cmask = dx::to_compatible_const_mask<T>(mask);
         if constexpr (unqualified_canonical_imexscan<zero_t, M, T, I, Op>) {
             if consteval {
-                return operator()(dx::broadcast<T>(dx::zero), mask, val, init,
-                    __DPL forward<Op>(op));
+                return exscan_t::fallbacki(
+                    dx::zero, mask, val, init, __DPL forward<Op>(op));
             } else {
-                constexpr auto cmask = dx::to_compatible_const_mask<T>(mask);
                 return exscan(internal::abi<A>, dx::zero, cmask, val, init,
                     __DPL forward<Op>(op));
             }
         } else {
-            return operator()(dx::broadcast<T>(dx::zero), mask, val, init,
-                __DPL forward<Op>(op));
+            return exscan_t::fallbacki(
+                dx::zero, mask, val, init, __DPL forward<Op>(op));
         }
     }
 
@@ -317,12 +315,12 @@ public:
             return exscan(dx::zero, dx::to_compatible_const_mask<T>(mask), val,
                 init, __DPL forward<Op>(op));
         } else {
-            return operator()(dx::broadcast<T>(dx::zero), mask, val, init,
-                __DPL forward<Op>(op));
+            return exscan_t::fallbacki(
+                dx::zero, mask, val, init, __DPL forward<Op>(op));
         }
     }
 
-    template <typename M, extended_vector T, broadcastable_to<T> I,
+    template <typename M, simd_vector T, broadcastable_to<T> I,
         scan_operator_for<T> Op>
     requires const_mask_for<M, T> && requires(M mask, T val, I init, Op&& op) {
         exscan_t::operator()(mask, val, init, __DPL forward<Op>(op));
@@ -350,7 +348,7 @@ concept unqualified_canonical_mscan =
     requires(S src, M mask, T val, BinaryOp && (*op)()) {
         {
             scan(internal::abi<A>, src, mask, val, op())
-        } -> equivalent_simd_as<canonical_if_zero_t<S, T, A>>;
+        } -> canonical_arithmetic_result<canonical_if_zero_t<S, T, A>>;
     };
 
 template <typename S, typename M, typename T, typename BinaryOp,
@@ -359,7 +357,7 @@ concept unqualified_extended_mscan =
     requires(S src, M mask, T val, BinaryOp && (*op)()) {
         {
             scan(src, mask, val, op())
-        } -> equivalent_simd_as<canonical_if_zero_t<S, T, A>>;
+        } -> extended_arithmetic_result<canonical_if_zero_t<S, T, A>>;
     };
 
 template <typename S, typename M, typename T, typename BinaryOp,
@@ -369,7 +367,7 @@ concept unqualified_canonical_imscan =
         {
             scan(internal::abi<A>, src,
                 internal::to_const_mask<A, scan_t, S, T>(mask), val, op())
-        } -> equivalent_simd_as<canonical_if_zero_t<S, T, A>>;
+        } -> canonical_arithmetic_result<canonical_if_zero_t<S, T, A>>;
     };
 
 template <typename S, typename M, typename T, typename BinaryOp,
@@ -378,7 +376,7 @@ concept unqualified_extended_imscan =
     requires(S src, M mask, T val, BinaryOp && (*op)()) {
         {
             scan(src, internal::to_const_mask<A, scan_t, S, T>(mask), val, op())
-        } -> equivalent_simd_as<canonical_if_zero_t<S, T, A>>;
+        } -> extended_arithmetic_result<canonical_if_zero_t<S, T, A>>;
     };
 
 struct scan_t : private scan_base {
@@ -487,22 +485,22 @@ public:
         if constexpr (same_as<abi_type_t<T>, abi_type_t<M>>) {
             if constexpr (unqualified_canonical_mscan<zero_t, M, T, Op>) {
                 if consteval {
-                    return operator()(dx::broadcast<S>(dx::zero), mask, val,
-                        __DPL forward<Op>(op));
+                    return scan_t::fallback(
+                        dx::zero, mask, val, __DPL forward<Op>(op));
                 } else {
                     return scan(internal::abi<A>, dx::zero, mask, val,
                         __DPL forward<Op>(op));
                 }
             } else {
-                return operator()(dx::broadcast<S>(dx::zero), mask, val,
-                    __DPL forward<Op>(op));
+                return scan_t::fallback(
+                    dx::zero, mask, val, __DPL forward<Op>(op));
             }
         } else if constexpr (unqualified_canonical_mscan<zero_t, M, T, Op>) {
             return scan(
                 internal::abi<A>, dx::zero, mask, val, __DPL forward<Op>(op));
         } else {
-            return operator()(
-                dx::broadcast<S>(dx::zero), mask, val, __DPL forward<Op>(op));
+            return scan_t::fallback(
+                dx::zero, mask, val, __DPL forward<Op>(op));
         }
     }
 
@@ -515,8 +513,8 @@ public:
             return scan(dx::zero, mask, val, __DPL forward<Op>(op));
         } else {
             using S = broadcast_type<M, T>;
-            return operator()(
-                dx::broadcast<S>(dx::zero), mask, val, __DPL forward<Op>(op));
+            return scan_t::fallback(
+                dx::zero, mask, val, __DPL forward<Op>(op));
         }
     }
 
@@ -570,7 +568,7 @@ public:
         if constexpr (unqualified_extended_imscan<S, M, T, Op>) {
             return scan(src, cmask, val, __DPL forward<Op>(op));
         } else {
-            return scan_t::fallback(src, cmask, val, __DPL forward<Op>(op));
+            return scan_t::fallbacki(src, cmask, val, __DPL forward<Op>(op));
         }
     }
 
@@ -582,16 +580,16 @@ public:
         using A = abi_type_t<T>;
         if constexpr (unqualified_canonical_imscan<zero_t, M, T, Op>) {
             if consteval {
-                return operator()(dx::broadcast<T>(dx::zero), mask, val,
-                    __DPL forward<Op>(op));
+                return scan_t::fallbacki(
+                    dx::zero, mask, val, __DPL forward<Op>(op));
             } else {
                 constexpr auto cmask = dx::to_compatible_const_mask<T>(mask);
                 return scan(internal::abi<A>, dx::zero, cmask, val,
                     __DPL forward<Op>(op));
             }
         } else {
-            return operator()(
-                dx::broadcast<T>(dx::zero), mask, val, __DPL forward<Op>(op));
+            return scan_t::fallbacki(
+                dx::zero, mask, val, __DPL forward<Op>(op));
         }
     }
 
@@ -604,12 +602,12 @@ public:
             return scan(dx::zero, dx::to_compatible_const_mask<T>(mask), val,
                 __DPL forward<Op>(op));
         } else {
-            return operator()(
-                dx::broadcast<T>(dx::zero), mask, val, __DPL forward<Op>(op));
+            return scan_t::fallbacki(
+                dx::zero, mask, val, __DPL forward<Op>(op));
         }
     }
 
-    template <typename M, extended_vector T, scan_operator_for<T> Op>
+    template <typename M, simd_vector T, scan_operator_for<T> Op>
     requires const_mask_for<M, T> && requires(M mask, T val, Op&& op) {
         scan_t::operator()(mask, val, __DPL forward<Op>(op));
     }

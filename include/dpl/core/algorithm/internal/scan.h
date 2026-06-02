@@ -12,6 +12,7 @@
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/constants/one.h"
 #  include "dpl/core/operations/arithmetic/add.h"
+#  include "dpl/core/operations/broadcast_lane.h"
 #  include "dpl/core/type_traits/basic_type.h"
 #  include "dpl/core/type_traits/simd_abi_traits.h"
 #  include "dpl/std/concepts/integral_constant_like.h"
@@ -235,11 +236,6 @@ concept unqualified_extended_scan_sum = requires(T val) {
     { scan_sum(val) } -> extended_arithmetic_result<T>;
 };
 
-template <typename T>
-concept extended_scan_sum = unqualified_extended_scan_sum<T> ||
-    (decayable_vector_for<T, operation_category::lane_reduction> &&
-        regular_invocable<scan_sum_base, canonical_type_t<T>>);
-
 struct scan_sum_base : protected scan_base {
     template <simd_abi A, simd_element_for<A> E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -257,13 +253,12 @@ struct scan_sum_base : protected scan_base {
     }
 
     template <extended_vector T>
-    requires extended_scan_sum<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T val) noexcept {
         if constexpr (unqualified_extended_scan_sum<T>) {
             return scan_sum(val);
         } else {
-            return operator()(dx::to_canonical(val));
+            return scan_base::inclusive(val, dx::add);
         }
     }
 };
