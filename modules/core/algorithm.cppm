@@ -18,14 +18,15 @@ import :core.utility;
 
 // IWYU pragma: begin_exports
 #include "dpl/core/algorithm/clamp.h"
+#include "dpl/core/algorithm/compress.h"
 #include "dpl/core/algorithm/cswap.h"
 #include "dpl/core/algorithm/hmax.h"
 #include "dpl/core/algorithm/hmin.h"
 #include "dpl/core/algorithm/hsum.h"
 #include "dpl/core/algorithm/inner_product.h"
-#include "dpl/core/algorithm/permute.h"
 #include "dpl/core/algorithm/reduce.h"
 #include "dpl/core/algorithm/rotate.h"
+#include "dpl/core/algorithm/scan_sum.h"
 #include "dpl/core/algorithm/shift.h"
 #include "dpl/core/algorithm/slide.h"
 #include "dpl/core/algorithm/splice.h"

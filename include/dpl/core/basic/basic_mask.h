@@ -5,6 +5,7 @@
 
 #include "dpl/core/basic/broadcast.h"
 #include "dpl/core/basic/broadcasting.h"
+#include "dpl/core/basic/const_mask.h"
 #include "dpl/core/basic/extract.h"
 #include "dpl/core/basic/immediate.h"
 #include "dpl/core/basic/initialize.h"
@@ -65,7 +66,7 @@ public:
     }
 
     __DPL_HIDE_FROM_ABI constexpr basic_mask() noexcept
-        : basic_mask(datapar::broadcast<basic_mask>(false)) {}
+        : basic_mask(datapar::broadcast<basic_mask>(false_type{})) {}
 
     __DPL_HIDE_FROM_ABI explicit constexpr basic_mask(
         broadcasting_t, bool scalar) noexcept
@@ -78,6 +79,13 @@ public:
         bitset<abi_traits::size> data) noexcept
     requires fixed_width_abi<A>
         : basic_mask(datapar::initialize<E, A>(data)) {}
+
+    template <different_from<basic_mask> M>
+    requires const_mask_for<M, basic_mask>
+    __DPL_HIDE_FROM_ABI constexpr basic_mask(M mask) noexcept
+    requires fixed_width_abi<A>
+        : basic_mask(static_cast<bitset<abi_traits::size>>(
+              datapar::to_compatible_const_mask<basic_mask>(mask))) {}
 
     template <core_convertible_to<bool>... Bs>
     requires fixed_width_abi<A>

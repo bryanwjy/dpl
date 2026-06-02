@@ -280,7 +280,7 @@ public:
         }
     }
 
-    template <simd_abi MA, simd_element_for<MA> E, simd_abi TA,
+    template <simd_abi MA, simd_element_for<MA> ME, simd_abi TA,
         simd_element_for<TA> E>
     requires common_size_with<E, ME> &&
         (different_from<MA, TA> || scalable_abi<MA> || scalable_abi<TA>) &&

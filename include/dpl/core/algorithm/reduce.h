@@ -4,7 +4,6 @@
 #include "dpl/config.h"
 
 #include "dpl/core/algorithm/packed_indices.h"
-#include "dpl/core/algorithm/permute.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/const_mask.h"
@@ -13,6 +12,7 @@
 #  include "dpl/core/concepts/compatible_mask_with.h"
 #  include "dpl/core/operations/bit.h"
 #  include "dpl/core/operations/logical.h"
+#  include "dpl/core/operations/permute.h"
 #  include "dpl/core/operations/reinterpret.h"
 #  include "dpl/core/type_traits/iota_sequence.h"
 #  include "dpl/std/bit/bit_width.h"

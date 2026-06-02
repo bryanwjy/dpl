@@ -25,20 +25,50 @@
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
+namespace internal {
+template <size_t W>
+struct mask_value {};
+template <size_t W>
+using mask_value_t DPL_NODEBUG = typename mask_value<W>::type;
 
-DPL_EXPORT template <size_t W, bit_type_t<W> V>
+#if DPL_SUPPORTS_INT128
+#  define __DPL_MAX_BITS 16
+#else
+#  define __DPL_MAX_BITS 8
+#endif
+
+template <size_t W>
+requires (W <= __DPL_MAX_BITS && __DPL has_single_bit(W))
+struct mask_value<W> : bit_type<W> {};
+
+template <size_t W>
+requires (W > __DPL_MAX_BITS && __DPL has_single_bit(W))
+struct mask_value<W> {
+    using type DPL_NODEBUG = bitset<W>;
+};
+
+#undef __DPL_MAX_BITS
+} // namespace internal
+
+DPL_EXPORT template <size_t W, internal::mask_value_t<W> V>
 struct const_mask;
 
-DPL_EXPORT template <size_t W, bit_type_t<W> V>
+DPL_EXPORT template <size_t W, internal::mask_value_t<W> V>
 inline constexpr bool enable_const_mask<const_mask<W, V>> = true;
 
-DPL_EXPORT template <size_t W, bit_type_t<W> V>
+DPL_EXPORT template <size_t W, internal::mask_value_t<W> V>
 struct const_mask {
-    using value_type = bit_type_t<W>;
+    using value_type = internal::mask_value_t<W>;
     using type = const_mask;
     static constexpr size_t width = W;
-    static constexpr value_type value =
-        (V & static_cast<value_type>((1ll << W) - 1));
+    static constexpr value_type value = []() {
+        if constexpr (integral<value_type>) {
+            return (V & static_cast<value_type>((1ll << W) - 1));
+        } else {
+            return V;
+        }
+    }();
+
     __DPL_HIDE_FROM_ABI constexpr operator immediate<value>(
         this const_mask) noexcept {
         return imm<value>;
@@ -52,12 +82,14 @@ struct const_mask {
         return value;
     }
 
-    __DPL_HIDE_FROM_ABI constexpr operator bitset<W>(this const_mask) noexcept {
-        return bitset<W>(value);
-    }
-
     __DPL_HIDE_FROM_ABI static constexpr value_type operator()() noexcept {
         return value;
+    }
+
+    __DPL_HIDE_FROM_ABI constexpr operator bitset<W>(this const_mask) noexcept
+    requires integral<value_type>
+    {
+        return bitset<W>(value);
     }
 
     __DPL_HIDE_FROM_ABI consteval const_mask() noexcept = default;

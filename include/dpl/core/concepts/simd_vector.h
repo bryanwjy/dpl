@@ -16,9 +16,9 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar {
 DPL_EXPORT template <typename T>
-inline constexpr bool enable_simd_type = false;
+inline constexpr bool enable_vector_type = false;
 DPL_EXPORT template <simd_abi A, simd_element_for<A> E>
-inline constexpr bool enable_simd_type<basic_vector<E, A>> = true;
+inline constexpr bool enable_vector_type<basic_vector<E, A>> = true;
 
 namespace atom {
 template <typename T>
@@ -29,7 +29,7 @@ concept simd_basics = is_object_v<T> && is_trivially_copyable_v<T> && requires {
 } && semiregular<T>;
 
 template <typename T>
-concept vector_type = enable_simd_type<T> &&
+concept vector_type = enable_vector_type<T> &&
     requires {
         requires simd_element_for<typename T::value_type, typename T::abi_type>;
         requires sizeof(typename T::value_type) <= T::abi_type::size;
