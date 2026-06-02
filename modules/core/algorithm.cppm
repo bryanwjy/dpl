@@ -20,6 +20,7 @@ import :core.utility;
 #include "dpl/core/algorithm/clamp.h"
 #include "dpl/core/algorithm/compress.h"
 #include "dpl/core/algorithm/cswap.h"
+#include "dpl/core/algorithm/expand.h"
 #include "dpl/core/algorithm/hmax.h"
 #include "dpl/core/algorithm/hmin.h"
 #include "dpl/core/algorithm/hsum.h"

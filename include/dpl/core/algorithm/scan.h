@@ -620,84 +620,10 @@ public:
     }
 };
 
-template <auto V>
-struct scani_t {};
-template <auto V>
-struct exscani_t {};
-
-template <integral auto V>
-struct exscani_t<V> {
-private:
-    template <typename T>
-    using mask_type DPL_NODEBUG = const_mask<simd_abi_traits<T>::size, V>;
-
-public:
-    template <typename S, simd_vector R, typename I, typename Op>
-    requires requires {
-        typename canonical_if_zero_t<S, R>;
-        typename mask_type<canonical_if_zero_t<S, R>>;
-        requires regular_invocable<exscan_t, S,
-            mask_type<canonical_if_zero_t<S, R>>, R, I, Op>;
-    }
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(S src, R val, I init, Op&& op) noexcept {
-        constexpr mask_type<canonical_if_zero_t<S, R>> cmask{};
-        return exscan_t::operator()(
-            src, cmask, val, init, __DPL forward<Op>(op));
-    }
-
-    template <simd_vector T, typename I, typename Op>
-    requires requires {
-        typename mask_type<T>;
-        requires regular_invocable<exscan_t, dx::zero_t, T, I, Op>;
-    }
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T val, I init, Op&& op) noexcept {
-        constexpr mask_type<T> cmask{};
-        return exscan_t::operator()(cmask, val, init, __DPL forward<Op>(op));
-    }
-};
-
-template <integral auto V>
-struct scani_t<V> {
-private:
-    template <typename T>
-    using mask_type DPL_NODEBUG = const_mask<simd_abi_traits<T>::size, V>;
-
-public:
-    template <typename S, simd_vector R, typename Op>
-    requires requires {
-        typename canonical_if_zero_t<S, R>;
-        typename mask_type<canonical_if_zero_t<S, R>>;
-        requires regular_invocable<scan_t, S,
-            mask_type<canonical_if_zero_t<S, R>>, R, Op>;
-    }
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(S src, R val, Op&& op) noexcept {
-        constexpr mask_type<canonical_if_zero_t<S, R>> cmask{};
-        return scan_t::operator()(src, cmask, val, __DPL forward<Op>(op));
-    }
-
-    template <simd_vector T, typename Op>
-    requires requires {
-        typename mask_type<T>;
-        requires regular_invocable<scan_t, dx::zero_t, T, Op>;
-    }
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T val, Op&& op) noexcept {
-        constexpr mask_type<T> cmask{};
-        return scan_t::operator()(cmask, val, __DPL forward<Op>(op));
-    }
-};
-
 } // namespace datapar::internal
 
 namespace datapar {
-DPL_EXPORT template <auto V>
-inline constexpr internal::scani_t<V> scani{};
 DPL_EXPORT inline constexpr internal::scan_t scan{};
-DPL_EXPORT template <auto V>
-inline constexpr internal::exscani_t<V> exscani{};
 DPL_EXPORT inline constexpr internal::exscan_t exscan{};
 } // namespace datapar
 DPL_DEFAULT_NAMESPACE_END
