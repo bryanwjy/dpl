@@ -86,8 +86,9 @@ public:
             return (... | (vals << Is));
         }(make_index_sequence<sizeof...(Bs)>{})) {}
 
-    __DPL_HIDE_FROM_ABI explicit constexpr operator underlying_type() noexcept {
-        return value_;
+    __DPL_HIDE_FROM_ABI explicit constexpr operator underlying_type(
+        this bitset self) noexcept {
+        return self.value_;
     }
 
     template <size_t... Ws>

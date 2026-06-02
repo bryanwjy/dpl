@@ -15,8 +15,22 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 DPL_EXPORT template <typename>
 struct tuple_size {};
 
+DPL_EXPORT template <typename T>
+struct tuple_size<T const> : tuple_size<T> {};
+DPL_EXPORT template <typename T>
+struct tuple_size<T volatile> : tuple_size<T> {};
+DPL_EXPORT template <typename T>
+struct tuple_size<T const volatile> : tuple_size<T> {};
+
 DPL_EXPORT template <decltype(sizeof(0)), typename>
 struct tuple_element {};
+
+DPL_EXPORT template <decltype(sizeof(0)) I, typename T>
+struct tuple_element<I, T const> : tuple_element<I, T> {};
+DPL_EXPORT template <decltype(sizeof(0)) I, typename T>
+struct tuple_element<I, T volatile> : tuple_element<I, T> {};
+DPL_EXPORT template <decltype(sizeof(0)) I, typename T>
+struct tuple_element<I, T const volatile> : tuple_element<I, T> {};
 
 DPL_EXPORT template <typename T>
 inline constexpr auto tuple_size_v = tuple_size<T>::value;

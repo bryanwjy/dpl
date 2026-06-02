@@ -62,7 +62,9 @@ private:
         if constexpr (same_as<index_sequence<Is...>, iota_sequence_t<E, A>>) {
             return arg;
         } else {
-            return dx::initialize<E, A>(arg[imm<Is>]...);
+            constexpr auto simd_size = simd_abi_traits<E, A>::size();
+            return dx::initialize<E, A>(
+                (Is < simd_size ? arg[imm<Is>] : E())...);
         }
     }
 
@@ -89,7 +91,6 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A> operator()(
         basic_vector<E, A> arg) noexcept {
-        static_assert((... && (Is < simd_abi_traits<E, A>::size)));
         if constexpr (unqualified_canonical_permutei<basic_vector<E, A>,
                           Is...>) {
             if consteval {
@@ -107,7 +108,6 @@ public:
         unqualified_permutei<T, Is...>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T arg) noexcept {
-        static_assert((... && (Is < simd_abi_traits<T>::size)));
         if constexpr (unqualified_extended_permutei<T, Is...>) {
             return permute<Is...>(arg);
         } else {
@@ -145,7 +145,11 @@ private:
         T arg, basic_vector<E, A> idx) noexcept {
         return []<size_t... Is>(
                    T arg, basic_vector<E, A> idx, index_sequence<Is...>) {
-            return dx::initialize<T>(arg[idx[imm<Is>]]...);
+            constexpr auto simd_size = simd_abi_traits<T>::size();
+            using TE = typename T::value_type;
+            auto const zero = TE();
+            return dx::initialize<T>(
+                (idx[imm<Is>] < simd_size ? arg[idx[imm<Is>]] : zero)...);
         }(arg, idx, iota_sequence<T>);
     }
 

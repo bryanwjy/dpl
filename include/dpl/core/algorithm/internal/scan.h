@@ -14,7 +14,6 @@
 #  include "dpl/core/operations/arithmetic/add.h"
 #  include "dpl/core/type_traits/basic_type.h"
 #  include "dpl/core/type_traits/simd_abi_traits.h"
-#  include "dpl/std/concepts/convertible_to.h"
 #  include "dpl/std/concepts/integral_constant_like.h"
 #  include "dpl/std/concepts/invocable.h"
 #  include "dpl/std/utility/apply.h"
@@ -25,29 +24,27 @@ namespace datapar::internal {
 
 struct scan_base {
 protected:
-    template <integral_constant_like Imm, typename E, fixed_width_abi A,
+    template <integral_constant_like Imm, fixed_width_vector T,
         typename BinaryOp>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_vector<E, A>
-        DPL_VECTORCALL inclusive(
-            Imm, basic_vector<E, A> val, BinaryOp&& op) noexcept {
+    static constexpr auto DPL_VECTORCALL inclusive(
+        Imm, T val, BinaryOp&& op) noexcept {
 
         [&]<size_t I>(this auto self, immediate<I> offset) {
-            using bitset_t = bitset<simd_abi_traits<E, A>::size>;
+            using bitset_t = bitset<simd_abi_traits<T>::size>;
             constexpr auto lane_mask = __DPL apply(
-                [offset](auto... idx) {
-                    constexpr auto S = simd_abi_traits<E, A>::size();
-                    if constexpr (integral<typename bitset_t::value_type>) {
-                        return const_mask<S,
-                            +bitset_t((
-                                idx() >= offset() && idx() < Imm::value)...)>{};
+                [offset]<typename... Is>(Is... idx) {
+                    constexpr auto S = simd_abi_traits<T>::size();
+                    constexpr auto set =
+                        bitset_t((Is::value >= I && Is::value < Imm::value)...);
+                    using underlying = typename bitset_t::underlying_type;
+                    if constexpr (integral<underlying>) {
+                        return const_mask<S, static_cast<underlying>(set)>{};
                     } else {
-                        return const_mask<S,
-                            bitset_t((
-                                idx() >= offset() && idx() < Imm::value)...)>{};
+                        return const_mask<S, set>{};
                     }
                 },
-                iota_sequence<E, A>);
+                iota_sequence<T>);
 
             auto const shifted = dx::shift_right(val, offset);
             val = dx::select(lane_mask, __DPL invoke(op, shifted, val), val);
@@ -59,104 +56,91 @@ protected:
         return val;
     }
 
-    template <typename E, simd_abi A, typename BinaryOp>
+    template <simd_vector T, typename BinaryOp>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_vector<E, A>
-        DPL_VECTORCALL inclusive(
-            size_t size, basic_vector<E, A> val, BinaryOp&& op) noexcept {
+    static constexpr auto DPL_VECTORCALL inclusive(
+        size_t size, T val, BinaryOp&& op) noexcept {
+        auto const idx = dx::lane_index<T>();
         for (auto i = 0zu; i < size; i <<= 1) {
             auto const shifted = dx::shift_right(val, i);
-            using sint = signed_representation_t<E>;
-            auto const offset = dx::broadcast<A>(static_cast<sint>(i));
-            val = dx::select(
-                dx::lane_index<E, A>() >= offset, op(shifted, val), val);
+            using sint = signed_representation_t<typename T::value_type>;
+            auto const offset = dx::broadcast_lane(idx, i);
+            val = dx::select(idx >= offset, op(shifted, val), val);
         }
 
         return val;
     }
 
-    template <typename E, simd_abi A, typename BinaryOp>
+    template <simd_vector T, typename BinaryOp>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_vector<E, A>
-        DPL_VECTORCALL inclusive(
-            basic_vector<E, A> val, BinaryOp&& op) noexcept {
-        if constexpr (fixed_width_abi<A>) {
-            constexpr auto N = simd_abi_traits<E, A>::size();
+    static constexpr auto DPL_VECTORCALL inclusive(
+        T val, BinaryOp&& op) noexcept {
+        if constexpr (fixed_width_vector<T>) {
+            constexpr auto N = simd_abi_traits<T>::size();
             return scan_base::inclusive(
                 imm<N>, val, __DPL forward<BinaryOp>(op));
         } else {
-            return scan_base::inclusive(simd_abi_traits<E, A>::size(), val,
-                __DPL forward<BinaryOp>(op));
+            return scan_base::inclusive(
+                simd_abi_traits<T>::size(), val, __DPL forward<BinaryOp>(op));
         }
     }
 
-    template <integral_constant_like Imm, typename E, fixed_width_abi A,
+    template <integral_constant_like Imm, fixed_width_vector T,
         typename BinaryOp>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_vector<E, A>
-        DPL_VECTORCALL exclusive(Imm size, basic_vector<E, A> val,
-            basic_vector<E, A> init, BinaryOp&& op) noexcept {
+    static constexpr auto DPL_VECTORCALL exclusive(
+        Imm size, T val, T init, BinaryOp&& op) noexcept {
         val = scan_base::inclusive(size, val, op);
         auto const result =
             dx::select(imm<0b1>, init, dx::shift_right(val, imm<1zu>));
         return dx::select(imm<0b1>, result, op(init, result));
     }
 
-    template <typename E, simd_abi A, typename BinaryOp>
+    template <simd_vector T, typename BinaryOp>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_vector<E, A>
-        DPL_VECTORCALL exclusive(size_t size, basic_vector<E, A> val,
-            basic_vector<E, A> init, BinaryOp&& op) noexcept {
+    static constexpr auto DPL_VECTORCALL exclusive(
+        size_t size, T val, T init, BinaryOp&& op) noexcept {
         val = scan_base::inclusive(size, val, op);
-        if constexpr (fixed_width_abi<A>) {
+        if constexpr (fixed_width_vector<T>) {
             auto const result =
                 dx::select(imm<0b1>, init, dx::shift_right(val, imm<1zu>));
             return dx::select(imm<0b1>, result, op(init, result));
         } else {
-            auto const iszero = dx::lane_index<E, A>() == 0;
+            auto const iszero = dx::lane_index<T>() == 0;
             auto const result =
                 dx::select(iszero, init, dx::shift_right(val, 1zu));
             return dx::select(iszero, result, op(init, result));
         }
     }
 
-    template <typename E, simd_abi A, typename BinaryOp>
+    template <simd_vector T, typename BinaryOp>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_vector<E, A>
-        DPL_VECTORCALL exclusive(basic_vector<E, A> val,
-            basic_vector<E, A> init, BinaryOp&& op) noexcept {
-        if constexpr (fixed_width_abi<A>) {
-            constexpr auto N = simd_abi_traits<E, A>::size();
+    static constexpr auto DPL_VECTORCALL exclusive(
+        T val, T init, BinaryOp&& op) noexcept {
+        if constexpr (fixed_width_vector<T>) {
+            constexpr auto N = simd_abi_traits<T>::size();
             return scan_base::exclusive(
                 imm<N>, val, init, __DPL forward<BinaryOp>(op));
         } else {
-            return scan_base::exclusive(simd_abi_traits<E, A>::size(), val,
-                init, __DPL forward<BinaryOp>(op));
+            return scan_base::exclusive(simd_abi_traits<T>::size(), val, init,
+                __DPL forward<BinaryOp>(op));
         }
     }
 };
 
 struct exscan_sum_base;
 
-template <typename T>
-concept unqualified_canonical_exscan_sum =
-    requires(T val, typename T::value_type init) {
-        {
-            exscan_sum(internal::abi<T>, val, init)
-        } -> canonical_arithmetic_result<T>;
-    };
+template <typename T, typename I>
+concept unqualified_canonical_exscan_sum = requires(T val, I init) {
+    {
+        exscan_sum(internal::abi<T>, val, init)
+    } -> canonical_arithmetic_result<T>;
+};
 
-template <typename T>
-concept unqualified_extended_exscan_sum =
-    requires(T val, typename T::value_type init) {
-        { exscan_sum(val, init) } -> extended_arithmetic_result<T>;
-    };
-
-template <typename T>
-concept extended_exscan_sum = unqualified_extended_exscan_sum<T> ||
-    (decayable_simd_for<T, operation_category::lane_reduction> &&
-        regular_invocable<exscan_sum_base, canonical_type_t<T>,
-            typename T::value_type>);
+template <typename T, typename I>
+concept unqualified_extended_exscan_sum = requires(T val, I init) {
+    { exscan_sum(val, init) } -> extended_arithmetic_result<T>;
+};
 
 template <typename T, typename M>
 concept extended_mask_scan_result =
@@ -178,68 +162,63 @@ concept unqualified_extended_mask_scan = requires(T val) {
     { exscan_sum(val) } -> extended_mask_scan_result<T>;
 };
 
-template <typename T>
-concept extended_mask_scan = unqualified_extended_mask_scan<T> ||
-    (decayable_mask_for<T, operation_category::lane_reduction> &&
-        regular_invocable<exscan_sum_base, canonical_type_t<T>>);
-
 struct exscan_sum_base : protected scan_base {
-    template <simd_abi A, simd_element_for<A> E, convertible_to<E> I>
+    template <canonical_vector T, broadcastable_to<T> I>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(
-        basic_vector<E, A> val, I init) noexcept {
-        if constexpr (unqualified_canonical_exscan_sum<basic_vector<E, A>>) {
+    static constexpr auto operator()(T val, I init) noexcept {
+        if constexpr (unqualified_canonical_exscan_sum<T, I>) {
             if consteval {
                 return scan_base::exclusive(
-                    val, dx::broadcast<E, A>(init), dx::add);
+                    val, dx::broadcast<T>(init), dx::add);
             } else {
-                return exscan_sum(internal::abi<A>, val, static_cast<E>(init));
+                return exscan_sum(internal::abi<T>, val, init);
             }
         } else {
-            return scan_base::exclusive(
-                val, dx::broadcast<E, A>(init), dx::add);
+            return scan_base::exclusive(val, dx::broadcast<T>(init), dx::add);
         }
     }
 
-    template <extended_vector T, convertible_to<typename T::value_type> I>
-    requires extended_exscan_sum<T>
+    template <extended_vector T, broadcastable_to<T> I>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T val, I init) noexcept {
-        if constexpr (unqualified_extended_exscan_sum<T>) {
-            return exscan_sum(val, static_cast<typename T::value_type>(init));
+        if constexpr (unqualified_extended_exscan_sum<T, I>) {
+            return exscan_sum(val, init);
         } else {
-            return operator()(dx::to_canonical(val), init);
+            return scan_base::exclusive(val, dx::broadcast<T>(init), dx::add);
         }
     }
 
     template <simd_abi A, simd_element_for<A> E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<signed_representation_t<E>, A> operator()(
-        basic_mask<E, A> mask) noexcept {
+    static constexpr auto operator()(basic_mask<E, A> mask) noexcept {
         using sint = signed_representation_t<E>;
         if constexpr (unqualified_canonical_mask_scan<basic_mask<E, A>>) {
             if consteval {
-                auto const vec =
-                    dx::select(mask, dx::broadcast<sint, A>(dx::one), dx::zero);
+                using idx_type = decltype(dx::lane_index<E, A>());
+                auto const vec = dx::select(
+                    mask, dx::broadcast<idx_type>(dx::one), dx::zero);
                 return operator()(vec, dx::zero);
             } else {
                 return exscan_sum(internal::abi<A>, mask);
             }
         } else {
+            using idx_type = decltype(dx::lane_index<E, A>());
             auto const vec =
-                dx::select(mask, dx::broadcast<sint, A>(dx::one), dx::zero);
+                dx::select(mask, dx::broadcast<idx_type>(dx::one), dx::zero);
             return operator()(vec, dx::zero);
         }
     }
 
     template <extended_mask T>
-    requires extended_mask_scan<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T val) noexcept {
+    static constexpr auto operator()(T mask) noexcept {
         if constexpr (unqualified_extended_mask_scan<T>) {
-            return exscan_sum(val);
+            return exscan_sum(mask);
         } else {
-            return operator()(dx::to_canonical(val));
+            using idx_type = decltype(dx::lane_index<T>());
+            auto const vec =
+                dx::select(mask, dx::broadcast<idx_type>(dx::one), dx::zero);
+            return operator()(vec, dx::zero);
         }
     }
 };

@@ -65,7 +65,7 @@ __DPL_HIDE_FROM_ABI constexpr decltype(auto) apply(F&& func,
     T&& tuple) noexcept(details::apply::is_nothrow_applicable_v<F, T>) {
 #if (DPL_HAS_CXX26_EXTENSIONS || DPL_CXX26) && \
     __cpp_structured_bindings >= 202411L
-    auto&& [... vals] = __DPL forward(tuple);
+    auto&& [... vals] = __DPL forward<T>(tuple);
     return __DPL invoke(
         __DPL forward<F>(func), __DPL forward<decltype(vals)>(vals)...);
 #else

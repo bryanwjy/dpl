@@ -36,7 +36,6 @@ struct lane_index_t<T, U> {
     using E DPL_NODEBUG = conditional_t<simd_abi<T>, U, T>;
     using I DPL_NODEBUG = signed_representation_t<E>;
 
-    template <typename E, typename A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr basic_vector<I, A> fallback() noexcept {
         return __DPL apply(

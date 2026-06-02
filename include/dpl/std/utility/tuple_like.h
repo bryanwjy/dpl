@@ -24,13 +24,14 @@ template <size_t>
 void get(...) noexcept = delete;
 
 template <typename T>
-concept has_size =
-    requires { typename __DPL size_constant<std::tuple_size_v<T>>; };
+concept has_size = requires {
+    typename __DPL size_constant<std::tuple_size_v<remove_cvref_t<T>>>;
+};
 
 template <typename T, size_t I>
-concept has_element = has_size<T> && requires(T t) {
-    requires I < std::tuple_size_v<T>;
-    typename std::tuple_element_t<I, T>;
+concept has_element = has_size<T> && requires {
+    requires I < std::tuple_size_v<remove_cvref_t<T>>;
+    typename std::tuple_element_t<I, remove_cvref_t<T>>;
 };
 
 template <typename T, size_t I>
@@ -114,13 +115,10 @@ namespace details::tuple_like {
 template <typename T>
 struct sequence_for {};
 
-template <typename T>
-requires (!same_as<remove_cvref_t<T>, T>)
-struct sequence_for<T> : sequence_for<remove_cvref_t<T>> {};
-
 template <__DPL ranges::details::has_size T>
 struct sequence_for<T> {
-    using type DPL_NODEBUG = __DPL make_index_sequence<std::tuple_size_v<T>>;
+    using type DPL_NODEBUG =
+        __DPL make_index_sequence<std::tuple_size_v<remove_cvref_t<T>>>;
 };
 template <typename T, size_t N>
 struct sequence_for<T[N]> {
