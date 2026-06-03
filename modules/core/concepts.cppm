@@ -33,6 +33,7 @@ import :std.utility;
 #include "dpl/core/concepts/simd_element.h"
 #include "dpl/core/concepts/simd_element_representation.h"
 #include "dpl/core/concepts/simd_equivalence.h"
+#include "dpl/core/concepts/simd_expression.h"
 #include "dpl/core/concepts/simd_lane_representation.h"
 #include "dpl/core/concepts/simd_lane_type.h"
 #include "dpl/core/concepts/simd_mask.h"

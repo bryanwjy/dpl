@@ -67,10 +67,15 @@ concept unqualified_evaluatable =
 
 } // namespace internal
 
+namespace atom {
+template <typename T>
+concept simd_expression = __DPL datapar::internal::has_expression_result<T> &&
+    (__DPL datapar::internal::member_evaluatable<T> ||
+        __DPL datapar::internal::unqualified_evaluatable<T>);
+}
+
 DPL_EXPORT template <typename T>
-concept simd_expression =
-    extended_class<T> && internal::has_expression_result<T> &&
-    (internal::member_evaluatable<T> || internal::unqualified_evaluatable<T>);
+concept simd_expression = extended_class<T> && atom::simd_expression<T>;
 DPL_EXPORT template <typename T>
 concept mask_expression = simd_mask<T> && simd_expression<T>;
 DPL_EXPORT template <typename T>

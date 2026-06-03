@@ -8,6 +8,7 @@
 #if !DPL_MODULES
 #  include "dpl/core/basic/zero.h"
 #  include "dpl/core/constants/zero.h"
+#  include "dpl/core/type_traits/simd_expression_result.h"
 #  include "dpl/std/concepts/invocable.h"
 #  include "dpl/std/type_traits/declval.h"
 #endif
@@ -74,6 +75,10 @@ using canonical_if_zero_t DPL_NODEBUG = conditional_t<is_same_v<T, zero_t>,
 template <typename T, typename U, typename A = typename U::abi_type>
 using canonical_or_zero_t DPL_NODEBUG = conditional_t<is_same_v<T, zero_t>, T,
     basic_vector<simd_lane_type_t<U>, A>>;
+
+template <typename T>
+using expression_result_or_zero_t DPL_NODEBUG =
+    conditional_t<is_same_v<T, zero_t>, zero_t, simd_expression_result_t<T>>;
 
 template <typename A, typename Op, typename S, typename... Args, typename M>
 consteval auto to_const_mask(M mask) noexcept {

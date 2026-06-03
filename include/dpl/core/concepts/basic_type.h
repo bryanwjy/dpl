@@ -50,10 +50,10 @@ DPL_EXPORT template <typename T>
 concept extended_class = simd_class<T> && !canonical_class<T>;
 
 DPL_EXPORT template <typename T>
-concept extended_vector = simd_vector<T> && !canonical_vector<T>;
+concept extended_vector = simd_vector<T> && extended_class<T>;
 
 DPL_EXPORT template <typename T>
-concept extended_mask = simd_mask<T> && !canonical_mask<T>;
+concept extended_mask = simd_mask<T> && extended_class<T>;
 
 } // namespace datapar
 

@@ -28,6 +28,7 @@ import :core.concepts;
 #include "dpl/core/type_traits/representation.h"
 #include "dpl/core/type_traits/simd_abi_traits.h"
 #include "dpl/core/type_traits/simd_abi_type.h"
+#include "dpl/core/type_traits/simd_expression_result.h"
 #include "dpl/core/type_traits/simd_lane_type.h"
 #include "dpl/core/type_traits/simd_vector_type.h"
 // IWYU pragma: end_exports

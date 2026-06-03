@@ -10,16 +10,15 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar {
+template <typename T, operation_category C>
+concept decayable_simd_for = canonical_class<T> ||
+    (extended_class<T> && ((simd_traits<T>::decay_policy & C) == C));
 
 template <typename T, operation_category C>
-concept decayable_vector_for =
-    extended_vector<T> && ((simd_traits<T>::decay_policy & C) == C);
+concept decayable_vector_for = decayable_simd_for<T, C> && simd_vector<T>;
+
 template <typename T, operation_category C>
-concept decayable_mask_for =
-    extended_mask<T> && ((simd_traits<T>::decay_policy & C) == C);
-template <typename T, operation_category C>
-concept decayable_simd_for =
-    extended_class<T> && ((simd_traits<T>::decay_policy & C) == C);
+concept decayable_mask_for = decayable_simd_for<T, C> && simd_mask<T>;
 
 template <operation_category C, typename... T>
 concept all_decayable = (... && decayable_simd_for<T, C>);
