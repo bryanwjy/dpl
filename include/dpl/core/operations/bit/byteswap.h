@@ -11,68 +11,81 @@
 #  include "dpl/core/concepts/decayable.h"
 #  include "dpl/core/concepts/operation_category.h"
 #  include "dpl/core/concepts/simd_abi.h"
+#  include "dpl/core/type_traits/simd_abi_type.h"
+#  include "dpl/core/type_traits/simd_lane_type.h"
 #  include "dpl/std/bit/bit_cast.h"
 #  include "dpl/std/bit/byteswap.h"
+#  include "dpl/std/utility/bitset.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void byteswap(...) noexcept = delete;
-template <auto>
-void byteswap(...) noexcept = delete;
-
-struct byteswap_t;
 
 template <typename T, typename U>
-concept canonical_byteswap_result =
+concept canonical_byteswap_vector =
     simd_vector<T> && same_as<typename T::value_type, typename U::value_type> &&
     same_as<typename T::abi_type, typename U::abi_type>;
 
 template <typename T, typename U>
-concept extended_byteswap_result =
-    simd_vector<T> && same_as<typename T::value_type, typename U::value_type> &&
-    common_abi_with<typename T::abi_type, typename U::abi_type>;
+concept canonical_byteswap_mask =
+    simd_mask<T> && same_as<simd_lane_type_t<T>, simd_lane_type_t<U>> &&
+    same_as<simd_abi_type_t<T>, simd_abi_type_t<U>>;
+
+struct byteswap_t;
 
 template <typename T>
 concept unqualified_canonical_byteswap = requires(T val) {
-    { byteswap(internal::abi<T>, val) } -> canonical_byteswap_result<T>;
+    { byteswap(internal::abi<T>, val) } -> canonical_byteswap_vector<T>;
 };
 
 template <typename T>
 concept unqualified_extended_byteswap = requires(T val) {
-    { byteswap(val) } -> extended_byteswap_result<T>;
+    { byteswap(val) } -> extended_operation_vector<typename T::abi_type>;
 };
 
 template <typename T>
-concept unqualified_byteswap = unqualified_extended_byteswap<T> ||
-    (decayable_vector_for<T, operation_category::lane_agnostic> &&
-        regular_invocable<byteswap_t, canonical_type_t<T>>);
+concept expression_byteswap =
+    simd_expression<T> && invocable<byteswap_t, simd_expression_result_t<T>>;
 
-template <typename S, typename C, typename T, typename A = common_abi_t<C, T>>
-concept unqualified_canonical_mbyteswap = requires(S src, C mask, T val) {
+template <typename T>
+concept decayable_byteswap =
+    decayable_vector_for<T, operation_category::lane_agnostic> &&
+    regular_invocable<byteswap_t, canonical_type_t<T>>;
+
+template <typename T>
+concept extended_byteswap = unqualified_extended_byteswap<T> ||
+    expression_byteswap<T> || decayable_byteswap<T>;
+
+template <typename S, typename M, typename T, typename A = common_abi_t<M, T>>
+concept unqualified_canonical_mbyteswap = requires(S src, M mask, T val) {
     {
         byteswap(internal::abi<A>, src, mask, val)
     } -> equivalent_simd_as<canonical_if_zero_t<S, T, A>>;
 };
 
-template <typename S, typename C, typename T, typename A = common_abi_t<C, T>>
-concept unqualified_extended_mbyteswap = requires(S src, C mask, T val) {
-    {
-        byteswap(src, mask, val)
-    } -> equivalent_simd_as<canonical_if_zero_t<S, T, A>>;
+template <typename S, typename M, typename T, typename A = common_abi_t<M, T>>
+concept unqualified_extended_mbyteswap = requires(S src, M mask, T val) {
+    { byteswap(src, mask, val) } -> extended_operation_vector<A>;
 };
 
-template <typename S, typename C, typename T, typename A = common_abi_t<T, C>>
+template <typename S, typename M, typename T>
+concept expression_mbyteswap =
+    (simd_expression<S> || simd_expression<M> || simd_expression<T>) &&
+    invocable<byteswap_t, expression_result_or_zero_t<S>,
+        simd_expression_result_t<M>, simd_expression_result_t<T>>;
+
+template <typename S, typename M, typename T, typename A = common_abi_t<T, M>>
 concept decayable_mbyteswap = decayable_vector_for<canonical_if_zero_t<S, T, A>,
                                   operation_category::lane_agnostic> &&
     decayable_vector_for<T, operation_category::lane_agnostic> &&
-    decayable_mask_for<C, operation_category::lane_agnostic> &&
-    requires(byteswap_t op, canonical_or_zero_t<S, T, A> s,
-        canonical_type_t<C> c, canonical_type_t<T> t) { op(s, c, t); };
+    decayable_mask_for<M, operation_category::lane_agnostic> &&
+    regular_invocable<byteswap_t, canonical_or_zero_t<S, T, A>,
+        canonical_type_t<M>, canonical_type_t<T>>;
 
-template <typename S, typename C, typename T, typename A = common_abi_t<T, C>>
-concept extended_mbyteswap = unqualified_extended_mbyteswap<S, C, T, A> ||
-    decayable_mbyteswap<S, C, T, A>;
+template <typename S, typename M, typename T, typename A = common_abi_t<T, M>>
+concept extended_mbyteswap = unqualified_extended_mbyteswap<S, M, T, A> ||
+    expression_mbyteswap<S, M, T> || decayable_mbyteswap<S, M, T, A>;
 
 template <typename S, typename M, typename T,
     typename A = common_abi_t<canonical_if_zero_t<S, T>, T>>
@@ -88,21 +101,52 @@ template <typename S, typename M, typename T,
 concept unqualified_extended_imbyteswap = requires(S src, M mask, T val) {
     {
         byteswap(src, internal::to_const_mask<A, byteswap_t, S, T>(mask), val)
-    } -> equivalent_simd_as<canonical_if_zero_t<S, T, A>>;
+    } -> extended_operation_vector<A>;
 };
+
+template <typename S, typename M, typename T>
+concept expression_imbyteswap = (simd_expression<S> || simd_expression<T>) &&
+    invocable<byteswap_t, expression_result_or_zero_t<S>, M,
+        simd_expression_result_t<T>>;
 
 template <typename S, typename M, typename T,
     typename A = common_abi_t<canonical_if_zero_t<S, T>, T>>
 concept decayable_imbyteswap = decayable_vector_for<canonical_if_zero_t<S, T>,
                                    operation_category::lane_agnostic> &&
     decayable_vector_for<T, operation_category::lane_agnostic> &&
-    requires(byteswap_t op, canonical_or_zero_t<S, T, A> s, M mask,
-        canonical_type_t<T> t) { op(s, mask, t); };
+    regular_invocable<byteswap_t, canonical_or_zero_t<S, T, A>, M,
+        canonical_type_t<T>>;
 
 template <typename S, typename M, typename T,
     typename A = common_abi_t<canonical_if_zero_t<S, T>, T>>
 concept extended_imbyteswap = unqualified_extended_imbyteswap<S, M, T, A> ||
-    decayable_imbyteswap<S, M, T, A>;
+    expression_imbyteswap<S, M, T> || decayable_imbyteswap<S, M, T, A>;
+
+///
+template <typename T>
+concept unqualified_canonical_mask_byteswap = requires(T val) {
+    { byteswap(internal::abi<T>, val) } -> canonical_byteswap_mask<T>;
+};
+
+template <typename T>
+concept unqualified_extended_mask_byteswap = requires(T val) {
+    { byteswap(val) } -> extended_operation_vector<typename T::abi_type>;
+};
+
+template <typename T>
+concept expression_mask_byteswap =
+    mask_expression<T> && invocable<byteswap_t, simd_expression_result_t<T>>;
+
+template <typename T>
+concept decayable_mask_byteswap =
+    decayable_mask_for<T, operation_category::lane_agnostic> &&
+    regular_invocable<byteswap_t, canonical_type_t<T>>;
+
+template <typename T>
+concept extended_mask_byteswap = unqualified_extended_mask_byteswap<T> ||
+    expression_mask_byteswap<T> || decayable_mask_byteswap<T>;
+
+///
 
 struct byteswap_t {
 private:
@@ -117,6 +161,19 @@ private:
                 return static_cast<ubit>(count);
             },
             arg);
+    }
+
+    template <typename E, typename A>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL fallback(
+        basic_mask<E, A> arg) noexcept {
+        using ubit = unsigned_representation_t<E>;
+
+        return [&]<size_t... Is>(index_sequence<Is...>) {
+            constexpr auto simd_size = simd_abi_traits<E, A>::size();
+            return dx::initialize<E, A>(
+                bitset<simd_size>(arg[imm<simd_size - 1 - Is>]...));
+        }(iota_sequence<E, A>);
     }
 
 public:
@@ -146,18 +203,20 @@ public:
     }
 
     template <extended_vector T>
-    requires unqualified_byteswap<T>
+    requires extended_byteswap<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T val) noexcept {
         if constexpr (unqualified_extended_byteswap<T>) {
             return byteswap(val);
+        } else if constexpr (expression_byteswap<T>) {
+            return operator()(dx::evaluate(val));
         } else {
             return operator()(dx::to_canonical(val));
         }
     }
 
-    template <fixed_width_abi A, simd_element_for<A> E, common_size_with<E> ME>
-    requires integral<E>
+    template <fixed_width_abi A, simd_element_for<A> E, simd_element_for<A> ME>
+    requires integral<E> && common_size_with<E, ME>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A> operator()(basic_vector<E, A> src,
         basic_mask<ME, A> mask, basic_vector<E, A> val) noexcept {
@@ -173,65 +232,13 @@ public:
         }
     }
 
-    template <simd_abi SA, simd_element_for<SA> E, simd_abi TA,
-        simd_element_for<SA> ME>
-    requires common_size_with<E, ME> &&
-        (different_from<SA, TA> || scalable_abi<SA> || scalable_abi<TA> ||
-            !integral<E>) &&
-        simd_element_for<E, TA> &&
-        maskable_args<basic_vector<E, SA>, basic_mask<ME, SA>,
-            basic_vector<E, TA>> &&
-        unqualified_canonical_mbyteswap<basic_vector<E, SA>, basic_mask<ME, SA>,
-            basic_vector<E, TA>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, SA> operator()(basic_vector<E, SA> src,
-        basic_mask<ME, SA> mask, basic_vector<E, TA> val) noexcept {
-        return byteswap(internal::abi<SA>, src, mask, val);
-    }
-
-    template <simd_vector Pass, simd_mask M, simd_vector Arg>
-    requires (extended_vector<Pass> || extended_mask<M> ||
-                 extended_vector<Arg>) &&
-        maskable_args<Pass, M, Arg> &&
-        extended_mbyteswap<byteswap_t, Pass, M, Arg>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(Pass src, M mask, Arg arg) noexcept {
-        if constexpr (unqualified_extended_mbyteswap<Pass, M, Arg>) {
-            return byteswap(src, mask, arg);
-        } else {
-            return operator()(dx::to_canonical(src), dx::to_canonical(mask),
-                dx::to_canonical(arg));
-        }
-    }
-
-    template <fixed_width_abi A, simd_element_for<A> E, simd_element_for<A> ME>
-    requires common_size_with<E, ME> && integral<E>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<unsigned_representation_t<E>, A> operator()(
-        basic_vector<unsigned_representation_t<E>, A> src,
-        basic_mask<ME, A> mask, basic_vector<E, A> val) noexcept {
-        if constexpr (unqualified_canonical_mbyteswap<
-                          basic_vector<unsigned_representation_t<E>, A>,
-                          basic_mask<ME, A>, basic_vector<E, A>>) {
-            if consteval {
-                return internal::masked<byteswap_t>(src, mask, val);
-            } else {
-                return byteswap(internal::abi<A>, src, mask, val);
-            }
-        } else {
-            return internal::masked<byteswap_t>(src, mask, val);
-        }
-    }
-
     template <simd_abi MA, simd_element_for<MA> ME, simd_abi TA,
         simd_element_for<TA> E>
-    requires common_size_with<E, ME> && integral<E> &&
-        (different_from<MA, TA> || scalable_abi<MA> || scalable_abi<TA>) &&
-        simd_element_for<E, TA> &&
-        maskable_args<basic_vector<unsigned_representation_t<E>, MA>,
-            basic_mask<ME, MA>, basic_vector<E, TA>> &&
-        unqualified_canonical_mbyteswap<
-            basic_vector<unsigned_representation_t<E>, MA>, basic_mask<ME, MA>,
+    requires (different_from<MA, TA> || scalable_abi<MA> || scalable_abi<TA> ||
+                 !integral<E>) &&
+        maskable_args<basic_vector<E, MA>, basic_mask<ME, MA>,
+            basic_vector<E, TA>> &&
+        unqualified_canonical_mbyteswap<basic_vector<E, MA>, basic_mask<ME, MA>,
             basic_vector<E, TA>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, MA> operator()(basic_vector<E, MA> src,
@@ -239,23 +246,71 @@ public:
         return byteswap(internal::abi<MA>, src, mask, val);
     }
 
-    template <simd_mask M, simd_vector Arg>
-    requires (extended_mask<M> || extended_vector<Arg>) &&
-        zmaskable_args<M, Arg> && extended_mbyteswap<byteswap_t, zero_t, M, Arg>
+    template <simd_vector S, simd_mask M, simd_vector T>
+    requires (extended_vector<S> || extended_mask<M> || extended_vector<T>) &&
+        maskable_args<S, M, T> && extended_mbyteswap<S, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(M mask, Arg arg) noexcept {
-        if constexpr (unqualified_extended_mbyteswap<dx::zero_t, M, Arg>) {
-            return byteswap(mask, arg);
+    static constexpr auto operator()(S src, M mask, T val) noexcept {
+        if constexpr (unqualified_extended_mbyteswap<S, M, T>) {
+            return byteswap(src, mask, val);
+        } else if constexpr (expression_mbyteswap<S, M, T>) {
+            return operator()(
+                dx::evaluate(src), dx::evaluate(mask), dx::evaluate(val));
         } else {
-            return operator()(dx::to_canonical(mask), dx::to_canonical(arg));
+            return operator()(dx::to_canonical(src), dx::to_canonical(mask),
+                dx::to_canonical(val));
         }
     }
 
-    template <simd_mask M, simd_vector Arg>
-    requires requires(M mask, Arg arg) { byteswap_t::operator()(mask, arg); }
+    template <fixed_width_abi A, simd_element_for<A> E, simd_element_for<A> ME>
+    requires integral<E> && common_size_with<E, ME>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(dx::zero_t, M mask, Arg arg) noexcept {
-        return operator()(mask, arg);
+    static constexpr basic_vector<E, A> operator()(
+        basic_mask<ME, A> mask, basic_vector<E, A> val) noexcept {
+        if constexpr (unqualified_canonical_mbyteswap<zero_t, basic_mask<ME, A>,
+                          basic_vector<E, A>>) {
+            if consteval {
+                return internal::masked<byteswap_t>(mask, val);
+            } else {
+                return byteswap(internal::abi<A>, dx::zero, mask, val);
+            }
+        } else {
+            return operator()(dx::zero_v<basic_vector<E, A>>, mask, val);
+        }
+    }
+
+    template <simd_abi TA, simd_element_for<TA> E, common_abi_with<TA> MA,
+        simd_element_for<MA> ME>
+    requires (different_from<MA, TA> || scalable_abi<MA> || scalable_abi<TA> ||
+                 !integral<E>) &&
+        zmaskable_args<basic_mask<ME, MA>, basic_vector<E, TA>> &&
+        unqualified_canonical_mbyteswap<dx::zero_t, basic_mask<ME, MA>,
+            basic_vector<E, TA>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(
+        basic_mask<ME, MA> mask, basic_vector<E, TA> val) noexcept {
+        return byteswap(internal::abi<MA>, dx::zero, mask, val);
+    }
+
+    template <simd_mask M, simd_vector T>
+    requires (extended_mask<M> || extended_vector<T>) && zmaskable_args<M, T> &&
+        extended_mbyteswap<zero_t, M, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(M mask, T val) noexcept {
+        if constexpr (unqualified_extended_mbyteswap<dx::zero_t, M, T>) {
+            return byteswap(dx::zero, mask, val);
+        } else if constexpr (expression_mbyteswap<dx::zero_t, M, T>) {
+            return operator()(dx::evaluate(mask), dx::evaluate(val));
+        } else {
+            return operator()(dx::to_canonical(mask), dx::to_canonical(val));
+        }
+    }
+
+    template <simd_mask M, simd_vector T>
+    requires invocable<byteswap_t, M, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(dx::zero_t, M mask, T val) noexcept {
+        return operator()(mask, val);
     }
 
     template <fixed_width_abi A, simd_element_for<A> E,
@@ -295,14 +350,17 @@ public:
 
     template <simd_vector S, const_mask_for<S> M, simd_vector T>
     requires (extended_vector<S> || extended_vector<T>) &&
-        imm_maskable_args<S, T> && extended_imbyteswap<byteswap_t, S, M, T>
+        imm_maskable_args<S, T> && extended_imbyteswap<S, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(S src, M mask, T arg) noexcept {
-        if constexpr (unqualified_extended_mbyteswap<S, M, T>) {
-            return byteswap(src, dx::to_compatible_const_mask<S>(mask), arg);
+    static constexpr auto operator()(S src, M mask, T val) noexcept {
+        if constexpr (unqualified_extended_imbyteswap<S, M, T>) {
+            return byteswap(src, dx::to_compatible_const_mask<S>(mask), val);
+        } else if constexpr (expression_imbyteswap<S, M, T>) {
+            return operator()(
+                dx::evaluate(src), dx::evaluate(mask), dx::evaluate(val));
         } else {
-            return operator()(dx::to_canonical(src),
-                dx::to_compatible_const_mask<S>(mask), dx::to_canonical(arg));
+            return operator()(
+                dx::to_canonical(src), mask, dx::to_canonical(val));
         }
     }
 
@@ -322,13 +380,13 @@ public:
                     val);
             }
         } else {
-            return operator()(dx::zero_v<basic_vector<E, A>>, mask, val);
+            return operator()(dx::broadcast<E, A>(dx::zero), mask, val);
         }
     }
 
     template <simd_abi TA, simd_element_for<TA> E,
         const_mask_for<basic_vector<E, TA>> M>
-    requires (scalable_abi<TA> || !integral<E>) && simd_element_for<E, TA> &&
+    requires (scalable_abi<TA> || !integral<E>) &&
         imm_zmaskable_args<basic_vector<E, TA>> &&
         unqualified_canonical_imbyteswap<zero_t, M, basic_vector<E, TA>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -339,24 +397,61 @@ public:
     }
 
     template <extended_vector T, const_mask_for<T> M>
-    requires imm_zmaskable_args<T> &&
-        extended_imbyteswap<byteswap_t, zero_t, M, T>
+    requires imm_zmaskable_args<T> && extended_imbyteswap<zero_t, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(M mask, T arg) noexcept {
+    static constexpr auto operator()(M mask, T val) noexcept {
         if constexpr (unqualified_extended_imbyteswap<zero_t, M, T>) {
             return byteswap(
-                dx::zero, dx::to_compatible_const_mask<T>(mask), arg);
+                dx::zero, dx::to_compatible_const_mask<T>(mask), val);
+        } else if constexpr (expression_imbyteswap<dx::zero_t, M, T>) {
+            return operator()(mask, dx::evaluate(val));
         } else {
-            return operator()(
-                dx::to_compatible_const_mask<T>(mask), dx::to_canonical(arg));
+            return operator()(mask, dx::to_canonical(val));
         }
     }
 
     template <simd_vector T, const_mask_for<T> M>
-    requires requires(M mask, T arg) { byteswap_t::operator()(mask, arg); }
+    requires invocable<byteswap_t, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(dx::zero_t, M mask, T arg) noexcept {
-        return operator()(mask, arg);
+    static constexpr auto operator()(dx::zero_t, M mask, T val) noexcept {
+        return operator()(mask, val);
+    }
+
+    ///
+    template <fixed_width_abi A, simd_element_for<A> E>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr basic_mask<E, A> operator()(
+        basic_mask<E, A> val) noexcept {
+        if constexpr (unqualified_canonical_mask_byteswap<basic_mask<E, A>>) {
+            if consteval {
+                return fallback(val);
+            } else {
+                return byteswap(internal::abi<A>, val);
+            }
+        } else {
+            return fallback(val);
+        }
+    }
+
+    template <scalable_abi A, simd_element_for<A> E>
+    requires unqualified_canonical_mask_byteswap<basic_mask<E, A>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr basic_mask<E, A> operator()(
+        basic_mask<E, A> val) noexcept {
+        return byteswap(internal::abi<A>, val);
+    }
+
+    template <extended_mask T>
+    requires extended_mask_byteswap<T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T val) noexcept {
+        if constexpr (unqualified_extended_mask_byteswap<T>) {
+            return byteswap(val);
+        } else if constexpr (expression_mask_byteswap<T>) {
+            return operator()(dx::evaluate(val));
+        } else {
+            return operator()(dx::to_canonical(val));
+        }
     }
 };
 } // namespace datapar::internal
