@@ -21,6 +21,9 @@ template <typename T, operation_category C>
 concept decayable_simd_for =
     extended_class<T> && ((simd_traits<T>::decay_policy & C) == C);
 
+template <operation_category C, typename... T>
+concept all_decayable = (... && decayable_simd_for<T, C>);
+
 } // namespace datapar
 
 DPL_DEFAULT_NAMESPACE_END

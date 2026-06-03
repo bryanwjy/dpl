@@ -32,10 +32,13 @@ namespace datapar::internal {
 template <typename T>
 inline constexpr bool is_negated_mask_specialization = false;
 
-template <simd_mask T>
+/**
+ * Only allowed for canonical masks to to keep it simple
+ */
+template <canonical_mask T>
 class negated_mask;
 
-template <simd_mask T>
+template <canonical_mask T>
 inline constexpr bool is_negated_mask_specialization<negated_mask<T>> = true;
 
 template <typename T>
@@ -50,7 +53,7 @@ constexpr auto make_negated_mask(negated_mask<T> const& val) noexcept {
     return !val;
 }
 
-template <simd_mask T>
+template <canonical_mask T>
 class negated_mask : public simd_mask_base<negated_mask<T>> {
     using element_type DPL_NODEBUG = simd_lane_type_t<T>;
 
@@ -83,11 +86,11 @@ public:
         : negated_mask(
               dx::to_native_type(dx::reinterpret<element_type>(!other))) {}
 
-    template <common_size_simd_with<T> U>
-    requires same_abi_simd_as<T, U>
+    template <different_from<T> U>
+    requires convertible_to<T, U>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     explicit operator U(this negated_mask self) noexcept {
-        return dx::bwnot(!self);
+        return static_cast<U>(dx::bwnot(!self));
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
@@ -97,13 +100,6 @@ public:
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     explicit constexpr operator mask_type(this negated_mask self) noexcept {
-        return dx::to_native_type(dx::bwnot(!self));
-    }
-
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    constexpr mask_type operator+(this negated_mask self) noexcept
-    requires canonical_mask<T>
-    {
         return dx::to_native_type(dx::bwnot(!self));
     }
 

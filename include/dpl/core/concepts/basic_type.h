@@ -41,19 +41,19 @@ DPL_EXPORT template <typename T>
 concept canonical_class = simd_class<T> && atom::canonical_class<T>;
 
 DPL_EXPORT template <typename T>
-concept canonical_vector = canonical_class<T> && atom::vector_type<T>;
+concept canonical_vector = simd_vector<T> && canonical_class<T>;
 
 DPL_EXPORT template <typename T>
-concept canonical_mask = canonical_class<T> && atom::simd_mask<T>;
+concept canonical_mask = simd_mask<T> && canonical_class<T>;
 
 DPL_EXPORT template <typename T>
-concept extended_class = simd_class<T> && !atom::canonical_class<T>;
+concept extended_class = simd_class<T> && !canonical_class<T>;
 
 DPL_EXPORT template <typename T>
-concept extended_vector = extended_class<T> && atom::vector_type<T>;
+concept extended_vector = simd_vector<T> && !canonical_vector<T>;
 
 DPL_EXPORT template <typename T>
-concept extended_mask = extended_class<T> && atom::simd_mask<T>;
+concept extended_mask = simd_mask<T> && !canonical_mask<T>;
 
 } // namespace datapar
 

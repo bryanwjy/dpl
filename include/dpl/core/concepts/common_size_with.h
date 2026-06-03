@@ -14,7 +14,6 @@ concept common_size_with = sizeof(A) == sizeof(B);
 
 DPL_EXPORT template <typename A, typename B>
 concept common_size_simd_with = common_class_with<A, B> &&
-    atom::common_abi_with<typename A::abi_type, typename B::abi_type> &&
     common_size_with<simd_lane_type_t<A>, simd_lane_type_t<B>>;
 } // namespace datapar
 

@@ -93,7 +93,11 @@ DPL_EXPORT template <simd_mask T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr auto operator!(T val) noexcept
     -> invoke_result_t<internal::logical_not_t, T> {
-    return datapar::logical_not(val);
+    if constexpr (canonical_mask<T>) {
+        return internal::make_negated_mask(val);
+    } else {
+        return datapar::logical_not(val);
+    }
 }
 
 } // namespace datapar

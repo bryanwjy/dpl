@@ -12,7 +12,14 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 DPL_EXPORT template <typename T>
-inline constexpr bool enable_simd_abi = false;
+struct simd_abi_base {
+protected:
+    constexpr ~simd_abi_base() = default;
+};
+
+DPL_EXPORT template <typename T>
+inline constexpr bool enable_simd_abi = derived_from<T, simd_abi_base<T>>;
+;
 
 namespace internal {
 template <template <typename> typename>
@@ -27,14 +34,14 @@ concept simd_abi =
 } // namespace internal
 
 DPL_EXPORT template <typename T>
-concept fixed_width_abi = internal::simd_abi<T> &&
-    requires { typename integral_constant<size_t, T::size>; };
+concept fixed_width_abi = internal::simd_abi<remove_cv_t<T>> &&
+    requires { typename integral_constant<size_t, remove_cv_t<T>::size>; };
 
 DPL_EXPORT template <typename T>
 concept scalable_abi =
-    internal::simd_abi<T> && !fixed_width_abi<T> && requires {
+    internal::simd_abi<remove_cv_t<T>> && !fixed_width_abi<T> && requires {
         // Checking everything seems to be quite expensive
-        { T::template size<char>() } -> unsigned_integral;
+        { remove_cv_t<T>::template size<char>() } -> unsigned_integral;
     };
 
 DPL_EXPORT template <typename T>
@@ -42,17 +49,17 @@ concept simd_abi = fixed_width_abi<T> || scalable_abi<T>;
 
 namespace internal {
 template <simd_abi A>
-consteval A make_abi() noexcept {
-    return A{};
+consteval remove_cv_t<A> make_abi() noexcept {
+    return remove_cv_t<A>{};
 }
 
 template <typename T>
 requires requires {
-    typename T::abi_type;
-    { make_abi<typename T::abi_type>() } -> simd_abi;
+    typename remove_cv_t<T>::abi_type;
+    { make_abi<typename remove_cv_t<T>::abi_type>() } -> simd_abi;
 }
-consteval typename T::abi_type make_abi() noexcept {
-    return typename T::abi_type{};
+consteval typename remove_cv_t<T>::abi_type make_abi() noexcept {
+    return typename remove_cv_t<T>::abi_type{};
 }
 
 template <typename A>

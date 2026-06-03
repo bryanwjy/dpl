@@ -4,8 +4,8 @@
 #include "dpl/config.h"
 
 #include "dpl/core/concepts/simd_abi.h"
-#include "dpl/core/concepts/simd_element_for.h"
-#include "dpl/core/concepts/simd_vector.h"
+#include "dpl/core/concepts/simd_basics.h"
+#include "dpl/core/concepts/simd_class.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/fwd/basic.h"
@@ -14,36 +14,16 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar {
-DPL_EXPORT template <typename T>
-struct simd_mask_base {
-protected:
-    constexpr ~simd_mask_base() = default;
-};
 
 DPL_EXPORT template <typename T>
-inline constexpr bool enable_simd_mask = derived_from<T, simd_mask_base<T>>;
-DPL_EXPORT template <simd_abi A, simd_element_for<A> E>
-inline constexpr bool enable_simd_mask<basic_mask<E, A>> = true;
+concept simd_mask = simd_class<T> && atom::simd_mask<remove_cv_t<T>>;
 
-namespace atom {
-template <typename M>
-concept simd_mask = enable_simd_mask<M> && requires(M const mask) {
-    typename M::vector_type;
-    requires same_as<typename M::value_type, bool> &&
-        simd_vector<typename M::vector_type>;
-    requires explicitly_convertible_to<M,
-        typename M::abi_type::template native_mask<
-            typename M::vector_type::value_type>>;
-};
-} // namespace atom
-
-DPL_EXPORT template <typename M>
-concept simd_mask = atom::simd_basics<M> && atom::simd_mask<M>;
 DPL_EXPORT template <typename T>
-concept scalable_mask = simd_mask<T> && scalable_abi<typename T::abi_type>;
+concept scalable_mask =
+    simd_mask<T> && scalable_abi<typename remove_cv_t<T>::abi_type>;
 DPL_EXPORT template <typename T>
 concept fixed_width_mask =
-    simd_mask<T> && fixed_width_abi<typename T::abi_type>;
+    simd_mask<T> && fixed_width_abi<typename remove_cv_t<T>::abi_type>;
 } // namespace datapar
 
 DPL_DEFAULT_NAMESPACE_END

@@ -26,6 +26,7 @@ import :std.type_traits;
 #include "dpl/std/concepts/enumeration.h"
 #include "dpl/std/concepts/equality_comparable.h"
 #include "dpl/std/concepts/floating_point.h"
+#include "dpl/std/concepts/forwardable_as.h"
 #include "dpl/std/concepts/integral.h"
 #include "dpl/std/concepts/integral_constant_like.h"
 #include "dpl/std/concepts/invocable.h"
