@@ -19,7 +19,6 @@ protected:
 
 DPL_EXPORT template <typename T>
 inline constexpr bool enable_simd_abi = derived_from<T, simd_abi_base<T>>;
-;
 
 namespace internal {
 template <template <typename> typename>

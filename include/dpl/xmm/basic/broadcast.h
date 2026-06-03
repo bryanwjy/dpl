@@ -40,22 +40,26 @@ constexpr simd<E> broadcast(abi_tag tag, type_identity_t<E> scalar) noexcept {
             return dx::xmm::initialize<E>(tag, forward(Is, data)...);
         }(iota_sequence<E, abi_tag>, tag, scalar);
     } else {
-        if constexpr (common_float_with<float, E>) {
-            return _mm_set1_ps(scalar);
-        } else if constexpr (common_float_with<double, E>) {
-            return _mm_set1_pd(scalar);
-        } else if constexpr (bfloat16_like<E> || float16_like<E>) {
+        if constexpr (same_as<float, lane_representation_t<E>>) {
+            return _mm_set1_ps(__DPL bit_cast<float>(scalar));
+        } else if constexpr (same_as<double, lane_representation_t<E>>) {
+            return _mm_set1_pd(__DPL bit_cast<double>(scalar));
+        } else if constexpr (bfloat16_like<lane_representation_t<E>> ||
+            float16_like<lane_representation_t<E>>) {
             return __DPL bit_cast<native_vector_t<E>>(
                 _mm_set1_epi16(__DPL bit_cast<int16>(scalar)));
-        } else if constexpr (common_bits_with<E, int32>) {
-            return _mm_set1_epi32(__DPL bit_cast<int32>(scalar));
-        } else if constexpr (common_bits_with<E, int16>) {
-            return _mm_set1_epi16(__DPL bit_cast<int16>(scalar));
-        } else if constexpr (common_bits_with<E, int8>) {
-            return _mm_set1_epi8(__DPL bit_cast<int8>(scalar));
         } else {
-            static_assert(common_bits_with<E, int64>);
-            return _mm_set1_epi64x(__DPL bit_cast<int64>(scalar));
+            static_assert(integral<lane_representation_t<E>>);
+            if constexpr (sizeof(E) == sizeof(int32)) {
+                return _mm_set1_epi32(__DPL bit_cast<int32>(scalar));
+            } else if constexpr (sizeof(E) == sizeof(int16)) {
+                return _mm_set1_epi16(__DPL bit_cast<int16>(scalar));
+            } else if constexpr (sizeof(E) == sizeof(int8)) {
+                return _mm_set1_epi8(__DPL bit_cast<int8>(scalar));
+            } else {
+                static_assert(sizeof(E) == sizeof(int64));
+                return _mm_set1_epi64x(__DPL bit_cast<int64>(scalar));
+            }
         }
     }
 }
@@ -67,11 +71,12 @@ constexpr simd<E> broadcast(abi_tag tag, dx::zero_t) noexcept {
     if consteval {
         return xmm::broadcast<E>(tag, 0);
     } else {
-        if constexpr (common_float_with<float, E>) {
+        if constexpr (same_as<float, lane_representation_t<E>>) {
             return _mm_setzero_ps();
-        } else if constexpr (common_float_with<double, E>) {
+        } else if constexpr (same_as<double, lane_representation_t<E>>) {
             return _mm_setzero_pd();
-        } else if constexpr (bfloat16_like<E> || float16_like<E>) {
+        } else if constexpr (bfloat16_like<lane_representation_t<E>> ||
+            float16_like<lane_representation_t<E>>) {
             return __DPL bit_cast<native_vector_t<E>>(_mm_setzero_si128());
         } else {
             static_assert(integral<E>);
@@ -89,11 +94,12 @@ constexpr simd<E> broadcast(abi_tag tag, dx::all_bits_t) noexcept {
     } else {
         auto xmm0 = _mm_undefined_si128();
         xmm0 = _mm_cmpeq_epi32(xmm0, xmm0);
-        if constexpr (common_float_with<float, E>) {
+        if constexpr (same_as<float, lane_representation_t<E>>) {
             return _mm_castsi128_ps(xmm0);
-        } else if constexpr (common_float_with<double, E>) {
+        } else if constexpr (same_as<double, lane_representation_t<E>>) {
             return _mm_castsi128_pd(xmm0);
-        } else if constexpr (bfloat16_like<E> || float16_like<E>) {
+        } else if constexpr (bfloat16_like<lane_representation_t<E>> ||
+            float16_like<lane_representation_t<E>>) {
             return __DPL bit_cast<native_vector_t<E>>(xmm0);
         } else {
             static_assert(integral<E>);

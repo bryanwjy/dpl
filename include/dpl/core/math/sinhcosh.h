@@ -73,13 +73,13 @@ private:
 
         auto const poly = polynomial<E>(s.upper);
         auto t = [&]() {
-            if constexpr (common_float_with<E, float>) {
+            if constexpr (same_as<E, float>) {
                 auto t = s * poly + onesixth<E, A>;
                 t = s * t + fmath::half;
                 t = s + fmath::square(s) * t;
                 return fmath::fast(dx::one_v<simdf>) + t;
             } else {
-                static_assert(common_float_with<E, double>);
+                static_assert(same_as<E, double>);
                 auto t = fmath::single(dx::broadcast<simdf>(fmath::half)) +
                     s * onesixth<E, A>;
                 t = fmath::single(dx::one_v<simdf>) + t * s;

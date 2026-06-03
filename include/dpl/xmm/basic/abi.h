@@ -12,7 +12,7 @@
 #  include "dpl/core/fwd.h"
 
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/concepts/simd_element.h"
+#  include "dpl/core/concepts/simd_element_for.h"
 #  include "dpl/std/concepts/enumeration.h"
 #  include "dpl/std/concepts/same_as.h"
 #  include "dpl/std/type_traits/conditional.h"
@@ -21,9 +21,6 @@
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
-namespace datapar {
-DPL_EXPORT namespace xmm {}
-} // namespace datapar
 
 namespace datapar::xmm {
 namespace dx = __DPL datapar;       // NOLINT
@@ -35,10 +32,16 @@ DPL_DEFAULT_NAMESPACE_END
 DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::xmm {
+DPL_EXPORT struct abi_tag;
+
+template <typename T>
+using lane_representation_t DPL_NODEBUG =
+    dx::simd_element_representation_t<abi_tag, T>;
+
 template <typename T>
 struct native_vector {};
 template <typename T>
-using native_vector_t = typename native_vector<T>::type;
+using native_vector_t = typename native_vector<lane_representation_t<T>>::type;
 template <>
 struct native_vector<float> {
     using type = __m128;
@@ -56,11 +59,8 @@ requires (sizeof(T) == 2) && (!brain_float<T>)
 struct native_vector<T> {
     using type = __m128h;
 };
+
 template <integral T>
-struct native_vector<T> {
-    using type = __m128i;
-};
-template <enumeration T>
 struct native_vector<T> {
     using type = __m128i;
 };

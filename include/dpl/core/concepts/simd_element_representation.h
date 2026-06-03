@@ -26,10 +26,6 @@ struct simd_element_representation<A, E> {
     using type = E;
 };
 
-DPL_EXPORT template <simd_abi A, enumeration E>
-struct simd_element_representation<A, E> :
-    simd_element_representation<A, underlying_type_t<E>> {};
-
 } // namespace datapar
 
 DPL_DEFAULT_NAMESPACE_END

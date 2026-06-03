@@ -14,8 +14,6 @@
 #  include "dpl/core/fwd.h"
 
 #  include "dpl/core/basic/const_mask.h"
-#  include "dpl/core/concepts/common_arithmetic_with.h"
-#  include "dpl/core/concepts/common_integral_with.h"
 #  include "dpl/core/concepts/common_size_with.h"
 #  include "dpl/core/type_traits/common_size_type.h"
 #  include "dpl/std/utility/template_barrier.h"

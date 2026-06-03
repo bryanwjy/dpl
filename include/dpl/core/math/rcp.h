@@ -48,9 +48,9 @@ private:
 
     template <floating_point E>
     static constexpr auto useed = []() {
-        if constexpr (common_float_with<E, double>) {
+        if constexpr (same_as<E, double>) {
             return unsigned_representation_t<E>(0x7FDE6238DA3C2118);
-        } else if constexpr (common_float_with<E, float>) {
+        } else if constexpr (same_as<E, float>) {
             return unsigned_representation_t<E>(0x7EF311C3);
         } else if constexpr (brain_float<E>) {
             return unsigned_representation_t<E>(0x7EF3);

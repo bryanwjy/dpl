@@ -14,8 +14,6 @@
 #  include "dpl/core/fwd.h"
 
 #  include "dpl/core/concepts/arithmetic_type.h"
-#  include "dpl/core/concepts/common_float_with.h"
-#  include "dpl/core/type_traits/common_arithmetic_type.h"
 #  include "dpl/xmm/basic/abi.h"
 
 #  include <immintrin.h>
@@ -28,74 +26,82 @@ namespace datapar::xmm {
 template <typename>
 void element_cast(...) noexcept = delete;
 
-template <arithmetic_type E>
-using arithmetic_result DPL_NODEBUG = simd<common_arithmetic_type_t<E, E>>;
-
-DPL_EXPORT template <arithmetic_type E>
+DPL_EXPORT template <typename E>
+requires arithmetic_type<lane_representation_t<E>>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline arithmetic_result<E>
+inline simd<E>
     DPL_VECTORCALL add(simd<E> lhs, simd<E> rhs) noexcept {
-    if constexpr (common_arithmetic_with<E, int64>) {
+    if constexpr (sizeof(E) == sizeof(int64)) {
         return _mm_add_epi64(+lhs, +rhs);
-    } else if constexpr (common_arithmetic_with<E, int32>) {
+    } else if constexpr (sizeof(E) == sizeof(int32)) {
         return _mm_add_epi32(+lhs, +rhs);
-    } else if constexpr (common_arithmetic_with<E, int16>) {
+    } else if constexpr (sizeof(E) == sizeof(int16)) {
         return _mm_add_epi16(+lhs, +rhs);
     } else {
-        static_assert(common_arithmetic_with<E, int8>);
+        static_assert(sizeof(E) == sizeof(int8));
         return _mm_add_epi8(+lhs, +rhs);
     }
 }
 
-DPL_EXPORT template <common_float_with<float> E>
+DPL_EXPORT template <typename E>
+requires arithmetic_type<lane_representation_t<E>> &&
+    same_as<lane_representation_t<E>, float>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<E>
     DPL_VECTORCALL add(simd<E> lhs, simd<E> rhs) noexcept {
     return _mm_add_ps(+lhs, +rhs);
 }
 
-DPL_EXPORT template <common_float_with<double> E>
+DPL_EXPORT template <typename E>
+requires arithmetic_type<lane_representation_t<E>> &&
+    same_as<lane_representation_t<E>, double>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<E>
     DPL_VECTORCALL add(simd<E> lhs, simd<E> rhs) noexcept {
     return _mm_add_pd(+lhs, +rhs);
 }
 
-DPL_EXPORT template <arithmetic_type E>
+DPL_EXPORT template <typename E>
+requires arithmetic_type<lane_representation_t<E>>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline arithmetic_result<E>
+inline simd<E>
     DPL_VECTORCALL subtract(simd<E> lhs, simd<E> rhs) noexcept {
-    if constexpr (common_arithmetic_with<E, int64>) {
+    if constexpr (sizeof(E) == sizeof(int64)) {
         return _mm_sub_epi64(+lhs, +rhs);
-    } else if constexpr (common_arithmetic_with<E, int32>) {
+    } else if constexpr (sizeof(E) == sizeof(int32)) {
         return _mm_sub_epi32(+lhs, +rhs);
-    } else if constexpr (common_arithmetic_with<E, int16>) {
+    } else if constexpr (sizeof(E) == sizeof(int16)) {
         return _mm_sub_epi16(+lhs, +rhs);
     } else {
-        static_assert(common_arithmetic_with<E, int8>);
+        static_assert(sizeof(E) == sizeof(int8));
         return _mm_sub_epi8(+lhs, +rhs);
     }
 }
 
-DPL_EXPORT template <common_float_with<float> E>
+DPL_EXPORT template <typename E>
+requires arithmetic_type<lane_representation_t<E>> &&
+    same_as<lane_representation_t<E>, float>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<E>
     DPL_VECTORCALL subtract(simd<E> lhs, simd<E> rhs) noexcept {
     return _mm_sub_ps(+lhs, +rhs);
 }
 
-DPL_EXPORT template <common_float_with<double> E>
+DPL_EXPORT template <typename E>
+requires arithmetic_type<lane_representation_t<E>> &&
+    same_as<lane_representation_t<E>, double>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<E>
     DPL_VECTORCALL subtract(simd<E> lhs, simd<E> rhs) noexcept {
     return _mm_sub_pd(+lhs, +rhs);
 }
 
-DPL_EXPORT template <arithmetic_type E>
+DPL_EXPORT template <typename E>
+requires arithmetic_type<lane_representation_t<E>>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline arithmetic_result<E>
+inline simd<E>
     DPL_VECTORCALL multiply(simd<E> lhs, simd<E> rhs) noexcept {
-    if constexpr (common_arithmetic_with<E, int64>) {
+    if constexpr (sizeof(E) == sizeof(int64)) {
 #if DPL_SIMD_X86_AVX512DQ & DPL_SIMD_X86_AVX512VL
         return _mm_mullo_epi64(+lhs, +rhs);
 #else
@@ -111,12 +117,12 @@ inline arithmetic_result<E>
         return _mm_add_epi64(
             lo_lo, _mm_slli_epi64(_mm_add_epi64(lo_hi, hi_lo), 32));
 #endif
-    } else if constexpr (common_arithmetic_with<E, int32>) {
+    } else if constexpr (sizeof(E) == sizeof(int32)) {
         return _mm_mullo_epi32(+lhs, +rhs);
-    } else if constexpr (common_arithmetic_with<E, int16>) {
+    } else if constexpr (sizeof(E) == sizeof(int16)) {
         return _mm_mullo_epi16(+lhs, +rhs);
     } else {
-        static_assert(common_arithmetic_with<E, int8>);
+        static_assert(sizeof(E) == sizeof(int8));
         auto const zero = _mm_setzero_si128();
         auto const vlhs = +lhs;
         auto const vrhs = +rhs;
@@ -150,30 +156,36 @@ inline arithmetic_result<E>
     }
 }
 
-DPL_EXPORT template <arithmetic_type E>
-requires common_float_with<E, float>
+DPL_EXPORT template <typename E>
+requires arithmetic_type<lane_representation_t<E>> &&
+    same_as<lane_representation_t<E>, float>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<E>
     DPL_VECTORCALL multiply(simd<E> lhs, simd<E> rhs) noexcept {
     return _mm_mul_ps(+lhs, +rhs);
 }
 
-DPL_EXPORT template <arithmetic_type E>
-requires common_float_with<E, double>
+DPL_EXPORT template <typename E>
+requires arithmetic_type<lane_representation_t<E>> &&
+    same_as<lane_representation_t<E>, double>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<E>
     DPL_VECTORCALL multiply(simd<E> lhs, simd<E> rhs) noexcept {
     return _mm_mul_pd(+lhs, +rhs);
 }
 
-DPL_EXPORT template <common_float_with<float> E>
+DPL_EXPORT template <typename E>
+requires arithmetic_type<lane_representation_t<E>> &&
+    same_as<lane_representation_t<E>, float>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<E>
     DPL_VECTORCALL divide(simd<E> lhs, simd<E> rhs) noexcept {
     return _mm_div_ps(+lhs, +rhs);
 }
 
-DPL_EXPORT template <common_float_with<double> E>
+DPL_EXPORT template <typename E>
+requires arithmetic_type<lane_representation_t<E>> &&
+    same_as<lane_representation_t<E>, double>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<E>
     DPL_VECTORCALL divide(simd<E> lhs, simd<E> rhs) noexcept {
@@ -181,28 +193,36 @@ inline simd<E>
 }
 
 #if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
-DPL_EXPORT template <float16_like E>
+DPL_EXPORT template <typename E>
+requires arithmetic_type<lane_representation_t<E>> &&
+    float16_like<lane_representation_t<E>>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<E>
     DPL_VECTORCALL add(simd<E> lhs, simd<E> rhs) noexcept {
     return _mm_add_ph(+lhs, +rhs);
 }
 
-DPL_EXPORT template <float16_like E>
+DPL_EXPORT template <typename E>
+requires arithmetic_type<lane_representation_t<E>> &&
+    float16_like<lane_representation_t<E>>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<E>
     DPL_VECTORCALL subtract(simd<E> lhs, simd<E> rhs) noexcept {
     return _mm_sub_ph(+lhs, +rhs);
 }
 
-DPL_EXPORT template <float16_like E>
+DPL_EXPORT template <typename E>
+requires arithmetic_type<lane_representation_t<E>> &&
+    float16_like<lane_representation_t<E>>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<E>
     DPL_VECTORCALL multiply(simd<E> lhs, simd<E> rhs) noexcept {
     return _mm_mul_ph(+lhs, +rhs);
 }
 
-DPL_EXPORT template <float16_like E>
+DPL_EXPORT template <typename E>
+requires arithmetic_type<lane_representation_t<E>> &&
+    float16_like<lane_representation_t<E>>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<E>
     DPL_VECTORCALL divide(simd<E> lhs, simd<E> rhs) noexcept {
@@ -210,7 +230,9 @@ inline simd<E>
 }
 #endif
 
-DPL_EXPORT template <bfloat16_like E>
+DPL_EXPORT template <typename E>
+requires arithmetic_type<lane_representation_t<E>> &&
+    bfloat16_like<lane_representation_t<E>>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<E>
     DPL_VECTORCALL add(simd<E> lhs, simd<E> rhs) noexcept {
@@ -236,7 +258,9 @@ inline simd<E>
 #endif
 }
 
-DPL_EXPORT template <bfloat16_like E>
+DPL_EXPORT template <typename E>
+requires arithmetic_type<lane_representation_t<E>> &&
+    bfloat16_like<lane_representation_t<E>>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<E>
     DPL_VECTORCALL subtract(simd<E> lhs, simd<E> rhs) noexcept {
@@ -262,7 +286,9 @@ inline simd<E>
 #endif
 }
 
-DPL_EXPORT template <bfloat16_like E>
+DPL_EXPORT template <typename E>
+requires arithmetic_type<lane_representation_t<E>> &&
+    bfloat16_like<lane_representation_t<E>>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<E>
     DPL_VECTORCALL multiply(simd<E> lhs, simd<E> rhs) noexcept {
@@ -289,7 +315,9 @@ inline simd<E>
 #endif
 }
 
-DPL_EXPORT template <bfloat16_like E>
+DPL_EXPORT template <typename E>
+requires arithmetic_type<lane_representation_t<E>> &&
+    bfloat16_like<lane_representation_t<E>>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<E>
     DPL_VECTORCALL divide(simd<E> lhs, simd<E> rhs) noexcept {
@@ -315,7 +343,8 @@ inline simd<E>
 #endif
 }
 
-DPL_EXPORT template <arithmetic_type E>
+DPL_EXPORT template <typename E>
+requires arithmetic_type<lane_representation_t<E>>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 inline auto DPL_VECTORCALL add(abi_tag, simd<E> lhs, simd<E> rhs) noexcept
 requires requires { xmm::add(lhs, rhs); }
@@ -323,7 +352,8 @@ requires requires { xmm::add(lhs, rhs); }
     return xmm::add(lhs, rhs);
 }
 
-DPL_EXPORT template <arithmetic_type E>
+DPL_EXPORT template <typename E>
+requires arithmetic_type<lane_representation_t<E>>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 inline auto DPL_VECTORCALL subtract(abi_tag, simd<E> lhs, simd<E> rhs) noexcept
 requires requires { xmm::subtract(lhs, rhs); }
@@ -331,7 +361,8 @@ requires requires { xmm::subtract(lhs, rhs); }
     return xmm::subtract(lhs, rhs);
 }
 
-DPL_EXPORT template <arithmetic_type E>
+DPL_EXPORT template <typename E>
+requires arithmetic_type<lane_representation_t<E>>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 inline auto DPL_VECTORCALL multiply(abi_tag, simd<E> lhs, simd<E> rhs) noexcept
 requires requires { xmm::multiply(lhs, rhs); }
@@ -339,7 +370,8 @@ requires requires { xmm::multiply(lhs, rhs); }
     return xmm::multiply(lhs, rhs);
 }
 
-DPL_EXPORT template <arithmetic_type E>
+DPL_EXPORT template <typename E>
+requires arithmetic_type<lane_representation_t<E>>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 inline auto DPL_VECTORCALL divide(abi_tag, simd<E> lhs, simd<E> rhs) noexcept
 requires requires { xmm::divide(lhs, rhs); }

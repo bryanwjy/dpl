@@ -13,6 +13,7 @@
 #if !DPL_MODULES
 #  include "dpl/core/fwd.h"
 
+#  include "dpl/core/concepts/integral_constant_like.h"
 #  include "dpl/core/type_traits/common_bits_type.h"
 #  include "dpl/core/type_traits/representation.h"
 #  include "dpl/std/utility/template_barrier.h"
@@ -25,95 +26,79 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::xmm {
 
-template <simd_element L, simd_element R>
+template <simd_element_for<abi_tag> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<common_bits_type_t<L, R>>
-    DPL_VECTORCALL bwor(simd<L> lhs, simd<R> rhs) noexcept {
-    using bits = common_bits_type_t<L, R>;
-    if constexpr (same_as<__m128i, native_vector_t<bits>>) {
-        return _mm_or_si128(
-            +xmm::reinterpret<bits>(lhs), +xmm::reinterpret<bits>(rhs));
-    } else if constexpr (same_as<__m128, native_vector_t<bits>>) {
-        return _mm_or_ps(
-            +xmm::reinterpret<bits>(lhs), +xmm::reinterpret<bits>(rhs));
-    } else if constexpr (same_as<__m128d, native_vector_t<bits>>) {
-        return _mm_or_pd(
-            +xmm::reinterpret<bits>(lhs), +xmm::reinterpret<bits>(rhs));
+inline simd<E>
+    DPL_VECTORCALL bwor(simd<E> lhs, simd<E> rhs) noexcept {
+    if constexpr (same_as<__m128i, native_vector_t<E>>) {
+        return _mm_or_si128(+lhs, +rhs);
+    } else if constexpr (same_as<__m128, native_vector_t<E>>) {
+        return _mm_or_ps(+lhs, +rhs);
+    } else if constexpr (same_as<__m128d, native_vector_t<E>>) {
+        return _mm_or_pd(+lhs, +rhs);
     } else {
-        using rep = signed_representation_t<L>;
+        using rep = signed_representation_t<E>;
         auto const result = _mm_or_si128(
             +xmm::reinterpret<rep>(lhs), +xmm::reinterpret<rep>(rhs));
-        return xmm::reinterpret<bits>(simd<rep>(result));
+        return xmm::reinterpret<E>(simd<rep>(result));
     }
 }
 
-template <simd_element L, simd_element R>
+template <simd_element_for<abi_tag> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<common_bits_type_t<L, R>>
-    DPL_VECTORCALL bwand(simd<L> lhs, simd<R> rhs) noexcept {
-    using bits = common_bits_type_t<L, R>;
-    if constexpr (same_as<__m128i, native_vector_t<bits>>) {
-        return _mm_and_si128(
-            +xmm::reinterpret<bits>(lhs), +xmm::reinterpret<bits>(rhs));
-    } else if constexpr (same_as<__m128, native_vector_t<bits>>) {
-        return _mm_and_ps(
-            +xmm::reinterpret<bits>(lhs), +xmm::reinterpret<bits>(rhs));
-    } else if constexpr (same_as<__m128d, native_vector_t<bits>>) {
-        return _mm_and_pd(
-            +xmm::reinterpret<bits>(lhs), +xmm::reinterpret<bits>(rhs));
+inline simd<E>
+    DPL_VECTORCALL bwand(simd<E> lhs, simd<E> rhs) noexcept {
+    if constexpr (same_as<__m128i, native_vector_t<E>>) {
+        return _mm_and_si128(+lhs, +rhs);
+    } else if constexpr (same_as<__m128, native_vector_t<E>>) {
+        return _mm_and_ps(+lhs, +rhs);
+    } else if constexpr (same_as<__m128d, native_vector_t<E>>) {
+        return _mm_and_pd(+lhs, +rhs);
     } else {
-        using rep = signed_representation_t<L>;
+        using rep = signed_representation_t<E>;
         auto const result = _mm_and_si128(
             +xmm::reinterpret<rep>(lhs), +xmm::reinterpret<rep>(rhs));
-        return xmm::reinterpret<bits>(simd<rep>(result));
+        return xmm::reinterpret<E>(simd<rep>(result));
     }
 }
 
-template <simd_element L, simd_element R>
+template <simd_element_for<abi_tag> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<common_bits_type_t<L, R>>
-    DPL_VECTORCALL bwxor(simd<L> lhs, simd<R> rhs) noexcept {
-    using bits = common_bits_type_t<L, R>;
-    if constexpr (same_as<__m128i, native_vector_t<bits>>) {
-        return _mm_xor_si128(
-            +xmm::reinterpret<bits>(lhs), +xmm::reinterpret<bits>(rhs));
-    } else if constexpr (same_as<__m128, native_vector_t<bits>>) {
-        return _mm_xor_ps(
-            +xmm::reinterpret<bits>(lhs), +xmm::reinterpret<bits>(rhs));
-    } else if constexpr (same_as<__m128d, native_vector_t<bits>>) {
-        return _mm_xor_pd(
-            +xmm::reinterpret<bits>(lhs), +xmm::reinterpret<bits>(rhs));
+inline simd<E>
+    DPL_VECTORCALL bwxor(simd<E> lhs, simd<E> rhs) noexcept {
+    if constexpr (same_as<__m128i, native_vector_t<E>>) {
+        return _mm_xor_si128(+lhs, +rhs);
+    } else if constexpr (same_as<__m128, native_vector_t<E>>) {
+        return _mm_xor_ps(+lhs, +rhs);
+    } else if constexpr (same_as<__m128d, native_vector_t<E>>) {
+        return _mm_xor_pd(+lhs, +rhs);
     } else {
-        using rep = signed_representation_t<L>;
+        using rep = signed_representation_t<E>;
         auto const result = _mm_xor_si128(
             +xmm::reinterpret<rep>(lhs), +xmm::reinterpret<rep>(rhs));
-        return xmm::reinterpret<bits>(simd<rep>(result));
+        return xmm::reinterpret<E>(simd<rep>(result));
     }
 }
 
-template <simd_element L, simd_element R>
+template <simd_element_for<abi_tag> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<common_bits_type_t<L, R>>
-    DPL_VECTORCALL bwandnot(simd<L> lhs, simd<R> rhs) noexcept {
-    using bits = common_bits_type_t<L, R>;
-    if constexpr (same_as<__m128i, native_vector_t<bits>>) {
-        return _mm_andnot_si128(
-            +xmm::reinterpret<bits>(rhs), +xmm::reinterpret<bits>(lhs));
-    } else if constexpr (same_as<__m128, native_vector_t<bits>>) {
-        return _mm_andnot_ps(
-            +xmm::reinterpret<bits>(rhs), +xmm::reinterpret<bits>(lhs));
-    } else if constexpr (same_as<__m128d, native_vector_t<bits>>) {
-        return _mm_andnot_pd(
-            +xmm::reinterpret<bits>(rhs), +xmm::reinterpret<bits>(lhs));
+inline simd<E>
+    DPL_VECTORCALL bwandnot(simd<E> lhs, simd<E> rhs) noexcept {
+    if constexpr (same_as<__m128i, native_vector_t<E>>) {
+        return _mm_andnot_si128(+rhs, +lhs);
+    } else if constexpr (same_as<__m128, native_vector_t<E>>) {
+        return _mm_andnot_ps(+rhs, +lhs);
+    } else if constexpr (same_as<__m128d, native_vector_t<E>>) {
+        return _mm_andnot_pd(+rhs, +lhs);
     } else {
-        using rep = signed_representation_t<L>;
+        using rep = signed_representation_t<E>;
         auto const result = _mm_andnot_si128(
             +xmm::reinterpret<rep>(rhs), +xmm::reinterpret<rep>(lhs));
-        return xmm::reinterpret<bits>(simd<rep>(result));
+        return xmm::reinterpret<E>(simd<rep>(result));
     }
 }
 
-template <simd_element E>
+template <simd_element_for<abi_tag> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<E>
     DPL_VECTORCALL bwnot(simd<E> val) noexcept {
@@ -122,50 +107,50 @@ inline simd<E>
         val, xmm::reinterpret<E>(simd<signed_representation_t<E>>(all)));
 }
 
-template <simd_element L, simd_element R>
+template <simd_element_for<abi_tag> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<common_bits_type_t<L, R>>
-    DPL_VECTORCALL bwornot(simd<L> lhs, simd<R> rhs) noexcept {
+inline simd<E>
+    DPL_VECTORCALL bwornot(simd<E> lhs, simd<E> rhs) noexcept {
     return xmm::bwnot(xmm::bwandnot(rhs, lhs));
 }
 
-template <simd_element L, simd_element R>
+template <simd_element_for<abi_tag> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-inline auto bwor(abi_tag, simd<L> lhs, simd<R> rhs) noexcept
+inline auto bwor(abi_tag, simd<E> lhs, simd<E> rhs) noexcept
 requires requires { xmm::bwor(lhs, rhs); }
 {
     return xmm::bwor(lhs, rhs);
 }
-template <simd_element L, simd_element R>
+template <simd_element_for<abi_tag> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-inline auto bwand(abi_tag, simd<L> lhs, simd<R> rhs) noexcept
+inline auto bwand(abi_tag, simd<E> lhs, simd<E> rhs) noexcept
 requires requires { xmm::bwand(lhs, rhs); }
 {
     return xmm::bwand(lhs, rhs);
 }
-template <simd_element L, simd_element R>
+template <simd_element_for<abi_tag> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-inline auto bwxor(abi_tag, simd<L> lhs, simd<R> rhs) noexcept
+inline auto bwxor(abi_tag, simd<E> lhs, simd<E> rhs) noexcept
 requires requires { xmm::bwxor(lhs, rhs); }
 {
     return xmm::bwxor(lhs, rhs);
 }
-template <simd_element L, simd_element R>
+template <simd_element_for<abi_tag> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-inline auto bwandnot(abi_tag, simd<L> lhs, simd<R> rhs) noexcept
+inline auto bwandnot(abi_tag, simd<E> lhs, simd<E> rhs) noexcept
 requires requires { xmm::bwandnot(lhs, rhs); }
 {
     return xmm::bwandnot(lhs, rhs);
 }
-template <simd_element L, simd_element R>
+template <simd_element_for<abi_tag> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-inline auto bwornot(abi_tag, simd<L> lhs, simd<R> rhs) noexcept
+inline auto bwornot(abi_tag, simd<E> lhs, simd<E> rhs) noexcept
 requires requires { xmm::bwornot(lhs, rhs); }
 {
     return xmm::bwornot(lhs, rhs);
 }
 
-template <simd_element E>
+template <simd_element_for<abi_tag> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 inline auto bwnot(abi_tag, simd<E> val) noexcept
 requires requires { xmm::bwnot(val); }
@@ -173,77 +158,77 @@ requires requires { xmm::bwnot(val); }
     return xmm::bwornot(val);
 }
 
-template <simd_element L, simd_element R>
+template <simd_element_for<abi_tag> L, simd_element_for<abi_tag> R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline mask<common_bits_type_t<L, R>>
     DPL_VECTORCALL bwor(mask<L> lhs, mask<R> rhs) noexcept {
     return +xmm::bwor(simd<L>(+lhs), simd<R>(+rhs));
 }
 
-template <simd_element L, simd_element R>
+template <simd_element_for<abi_tag> L, simd_element_for<abi_tag> R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline mask<common_bits_type_t<L, R>>
     DPL_VECTORCALL bwand(mask<L> lhs, mask<R> rhs) noexcept {
     return +xmm::bwand(simd<L>(+lhs), simd<R>(+rhs));
 }
 
-template <simd_element L, simd_element R>
+template <simd_element_for<abi_tag> L, simd_element_for<abi_tag> R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline mask<common_bits_type_t<L, R>>
     DPL_VECTORCALL bwxor(mask<L> lhs, mask<R> rhs) noexcept {
     return +xmm::bwxor(simd<L>(+lhs), simd<R>(+rhs));
 }
 
-template <simd_element L, simd_element R>
+template <simd_element_for<abi_tag> L, simd_element_for<abi_tag> R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline mask<common_bits_type_t<L, R>>
     DPL_VECTORCALL bwandnot(mask<L> lhs, mask<R> rhs) noexcept {
     return +xmm::bwandnot(simd<L>(+lhs), simd<R>(+rhs));
 }
 
-template <simd_element E>
+template <simd_element_for<abi_tag> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline mask<E>
     DPL_VECTORCALL bwnot(mask<E> val) noexcept {
     return +xmm::bwnot(simd<E>(+val));
 }
 
-template <simd_element L, simd_element R>
+template <simd_element_for<abi_tag> L, simd_element_for<abi_tag> R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline mask<common_bits_type_t<L, R>>
     DPL_VECTORCALL bwornot(mask<L> lhs, mask<R> rhs) noexcept {
     return +xmm::bwornot(simd<L>(+lhs), simd<L>(+rhs));
 }
 
-template <simd_element L, simd_element R>
+template <simd_element_for<abi_tag> L, simd_element_for<abi_tag> R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 inline auto bwor(abi_tag, mask<L> lhs, mask<R> rhs) noexcept
 requires requires { xmm::bwor(lhs, rhs); }
 {
     return xmm::bwor(lhs, rhs);
 }
-template <simd_element L, simd_element R>
+template <simd_element_for<abi_tag> L, simd_element_for<abi_tag> R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 inline auto bwand(abi_tag, mask<L> lhs, mask<R> rhs) noexcept
 requires requires { xmm::bwand(lhs, rhs); }
 {
     return xmm::bwand(lhs, rhs);
 }
-template <simd_element L, simd_element R>
+template <simd_element_for<abi_tag> L, simd_element_for<abi_tag> R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 inline auto bwxor(abi_tag, mask<L> lhs, mask<R> rhs) noexcept
 requires requires { xmm::bwxor(lhs, rhs); }
 {
     return xmm::bwxor(lhs, rhs);
 }
-template <simd_element L, simd_element R>
+template <simd_element_for<abi_tag> L, simd_element_for<abi_tag> R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 inline auto bwandnot(abi_tag, mask<L> lhs, mask<R> rhs) noexcept
 requires requires { xmm::bwandnot(lhs, rhs); }
 {
     return xmm::bwandnot(lhs, rhs);
 }
-template <simd_element L, simd_element R>
+template <simd_element_for<abi_tag> L, simd_element_for<abi_tag> R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 inline auto bwornot(abi_tag, mask<L> lhs, mask<R> rhs) noexcept
 requires requires { xmm::bwornot(lhs, rhs); }
@@ -251,7 +236,7 @@ requires requires { xmm::bwornot(lhs, rhs); }
     return xmm::bwornot(lhs, rhs);
 }
 
-template <simd_element E>
+template <simd_element_for<abi_tag> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 inline auto bwnot(abi_tag, mask<E> val) noexcept
 requires requires { xmm::bwnot(val); }
@@ -269,7 +254,8 @@ alignas(16) inline constexpr char niota_epi8[]{112, 113, 114, 115, 116, 117,
 
 } // namespace details
 
-template <template_barrier_t = __DPL template_barrier, simd_element E>
+template <template_barrier_t = __DPL template_barrier,
+    simd_element_for<abi_tag> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline mask<E>
     DPL_VECTORCALL bwshift_left(mask<E> val, int shift) noexcept {
@@ -289,7 +275,8 @@ inline mask<E>
     }
 }
 
-template <template_barrier_t = __DPL template_barrier, simd_element E>
+template <template_barrier_t = __DPL template_barrier,
+    simd_element_for<abi_tag> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline mask<E>
     DPL_VECTORCALL bwshift_right(mask<E> val, int shift) noexcept {
@@ -311,7 +298,7 @@ inline mask<E>
     }
 }
 
-template <template_barrier_t = __DPL template_barrier, simd_element E>
+template <simd_element_for<abi_tag> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 inline mask<E> bwshift_left(abi_tag, mask<E> val, int shift) noexcept
 requires requires { xmm::bwshift_left(val, shift); }
@@ -319,7 +306,7 @@ requires requires { xmm::bwshift_left(val, shift); }
     return xmm::bwshift_left(val, shift);
 }
 
-template <template_barrier_t = __DPL template_barrier, simd_element E>
+template <simd_element_for<abi_tag> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 inline mask<E> bwshift_right(abi_tag, mask<E> val, int shift) noexcept
 requires requires { xmm::bwshift_right(val, shift); }
@@ -327,7 +314,7 @@ requires requires { xmm::bwshift_right(val, shift); }
     return xmm::bwshift_right(val, shift);
 }
 
-template <integral auto V, simd_element E>
+template <integral auto V, simd_element_for<abi_tag> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline mask<E>
     DPL_VECTORCALL bwshift_left(
@@ -345,7 +332,7 @@ inline mask<E>
     }
 }
 
-template <integral auto V, simd_element E>
+template <integral auto V, simd_element_for<abi_tag> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline mask<E>
     DPL_VECTORCALL bwshift_right(
@@ -363,24 +350,23 @@ inline mask<E>
     }
 }
 
-template <integral auto V, simd_element E>
+template <simd_element_for<abi_tag> E, integral_constant_like I>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-inline mask<E> bwshift_left(
-    abi_tag, mask<E> val, immediate<V> imm = dx::imm<V>) noexcept
-requires requires { xmm::bwshift_left<V>(val); }
+inline mask<E> bwshift_left(abi_tag, mask<E> val, I) noexcept
+requires requires { xmm::bwshift_left<I::value>(val); }
 {
-    return xmm::bwshift_left<V>(val);
+    return xmm::bwshift_left<I::value>(val);
 }
-template <integral auto V, simd_element E>
+template <simd_element_for<abi_tag> E, integral_constant_like I>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-inline mask<E> bwshift_right(
-    abi_tag, mask<E> val, immediate<V> imm = dx::imm<V>) noexcept
-requires requires { xmm::bwshift_right<V>(val); }
+inline mask<E> bwshift_right(abi_tag, mask<E> val, I) noexcept
+requires requires { xmm::bwshift_right<I::value>(val); }
 {
-    return xmm::bwshift_right<V>(val);
+    return xmm::bwshift_right<I::value>(val);
 }
 
-template <template_barrier_t = __DPL template_barrier, simd_element E>
+template <template_barrier_t = __DPL template_barrier,
+    simd_element_for<abi_tag> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<E>
     DPL_VECTORCALL bwshift_left(simd<E> val, int shift) noexcept {
@@ -416,16 +402,15 @@ inline simd<E>
     }
 }
 
-template <template_barrier_t = __DPL template_barrier, simd_element E>
+template <template_barrier_t = __DPL template_barrier,
+    simd_element_for<abi_tag> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<E>
     DPL_VECTORCALL bwshift_right(abi_tag tag, simd<E> val, int shift) noexcept {
-    if constexpr (floating_point<E>) {
+    if constexpr (floating_point<lane_representation_t<E>> ||
+        bfloat16_like<lane_representation_t<E>> ||
+        float16_like<lane_representation_t<E>>) {
         using bit = unsigned_representation_t<E>;
-        return xmm::reinterpret<E>(tag,
-            xmm::bwshift_right(tag, xmm::reinterpret<bit>(tag, val), shift));
-    } else if constexpr (enumeration<E>) {
-        using bit = underlying_type_t<E>;
         return xmm::reinterpret<E>(tag,
             xmm::bwshift_right(tag, xmm::reinterpret<bit>(tag, val), shift));
     } else if constexpr (sizeof(E) == sizeof(int64)) {
@@ -480,7 +465,7 @@ inline simd<E>
     }
 }
 
-template <template_barrier_t = __DPL template_barrier, simd_element E>
+template <simd_element_for<abi_tag> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 inline simd<E> bwshift_left(abi_tag, simd<E> val, int shift) noexcept
 requires requires { xmm::bwshift_left(val, shift); }
@@ -488,7 +473,7 @@ requires requires { xmm::bwshift_left(val, shift); }
     return xmm::bwshift_left(val, shift);
 }
 
-template <template_barrier_t = __DPL template_barrier, simd_element E>
+template <simd_element_for<abi_tag> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 inline simd<E> bwshift_right(abi_tag tag, simd<E> val, int shift) noexcept
 requires requires { xmm::bwshift_right(val, shift); }
@@ -502,12 +487,10 @@ inline simd<E>
     DPL_VECTORCALL bwshift_left(
         simd<E> val, immediate<V> imm = dx::imm<V>) noexcept {
     static_assert(V >= 0 && V < sizeof(E) * char_bit_v);
-    if constexpr (floating_point<E>) {
+    if constexpr (floating_point<lane_representation_t<E>> ||
+        bfloat16_like<lane_representation_t<E>> ||
+        float16_like<lane_representation_t<E>>) {
         using bit = unsigned_representation_t<E>;
-        return xmm::reinterpret<E>(
-            xmm::bwshift_left(xmm::reinterpret<bit>(val), imm));
-    } else if constexpr (enumeration<E>) {
-        using bit = underlying_type_t<E>;
         return xmm::reinterpret<E>(
             xmm::bwshift_left(xmm::reinterpret<bit>(val), imm));
     } else if constexpr (sizeof(E) == sizeof(int64)) {
@@ -540,12 +523,10 @@ inline simd<E>
     DPL_VECTORCALL bwshift_right(
         simd<E> val, immediate<V> imm = dx::imm<V>) noexcept {
     static_assert(V >= 0 && V < sizeof(E) * char_bit_v);
-    if constexpr (floating_point<E>) {
+    if constexpr (floating_point<lane_representation_t<E>> ||
+        bfloat16_like<lane_representation_t<E>> ||
+        float16_like<lane_representation_t<E>>) {
         using bit = unsigned_representation_t<E>;
-        return xmm::reinterpret<E>(
-            xmm::bwshift_left(xmm::reinterpret<bit>(val), imm));
-    } else if constexpr (enumeration<E>) {
-        using bit = underlying_type_t<E>;
         return xmm::reinterpret<E>(
             xmm::bwshift_left(xmm::reinterpret<bit>(val), imm));
     } else if constexpr (sizeof(E) == sizeof(int64)) {
@@ -597,38 +578,34 @@ inline simd<E>
     }
 }
 
-template <integral auto V, simd_element E>
+template <simd_element_for<abi_tag> E, integral_constant_like I>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-inline simd<E> bwshift_left(
-    abi_tag, simd<E> val, immediate<V> imm = dx::imm<V>) noexcept
-requires requires { xmm::bwshift_left<V>(val); }
+inline simd<E> bwshift_left(abi_tag, simd<E> val, I) noexcept
+requires requires { xmm::bwshift_left<I::value>(val); }
 {
-    return xmm::bwshift_left<V>(val);
+    return xmm::bwshift_left<I::value>(val);
 }
 
-template <integral auto V, simd_element E>
+template <simd_element_for<abi_tag> E, integral_constant_like I>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-inline simd<E> bwshift_right(
-    abi_tag, simd<E> val, immediate<V> imm = dx::imm<V>) noexcept
-requires requires { xmm::bwshift_right<V>(val); }
+inline simd<E> bwshift_right(abi_tag, simd<E> val, I) noexcept
+requires requires { xmm::bwshift_right<I::value>(val); }
 {
-    return xmm::bwshift_right<V>(val);
+    return xmm::bwshift_right<I::value>(val);
 }
 
 #if DPL_SIMD_X86_AVX2
 
-template <template_barrier_t = __DPL template_barrier, simd_element L,
-    simd_element R>
-requires common_size_with<L, R> && integral<R>
+template <template_barrier_t = __DPL template_barrier,
+    simd_element_for<abi_tag> L, simd_element_for<abi_tag> R>
+requires common_size_with<L, R> && integral<lane_representation_t<R>>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<L>
     DPL_VECTORCALL bwshift_left(simd<L> lhs, simd<R> rhs) noexcept {
-    if constexpr (floating_point<L>) {
+    if constexpr (floating_point<lane_representation_t<L>> ||
+        bfloat16_like<lane_representation_t<L>> ||
+        float16_like<lane_representation_t<L>>) {
         using bit = unsigned_representation_t<L>;
-        return xmm::reinterpret<L>(
-            xmm::bwshift_left(xmm::reinterpret<bit>(lhs), rhs));
-    } else if constexpr (enumeration<L>) {
-        using bit = underlying_type_t<L>;
         return xmm::reinterpret<L>(
             xmm::bwshift_left(xmm::reinterpret<bit>(lhs), rhs));
     } else if constexpr (sizeof(L) == sizeof(int64)) {
@@ -677,22 +654,20 @@ inline simd<L>
     }
 }
 
-template <template_barrier_t = __DPL template_barrier, simd_element L,
-    simd_element R>
-requires common_size_with<L, R> && integral<R>
+template <template_barrier_t = __DPL template_barrier,
+    simd_element_for<abi_tag> L, simd_element_for<abi_tag> R>
+requires common_size_with<L, R> && integral<lane_representation_t<R>>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<L>
     DPL_VECTORCALL bwshift_right(simd<L> lhs, simd<R> rhs) noexcept {
-    if constexpr (floating_point<L>) {
+    if constexpr (floating_point<lane_representation_t<L>> ||
+        bfloat16_like<lane_representation_t<L>> ||
+        float16_like<lane_representation_t<L>>) {
         using bit = unsigned_representation_t<L>;
         return xmm::reinterpret<L>(
             xmm::bwshift_left(xmm::reinterpret<bit>(lhs), rhs));
-    } else if constexpr (enumeration<L>) {
-        using bit = underlying_type_t<L>;
-        return xmm::reinterpret<L>(
-            xmm::bwshift_left(xmm::reinterpret<bit>(lhs), rhs));
     } else if constexpr (sizeof(L) == sizeof(int64)) {
-        if constexpr (unsigned_integral<L>) {
+        if constexpr (unsigned_integral<lane_representation_t<L>>) {
             return _mm_srlv_epi64(+lhs, +rhs);
         } else {
 #  if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
@@ -706,20 +681,20 @@ inline simd<L>
 #  endif
         }
     } else if constexpr (sizeof(L) == sizeof(int32)) {
-        if constexpr (unsigned_integral<L>) {
+        if constexpr (unsigned_integral<lane_representation_t<L>>) {
             return _mm_srlv_epi32(+lhs, +rhs);
         } else {
             return _mm_srav_epi32(+lhs, +rhs);
         }
     } else if constexpr (sizeof(L) == sizeof(int16)) {
 #  if DPL_SIMD_X86_AVX512BW & DPL_SIMD_X86_AVX512VL
-        if constexpr (unsigned_integral<L>) {
+        if constexpr (unsigned_integral<lane_representation_t<L>>) {
             return _mm_srlv_epi16(+lhs, +rhs);
         } else {
             return _mm_srav_epi16(+lhs, +rhs);
         }
 #  else
-        if constexpr (unsigned_integral<L>) {
+        if constexpr (unsigned_integral<lane_representation_t<L>>) {
             auto xmm0 = +lhs;
             auto xmm1 = +rhs;
             auto xmm3 = _mm_cvtepu16_epi32(xmm1);
@@ -752,8 +727,8 @@ inline simd<L>
         }
 #  endif
     } else {
-        static_assert(common_bits_with<L, int8>);
-        if constexpr (unsigned_integral<L>) {
+        static_assert(sizeof(L) == sizeof(int8));
+        if constexpr (unsigned_integral<lane_representation_t<L>>) {
             using i16 = make_unsigned_t<bit_type_t<sizeof(L) * 2 * char_bit_v>>;
             auto xmm0 = +lhs;
             auto xmm1 = +rhs;
@@ -791,18 +766,16 @@ inline simd<L>
 
 #else
 // SSE 4.2
-template <template_barrier_t = __DPL template_barrier, simd_element L,
-    simd_element R>
-requires common_size_with<L, R> && integral<R>
+template <template_barrier_t = __DPL template_barrier,
+    simd_element_for<abi_tag> L, simd_element_for<abi_tag> R>
+requires common_size_with<L, R> && integral<lane_representation_t<R>>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<L>
     DPL_VECTORCALL bwshift_left(simd<L> lhs, simd<R> rhs) noexcept {
-    if constexpr (floating_point<L>) {
+    if constexpr (floating_point<lane_representation_t<L>> ||
+        bfloat16_like<lane_representation_t<L>> ||
+        float16_like<lane_representation_t<L>>) {
         using bit = unsigned_representation_t<L>;
-        return xmm::reinterpret<L>(
-            xmm::bwshift_left(xmm::reinterpret<bit>(lhs), rhs));
-    } else if constexpr (enumeration<L>) {
-        using bit = underlying_type_t<L>;
         return xmm::reinterpret<L>(
             xmm::bwshift_left(xmm::reinterpret<bit>(lhs), rhs));
     } else if constexpr (sizeof(L) == sizeof(int64)) {
@@ -866,8 +839,7 @@ inline simd<L>
 // No efficient way to right shift without avx2
 #endif
 
-template <template_barrier_t = __DPL template_barrier, simd_element L,
-    simd_element R>
+template <simd_element_for<abi_tag> L, simd_element_for<abi_tag> R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 inline simd<L> bwshift_left(abi_tag, simd<L> lhs, simd<R> rhs) noexcept
 requires requires { xmm::bwshift_left(lhs, rhs); }
@@ -875,8 +847,7 @@ requires requires { xmm::bwshift_left(lhs, rhs); }
     return xmm::bwshift_left(lhs, rhs);
 }
 
-template <template_barrier_t = __DPL template_barrier, simd_element L,
-    simd_element R>
+template <simd_element_for<abi_tag> L, simd_element_for<abi_tag> R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 inline simd<L> bwshift_right(abi_tag, simd<L> lhs, simd<R> rhs) noexcept
 requires requires { xmm::bwshift_right(lhs, rhs); }

@@ -13,9 +13,8 @@
 #if !DPL_MODULES
 #  include "dpl/core/basic/immediate.h"
 #  include "dpl/core/basic/to_simd_mask.h"
-#  include "dpl/core/concepts/common_float_with.h"
 #  include "dpl/core/concepts/common_size_with.h"
-#  include "dpl/core/concepts/simd_element.h"
+#  include "dpl/core/concepts/simd_element_for.h"
 #  include "dpl/core/type_traits/iota_sequence.h"
 #  include "dpl/xmm/basic/abi.h"
 #  include "dpl/xmm/basic/extract.h"
@@ -27,7 +26,7 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::xmm {
 
-DPL_EXPORT template <simd_element E>
+DPL_EXPORT template <simd_element_for<abi_tag> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr mask<E>
     DPL_VECTORCALL to_simd_mask(abi_tag tag, simd<E> src) noexcept {
@@ -40,11 +39,12 @@ constexpr mask<E>
         }(tag, src, iota_sequence<E, abi_tag>);
     } else {
         auto const result = [](abi_tag tag, simd<E> src) {
-            if constexpr (common_float_with<E, float>) {
+            if constexpr (same_as<lane_representation_t<E>, float>) {
                 return _mm_cmpneq_ps(+src, _mm_setzero_ps());
-            } else if constexpr (common_float_with<E, double>) {
+            } else if constexpr (same_as<lane_representation_t<E>, double>) {
                 return _mm_cmpneq_pd(+src, _mm_setzero_pd());
-            } else if constexpr (floating_point<E> && sizeof(E) == 2) {
+            } else if constexpr (float16_like<lane_representation_t<E>> ||
+                bfloat16_like<lane_representation_t<E>>) {
                 auto const vsrc = __DPL bit_cast<__m128i>(+src);
                 auto const abs = _mm_and_si128(vsrc, _mm_set1_epi16(0x7fff));
                 using sbit = signed_representation_t<E>;

@@ -11,9 +11,7 @@
 #include "dpl/xmm/basic/abi.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/concepts/common_float_with.h" // IWYU pragma: keep
-#  include "dpl/core/concepts/common_order_with.h" // IWYU pragma: keep
-#  include "dpl/core/concepts/simd_element.h"
+#  include "dpl/core/concepts/simd_element_for.h"
 #  include "dpl/core/type_traits/representation.h"
 #  include "dpl/std/bit/bit_cast.h"
 #  include "dpl/std/concepts/integral_constant_like.h"
@@ -38,27 +36,27 @@ constexpr E extract(abi_tag, simd<E> src, size_t idx) noexcept {
     };
     return __DPL bit_cast<E>(__DPL bit_cast<buffer>(src).data[idx]);
 #else
-    if constexpr (common_float_with<float, E>) {
+    if constexpr (same_as<float, lane_representation_t<E>>) {
         return __DPL bit_cast<E>((+src).m128_f32[idx]);
-    } else if constexpr (common_float_with<double, E>) {
+    } else if constexpr (same_as<double, lane_representation_t<E>>) {
         return __DPL bit_cast<E>((+src).m128d_f64[idx]);
-    } else if constexpr (floating_point<E> && sizeof(E) == 2) {
+    } else if constexpr (bfloat16_like<lane_representation_t<E>> ||
+        float16_like<lane_representation_t<E>>) {
         return __DPL bit_cast<E>((+src).m128i_i16[idx]);
     } else {
-        using T = conditional_t<enumeration<E>, underlying_type_t<E>, E>;
-        if constexpr (common_order_with<T, int32>) {
+        if constexpr (same_as<lane_representation_t<E>, int32>) {
             return __DPL bit_cast<E>((+src).m128i_i32[idx]);
-        } else if constexpr (common_order_with<T, int16>) {
+        } else if constexpr (same_as<lane_representation_t<E>, int16>) {
             return __DPL bit_cast<E>((+src).m128i_i16[idx]);
-        } else if constexpr (common_order_with<T, int8>) {
+        } else if constexpr (same_as<lane_representation_t<E>, int8>) {
             return __DPL bit_cast<E>((+src).m128i_i8[idx]);
-        } else if constexpr (common_order_with<T, int64>) {
+        } else if constexpr (same_as<lane_representation_t<E>, int64>) {
             return __DPL bit_cast<E>((+src).m128i_i64[idx]);
-        } else if constexpr (common_order_with<T, uint32>) {
+        } else if constexpr (same_as<lane_representation_t<E>, uint32>) {
             return __DPL bit_cast<E>((+src).m128i_u32[idx]);
-        } else if constexpr (common_order_with<T, uint16>) {
+        } else if constexpr (same_as<lane_representation_t<E>, uint16>) {
             return __DPL bit_cast<E>((+src).m128i_u16[idx]);
-        } else if constexpr (common_order_with<T, uint8>) {
+        } else if constexpr (same_as<lane_representation_t<E>, uint8>) {
             return __DPL bit_cast<E>((+src).m128i_u8[idx]);
         } else {
             return __DPL bit_cast<E>((+src).m128i_u64[idx]);
@@ -66,19 +64,6 @@ constexpr E extract(abi_tag, simd<E> src, size_t idx) noexcept {
     }
 #endif
 }
-
-namespace internal {
-template <typename T>
-consteval auto int_type() noexcept {
-    if constexpr (enumeration<T>) {
-        return underlying_type_t<T>{};
-    } else {
-        return T{};
-    }
-}
-template <typename T>
-using int_type_t DPL_NODEBUG = decltype(int_type<T>());
-} // namespace internal
 
 DPL_EXPORT template <simd_element_for<abi_tag> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
@@ -88,42 +73,42 @@ constexpr E extract(
         return dx::xmm::extract(tag, src, static_cast<size_t>(idx));
     } else {
         constexpr auto imm8 = static_cast<int>(idx);
-        if constexpr (common_float_with<float, E>) {
+        if constexpr (same_as<float, lane_representation_t<E>>) {
             return __DPL bit_cast<E>(_mm_extract_ps(+src, imm8));
-        } else if constexpr (common_float_with<double, E>) {
+        } else if constexpr (same_as<double, lane_representation_t<E>>) {
             return __DPL bit_cast<E>(
                 _mm_extract_epi64(_mm_castpd_si128(+src), idx));
-        } else if constexpr (floating_point<E> && sizeof(E) == 2) {
+        } else if constexpr (bfloat16_like<lane_representation_t<E>> ||
+            float16_like<lane_representation_t<E>>) {
 #if DPL_SIMD_X86_AVX512FP16
-            if constexpr (!bfloat16_like<E>) {
-                return __DPL bit_cast<E>(static_cast<E>(
+            if constexpr (!bfloat16_like<lane_representation_t<E>>) {
+                return __DPL bit_cast<E>(static_cast<int16>(
                     _mm_extract_epi16(_mm_castph_si128(+src), imm8)));
             } else {
-                return __DPL bit_cast<E>(static_cast<E>(
+                return __DPL bit_cast<E>(static_cast<int16>(
                     _mm_extract_epi16(__DPL bit_cast<__m128i>(+src), imm8)));
             }
 #else
-            return __DPL bit_cast<E>(static_cast<signed_representation_t<E>>(
+            return __DPL bit_cast<E>(static_cast<int16>(
                 _mm_extract_epi16(__DPL bit_cast<__m128i>(+src), imm8)));
 #endif
         } else {
-            using T = internal::int_type_t<E>;
-            if constexpr (common_order_with<T, int32>) {
+            if constexpr (same_as<lane_representation_t<E>, int32>) {
                 return __DPL bit_cast<E>(_mm_extract_epi32(+src, imm8));
-            } else if constexpr (common_order_with<T, int16>) {
+            } else if constexpr (same_as<lane_representation_t<E>, int16>) {
                 return __DPL bit_cast<E>(
                     static_cast<E>(_mm_extract_epi16(+src, imm8)));
-            } else if constexpr (common_order_with<T, int8>) {
+            } else if constexpr (same_as<lane_representation_t<E>, int8>) {
                 return __DPL bit_cast<E>(
                     static_cast<E>(_mm_extract_epi8(+src, imm8)));
-            } else if constexpr (common_order_with<T, int64>) {
+            } else if constexpr (same_as<lane_representation_t<E>, int64>) {
                 return __DPL bit_cast<E>(_mm_extract_epi64(+src, imm8));
-            } else if constexpr (common_order_with<T, uint32>) {
+            } else if constexpr (same_as<lane_representation_t<E>, uint32>) {
                 return __DPL bit_cast<E>(_mm_extract_epi32(+src, imm8));
-            } else if constexpr (common_order_with<T, uint16>) {
+            } else if constexpr (same_as<lane_representation_t<E>, uint16>) {
                 return __DPL bit_cast<E>(
                     static_cast<E>(_mm_extract_epi16(+src, imm8)));
-            } else if constexpr (common_order_with<T, uint8>) {
+            } else if constexpr (same_as<lane_representation_t<E>, uint8>) {
                 return __DPL bit_cast<E>(
                     static_cast<E>(_mm_extract_epi8(+src, imm8)));
             } else {
