@@ -88,7 +88,7 @@ concept decayable_msubtract =
     decayable_vector_for<L, operation_category::lane_agnostic> &&
     decayable_vector_for<R, operation_category::lane_agnostic> &&
     regular_invocable<subtract_t,
-        canonical_if_zero_t<S, operation_result_t<subtract_t, L, R>, A>,
+        canonical_or_zero_t<S, operation_result_t<subtract_t, L, R>, A>,
         canonical_type_t<M>, canonical_type_t<L>, canonical_type_t<R>>;
 
 template <typename S, typename M, typename L, typename R,
@@ -118,8 +118,7 @@ concept unqualified_extended_imsubtract =
         {
             subtract(src, internal::to_const_mask<A, subtract_t, S, L, R>(mask),
                 lhs, rhs)
-        } -> equivalent_simd_as<
-            canonical_if_zero_t<S, operation_result_t<subtract_t, L, R>, A>>;
+        } -> extended_operation_vector<A>;
     };
 
 template <typename S, typename M, typename L, typename R>
@@ -138,10 +137,9 @@ concept decayable_imsubtract =
         operation_category::lane_agnostic> &&
     decayable_vector_for<L, operation_category::lane_agnostic> &&
     decayable_vector_for<R, operation_category::lane_agnostic> &&
-    requires(subtract_t op,
-        canonical_if_zero_t<S, operation_result_t<subtract_t, L, R>, A> s,
-        M mask, canonical_type_t<L> l,
-        canonical_type_t<R> r) { op(s, mask, l, r); };
+    regular_invocable<subtract_t,
+        canonical_or_zero_t<S, operation_result_t<subtract_t, L, R>, A>, M,
+        canonical_type_t<L>, canonical_type_t<R>>;
 
 template <typename S, typename M, typename L, typename R,
     typename A = common_abi_t<

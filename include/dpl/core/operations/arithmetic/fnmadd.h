@@ -75,13 +75,10 @@ concept unqualified_canonical_mfnmadd = requires(
 
 template <typename S, typename M, typename AT, typename BT, typename CT,
     typename A = common_abi_t<AT, BT, CT, M>>
-concept unqualified_extended_mfnmadd = requires(
-    S src, M mask, AT a, BT b, CT c) {
-    {
-        fnmadd(src, mask, a, b, c)
-    } -> equivalent_simd_as<
-        canonical_if_zero_t<S, operation_result_t<fnmadd_t, AT, BT, CT>, A>>;
-};
+concept unqualified_extended_mfnmadd =
+    requires(S src, M mask, AT a, BT b, CT c) {
+        { fnmadd(src, mask, a, b, c) } -> extended_operation_vector<A>;
+    };
 template <typename S, typename M, typename AT, typename BT, typename CT>
 concept expression_mfnmadd =
     (simd_expression<S> || simd_expression<M> || simd_expression<AT> ||
@@ -101,7 +98,7 @@ concept decayable_mfnmadd =
     decayable_vector_for<BT, operation_category::lane_agnostic> &&
     decayable_vector_for<CT, operation_category::lane_agnostic> &&
     regular_invocable<fnmadd_t,
-        canonical_if_zero_t<S, operation_result_t<fnmadd_t, AT, BT, CT>, A>,
+        canonical_or_zero_t<S, operation_result_t<fnmadd_t, AT, BT, CT>, A>,
         canonical_type_t<M>, canonical_type_t<AT>, canonical_type_t<BT>,
         canonical_type_t<CT>>;
 
@@ -133,8 +130,7 @@ concept unqualified_extended_imfnmadd = requires(
     {
         fnmadd(src, internal::to_const_mask<A, fnmadd_t, S, AT, BT, CT>(mask),
             a, b, c)
-    } -> equivalent_simd_as<
-        canonical_if_zero_t<S, operation_result_t<fnmadd_t, AT, BT, CT>, A>>;
+    } -> extended_operation_vector<A>;
 };
 
 template <typename S, typename M, typename AT, typename BT, typename CT>
@@ -156,7 +152,7 @@ concept decayable_imfnmadd =
     decayable_vector_for<BT, operation_category::lane_agnostic> &&
     decayable_vector_for<CT, operation_category::lane_agnostic> &&
     regular_invocable<fnmadd_t,
-        canonical_if_zero_t<S, operation_result_t<fnmadd_t, AT, BT, CT>, A>, M,
+        canonical_or_zero_t<S, operation_result_t<fnmadd_t, AT, BT, CT>, A>, M,
         canonical_type_t<AT>, canonical_type_t<BT>, canonical_type_t<CT>>;
 
 template <typename S, typename M, typename AT, typename BT, typename CT,

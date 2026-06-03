@@ -42,7 +42,8 @@ concept unqualified_extended_multiply = requires(L lhs, R rhs) {
 
 template <typename L, typename R>
 concept expression_multiply = (simd_expression<L> || simd_expression<R>) &&
-    invocable<abs_t, simd_expression_result_t<L>, simd_expression_result_t<R>>;
+    invocable<multiply_t, simd_expression_result_t<L>,
+        simd_expression_result_t<R>>;
 
 template <typename L, typename R, typename A = common_abi_t<L, R>>
 concept decayable_multiply = (decayable_vector_for<L,
@@ -87,7 +88,7 @@ concept decayable_mmultiply =
     decayable_vector_for<L, operation_category::lane_agnostic> &&
     decayable_vector_for<R, operation_category::lane_agnostic> &&
     regular_invocable<multiply_t,
-        canonical_if_zero_t<S, operation_result_t<multiply_t, L, R>, A>,
+        canonical_or_zero_t<S, operation_result_t<multiply_t, L, R>, A>,
         canonical_type_t<M>, canonical_type_t<L>, canonical_type_t<R>>;
 
 template <typename S, typename M, typename L, typename R,
@@ -117,8 +118,7 @@ concept unqualified_extended_immultiply =
         {
             multiply(src, internal::to_const_mask<A, multiply_t, S, L, R>(mask),
                 lhs, rhs)
-        } -> equivalent_simd_as<
-            canonical_if_zero_t<S, operation_result_t<multiply_t, L, R>, A>>;
+        } -> extended_operation_vector<A>;
     };
 
 template <typename S, typename M, typename L, typename R>
@@ -137,10 +137,9 @@ concept decayable_immultiply =
         operation_category::lane_agnostic> &&
     decayable_vector_for<L, operation_category::lane_agnostic> &&
     decayable_vector_for<R, operation_category::lane_agnostic> &&
-    requires(multiply_t op,
-        canonical_if_zero_t<S, operation_result_t<multiply_t, L, R>, A> s,
-        M mask, canonical_type_t<L> l,
-        canonical_type_t<R> r) { op(s, mask, l, r); };
+    regular_invocable<multiply_t,
+        canonical_or_zero_t<S, operation_result_t<multiply_t, L, R>, A>, M,
+        canonical_type_t<L>, canonical_type_t<R>>;
 
 template <typename S, typename M, typename L, typename R,
     typename A = common_abi_t<
