@@ -15,6 +15,7 @@
 #  include "dpl/std/bit/has_single_bit.h"
 #  include "dpl/std/concepts/array_initializable.h"
 #  include "dpl/std/concepts/convertible_to.h"
+#  include "dpl/std/concepts/different_from.h"
 #  include "dpl/std/concepts/invocable.h"
 #  include "dpl/std/concepts/same_as.h"
 #  include "dpl/std/utility/bitset.h"
@@ -38,9 +39,8 @@ struct initialize_t<T, U> {
     using A DPL_NODEBUG = conditional_t<simd_abi<T>, T, U>;
 
 public:
-    template <core_convertible_to<E>... Args>
-    requires fixed_width_abi<A> &&
-        array_initializable<E[simd_abi_traits<E, A>::size], Args...> &&
+    template <typename... Args>
+    requires array_initializable<E[sizeof...(Args)], Args...> &&
         (... && !same_as<bool, Args>)
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
         static constexpr basic_vector<E, A> operator()(Args&&... args) noexcept
@@ -58,19 +58,6 @@ public:
         requires { initialize<E>(internal::abi<A>, data); }
     {
         return initialize<E>(internal::abi<A>, data);
-    }
-
-    template <core_convertible_to<E>... Args>
-    requires scalable_abi<A> &&
-        array_initializable<E[sizeof...(Args)], Args...> &&
-        (... && !same_as<bool, Args>)
-        DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-        static constexpr basic_vector<E, A> operator()(Args&&... args) noexcept
-    requires requires {
-        initialize<E>(internal::abi<A>, __DPL forward<Args>(args)...);
-    }
-    {
-        return initialize<E>(internal::abi<A>, __DPL forward<Args>(args)...);
     }
 
     template <size_t W>
@@ -149,21 +136,23 @@ template <extended_class T>
 struct initialize_t<T, ignore_t> {
 private:
     using base_type DPL_NODEBUG = initialize_t<canonical_type_t<T>>;
+    using E DPL_NODEBUG = simd_lane_type_t<T>;
 
 public:
     template <typename... Args>
-    requires regular_invocable<base_type, Args...>
+    requires simd_vector<T> && (sizeof...(Args) > 0) &&
+        array_initializable<E[sizeof...(Args)], Args...> &&
+        constructible_from<T, Args...>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr T operator()(Args&&... args) noexcept
-    requires constructible_from<T, Args...> ||
-        explicitly_convertible_to<canonical_type_t<T>, T>
-    {
-        if constexpr (constructible_from<T, Args...>) {
-            return T(__DPL forward<Args>(args)...);
-        } else {
-            return static_cast<T>(
-                base_type::operator()( __DPL forward<Args>(args)...));
-        }
+    static constexpr T operator()(Args&&... args) noexcept {
+        return T(__DPL forward<Args>(args)...);
+    }
+
+    template <size_t N>
+    requires simd_mask<T> && constructible_from<bitset<N> const&>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr T operator()(bitset<N> const& data) noexcept {
+        return T(data);
     }
 };
 } // namespace datapar::internal

@@ -22,18 +22,6 @@ namespace datapar::internal {
 void store(...) noexcept = delete;
 void aligned_store(...) noexcept = delete;
 
-template <typename T>
-concept storable_simd =
-    canonical_vector<T> && requires(T src, typename T::value_type* dst) {
-        store(internal::abi<T>, src, dst);
-    };
-
-template <typename S>
-concept aligned_storable_simd =
-    canonical_vector<S> && requires(S src, typename S::value_type* dst) {
-        aligned_store(internal::abi<S>, src, dst);
-    };
-
 struct store_t {
     template <canonical_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
@@ -65,8 +53,8 @@ struct store_t {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
     static constexpr void operator()(
         T src, typename T::value_type* dst) noexcept {
-        if constexpr (requires { store(internal::abi<T>, src, dst); }) {
-            store(internal::abi<T>, src, dst);
+        if constexpr (requires { store(src, dst); }) {
+            store(src, dst);
         } else if constexpr (equivalent_simd_as<canonical_type_t<T>, T>) {
             operator()(dx::to_canonical(src), dst);
         } else {
@@ -80,8 +68,8 @@ struct store_t {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
     static constexpr void operator()(
         aligned_t tag, T src, typename T::value_type* dst) noexcept {
-        if constexpr (requires { aligned_store(internal::abi<T>, src, dst); }) {
-            aligned_store(internal::abi<T>, src, dst);
+        if constexpr (requires { aligned_store(src, dst); }) {
+            aligned_store(src, dst);
         } else if constexpr (equivalent_simd_as<canonical_type_t<T>, T>) {
             operator()(tag, dx::to_canonical(src), dst);
         } else {

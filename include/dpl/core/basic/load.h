@@ -4,6 +4,7 @@
 #include "dpl/config.h"
 
 #include "dpl/core/basic/aligned.h"
+#include "dpl/core/basic/loading.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/fwd.h"
@@ -64,21 +65,23 @@ struct load_t<T> {
     using base_type DPL_NODEBUG = load_t<canonical_type_t<T>>;
 
 public:
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr T operator()(E const* src) noexcept
-    requires regular_invocable<base_type, E const*> &&
-        explicitly_convertible_to<canonical_type_t<T>, T>
+    requires constructible_from<loading_t, E const*>
     {
-        return static_cast<T>(load_t<canonical_type_t<T>>::operator()(src));
+        return T(dx::loading, src);
     }
 
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr T operator()(aligned_t tag, E const* src) noexcept
-    requires regular_invocable<base_type, aligned_t, E const*> &&
-        explicitly_convertible_to<canonical_type_t<T>, T>
+    requires constructible_from<loading_t, aligned_t, E const*>
     {
-        return static_cast<T>(
-            load_t<canonical_type_t<T>>::operator()(tag, src));
+        return T(dx::loading, tag, src);
+    }
+
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr T operator()(aligned_t, E const* src) noexcept {
+        return load_t::operator()(src);
     }
 };
 

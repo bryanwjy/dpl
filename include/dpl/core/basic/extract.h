@@ -7,6 +7,7 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/basic_type.h"
+#  include "dpl/core/concepts/decayable.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_class.h"
 #  include "dpl/std/concepts/integral.h"
@@ -36,12 +37,12 @@ struct extract_t {
         return extract(internal::abi<T>, src, idx);
     }
 
-    template <simd_class T>
+    template <extended_class T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr same_as<typename T::value_type> auto operator()(
         T src, extraction_index auto idx) noexcept {
-        if constexpr (requires { extract(internal::abi<T>, src, idx); }) {
-            return extract(internal::abi<T>, src, idx);
+        if constexpr (requires { extract(src, idx); }) {
+            return extract(src, idx);
         } else {
             return operator()(dx::to_canonical(src), idx);
         }

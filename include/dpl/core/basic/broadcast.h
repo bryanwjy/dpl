@@ -12,6 +12,8 @@
 #  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/broadcastable_to.h"
 #  include "dpl/core/type_traits/basic_type.h"
+#  include "dpl/core/type_traits/simd_abi_type.h"
+#  include "dpl/core/type_traits/simd_lane_type.h"
 #  include "dpl/std/concepts/integral_constant_like.h"
 #  include "dpl/std/concepts/invocable.h"
 #  include "dpl/std/utility/forward.h"
@@ -85,8 +87,8 @@ public:
 template <canonical_class T>
 struct broadcast_t<T> {
 private:
-    using E DPL_NODEBUG = typename T::value_type;
-    using A DPL_NODEBUG = typename T::abi_type;
+    using E DPL_NODEBUG = simd_lane_type_t<T>;
+    using A DPL_NODEBUG = simd_abi_type_t<T>;
 
 public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -115,7 +117,7 @@ public:
 template <extended_class T>
 struct broadcast_t<T> {
 private:
-    using E DPL_NODEBUG = typename T::value_type;
+    using E DPL_NODEBUG = simd_lane_type_t<T>;
     using base_type DPL_NODEBUG = broadcast_t<canonical_type_t<T>>;
 
 public:
