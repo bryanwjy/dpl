@@ -15,7 +15,13 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar {
 DPL_EXPORT template <typename T>
-inline constexpr bool enable_simd_mask = false;
+struct simd_mask_base {
+protected:
+    constexpr ~simd_mask_base() = default;
+};
+
+DPL_EXPORT template <typename T>
+inline constexpr bool enable_simd_mask = derived_from<T, simd_mask_base<T>>;
 DPL_EXPORT template <simd_abi A, simd_element_for<A> E>
 inline constexpr bool enable_simd_mask<basic_mask<E, A>> = true;
 

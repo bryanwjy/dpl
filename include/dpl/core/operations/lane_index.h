@@ -13,7 +13,7 @@
 #  include "dpl/core/type_traits/iota_sequence.h"
 #  include "dpl/core/type_traits/rebind_simd.h"
 #  include "dpl/core/type_traits/representation.h"
-#  include "dpl/core/type_traits/simd_type.h"
+#  include "dpl/core/type_traits/simd_vector_type.h"
 #  include "dpl/std/concepts/invocable.h"
 #  include "dpl/std/utility/apply.h"
 #  include "dpl/std/utility/ignore.h"
@@ -90,7 +90,7 @@ private:
     using E DPL_NODEBUG = typename T::value_type;
     using base_type DPL_NODEBUG = lane_index_t<canonical_type_t<T>>;
     using result_type DPL_NODEBUG =
-        rebind_simd_t<simd_type_t<T>, signed_representation_t<E>>;
+        rebind_simd_t<simd_vector_type_t<T>, signed_representation_t<E>>;
 
 public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)

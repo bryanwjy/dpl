@@ -147,9 +147,9 @@ public:
     requires maskable_args<S, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(S src, M mask, T val) noexcept {
-        using A = abi_type_t<S>;
-        if constexpr (same_as<abi_type_t<S>, abi_type_t<M>> &&
-            same_as<abi_type_t<T>, abi_type_t<M>>) {
+        using A = simd_abi_type_t<S>;
+        if constexpr (same_as<simd_abi_type_t<S>, simd_abi_type_t<M>> &&
+            same_as<simd_abi_type_t<T>, simd_abi_type_t<M>>) {
             if constexpr (unqualified_canonical_compress<S, M, T>) {
                 if consteval {
                     return compress_t::fallback(src, mask, val);
@@ -182,9 +182,9 @@ public:
     requires zmaskable_args<M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, T val) noexcept {
-        using A = abi_type_t<M>;
+        using A = simd_abi_type_t<M>;
         using S = broadcast_type<M, T>;
-        if constexpr (same_as<abi_type_t<T>, abi_type_t<M>>) {
+        if constexpr (same_as<simd_abi_type_t<T>, simd_abi_type_t<M>>) {
             if constexpr (unqualified_canonical_compress<zero_t, M, T>) {
                 if consteval {
                     return operator()(dx::broadcast<S>(dx::zero), mask, val);
@@ -225,9 +225,9 @@ public:
     requires imm_maskable_args<S, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(S src, M mask, T val) noexcept {
-        using A = abi_type_t<S>;
+        using A = simd_abi_type_t<S>;
         constexpr auto cmask = dx::to_compatible_const_mask<S>(mask);
-        if constexpr (same_as<abi_type_t<T>, abi_type_t<S>>) {
+        if constexpr (same_as<simd_abi_type_t<T>, simd_abi_type_t<S>>) {
             if constexpr (unqualified_canonical_icompress<S, M, T>) {
                 if consteval {
                     return compress_t::fallbacki(src, cmask, val);
@@ -261,7 +261,7 @@ public:
     requires const_mask_for<M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, T val) noexcept {
-        using A = abi_type_t<T>;
+        using A = simd_abi_type_t<T>;
         if constexpr (unqualified_canonical_icompress<zero_t, M, T>) {
             if consteval {
                 return operator()(dx::broadcast<T>(dx::zero), mask, val);

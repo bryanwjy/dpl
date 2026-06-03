@@ -11,7 +11,7 @@
 #  include "dpl/core/concepts/common_abi_with.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/operations/compare/max.h"
-#  include "dpl/core/type_traits/abi_type.h"
+#  include "dpl/core/type_traits/simd_abi_type.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -128,9 +128,9 @@ public:
     requires maskable_args<S, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(S src, M mask, T val, I init) noexcept {
-        using A = abi_type_t<S>;
-        if constexpr (same_as<abi_type_t<S>, abi_type_t<M>> &&
-            same_as<abi_type_t<T>, abi_type_t<M>>) {
+        using A = simd_abi_type_t<S>;
+        if constexpr (same_as<simd_abi_type_t<S>, simd_abi_type_t<M>> &&
+            same_as<simd_abi_type_t<T>, simd_abi_type_t<M>>) {
             if constexpr (unqualified_canonical_mexscan_max<S, M, T, I>) {
                 if consteval {
                     return exscan_max_t::fallback(src, mask, val, init);
@@ -164,9 +164,9 @@ public:
     requires zmaskable_args<M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, T val, I init) noexcept {
-        using A = abi_type_t<M>;
+        using A = simd_abi_type_t<M>;
         using S = broadcast_type<M, T>;
-        if constexpr (same_as<abi_type_t<T>, abi_type_t<M>>) {
+        if constexpr (same_as<simd_abi_type_t<T>, simd_abi_type_t<M>>) {
             if constexpr (unqualified_canonical_mexscan_max<zero_t, M, T, I>) {
                 if consteval {
                     return exscan_max_t::fallback(dx::zero, mask, val, init);
@@ -213,9 +213,9 @@ public:
     requires imm_maskable_args<S, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(S src, M mask, T val, I init) noexcept {
-        using A = abi_type_t<S>;
+        using A = simd_abi_type_t<S>;
         constexpr auto cmask = dx::to_compatible_const_mask<S>(mask);
-        if constexpr (same_as<abi_type_t<T>, abi_type_t<S>>) {
+        if constexpr (same_as<simd_abi_type_t<T>, simd_abi_type_t<S>>) {
             if constexpr (unqualified_canonical_imexscan_max<S, M, T, I>) {
                 if consteval {
                     return exscan_max_t::fallbacki(src, cmask, val, init);
@@ -250,7 +250,7 @@ public:
     requires const_mask_for<M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, T val, I init) noexcept {
-        using A = abi_type_t<T>;
+        using A = simd_abi_type_t<T>;
         constexpr auto cmask = dx::to_compatible_const_mask<T>(mask);
         if constexpr (unqualified_canonical_imexscan_max<zero_t, M, T, I>) {
             if consteval {
@@ -372,9 +372,9 @@ public:
     requires maskable_args<S, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(S src, M mask, T val) noexcept {
-        using A = abi_type_t<S>;
-        if constexpr (same_as<abi_type_t<S>, abi_type_t<M>> &&
-            same_as<abi_type_t<T>, abi_type_t<M>>) {
+        using A = simd_abi_type_t<S>;
+        if constexpr (same_as<simd_abi_type_t<S>, simd_abi_type_t<M>> &&
+            same_as<simd_abi_type_t<T>, simd_abi_type_t<M>>) {
             if constexpr (unqualified_canonical_mscan_max<S, M, T>) {
                 if consteval {
                     return scan_max_t::fallback(src, mask, val);
@@ -407,8 +407,8 @@ public:
     requires zmaskable_args<M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, T val) noexcept {
-        using A = abi_type_t<M>;
-        if constexpr (same_as<abi_type_t<T>, abi_type_t<M>>) {
+        using A = simd_abi_type_t<M>;
+        if constexpr (same_as<simd_abi_type_t<T>, simd_abi_type_t<M>>) {
             if constexpr (unqualified_canonical_mscan_max<zero_t, M, T>) {
                 if consteval {
                     return scan_max_t::fallback(dx::zero, mask, val);
@@ -448,9 +448,9 @@ public:
     requires imm_maskable_args<S, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(S src, M mask, T val) noexcept {
-        using A = abi_type_t<S>;
+        using A = simd_abi_type_t<S>;
         constexpr auto cmask = dx::to_compatible_const_mask<S>(mask);
-        if constexpr (same_as<abi_type_t<T>, abi_type_t<S>>) {
+        if constexpr (same_as<simd_abi_type_t<T>, simd_abi_type_t<S>>) {
             if constexpr (unqualified_canonical_imscan_max<S, M, T>) {
                 if consteval {
                     return scan_max_t::fallbacki(src, cmask, val);
@@ -484,7 +484,7 @@ public:
     requires const_mask_for<M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, T val) noexcept {
-        using A = abi_type_t<T>;
+        using A = simd_abi_type_t<T>;
         constexpr auto cmask = dx::to_compatible_const_mask<T>(mask);
         if constexpr (unqualified_canonical_imscan_max<zero_t, M, T>) {
             if consteval {

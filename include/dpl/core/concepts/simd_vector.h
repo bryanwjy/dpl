@@ -8,6 +8,7 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/fwd/basic.h"
+#  include "dpl/std/concepts/simd_vector_base.h"
 #  include "dpl/std/type_traits/is_object.h"
 #  include "dpl/std/type_traits/is_trivially_copyable.h"
 #endif
@@ -16,7 +17,13 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar {
 DPL_EXPORT template <typename T>
-inline constexpr bool enable_vector_type = false;
+struct simd_vector_base {
+protected:
+    constexpr ~simd_vector_base() = default;
+};
+
+DPL_EXPORT template <typename T>
+inline constexpr bool enable_vector_type = derived_from<T, simd_vector_base<T>>;
 DPL_EXPORT template <simd_abi A, simd_element_for<A> E>
 inline constexpr bool enable_vector_type<basic_vector<E, A>> = true;
 

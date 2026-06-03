@@ -94,7 +94,7 @@ public:
     static constexpr auto operator()(L lhs, R rhs) noexcept {
         if constexpr (unqualified_canonical_inner_product<L, R>) {
             if consteval {
-                if constexpr (same_as<abi_type_t<L>, abi_type_t<R>>) {
+                if constexpr (same_as<simd_abi_type_t<L>, simd_abi_type_t<R>>) {
                     return fallback(lhs, rhs);
                 } else {
                     return inner_product(
@@ -127,10 +127,10 @@ public:
     requires maskable_args<S, M, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(S src, M mask, L lhs, R rhs) noexcept {
-        using A = abi_type_t<S>;
-        if constexpr (same_as<abi_type_t<S>, abi_type_t<M>> &&
-            same_as<abi_type_t<L>, abi_type_t<M>> &&
-            same_as<abi_type_t<R>, abi_type_t<M>>) {
+        using A = simd_abi_type_t<S>;
+        if constexpr (same_as<simd_abi_type_t<S>, simd_abi_type_t<M>> &&
+            same_as<simd_abi_type_t<L>, simd_abi_type_t<M>> &&
+            same_as<simd_abi_type_t<R>, simd_abi_type_t<M>>) {
             if constexpr (unqualified_canonical_minner_product<S, M, L, R>) {
                 if consteval {
                     return inner_product_t::fallback(src, mask, lhs, rhs);
@@ -164,9 +164,9 @@ public:
     requires zmaskable_args<M, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, L lhs, R rhs) noexcept {
-        using A = abi_type_t<M>;
-        if constexpr (same_as<abi_type_t<L>, abi_type_t<M>> &&
-            same_as<abi_type_t<R>, abi_type_t<M>>) {
+        using A = simd_abi_type_t<M>;
+        if constexpr (same_as<simd_abi_type_t<L>, simd_abi_type_t<M>> &&
+            same_as<simd_abi_type_t<R>, simd_abi_type_t<M>>) {
             if constexpr (unqualified_canonical_minner_product<zero_t, M, L,
                               R>) {
                 if consteval {
@@ -212,10 +212,10 @@ public:
     requires imm_maskable_args<S, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(S src, M mask, L lhs, R rhs) noexcept {
-        using A = abi_type_t<S>;
+        using A = simd_abi_type_t<S>;
         constexpr auto cmask = dx::to_compatible_const_mask<S>(mask);
-        if constexpr (same_as<abi_type_t<L>, abi_type_t<S>> &&
-            same_as<abi_type_t<R>, abi_type_t<S>>) {
+        if constexpr (same_as<simd_abi_type_t<L>, simd_abi_type_t<S>> &&
+            same_as<simd_abi_type_t<R>, simd_abi_type_t<S>>) {
             if constexpr (unqualified_canonical_iminner_product<S, M, L, R>) {
                 if consteval {
                     return inner_product_t::fallback(src, cmask, lhs, rhs);

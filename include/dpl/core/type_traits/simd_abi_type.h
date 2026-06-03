@@ -14,18 +14,18 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
 DPL_EXPORT template <typename T>
-struct abi_type {};
+struct simd_abi_type {};
 
 DPL_EXPORT template <typename T>
-using abi_type_t = typename abi_type<T>::type;
+using simd_abi_type_t = typename simd_abi_type<T>::type;
 
 DPL_EXPORT template <simd_class T>
-struct abi_type<T> {
+struct simd_abi_type<T> {
     using type DPL_NODEBUG = typename T::abi_type;
 };
 
 DPL_EXPORT template <simd_abi T>
-struct abi_type<T> {
+struct simd_abi_type<T> {
     using type DPL_NODEBUG = T;
 };
 

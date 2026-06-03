@@ -184,9 +184,9 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(S src, M mask, T val, Op&& op) noexcept(
         is_nothrow_invocable_v<Op, T, T>) {
-        using A = abi_type_t<S>;
-        if constexpr (same_as<abi_type_t<S>, abi_type_t<M>> &&
-            same_as<abi_type_t<T>, abi_type_t<M>>) {
+        using A = simd_abi_type_t<S>;
+        if constexpr (same_as<simd_abi_type_t<S>, simd_abi_type_t<M>> &&
+            same_as<simd_abi_type_t<T>, simd_abi_type_t<M>>) {
             if constexpr (unqualified_canonical_mreduce<S, M, T, Op>) {
                 if consteval {
                     return reduce_t::fallback(
@@ -227,8 +227,8 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, T val, Op&& op) noexcept(
         is_nothrow_invocable_v<Op, T, T>) {
-        using A = abi_type_t<M>;
-        if constexpr (same_as<abi_type_t<T>, abi_type_t<M>>) {
+        using A = simd_abi_type_t<M>;
+        if constexpr (same_as<simd_abi_type_t<T>, simd_abi_type_t<M>>) {
             if constexpr (unqualified_canonical_mreduce<zero_t, M, T, Op>) {
                 if consteval {
                     return reduce_t::fallback(
@@ -279,9 +279,9 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(S src, M mask, T val, Op&& op) noexcept(
         is_nothrow_invocable_v<Op, T, T>) {
-        using A = abi_type_t<S>;
+        using A = simd_abi_type_t<S>;
         constexpr auto cmask = dx::to_compatible_const_mask<S>(mask);
-        if constexpr (same_as<abi_type_t<T>, abi_type_t<S>>) {
+        if constexpr (same_as<simd_abi_type_t<T>, simd_abi_type_t<S>>) {
             if constexpr (unqualified_canonical_imreduce<S, M, T, Op>) {
                 if consteval {
                     return reduce_t::fallbacki(
@@ -322,7 +322,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, T val, Op&& op) noexcept(
         is_nothrow_invocable_v<Op, T, T>) {
-        using A = abi_type_t<T>;
+        using A = simd_abi_type_t<T>;
         constexpr auto cmask = dx::to_compatible_const_mask<T>(mask);
         if constexpr (unqualified_canonical_imreduce<zero_t, M, T, Op>) {
             if consteval {

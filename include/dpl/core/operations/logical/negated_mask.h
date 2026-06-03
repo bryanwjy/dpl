@@ -35,6 +35,9 @@ inline constexpr bool is_negated_mask_specialization = false;
 template <simd_mask T>
 class negated_mask;
 
+template <simd_mask T>
+inline constexpr bool is_negated_mask_specialization<negated_mask<T>> = true;
+
 template <typename T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr negated_mask<remove_cvref_t<T>> make_negated_mask(T&& val) noexcept {
@@ -48,13 +51,14 @@ constexpr auto make_negated_mask(negated_mask<T> const& val) noexcept {
 }
 
 template <simd_mask T>
-class negated_mask {
+class negated_mask : public simd_mask_base<negated_mask<T>> {
     using element_type DPL_NODEBUG = simd_lane_type_t<T>;
 
 public:
     using vector_type = typename T::vector_type;
     using abi_type = typename T::abi_type;
     using value_type = bool;
+    using result_type = T;
     static constexpr auto decay_policy = simd_traits<T>::decay_policy;
 
 private:
@@ -83,6 +87,11 @@ public:
     requires same_abi_simd_as<T, U>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     explicit operator U(this negated_mask self) noexcept {
+        return dx::bwnot(!self);
+    }
+
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    constexpr T evaluate(this negated_mask self) noexcept {
         return dx::bwnot(!self);
     }
 
@@ -124,23 +133,22 @@ public:
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     friend constexpr bool any_of(negated_mask self) noexcept {
-        return internal::make_negated_mask(
-            dx::none_of(internal::abi<T>, !self));
+        return internal::make_negated_mask(dx::none_of(!self));
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     friend constexpr bool all_of(negated_mask self) noexcept {
-        return dx::none_of(internal::abi<T>, !self);
+        return dx::none_of(!self);
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     friend constexpr bool none_of(negated_mask self) noexcept {
-        return dx::all_of(internal::abi<T>, !self);
+        return dx::all_of(!self);
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     friend constexpr bool some_of(negated_mask self) noexcept {
-        return dx::some_of(internal::abi<T>, !self);
+        return dx::some_of(!self);
     }
 
     template <simd_mask U>
@@ -280,9 +288,6 @@ public:
 private:
     mask_type mask_;
 };
-
-template <simd_mask T>
-inline constexpr bool is_negated_mask_specialization<negated_mask<T>> = true;
 } // namespace datapar::internal
 
 namespace datapar {
@@ -292,7 +297,5 @@ struct rebind_simd<internal::negated_mask<T>, E, A> {
     using type DPL_NODEBUG =
         internal::negated_mask<typename rebind_simd<T, E, A>::type>;
 };
-DPL_EXPORT template <simd_mask T>
-inline constexpr bool enable_simd_mask<internal::negated_mask<T>> = true;
 } // namespace datapar
 DPL_DEFAULT_NAMESPACE_END

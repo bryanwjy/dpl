@@ -85,8 +85,8 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, L lhs, R rhs) noexcept {
         using A = common_abi_t<L, R, M>;
-        if constexpr (same_as<abi_type_t<L>, abi_type_t<M>> &&
-            same_as<abi_type_t<R>, abi_type_t<M>>) {
+        if constexpr (same_as<simd_abi_type_t<L>, simd_abi_type_t<M>> &&
+            same_as<simd_abi_type_t<R>, simd_abi_type_t<M>>) {
             if constexpr (unqualified_canonical_splice<L, M, R>) {
                 if consteval {
                     return splice_t::fallback(mask, lhs, rhs);
@@ -120,9 +120,9 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         M mask, T val, dx::zero_t tag = dx::zero) noexcept {
-        using A = abi_type_t<M>;
+        using A = simd_abi_type_t<M>;
         using R = broadcast_type<M, T>;
-        if constexpr (same_as<abi_type_t<T>, abi_type_t<M>>) {
+        if constexpr (same_as<simd_abi_type_t<T>, simd_abi_type_t<M>>) {
             if constexpr (unqualified_canonical_splice<M, T, dx::zero_t>) {
                 if consteval {
                     return operator()(mask, val, dx::broadcast<R>(tag));
@@ -168,7 +168,7 @@ public:
             }
         }(mask);
 
-        if constexpr (same_as<abi_type_t<L>, abi_type_t<R>>) {
+        if constexpr (same_as<simd_abi_type_t<L>, simd_abi_type_t<R>>) {
             if constexpr (unqualified_canonical_splicei<M, L, R>) {
                 if consteval {
                     return splice_t::fallbacki(cmask, lhs, rhs);
@@ -210,7 +210,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         M mask, T val, dx::zero_t tag = dx::zero) noexcept {
-        using A = abi_type_t<T>;
+        using A = simd_abi_type_t<T>;
         if constexpr (unqualified_canonical_splicei<M, T, dx::zero_t>) {
             if consteval {
                 return operator()(mask, val, dx::broadcast<T>(tag));

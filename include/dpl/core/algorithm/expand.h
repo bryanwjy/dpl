@@ -10,8 +10,8 @@
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/operations/permute.h"
 #  include "dpl/core/operations/select.h"
-#  include "dpl/core/type_traits/abi_type.h"
 #  include "dpl/core/type_traits/simd_abi_traits.h"
+#  include "dpl/core/type_traits/simd_abi_type.h"
 #  include "dpl/std/concepts/invocable.h"
 #endif
 
@@ -81,9 +81,9 @@ public:
     requires maskable_args<S, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(S src, M mask, T val) noexcept {
-        using A = abi_type_t<S>;
-        if constexpr (same_as<abi_type_t<S>, abi_type_t<M>> &&
-            same_as<abi_type_t<T>, abi_type_t<M>>) {
+        using A = simd_abi_type_t<S>;
+        if constexpr (same_as<simd_abi_type_t<S>, simd_abi_type_t<M>> &&
+            same_as<simd_abi_type_t<T>, simd_abi_type_t<M>>) {
             if constexpr (unqualified_canonical_expand<S, M, T>) {
                 if consteval {
                     return expand_t::fallback(src, mask, val);
@@ -116,9 +116,9 @@ public:
     requires zmaskable_args<M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, T val) noexcept {
-        using A = abi_type_t<M>;
+        using A = simd_abi_type_t<M>;
         using S = broadcast_type<M, T>;
-        if constexpr (same_as<abi_type_t<T>, abi_type_t<M>>) {
+        if constexpr (same_as<simd_abi_type_t<T>, simd_abi_type_t<M>>) {
             if constexpr (unqualified_canonical_expand<zero_t, M, T>) {
                 if consteval {
                     return expand_t::fallback(dx::zero, mask, val);
@@ -159,9 +159,9 @@ public:
     requires imm_maskable_args<S, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(S src, M mask, T val) noexcept {
-        using A = abi_type_t<S>;
+        using A = simd_abi_type_t<S>;
         constexpr auto cmask = dx::to_compatible_const_mask<S>(mask);
-        if constexpr (same_as<abi_type_t<T>, abi_type_t<S>>) {
+        if constexpr (same_as<simd_abi_type_t<T>, simd_abi_type_t<S>>) {
             if constexpr (unqualified_canonical_iexpand<S, M, T>) {
                 if consteval {
                     return expand_t::fallbacki(src, cmask, val);
@@ -195,7 +195,7 @@ public:
     requires const_mask_for<M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, T val) noexcept {
-        using A = abi_type_t<T>;
+        using A = simd_abi_type_t<T>;
         if constexpr (unqualified_canonical_iexpand<zero_t, M, T>) {
             if consteval {
                 return expand_t::fallbacki(dx::zero, mask, val);

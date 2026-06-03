@@ -14,19 +14,19 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
 DPL_EXPORT template <typename T>
-struct simd_type {};
+struct simd_vector_type {};
 
 DPL_EXPORT template <typename T>
-using simd_type_t = typename simd_type<T>::type;
+using simd_vector_type_t = typename simd_vector_type<T>::type;
 
 DPL_EXPORT template <simd_vector T>
-struct simd_type<T> {
+struct simd_vector_type<T> {
     using type DPL_NODEBUG = T;
 };
 
 DPL_EXPORT template <simd_mask T>
-struct simd_type<T> {
-    using type DPL_NODEBUG = typename T::simd_type;
+struct simd_vector_type<T> {
+    using type DPL_NODEBUG = typename T::vector_type;
 };
 
 } // namespace datapar

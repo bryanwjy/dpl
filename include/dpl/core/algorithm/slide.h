@@ -10,7 +10,7 @@
 #  include "dpl/core/concepts/simd_equivalence.h"
 #  include "dpl/core/operations/bitwise.h"
 #  include "dpl/core/operations/operation_base.h"
-#  include "dpl/core/type_traits/abi_type.h"
+#  include "dpl/core/type_traits/simd_abi_type.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -110,7 +110,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs, size_t count) noexcept {
         using A = common_abi_t<L, R>;
-        if constexpr (same_as<abi_type_t<L>, abi_type_t<R>>) {
+        if constexpr (same_as<simd_abi_type_t<L>, simd_abi_type_t<R>>) {
             if constexpr (unqualified_canonical_slide_left<L, R>) {
                 if consteval {
                     return slide_left_t::fallback(lhs, rhs, count);
@@ -144,7 +144,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs, N count) noexcept {
         using A = common_abi_t<L, R>;
-        if constexpr (same_as<abi_type_t<L>, abi_type_t<R>>) {
+        if constexpr (same_as<simd_abi_type_t<L>, simd_abi_type_t<R>>) {
             if constexpr (unqualified_canonical_slide_lefti<L, R, N>) {
                 if consteval {
                     return operator()(lhs, rhs, N::value);
@@ -193,7 +193,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs, size_t count) noexcept {
         using A = common_abi_t<L, R>;
-        if constexpr (same_as<abi_type_t<L>, abi_type_t<R>>) {
+        if constexpr (same_as<simd_abi_type_t<L>, simd_abi_type_t<R>>) {
             if constexpr (unqualified_canonical_slide_right<L, R>) {
                 if consteval {
                     return slide_right_t::fallback(lhs, rhs, count);
@@ -227,7 +227,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs, N count) noexcept {
         using A = common_abi_t<L, R>;
-        if constexpr (same_as<abi_type_t<L>, abi_type_t<R>>) {
+        if constexpr (same_as<simd_abi_type_t<L>, simd_abi_type_t<R>>) {
             if constexpr (unqualified_canonical_slide_righti<L, R, N>) {
                 if consteval {
                     return operator()(lhs, rhs, N::value);

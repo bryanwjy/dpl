@@ -13,7 +13,6 @@ import :std.utility;
 import :core.concepts;
 
 // IWYU pragma: begin_exports
-#include "dpl/core/type_traits/abi_type.h"
 #include "dpl/core/type_traits/array_for.h"
 #include "dpl/core/type_traits/basic_type.h"
 #include "dpl/core/type_traits/common_abi.h"
@@ -28,6 +27,7 @@ import :core.concepts;
 #include "dpl/core/type_traits/rebind_simd.h"
 #include "dpl/core/type_traits/representation.h"
 #include "dpl/core/type_traits/simd_abi_traits.h"
+#include "dpl/core/type_traits/simd_abi_type.h"
 #include "dpl/core/type_traits/simd_lane_type.h"
-#include "dpl/core/type_traits/simd_type.h"
+#include "dpl/core/type_traits/simd_vector_type.h"
 // IWYU pragma: end_exports

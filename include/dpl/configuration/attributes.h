@@ -348,6 +348,9 @@
 #if DPL_HAS_DECLSPEC(empty_bases)
 #  define __DPL_ATTRIBUTE_EMPTY_BASES empty_bases
 #  define __DPL_ATTRIBUTE_TYPE_DECLSPEC_EMPTY_BASES
+#  define DPL_EMPTY_BASES __declspec(empty_bases)
+#else
+#  define DPL_EMPTY_BASES
 #endif
 
 #if DPL_HAS_CPP_ATTRIBUTE(indeterminate) && DPL_CXX26
