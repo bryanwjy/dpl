@@ -20,6 +20,8 @@ namespace datapar::internal {
 
 void isnans(...) noexcept = delete;
 
+struct isnans_t;
+
 template <typename T>
 concept unqualified_canonical_isnans = requires(T arg) {
     { isnans(internal::abi<T>, arg) } -> exact_mask_for<T>;
@@ -27,8 +29,21 @@ concept unqualified_canonical_isnans = requires(T arg) {
 
 template <typename T>
 concept unqualified_extended_isnans = requires(T arg) {
-    { isnans(arg) } -> compatible_mask_with<T>;
+    { isnans(arg) } -> extended_operation_mask<typename T::abi_type>;
 };
+
+template <typename T>
+concept expression_isnans =
+    simd_expression<T> && invocable<isnans_t, simd_expression_result_t<T>>;
+
+template <typename T>
+concept decayable_isnans =
+    decayable_vector_for<T, operation_category::lane_agnostic> &&
+    regular_invocable<isnans_t, canonical_type_t<T>>;
+
+template <typename T>
+concept extended_isnans = unqualified_extended_isnans<T> ||
+    expression_isnans<T> || decayable_isnans<T>;
 
 struct isnans_t : mx::masked_predicate<isnans_t> {
 private:
@@ -46,22 +61,19 @@ private:
     }
 
     template <typename M, simd_vector T>
-    requires mx::maskable_predicate<isnans_t, M, T> &&
-        mx::canonical_predicate_args<isnans_t, M, T> &&
-        requires(
-            M mask, T val) { isnans(internal::abi<T>, dx::zero, mask, val); }
+    requires mx::canonical_masked_math_predicate<isnans_t, M, T> &&
+        requires(M mask, T val) { isnans(internal::abi<T>, mask, val); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
-        return isnans(internal::abi<T>, dx::zero, mask, val);
+        return isnans(internal::abi<T>, mask, val);
     }
 
     template <typename M, simd_vector T>
-    requires mx::maskable_predicate<isnans_t, M, T> &&
-        (!mx::canonical_predicate_args<isnans_t, M, T>) &&
-        requires(M mask, T val) { isnans(dx::zero, mask, val); }
+    requires mx::extended_masked_math_predicate<isnans_t, M, T> &&
+        requires(M mask, T val) { isnans(mask, val); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
-        return isnans(dx::zero, mask, val);
+        return isnans(mask, val);
     }
 
 public:
@@ -90,13 +102,13 @@ public:
     }
 
     template <extended_vector T>
-    requires unqualified_extended_isnans<T> ||
-        (decayable_vector_for<T, operation_category::lane_agnostic> &&
-            regular_invocable<isnans_t, canonical_type_t<T>>)
+    requires extended_isnans<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T arg) noexcept {
         if constexpr (unqualified_extended_isnans<T>) {
             return isnans(arg);
+        } else if constexpr (expression_isnans<T>) {
+            return operator()(dx::evaluate(arg));
         } else {
             return operator()(dx::to_canonical(arg));
         }

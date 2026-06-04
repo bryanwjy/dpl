@@ -20,7 +20,6 @@
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
-
 void rcp(...) noexcept = delete;
 
 struct rcp_t;
@@ -34,13 +33,21 @@ concept unqualified_canonical_rcp = requires(T val) {
 
 template <typename T>
 concept unqualified_extended_rcp = requires(T val) {
-    { rcp(val) } -> extended_arithmetic_result<T, T, typename T::abi_type>;
+    { rcp(val) } -> extended_operation_vector<typename T::abi_type>;
 };
 
 template <typename T>
-concept unqualified_rcp = unqualified_extended_rcp<T> ||
-    (decayable_vector_for<T, operation_category::lane_agnostic> &&
-        regular_invocable<rcp_t, canonical_type_t<T>>);
+concept expression_rcp =
+    simd_expression<T> && invocable<rcp_t, simd_expression_result_t<T>>;
+
+template <typename T>
+concept decayable_rcp =
+    decayable_vector_for<T, operation_category::lane_agnostic> &&
+    regular_invocable<rcp_t, canonical_type_t<T>>;
+
+template <typename T>
+concept extended_rcp =
+    unqualified_extended_rcp<T> || expression_rcp<T> || decayable_rcp<T>;
 
 struct rcp_t : private mx::masked_operation<rcp_t> {
 private:
@@ -88,18 +95,16 @@ private:
     }
 
     template <simd_vector S, typename M, simd_vector T>
-    requires mx::maskable_operator<rcp_t, S, M, T> &&
-        mx::canonical_operator_args<S, M, T> && requires(S src, M mask, T val) {
-            rcp(internal::abi<T>, src, mask, val);
-        }
+    requires mx::canonical_masked_math_operator<rcp_t, S, M, T> &&
+        requires(
+            S src, M mask, T val) { rcp(internal::abi<T>, src, mask, val); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL masked(S src, M mask, T val) noexcept {
         return rcp(internal::abi<T>, src, mask, val);
     }
 
     template <simd_vector S, typename M, simd_vector T>
-    requires mx::maskable_operator<rcp_t, S, M, T> &&
-        (!mx::canonical_operator_args<S, M, T>) &&
+    requires mx::extended_masked_math_operator<rcp_t, S, M, T> &&
         requires(S src, M mask, T val) { rcp(src, mask, val); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL masked(S src, M mask, T val) noexcept {
@@ -107,8 +112,7 @@ private:
     }
 
     template <typename M, simd_vector T>
-    requires mx::maskable_zoperator<rcp_t, M, T> &&
-        mx::canonical_zoperator_args<rcp_t, M, T> &&
+    requires mx::canonical_masked_math_zoperator<rcp_t, M, T> &&
         requires(M mask, T val) { rcp(internal::abi<T>, dx::zero, mask, val); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
@@ -116,8 +120,7 @@ private:
     }
 
     template <typename M, simd_vector T>
-    requires mx::maskable_zoperator<rcp_t, M, T> &&
-        (!mx::canonical_zoperator_args<rcp_t, M, T>) &&
+    requires mx::extended_masked_math_zoperator<rcp_t, M, T> &&
         requires(M mask, T val) { rcp(dx::zero, mask, val); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
@@ -151,11 +154,13 @@ public:
     }
 
     template <extended_vector T>
-    requires unqualified_rcp<T>
+    requires extended_rcp<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T val) noexcept {
         if constexpr (unqualified_extended_rcp<T>) {
             return rcp(val);
+        } else if constexpr (expression_rcp<T>) {
+            return operator()(dx::evaluate(val));
         } else {
             return operator()(dx::to_canonical(val));
         }

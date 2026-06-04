@@ -250,10 +250,18 @@ concept unqualified_extended_frexp = requires(T val, O opt) {
     { frexp(val, opt) } -> frexp_result_type<T, O>;
 };
 
+template <typename T, typename O>
+concept expression_frexp = simd_expression<T> &&
+    regular_invocable<frexp_t, simd_expression_result_t<T>, O>;
+
+template <typename T, typename O>
+concept decayable_frexp =
+    decayable_vector_for<T, operation_category::lane_agnostic> &&
+    regular_invocable<frexp_t, canonical_type_t<T>, O>;
+
 template <typename T, typename O, typename A = typename T::abi_type>
-concept unqualified_frexp = unqualified_extended_frexp<T, O, A> ||
-    (decayable_vector_for<T, operation_category::lane_agnostic> &&
-        regular_invocable<frexp_t, canonical_type_t<T>, O>);
+concept extended_frexp = unqualified_extended_frexp<T, O, A> ||
+    expression_frexp<T, O> || decayable_frexp<T, O>;
 
 struct frexp_t {
 private:
@@ -411,11 +419,13 @@ public:
     }
 
     template <extended_vector T, frexp_options Opt>
-    requires unqualified_frexp<T, Opt>
+    requires extended_frexp<T, Opt>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T val, Opt opt) noexcept {
         if constexpr (unqualified_extended_frexp<T, Opt>) {
             return frexp(val, opt);
+        } else if constexpr (expression_frexp<T, Opt>) {
+            return operator()(dx::evaluate(val), opt);
         } else {
             return operator()(dx::to_canonical(val), opt);
         }

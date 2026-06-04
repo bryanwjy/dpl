@@ -29,40 +29,56 @@ struct trunc_t;
 template <typename T>
 concept unqualified_canonical_trunc = requires(T val) {
     {
-        round(internal::abi<T>, val, rounding::to_zero)
+        round(internal::abi<T>, val, rounding::to_pos_inf)
     } -> canonical_arithmetic_result<T, T, typename T::abi_type>;
 };
 
 template <typename T>
 concept unqualified_extended_trunc = requires(T val) {
     {
-        round(val, rounding::to_zero)
-    } -> extended_arithmetic_result<T, T, typename T::abi_type>;
+        round(val, rounding::to_pos_inf)
+    } -> extended_operation_vector<typename T::abi_type>;
 };
 
 template <typename T>
-concept unqualified_trunc = unqualified_extended_trunc<T> ||
-    (decayable_vector_for<T, operation_category::lane_agnostic> &&
-        regular_invocable<trunc_t, canonical_type_t<T>>);
+concept expression_trunc = simd_expression<T> &&
+    regular_invocable<trunc_t, simd_expression_result_t<T>>;
+
+template <typename T>
+concept decayable_trunc =
+    decayable_vector_for<T, operation_category::lane_agnostic> &&
+    regular_invocable<trunc_t, canonical_type_t<T>>;
+
+template <typename T>
+concept extended_trunc =
+    unqualified_extended_trunc<T> || expression_trunc<T> || decayable_trunc<T>;
 
 template <typename T>
 concept unqualified_canonical_truncne = requires(T val) {
     {
-        round(internal::abi<T>, val, rounding::to_zero | rounding::no_exc)
+        round(internal::abi<T>, val, rounding::to_pos_inf | rounding::no_exc)
     } -> equivalent_simd_as<T>;
 };
 
 template <typename T>
 concept unqualified_extended_truncne = requires(T val) {
     {
-        round(val, rounding::to_zero | rounding::no_exc)
-    } -> equivalent_simd_as<T>;
+        round(val, rounding::to_pos_inf | rounding::no_exc)
+    } -> extended_operation_vector<typename T::abi_type>;
 };
 
 template <typename T>
-concept unqualified_truncne = unqualified_extended_trunc<T> ||
-    (decayable_vector_for<T, operation_category::lane_agnostic> &&
-        regular_invocable<trunc_t, canonical_type_t<T>, rounding::no_exc_t>);
+concept expression_truncne = simd_expression<T> &&
+    regular_invocable<trunc_t, simd_expression_result_t<T>, rounding::no_exc_t>;
+
+template <typename T>
+concept decayable_truncne =
+    decayable_vector_for<T, operation_category::lane_agnostic> &&
+    regular_invocable<trunc_t, canonical_type_t<T>, rounding::no_exc_t>;
+
+template <typename T>
+concept extended_truncne = unqualified_extended_trunc<T> ||
+    expression_truncne<T> || decayable_truncne<T>;
 
 struct trunc_t : mx::masked_operation<trunc_t> {
 private:
@@ -93,8 +109,8 @@ private:
     }
 
     template <simd_vector S, typename M, simd_vector T>
-    requires mx::maskable_operator<trunc_t, S, M, T> &&
-        mx::canonical_operator_args<S, M, T> && requires(S src, M mask, T val) {
+    requires mx::canonical_masked_math_operator<trunc_t, S, M, T> &&
+        requires(S src, M mask, T val) {
             round(internal::abi<T>, src, mask, val, trunc_t::exc);
         }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
@@ -103,8 +119,7 @@ private:
     }
 
     template <simd_vector S, typename M, simd_vector T>
-    requires mx::maskable_operator<trunc_t, S, M, T> &&
-        (!mx::canonical_operator_args<S, M, T>) &&
+    requires mx::extended_masked_math_operator<trunc_t, S, M, T> &&
         requires(S src, M mask, T val) { round(src, mask, val, trunc_t::exc); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL masked(S src, M mask, T val) noexcept {
@@ -112,8 +127,8 @@ private:
     }
 
     template <typename M, simd_vector T>
-    requires mx::maskable_zoperator<trunc_t, M, T> &&
-        mx::canonical_zoperator_args<trunc_t, M, T> && requires(M mask, T val) {
+    requires mx::canonical_masked_math_zoperator<trunc_t, M, T> &&
+        requires(M mask, T val) {
             round(internal::abi<T>, dx::zero, mask, val, trunc_t::exc);
         }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
@@ -122,8 +137,7 @@ private:
     }
 
     template <typename M, simd_vector T>
-    requires mx::maskable_zoperator<trunc_t, M, T> &&
-        (!mx::canonical_zoperator_args<trunc_t, M, T>) &&
+    requires mx::extended_masked_math_zoperator<trunc_t, M, T> &&
         requires(M mask, T val) { round(dx::zero, mask, val, trunc_t::exc); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
@@ -131,8 +145,9 @@ private:
     }
 
     template <simd_vector S, typename M, simd_vector T>
-    requires mx::maskable_operator<trunc_t, S, M, T> &&
-        mx::canonical_operator_args<S, M, T> && requires(S src, M mask, T val) {
+    requires mx::canonical_masked_math_operator<trunc_t, S, M, T,
+                 rounding::no_exc_t> &&
+        requires(S src, M mask, T val) {
             round(internal::abi<T>, src, mask, val, trunc_t::noexc);
         }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
@@ -142,8 +157,8 @@ private:
     }
 
     template <simd_vector S, typename M, simd_vector T>
-    requires mx::maskable_operator<trunc_t, S, M, T> &&
-        (!mx::canonical_operator_args<S, M, T>) &&
+    requires mx::extended_masked_math_operator<trunc_t, S, M, T,
+                 rounding::no_exc_t> &&
         requires(
             S src, M mask, T val) { round(src, mask, val, trunc_t::noexc); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
@@ -153,8 +168,9 @@ private:
     }
 
     template <typename M, simd_vector T>
-    requires mx::maskable_zoperator<trunc_t, M, T> &&
-        mx::canonical_zoperator_args<trunc_t, M, T> && requires(M mask, T val) {
+    requires mx::canonical_masked_math_zoperator<trunc_t, M, T,
+                 rounding::no_exc_t> &&
+        requires(M mask, T val) {
             round(internal::abi<T>, dx::zero, mask, val, trunc_t::noexc);
         }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
@@ -164,8 +180,8 @@ private:
     }
 
     template <typename M, simd_vector T>
-    requires mx::maskable_zoperator<trunc_t, M, T> &&
-        (!mx::canonical_zoperator_args<trunc_t, M, T>) &&
+    requires mx::extended_masked_math_zoperator<trunc_t, M, T,
+                 rounding::no_exc_t> &&
         requires(M mask, T val) { round(dx::zero, mask, val, trunc_t::noexc); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL masked(
@@ -200,11 +216,13 @@ public:
     }
 
     template <extended_vector T>
-    requires unqualified_trunc<T>
+    requires extended_trunc<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T val) noexcept {
         if constexpr (unqualified_extended_trunc<T>) {
             return round(val, trunc_t::exc);
+        } else if constexpr (expression_trunc<T>) {
+            return operator()(dx::evaluate(val));
         } else {
             return operator()(dx::to_canonical(val));
         }
@@ -236,11 +254,13 @@ public:
     }
 
     template <extended_vector T>
-    requires unqualified_truncne<T>
+    requires extended_truncne<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T val, rounding::no_exc_t) noexcept {
         if constexpr (unqualified_extended_trunc<T>) {
             return round(val, trunc_t::noexc);
+        } else if constexpr (expression_truncne<T>) {
+            return operator()(dx::evaluate(val), rounding::no_exc);
         } else {
             return operator()(dx::to_canonical(val), rounding::no_exc);
         }

@@ -170,7 +170,7 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto native(A abi, L lhs, R rhs) noexcept
     requires requires {
-        { subtract(lhs, rhs) } -> broadcasting_arithmetic_result<A>;
+        { subtract(lhs, rhs) } -> extended_operation_vector<A>;
     }
     {
         return subtract(lhs, rhs);

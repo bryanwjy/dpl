@@ -29,15 +29,23 @@ concept unqualified_canonical_copysign = requires(L lhs, R rhs) {
 
 template <typename L, typename R = L, typename A = common_abi_t<L, R>>
 concept unqualified_extended_copysign = requires(L lhs, R rhs) {
-    { copysign(lhs, rhs) } -> extended_arithmetic_result<L, L, A>;
+    { copysign(lhs, rhs) } -> extended_operation_vector<A>;
 };
 
+template <typename L, typename R>
+concept expression_copysign = (simd_expression<L> || simd_expression<R>) &&
+    invocable<copysign_t, simd_expression_result_t<L>,
+        simd_expression_result_t<R>>;
+
 template <typename L, typename R, typename A = common_abi_t<L, R>>
-concept unqualified_copysign = unqualified_extended_copysign<L, R, A> ||
-    (decayable_vector_for<L, operation_category::lane_agnostic> &&
-        decayable_vector_for<R, operation_category::lane_agnostic> &&
-        regular_invocable<copysign_t, canonical_type_t<L>,
-            canonical_type_t<R>>);
+concept decayable_copysign =
+    decayable_vector_for<L, operation_category::lane_agnostic> &&
+    decayable_vector_for<R, operation_category::lane_agnostic> &&
+    regular_invocable<copysign_t, canonical_type_t<L>, canonical_type_t<R>>;
+
+template <typename L, typename R, typename A = common_abi_t<L, R>>
+concept extended_copysign = unqualified_extended_copysign<L, R, A> ||
+    expression_copysign<L, R> || decayable_copysign<L, R, A>;
 
 struct copysign_t : private mx::masked_operation<copysign_t> {
 private:
@@ -125,11 +133,13 @@ public:
 
     template <simd_vector L, simd_vector R>
     requires (extended_vector<L> || extended_vector<R>) &&
-        unqualified_copysign<L, R>
+        extended_copysign<L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L magnitude, R sign) noexcept {
         if constexpr (unqualified_extended_copysign<L, R>) {
             return copysign(magnitude, sign);
+        } else if constexpr (expression_copysign<L, R>) {
+            return operator()(dx::evaluate(magnitude), dx::evaluate(sign));
         } else {
             return operator()(
                 dx::to_canonical(magnitude), dx::to_canonical(sign));
@@ -137,13 +147,12 @@ public:
     }
 
     template <simd_vector R, broadcastable_to<R> L>
-    requires requires(copysign_t op, R val) { op(val, val); }
+    requires invocable<copysign_t, R, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L magnitude, R sign) noexcept {
         if constexpr (canonical_vector<R>) {
-            if constexpr (requires {
-                              copysign(internal::abi<R>, magnitude, sign);
-                          }) {
+            if constexpr (unqualified_canonical_copysign<L, R,
+                              typename R::abi_type>) {
                 if consteval {
                     return operator()(dx::broadcast<R>(magnitude), sign);
                 } else {
@@ -152,7 +161,8 @@ public:
             } else {
                 return operator()(dx::broadcast<R>(magnitude), sign);
             }
-        } else if constexpr (requires { copysign(magnitude, sign); }) {
+        } else if constexpr (unqualified_extended_copysign<L, R,
+                                 typename R::abi_type>) {
             return copysign(magnitude, sign);
         } else {
             static_assert(

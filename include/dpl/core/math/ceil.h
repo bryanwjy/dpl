@@ -36,13 +36,21 @@ template <typename T>
 concept unqualified_extended_ceil = requires(T val) {
     {
         round(val, rounding::to_pos_inf)
-    } -> extended_arithmetic_result<T, T, typename T::abi_type>;
+    } -> extended_operation_vector<typename T::abi_type>;
 };
 
 template <typename T>
-concept unqualified_ceil = unqualified_extended_ceil<T> ||
-    (decayable_vector_for<T, operation_category::lane_agnostic> &&
-        regular_invocable<ceil_t, canonical_type_t<T>>);
+concept expression_ceil = simd_expression<T> &&
+    regular_invocable<ceil_t, simd_expression_result_t<T>>;
+
+template <typename T>
+concept decayable_ceil =
+    decayable_vector_for<T, operation_category::lane_agnostic> &&
+    regular_invocable<ceil_t, canonical_type_t<T>>;
+
+template <typename T>
+concept extended_ceil =
+    unqualified_extended_ceil<T> || expression_ceil<T> || decayable_ceil<T>;
 
 template <typename T>
 concept unqualified_canonical_ceilne = requires(T val) {
@@ -55,13 +63,21 @@ template <typename T>
 concept unqualified_extended_ceilne = requires(T val) {
     {
         round(val, rounding::to_pos_inf | rounding::no_exc)
-    } -> equivalent_simd_as<T>;
+    } -> extended_operation_vector<typename T::abi_type>;
 };
 
 template <typename T>
-concept unqualified_ceilne = unqualified_extended_ceil<T> ||
-    (decayable_vector_for<T, operation_category::lane_agnostic> &&
-        regular_invocable<ceil_t, canonical_type_t<T>, rounding::no_exc_t>);
+concept expression_ceilne = simd_expression<T> &&
+    regular_invocable<ceil_t, simd_expression_result_t<T>, rounding::no_exc_t>;
+
+template <typename T>
+concept decayable_ceilne =
+    decayable_vector_for<T, operation_category::lane_agnostic> &&
+    regular_invocable<ceil_t, canonical_type_t<T>, rounding::no_exc_t>;
+
+template <typename T>
+concept extended_ceilne =
+    unqualified_extended_ceil<T> || expression_ceilne<T> || decayable_ceilne<T>;
 
 struct ceil_t : private mx::masked_operation<ceil_t> {
 private:
@@ -82,8 +98,8 @@ private:
     }
 
     template <simd_vector S, typename M, simd_vector T>
-    requires mx::maskable_operator<ceil_t, S, M, T> &&
-        mx::canonical_operator_args<S, M, T> && requires(S src, M mask, T val) {
+    requires mx::canonical_masked_math_operator<ceil_t, S, M, T> &&
+        requires(S src, M mask, T val) {
             round(internal::abi<T>, src, mask, val, ceil_t::exc);
         }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
@@ -92,8 +108,7 @@ private:
     }
 
     template <simd_vector S, typename M, simd_vector T>
-    requires mx::maskable_operator<ceil_t, S, M, T> &&
-        (!mx::canonical_operator_args<S, M, T>) &&
+    requires mx::extended_masked_math_operator<ceil_t, S, M, T> &&
         requires(S src, M mask, T val) { round(src, mask, val, ceil_t::exc); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL masked(S src, M mask, T val) noexcept {
@@ -101,8 +116,8 @@ private:
     }
 
     template <typename M, simd_vector T>
-    requires mx::maskable_zoperator<ceil_t, M, T> &&
-        mx::canonical_zoperator_args<ceil_t, M, T> && requires(M mask, T val) {
+    requires mx::canonical_masked_math_zoperator<ceil_t, M, T> &&
+        requires(M mask, T val) {
             round(internal::abi<T>, dx::zero, mask, val, ceil_t::exc);
         }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
@@ -111,8 +126,7 @@ private:
     }
 
     template <typename M, simd_vector T>
-    requires mx::maskable_zoperator<ceil_t, M, T> &&
-        (!mx::canonical_zoperator_args<ceil_t, M, T>) &&
+    requires mx::extended_masked_math_zoperator<ceil_t, M, T> &&
         requires(M mask, T val) { round(dx::zero, mask, val, ceil_t::exc); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
@@ -120,8 +134,9 @@ private:
     }
 
     template <simd_vector S, typename M, simd_vector T>
-    requires mx::maskable_operator<ceil_t, S, M, T> &&
-        mx::canonical_operator_args<S, M, T> && requires(S src, M mask, T val) {
+    requires mx::canonical_masked_math_operator<ceil_t, S, M, T,
+                 rounding::no_exc_t> &&
+        requires(S src, M mask, T val) {
             round(internal::abi<T>, src, mask, val, ceil_t::noexc);
         }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
@@ -131,8 +146,8 @@ private:
     }
 
     template <simd_vector S, typename M, simd_vector T>
-    requires mx::maskable_operator<ceil_t, S, M, T> &&
-        (!mx::canonical_operator_args<S, M, T>) &&
+    requires mx::extended_masked_math_operator<ceil_t, S, M, T,
+                 rounding::no_exc_t> &&
         requires(S src, M mask, T val) { round(src, mask, val, ceil_t::noexc); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL masked(
@@ -141,8 +156,9 @@ private:
     }
 
     template <typename M, simd_vector T>
-    requires mx::maskable_zoperator<ceil_t, M, T> &&
-        mx::canonical_zoperator_args<ceil_t, M, T> && requires(M mask, T val) {
+    requires mx::canonical_masked_math_zoperator<ceil_t, M, T,
+                 rounding::no_exc_t> &&
+        requires(M mask, T val) {
             round(internal::abi<T>, dx::zero, mask, val, ceil_t::noexc);
         }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
@@ -152,8 +168,8 @@ private:
     }
 
     template <typename M, simd_vector T>
-    requires mx::maskable_zoperator<ceil_t, M, T> &&
-        (!mx::canonical_zoperator_args<ceil_t, M, T>) &&
+    requires mx::extended_masked_math_zoperator<ceil_t, M, T,
+                 rounding::no_exc_t> &&
         requires(M mask, T val) { round(dx::zero, mask, val, ceil_t::noexc); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL masked(
@@ -188,11 +204,13 @@ public:
     }
 
     template <extended_vector T>
-    requires unqualified_ceil<T>
+    requires extended_ceil<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T val) noexcept {
         if constexpr (unqualified_extended_ceil<T>) {
             return round(val, ceil_t::exc);
+        } else if constexpr (expression_ceil<T>) {
+            return operator()(dx::evaluate(val));
         } else {
             return operator()(dx::to_canonical(val));
         }
@@ -224,11 +242,13 @@ public:
     }
 
     template <extended_vector T>
-    requires unqualified_ceilne<T>
+    requires extended_ceilne<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T val, rounding::no_exc_t) noexcept {
-        if constexpr (unqualified_extended_ceil<T>) {
+        if constexpr (unqualified_extended_ceilne<T>) {
             return round(val, ceil_t::noexc);
+        } else if constexpr (expression_ceilne<T>) {
+            return operator()(dx::evaluate(val), rounding::no_exc);
         } else {
             return operator()(dx::to_canonical(val), rounding::no_exc);
         }

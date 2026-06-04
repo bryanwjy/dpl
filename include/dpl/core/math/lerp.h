@@ -35,18 +35,27 @@ concept unqualified_canonical_lerp = requires(AT a, BT b, CT c) {
 template <typename AT, typename BT, typename CT,
     typename A = common_abi_t<AT, BT, CT>>
 concept unqualified_extended_lerp = requires(AT a, BT b, CT c) {
-    { lerp(a, b, c) } -> extended_fma_result<AT, BT, CT, A>;
+    { lerp(a, b, c) } -> extended_operation_vector<A>;
 };
+
+template <typename AT, typename BT, typename CT>
+concept expression_lerp =
+    (simd_expression<AT> || simd_expression<BT> || simd_expression<CT>) &&
+    invocable<lerp_t, simd_expression_result_t<AT>,
+        simd_expression_result_t<BT>, simd_expression_result_t<CT>>;
+
+template <typename AT, typename BT, typename CT>
+concept decayable_lerp =
+    decayable_vector_for<AT, operation_category::lane_agnostic> &&
+    decayable_vector_for<BT, operation_category::lane_agnostic> &&
+    decayable_vector_for<CT, operation_category::lane_agnostic> &&
+    regular_invocable<lerp_t, canonical_type_t<AT>, canonical_type_t<BT>,
+        canonical_type_t<CT>>;
 
 template <typename AT, typename BT, typename CT,
     typename A = common_abi_t<AT, BT, CT>>
-concept unqualified_lerp = unqualified_canonical_lerp<AT, BT, CT, A> ||
-    unqualified_extended_lerp<AT, BT, CT, A> ||
-    (decayable_vector_for<AT, operation_category::lane_agnostic> &&
-        decayable_vector_for<BT, operation_category::lane_agnostic> &&
-        decayable_vector_for<CT, operation_category::lane_agnostic> &&
-        regular_invocable<lerp_t, canonical_type_t<AT>, canonical_type_t<BT>,
-            canonical_type_t<CT>>);
+concept extended_lerp = unqualified_extended_lerp<AT, BT, CT, A> ||
+    expression_lerp<AT, BT, CT> || decayable_lerp<AT, BT, CT>;
 
 struct lerp_t :
     private ternary_operation_base<lerp_t>,
@@ -176,11 +185,14 @@ public:
     template <simd_vector AT, simd_vector BT, simd_vector CT>
     requires (extended_vector<AT> || extended_vector<BT> ||
                  extended_vector<CT>) &&
-        unqualified_lerp<AT, BT, CT>
+        extended_lerp<AT, BT, CT>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(AT a, BT b, CT c) noexcept {
         if constexpr (unqualified_extended_lerp<AT, BT, CT>) {
             return lerp(a, b, c);
+        } else if constexpr (expression_lerp<AT, BT, CT>) {
+            return operator()(
+                dx::evaluate(a), dx::evaluate(b), dx::evaluate(c));
         } else {
             return operator()(
                 dx::to_canonical(a), dx::to_canonical(b), dx::to_canonical(c));

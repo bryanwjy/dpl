@@ -20,6 +20,8 @@ namespace datapar::internal {
 
 void isnormal(...) noexcept = delete;
 
+struct isnormal_t;
+
 template <typename T>
 concept unqualified_canonical_isnormal = requires(T arg) {
     { isnormal(internal::abi<T>, arg) } -> exact_mask_for<T>;
@@ -27,8 +29,21 @@ concept unqualified_canonical_isnormal = requires(T arg) {
 
 template <typename T>
 concept unqualified_extended_isnormal = requires(T arg) {
-    { isnormal(arg) } -> compatible_mask_with<T>;
+    { isnormal(arg) } -> extended_operation_mask<typename T::abi_type>;
 };
+
+template <typename T>
+concept expression_isnormal =
+    simd_expression<T> && invocable<isnormal_t, simd_expression_result_t<T>>;
+
+template <typename T>
+concept decayable_isnormal =
+    decayable_vector_for<T, operation_category::lane_agnostic> &&
+    regular_invocable<isnormal_t, canonical_type_t<T>>;
+
+template <typename T>
+concept extended_isnormal = unqualified_extended_isnormal<T> ||
+    expression_isnormal<T> || decayable_isnormal<T>;
 
 struct isnormal_t : private mx::masked_predicate<isnormal_t> {
 private:
@@ -43,22 +58,19 @@ private:
     }
 
     template <typename M, simd_vector T>
-    requires mx::maskable_predicate<isnormal_t, M, T> &&
-        mx::canonical_predicate_args<isnormal_t, M, T> &&
-        requires(
-            M mask, T val) { isnormal(internal::abi<T>, dx::zero, mask, val); }
+    requires mx::canonical_masked_math_predicate<isnormal_t, M, T> &&
+        requires(M mask, T val) { isnormal(internal::abi<T>, mask, val); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
-        return isnormal(internal::abi<T>, dx::zero, mask, val);
+        return isnormal(internal::abi<T>, mask, val);
     }
 
     template <typename M, simd_vector T>
-    requires mx::maskable_predicate<isnormal_t, M, T> &&
-        (!mx::canonical_predicate_args<isnormal_t, M, T>) &&
-        requires(M mask, T val) { isnormal(dx::zero, mask, val); }
+    requires mx::extended_masked_math_predicate<isnormal_t, M, T> &&
+        requires(M mask, T val) { isnormal(mask, val); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
-        return isnormal(dx::zero, mask, val);
+        return isnormal(mask, val);
     }
 
 public:
@@ -87,13 +99,13 @@ public:
     }
 
     template <extended_vector T>
-    requires unqualified_extended_isnormal<T> ||
-        (decayable_vector_for<T, operation_category::lane_agnostic> &&
-            regular_invocable<isnormal_t, canonical_type_t<T>>)
+    requires extended_isnormal<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T arg) noexcept {
         if constexpr (unqualified_extended_isnormal<T>) {
             return isnormal(arg);
+        } else if constexpr (expression_isnormal<T>) {
+            return operator()(dx::evaluate(arg));
         } else {
             return operator()(dx::to_canonical(arg));
         }

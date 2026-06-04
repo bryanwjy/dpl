@@ -39,11 +39,19 @@ concept unqualified_extended_pow = requires(L lhs, R rhs) {
     { pow(lhs, rhs) } -> extended_arithmetic_result<L, L, A>;
 };
 
+template <typename L, typename R>
+concept expression_pow = (simd_expression<L> || simd_expression<R>) &&
+    invocable<pow_t, simd_expression_result_t<L>, simd_expression_result_t<R>>;
+
+template <typename L, typename R>
+concept decayable_pow =
+    decayable_vector_for<L, operation_category::lane_agnostic> &&
+    decayable_vector_for<R, operation_category::lane_agnostic> &&
+    regular_invocable<pow_t, canonical_type_t<L>, canonical_type_t<R>>;
+
 template <typename L, typename R, typename A = common_abi_t<L, R>>
-concept unqualified_pow = unqualified_extended_pow<L, R, A> ||
-    (decayable_vector_for<L, operation_category::lane_agnostic> &&
-        decayable_vector_for<R, operation_category::lane_agnostic> &&
-        regular_invocable<pow_t, canonical_type_t<L>, canonical_type_t<R>>);
+concept extended_pow = unqualified_extended_pow<L, R, A> ||
+    expression_pow<L, R> || decayable_pow<L, R>;
 
 struct pow_t :
     private binary_operation_base<pow_t>,
@@ -226,8 +234,7 @@ private:
     }
 
     template <simd_vector S, typename M, simd_vector L, simd_vector R>
-    requires mx::maskable_operator<pow_t, S, M, L, R> &&
-        mx::canonical_operator_args<S, M, L, R> &&
+    requires mx::canonical_masked_math_operator<pow_t, S, M, L, R> &&
         requires(S src, M mask, L lhs, R rhs) {
             pow(internal::abi<common_abi_t<L, R>>, src, mask, lhs, rhs);
         }
@@ -238,8 +245,7 @@ private:
     }
 
     template <simd_vector S, typename M, simd_vector L, simd_vector R>
-    requires mx::maskable_operator<pow_t, S, M, L, R> &&
-        (!mx::canonical_operator_args<S, M, L, R>) &&
+    requires mx::extended_masked_math_operator<pow_t, S, M, L, R> &&
         requires(S src, M mask, L lhs, R rhs) { pow(src, mask, lhs, rhs); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL masked(
@@ -248,8 +254,7 @@ private:
     }
 
     template <typename M, simd_vector L, simd_vector R>
-    requires mx::maskable_zoperator<pow_t, M, L, R> &&
-        mx::canonical_zoperator_args<pow_t, M, L, R> &&
+    requires mx::canonical_masked_math_zoperator<pow_t, M, L, R> &&
         requires(M mask, L lhs, R rhs) {
             pow(internal::abi<common_abi_t<L, R>>, dx::zero, mask, lhs, rhs);
         }
@@ -259,8 +264,7 @@ private:
     }
 
     template <typename M, simd_vector L, simd_vector R>
-    requires mx::maskable_zoperator<pow_t, M, L, R> &&
-        (!mx::canonical_zoperator_args<pow_t, M, L, R>) &&
+    requires mx::extended_masked_math_zoperator<pow_t, M, L, R> &&
         requires(M mask, L lhs, R rhs) { pow(dx::zero, mask, lhs, rhs); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL masked(M mask, L lhs, R rhs) noexcept {
@@ -296,11 +300,13 @@ public:
     }
 
     template <simd_vector L, simd_vector R>
-    requires (extended_vector<L> || extended_vector<R>) && unqualified_pow<L, R>
+    requires (extended_vector<L> || extended_vector<R>) && extended_pow<L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs) noexcept {
         if constexpr (unqualified_extended_pow<L, R>) {
             return pow(lhs, rhs);
+        } else if constexpr (expression_pow<L, R>) {
+            return operator()(dx::evaluate(lhs), dx::evaluate(rhs));
         } else {
             return operator()(dx::to_canonical(lhs), dx::to_canonical(rhs));
         }

@@ -18,8 +18,9 @@
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
-
 void isinf(...) noexcept = delete;
+
+struct isinf_t;
 
 template <typename T>
 concept unqualified_canonical_isinf = requires(T arg) {
@@ -28,8 +29,21 @@ concept unqualified_canonical_isinf = requires(T arg) {
 
 template <typename T>
 concept unqualified_extended_isinf = requires(T arg) {
-    { isinf(arg) } -> compatible_mask_with<T>;
+    { isinf(arg) } -> extended_operation_mask<typename T::abi_type>;
 };
+
+template <typename T>
+concept expression_isinf =
+    simd_expression<T> && invocable<isinf_t, simd_expression_result_t<T>>;
+
+template <typename T>
+concept decayable_isinf =
+    decayable_vector_for<T, operation_category::lane_agnostic> &&
+    regular_invocable<isinf_t, canonical_type_t<T>>;
+
+template <typename T>
+concept extended_isinf =
+    unqualified_extended_isinf<T> || expression_isinf<T> || decayable_isinf<T>;
 
 struct isinf_t : private mx::masked_predicate<isinf_t> {
 private:
@@ -43,22 +57,19 @@ private:
     }
 
     template <typename M, simd_vector T>
-    requires mx::maskable_predicate<isinf_t, M, T> &&
-        mx::canonical_predicate_args<isinf_t, M, T> && requires(M mask, T val) {
-            isinf(internal::abi<T>, dx::zero, mask, val);
-        }
+    requires mx::canonical_masked_math_predicate<isinf_t, M, T> &&
+        requires(M mask, T val) { isinf(internal::abi<T>, mask, val); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
-        return isinf(internal::abi<T>, dx::zero, mask, val);
+        return isinf(internal::abi<T>, mask, val);
     }
 
     template <typename M, simd_vector T>
-    requires mx::maskable_predicate<isinf_t, M, T> &&
-        (!mx::canonical_predicate_args<isinf_t, M, T>) &&
-        requires(M mask, T val) { isinf(dx::zero, mask, val); }
+    requires mx::extended_masked_math_predicate<isinf_t, M, T> &&
+        requires(M mask, T val) { isinf(mask, val); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
-        return isinf(dx::zero, mask, val);
+        return isinf(mask, val);
     }
 
 public:
@@ -87,13 +98,13 @@ public:
     }
 
     template <extended_vector T>
-    requires unqualified_extended_isinf<T> ||
-        (decayable_vector_for<T, operation_category::lane_agnostic> &&
-            regular_invocable<isinf_t, canonical_type_t<T>>)
+    requires extended_isinf<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T arg) noexcept {
         if constexpr (unqualified_extended_isinf<T>) {
             return isinf(arg);
+        } else if constexpr (expression_isinf<T>) {
+            return operator()(dx::evaluate(arg));
         } else {
             return operator()(dx::to_canonical(arg));
         }

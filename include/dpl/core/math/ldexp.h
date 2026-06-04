@@ -39,16 +39,23 @@ concept unqualified_canonical_ldexp = requires(T val, I exp) {
 
 template <typename T, typename I, typename A = common_abi_t<T, I>>
 concept unqualified_extended_ldexp = requires(T val, I exp) {
-    {
-        ldexp(val, exp)
-    } -> extended_arithmetic_result<T, T, typename T::abi_type>;
+    { ldexp(val, exp) } -> extended_operation_vector<A>;
 };
 
+template <typename T, typename I>
+concept expression_ldexp = (simd_expression<T> || simd_expression<I>) &&
+    invocable<ldexp_t, simd_expression_result_t<T>,
+        simd_expression_result_t<I>>;
+
+template <typename T, typename I>
+concept decayable_ldexp =
+    decayable_vector_for<T, operation_category::lane_agnostic> &&
+    decayable_vector_for<I, operation_category::lane_agnostic> &&
+    regular_invocable<ldexp_t, canonical_type_t<T>, canonical_type_t<I>>;
+
 template <typename T, typename I, typename A = common_abi_t<T, I>>
-concept unqualified_ldexp = unqualified_extended_ldexp<T, I, A> ||
-    (decayable_vector_for<T, operation_category::lane_agnostic> &&
-        decayable_vector_for<I, operation_category::lane_agnostic> &&
-        regular_invocable<ldexp_t, canonical_type_t<T>, canonical_type_t<I>>);
+concept extended_ldexp = unqualified_extended_ldexp<T, I, A> ||
+    expression_ldexp<T, I> || decayable_ldexp<T, I>;
 
 struct ldexp_t :
     private binary_operation_base<ldexp_t>,
@@ -57,15 +64,19 @@ struct ldexp_t :
     friend mx::masked_operation<ldexp_t>;
 
     template <simd_abi A, typename L, typename R>
+    requires (canonical_vector<L> || canonical_vector<R>) &&
+        unqualified_canonical_ldexp<L, R, A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto native(A abi, L left, R right) noexcept
-    requires requires {
-        {
-            ldexp(internal::abi<A>, left, right)
-        } -> floating_point_simd_with_abi<A>;
-    }
-    {
+    static constexpr auto native(A abi, L left, R right) noexcept {
         return ldexp(internal::abi<A>, left, right);
+    }
+
+    template <simd_abi A, typename L, typename R>
+    requires (extended_vector<L> || extended_vector<R>) &&
+        unqualified_extended_ldexp<L, R, A>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto native(A abi, L left, R right) noexcept {
+        return ldexp(left, right);
     }
 
     template <signed_integral E, simd_abi A>
@@ -96,8 +107,8 @@ struct ldexp_t :
         exp = exp - (m << imm<2>);
 
         m += exp_bias;
-        m = dx::select(dx::zero > m, dx::zero, m);
-        m = dx::select(m > exp_mask, exp_mask, m);
+        m = dx::max(dx::zero, m);
+        m = dx::min(exp_mask, m);
 
         using simdi = basic_vector<sint, A>;
         auto u = dx::reinterpret<E>(m << mantissa_shift);
@@ -112,8 +123,7 @@ struct ldexp_t :
         rebind_simd_t<T, signed_representation_t<typename T::value_type>>;
 
     template <simd_vector S, typename M, simd_vector L, simd_vector R>
-    requires mx::maskable_operator<ldexp_t, S, M, L, R> &&
-        mx::canonical_operator_args<S, M, L, R> &&
+    requires mx::canonical_masked_math_operator<ldexp_t, S, M, L, R> &&
         requires(S src, M mask, L lhs, R rhs) {
             ldexp(internal::abi<common_abi_t<L, R>>, src, mask, lhs, rhs);
         }
@@ -124,8 +134,7 @@ struct ldexp_t :
     }
 
     template <simd_vector S, typename M, simd_vector L, simd_vector R>
-    requires mx::maskable_operator<ldexp_t, S, M, L, R> &&
-        (!mx::canonical_operator_args<S, M, L, R>) &&
+    requires mx::extended_masked_math_operator<ldexp_t, S, M, L, R> &&
         requires(S src, M mask, L lhs, R rhs) { ldexp(src, mask, lhs, rhs); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL masked(
@@ -134,8 +143,7 @@ struct ldexp_t :
     }
 
     template <typename M, simd_vector L, simd_vector R>
-    requires mx::maskable_zoperator<ldexp_t, M, L, R> &&
-        mx::canonical_zoperator_args<ldexp_t, M, L, R> &&
+    requires mx::canonical_masked_math_zoperator<ldexp_t, M, L, R> &&
         requires(M mask, L lhs, R rhs) {
             ldexp(internal::abi<common_abi_t<L, R>>, dx::zero, mask, lhs, rhs);
         }
@@ -146,8 +154,7 @@ struct ldexp_t :
     }
 
     template <typename M, simd_vector L, simd_vector R>
-    requires mx::maskable_zoperator<ldexp_t, M, L, R> &&
-        (!mx::canonical_zoperator_args<ldexp_t, M, L, R>) &&
+    requires mx::extended_masked_math_zoperator<ldexp_t, M, L, R> &&
         requires(M mask, L lhs, R rhs) { ldexp(dx::zero, mask, lhs, rhs); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL masked(M mask, L lhs, R rhs) noexcept {
@@ -187,11 +194,13 @@ public:
     template <simd_vector T, simd_vector I>
     requires signed_integral<typename I::value_type> &&
         common_size_with<typename T::value_type, typename I::value_type> &&
-        (extended_vector<T> || extended_vector<I>) && unqualified_ldexp<T, I>
+        (extended_vector<T> || extended_vector<I>) && extended_ldexp<T, I>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T num, I exp) noexcept {
         if constexpr (unqualified_extended_ldexp<T, I>) {
             return ldexp(num, exp);
+        } else if constexpr (expression_ldexp<T, I>) {
+            return operator()(dx::evaluate(num), dx::evaluate(exp));
         } else {
             return operator()(dx::to_canonical(num), dx::to_canonical(exp));
         }

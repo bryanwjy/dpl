@@ -33,29 +33,36 @@ void fixup(...) noexcept = delete;
 
 struct fixup_t;
 
-template <typename T, typename C, typename A = typename T::abi_type>
-concept unqualified_canonical_fixup = requires(T val, C conditions) {
+template <typename L, typename R, typename C, typename A = common_abi_t<L, R>>
+concept unqualified_canonical_fixup = requires(L lhs, R rhs, C conditions) {
     {
-        fixup(internal::abi<A>, val, val, conditions)
-    } -> canonical_arithmetic_result<T, T, typename T::abi_type>;
+        fixup(internal::abi<A>, lhs, rhs, conditions)
+    } -> canonical_arithmetic_result<L, R, A>;
 };
 
-template <typename T, typename C, typename A = typename T::abi_type>
-concept unqualified_extended_fixup = requires(T val, C conditions) {
-    {
-        fixup(val, val, conditions)
-    } -> canonical_arithmetic_result<T, T, typename T::abi_type>;
+template <typename L, typename R, typename C, typename A = common_abi_t<L, R>>
+concept unqualified_extended_fixup = requires(L lhs, R rhs, C conditions) {
+    { fixup(lhs, rhs, conditions) } -> extended_operation_vector<A>;
 };
 
-template <typename T, typename C, typename A = typename T::abi_type>
-concept unqualified_fixup = unqualified_extended_fixup<T, C, A> ||
-    (decayable_vector_for<T, operation_category::lane_agnostic> &&
-        regular_invocable<fixup_t, canonical_type_t<T>, canonical_type_t<T>,
-            C>);
+template <typename L, typename R, typename C, typename A = common_abi_t<L, R>>
+concept expression_fixup = (simd_expression<L> || simd_expression<R>) &&
+    invocable<fixup_t, simd_expression_result_t<L>, simd_expression_result_t<R>,
+        C>;
 
-struct fixup_t : private mx::masked_operation<fixup_t> {
+template <typename L, typename R, typename C, typename A = common_abi_t<L, R>>
+concept decayable_fixup =
+    decayable_vector_for<L, operation_category::lane_agnostic> &&
+    decayable_vector_for<R, operation_category::lane_agnostic> &&
+    regular_invocable<fixup_t, canonical_type_t<L>, canonical_type_t<R>, C>;
+
+template <typename L, typename R, typename C, typename A = common_abi_t<L, R>>
+concept extended_fixup = unqualified_extended_fixup<L, R, C, A> ||
+    expression_fixup<L, R, C, A> || decayable_fixup<L, R, C, A>;
+
+struct fixup_t : private mx::masked_assignment<fixup_t> {
 private:
-    friend mx::masked_operation<fixup_t>;
+    friend mx::masked_assignment<fixup_t>;
     struct sets {
         static constexpr auto finite_gezero =
             fpfix::positive | fpfix::zero | fpfix::one;
@@ -312,53 +319,53 @@ private:
         return result;
     }
 
-    template <simd_vector S, typename M, simd_vector T,
-        fpfix::condition_set_for<typename T::value_type> F>
-    requires mx::maskable_operator<fixup_t, S, M, T, F> &&
-        mx::canonical_operator_args<S, M, T, F> &&
-        requires(S src, M mask, T val, F flags) {
-            fixup(internal::abi<T>, src, mask, val, flags);
+    template <simd_vector S, typename M, simd_vector R,
+        fpfix::condition_set_for<typename R::value_type> F>
+    requires mx::canonical_masked_math_assignment<fixup_t, S, M, R, F> &&
+        requires(S src, M mask, R val, F flags) {
+            fixup(internal::abi<common_abi_t<S, R>>, src, mask, val, flags);
         }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL masked(
-        S src, M mask, T val, F flags) noexcept {
-        return fixup(internal::abi<T>, src, mask, val, flags);
+        S src, M mask, R val, F flags) noexcept {
+        return fixup(internal::abi<common_abi_t<S, R>>, src, mask, val, flags);
     }
 
-    template <simd_vector S, typename M, simd_vector T,
-        fpfix::condition_set_for<typename T::value_type> F>
-    requires mx::maskable_operator<fixup_t, S, M, T, F> &&
-        (!mx::canonical_operator_args<S, M, T, F>) &&
+    template <simd_vector S, typename M, simd_vector R,
+        fpfix::condition_set_for<typename R::value_type> F>
+    requires mx::extended_masked_math_assignment<fixup_t, S, M, R, F> &&
         requires(
-            S src, M mask, T val, F flags) { fixup(src, mask, val, flags); }
+            S src, M mask, R val, F flags) { fixup(src, mask, val, flags); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL masked(
-        S src, M mask, T val, F flags) noexcept {
+        S src, M mask, R val, F flags) noexcept {
         return fixup(src, mask, val, flags);
     }
 
-    template <typename M, simd_vector T,
-        fpfix::condition_set_for<typename T::value_type> F>
-    requires mx::maskable_zoperator<fixup_t, M, T, F> &&
-        mx::canonical_zoperator_args<fixup_t, M, T, F> &&
-        requires(M mask, T val, F flags) {
-            fixup(internal::abi<T>, dx::zero, mask, val, flags);
+    template <typename M, simd_vector S, simd_vector R,
+        fpfix::condition_set_for<typename R::value_type> F>
+    requires mx::canonical_masked_math_zassignment<fixup_t, M, S, R, F> &&
+        requires(M mask, S src, R val, F flags) {
+            fixup(internal::abi<common_abi_t<S, R>>, dx::zero, mask, src, val,
+                flags);
         }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL masked(
-        M mask, T val, F flags) noexcept {
-        return fixup(internal::abi<T>, dx::zero, mask, val, flags);
+        M mask, S src, R val, F flags) noexcept {
+        return fixup(
+            internal::abi<common_abi_t<S, R>>, dx::zero, mask, src, val, flags);
     }
 
-    template <typename M, simd_vector T,
-        fpfix::condition_set_for<typename T::value_type> F>
-    requires mx::maskable_zoperator<fixup_t, M, T, F> &&
-        (!mx::canonical_zoperator_args<fixup_t, M, T, F>) &&
-        requires(M mask, T val, F flags) { fixup(dx::zero, mask, val, flags); }
+    template <typename M, simd_vector S, simd_vector R,
+        fpfix::condition_set_for<typename R::value_type> F>
+    requires mx::extended_masked_math_zassignment<fixup_t, M, S, R, F> &&
+        requires(M mask, S src, R val, F flags) {
+            fixup(dx::zero, mask, src, val, flags);
+        }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL masked(
-        M mask, T val, F flags) noexcept {
-        return fixup(dx::zero, mask, val, flags);
+        M mask, S src, R val, F flags) noexcept {
+        return fixup(dx::zero, mask, src, val, flags);
     }
 
 public:
@@ -369,7 +376,8 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A> operator()(basic_vector<E, A> src,
         basic_vector<E, A> result, F conditions) noexcept {
-        if constexpr (unqualified_canonical_fixup<basic_vector<E, A>, F>) {
+        if constexpr (unqualified_canonical_fixup<basic_vector<E, A>,
+                          basic_vector<E, A>, F>) {
             if consteval {
                 return fallback(src, result, conditions);
             } else {
@@ -380,34 +388,40 @@ public:
         }
     }
 
-    template <simd_abi A, simd_element_for<A> E, fpfix::condition_set_for<E> F>
-    requires fpfix::result_subset_of<F, E, dx::nan, dx::zero, -dx::zero,
-                 dx::infinity, -dx::infinity> &&
-        (!floating_point<E>) &&
-        unqualified_canonical_fixup<basic_vector<E, A>, F>
+    template <simd_abi SA, simd_element_for<SA> E, common_abi_with<SA> RA,
+        fpfix::condition_set_for<E> F>
+    requires simd_element_for<E, RA> &&
+        fpfix::result_subset_of<F, E, dx::nan, dx::zero, -dx::zero,
+            dx::infinity, -dx::infinity> &&
+        (different_from<SA, RA> || !floating_point<E>) &&
+        unqualified_canonical_fixup<basic_vector<E, SA>, basic_vector<E, RA>, F>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(basic_vector<E, A> src,
-        basic_vector<E, A> result, F conditions) noexcept {
-        return fixup(internal::abi<A>, src, result, conditions);
+    static constexpr auto operator()(basic_vector<E, SA> src,
+        basic_vector<E, RA> result, F conditions) noexcept {
+        return fixup(
+            internal::abi<common_abi_t<SA, RA>>, src, result, conditions);
     }
 
-    template <extended_vector T,
-        fpfix::condition_set_for<typename T::value_type> F>
-    requires fpfix::result_subset_of<F, typename T::value_type, dx::nan,
-                 dx::zero, -dx::zero, dx::infinity, -dx::infinity> &&
-        unqualified_fixup<T, F>
+    template <extended_vector S, extended_vector R,
+        fpfix::condition_set_for<typename R::value_type> F>
+    requires same_as<typename S::value_type, typename R::value_type> &&
+        fpfix::result_subset_of<F, typename R::value_type, dx::nan, dx::zero,
+            -dx::zero, dx::infinity, -dx::infinity> &&
+        extended_fixup<S, R, F>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        T src, type_identity_t<T> result, F conditions) noexcept {
-        if constexpr (unqualified_extended_fixup<T, F>) {
+    static constexpr auto operator()(S src, R result, F conditions) noexcept {
+        if constexpr (unqualified_extended_fixup<S, R, F>) {
             return fixup(src, result, conditions);
+        } else if constexpr (expression_fixup<S, R, F>) {
+            return operator()(
+                dx::evaluate(src), dx::evaluate(result), conditions);
         } else {
             return operator()(
                 dx::to_canonical(src), dx::to_canonical(result), conditions);
         }
     }
 
-    using mx::masked_operation<fixup_t>::operator();
+    using mx::masked_assignment<fixup_t>::operator();
 };
 } // namespace datapar::internal
 

@@ -39,13 +39,21 @@ concept unqualified_canonical_exp2 = requires(T val) {
 
 template <typename T>
 concept unqualified_extended_exp2 = requires(T val) {
-    { exp2(val) } -> extended_arithmetic_result<T, T, typename T::abi_type>;
+    { exp2(val) } -> extended_operation_vector<typename T::abi_type>;
 };
 
 template <typename T>
-concept unqualified_exp2 = unqualified_extended_exp2<T> ||
-    (decayable_vector_for<T, operation_category::lane_agnostic> &&
-        regular_invocable<exp2_t, canonical_type_t<T>>);
+concept expression_exp2 =
+    simd_expression<T> && invocable<exp2_t, simd_expression_result_t<T>>;
+
+template <typename T>
+concept decayable_exp2 =
+    decayable_vector_for<T, operation_category::lane_agnostic> &&
+    regular_invocable<exp2_t, canonical_type_t<T>>;
+
+template <typename T>
+concept extended_exp2 =
+    unqualified_extended_exp2<T> || expression_exp2<T> || decayable_exp2<T>;
 
 struct exp2_t : private mx::masked_operation<exp2_t> {
 private:
@@ -136,39 +144,37 @@ private:
     }
 
     template <simd_vector S, typename M, simd_vector T>
-    requires mx::maskable_operator<exp2_t, S, M, T> &&
-        mx::canonical_operator_args<S, M, T> && requires(S src, M mask, T val) {
-            exp2(internal::abi<T>, src, mask, val);
-        }
+    requires mx::canonical_masked_math_operator<exp2_t, S, M, T> &&
+        requires(
+            S src, M mask, T val) { exp2(internal::abi<T>, src, mask, val); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL masked(S src, M mask, T val) noexcept {
+    static constexp2r auto DPL_VECTORCALL masked(
+        S src, M mask, T val) noexcept {
         return exp2(internal::abi<T>, src, mask, val);
     }
 
     template <simd_vector S, typename M, simd_vector T>
-    requires mx::maskable_operator<exp2_t, S, M, T> &&
-        (!mx::canonical_operator_args<S, M, T>) &&
+    requires mx::extended_masked_math_operator<exp2_t, S, M, T> &&
         requires(S src, M mask, T val) { exp2(src, mask, val); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL masked(S src, M mask, T val) noexcept {
+    static constexp2r auto DPL_VECTORCALL masked(
+        S src, M mask, T val) noexcept {
         return exp2(src, mask, val);
     }
 
     template <typename M, simd_vector T>
-    requires mx::maskable_zoperator<exp2_t, M, T> &&
-        mx::canonical_zoperator_args<exp2_t, M, T> &&
+    requires mx::canonical_masked_math_zoperator<exp2_t, M, T> &&
         requires(M mask, T val) { exp2(internal::abi<T>, dx::zero, mask, val); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
+    static constexp2r auto DPL_VECTORCALL masked(M mask, T val) noexcept {
         return exp2(internal::abi<T>, dx::zero, mask, val);
     }
 
     template <typename M, simd_vector T>
-    requires mx::maskable_zoperator<exp2_t, M, T> &&
-        (!mx::canonical_zoperator_args<exp2_t, M, T>) &&
+    requires mx::extended_masked_math_zoperator<exp2_t, M, T> &&
         requires(M mask, T val) { exp2(dx::zero, mask, val); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
+    static constexp2r auto DPL_VECTORCALL masked(M mask, T val) noexcept {
         return exp2(dx::zero, mask, val);
     }
 
@@ -199,11 +205,13 @@ public:
     }
 
     template <extended_vector T>
-    requires unqualified_exp2<T>
+    requires extended_exp2<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T val) noexcept {
         if constexpr (unqualified_extended_exp2<T>) {
             return exp2(val);
+        } else if constexpr (expression_exp2<T>) {
+            return operator()(dx::evaluate(val));
         } else {
             return operator()(dx::to_canonical(val));
         }

@@ -39,13 +39,21 @@ concept unqualified_canonical_sqrt = requires(T val) {
 
 template <typename T>
 concept unqualified_extended_sqrt = requires(T val) {
-    { sqrt(val) } -> extended_arithmetic_result<T, T, typename T::abi_type>;
+    { sqrt(val) } -> extended_operation_vector<typename T::abi_type>;
 };
 
 template <typename T>
-concept unqualified_sqrt = unqualified_extended_sqrt<T> ||
-    (decayable_vector_for<T, operation_category::lane_agnostic> &&
-        regular_invocable<sqrt_t, canonical_type_t<T>>);
+concept expression_sqrt =
+    simd_expression<T> && invocable<sqrt_t, simd_expression_result_t<T>>;
+
+template <typename T>
+concept decayable_sqrt =
+    decayable_vector_for<T, operation_category::lane_agnostic> &&
+    regular_invocable<sqrt_t, canonical_type_t<T>>;
+
+template <typename T>
+concept extended_sqrt =
+    unqualified_extended_sqrt<T> || expression_sqrt<T> || decayable_sqrt<T>;
 
 struct sqrt_t : private mx::masked_operation<sqrt_t> {
 private:
@@ -73,18 +81,16 @@ private:
     }
 
     template <simd_vector S, typename M, simd_vector T>
-    requires mx::maskable_operator<sqrt_t, S, M, T> &&
-        mx::canonical_operator_args<S, M, T> && requires(S src, M mask, T val) {
-            sqrt(internal::abi<T>, src, mask, val);
-        }
+    requires mx::canonical_masked_math_operator<sqrt_t, S, M, T> &&
+        requires(
+            S src, M mask, T val) { sqrt(internal::abi<T>, src, mask, val); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL masked(S src, M mask, T val) noexcept {
         return sqrt(internal::abi<T>, src, mask, val);
     }
 
     template <simd_vector S, typename M, simd_vector T>
-    requires mx::maskable_operator<sqrt_t, S, M, T> &&
-        (!mx::canonical_operator_args<S, M, T>) &&
+    requires mx::extended_masked_math_operator<sqrt_t, S, M, T> &&
         requires(S src, M mask, T val) { sqrt(src, mask, val); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL masked(S src, M mask, T val) noexcept {
@@ -92,8 +98,7 @@ private:
     }
 
     template <typename M, simd_vector T>
-    requires mx::maskable_zoperator<sqrt_t, M, T> &&
-        mx::canonical_zoperator_args<sqrt_t, M, T> &&
+    requires mx::canonical_masked_math_zoperator<sqrt_t, M, T> &&
         requires(M mask, T val) { sqrt(internal::abi<T>, dx::zero, mask, val); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
@@ -101,8 +106,7 @@ private:
     }
 
     template <typename M, simd_vector T>
-    requires mx::maskable_zoperator<sqrt_t, M, T> &&
-        (!mx::canonical_zoperator_args<sqrt_t, M, T>) &&
+    requires mx::extended_masked_math_zoperator<sqrt_t, M, T> &&
         requires(M mask, T val) { sqrt(dx::zero, mask, val); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
@@ -136,15 +140,18 @@ public:
     }
 
     template <extended_vector T>
-    requires unqualified_sqrt<T>
+    requires extended_sqrt<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T val) noexcept {
         if constexpr (unqualified_extended_sqrt<T>) {
             return sqrt(val);
+        } else if constexpr (expression_sqrt<T>) {
+            return operator()(dx::evaluate(val));
         } else {
             return operator()(dx::to_canonical(val));
         }
     }
+
     using mx::masked_operation<sqrt_t>::operator();
 };
 } // namespace datapar::internal

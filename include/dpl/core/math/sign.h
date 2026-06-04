@@ -23,9 +23,34 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void sign(...) noexcept = delete;
-template <typename A, typename L, typename R>
-concept unqualified_sign =
-    requires(L lhs, R rhs) { sign(internal::abi<A>, lhs, rhs); };
+
+struct sign_t;
+
+template <typename L, typename R = L, typename A = common_abi_t<L, R>>
+concept unqualified_canonical_sign = requires(L lhs, R rhs) {
+    {
+        sign(internal::abi<A>, lhs, rhs)
+    } -> canonical_arithmetic_result<L, L, A>;
+};
+
+template <typename L, typename R = L, typename A = common_abi_t<L, R>>
+concept unqualified_extended_sign = requires(L lhs, R rhs) {
+    { sign(lhs, rhs) } -> extended_operation_vector<A>;
+};
+
+template <typename L, typename R>
+concept expression_sign = (simd_expression<L> || simd_expression<R>) &&
+    invocable<sign_t, simd_expression_result_t<L>, simd_expression_result_t<R>>;
+
+template <typename L, typename R, typename A = common_abi_t<L, R>>
+concept decayable_sign =
+    decayable_vector_for<L, operation_category::lane_agnostic> &&
+    decayable_vector_for<R, operation_category::lane_agnostic> &&
+    regular_invocable<sign_t, canonical_type_t<L>, canonical_type_t<R>>;
+
+template <typename L, typename R, typename A = common_abi_t<L, R>>
+concept extended_sign = unqualified_extended_sign<L, R, A> ||
+    expression_sign<L, R> || decayable_sign<L, R, A>;
 
 /**
  * Returns the negation of the left argument if the right argument is
@@ -48,10 +73,19 @@ private:
     friend mx::masked_operation<sign_t>;
 
     template <simd_abi A, typename L, typename R>
-    requires requires(L lhs, R rhs) { sign(internal::abi<A>, lhs, rhs); }
+    requires (canonical_vector<L> || canonical_vector<R>) &&
+        unqualified_canonical_sign<L, R, A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto native(A abi, L left, R right) noexcept {
         return sign(internal::abi<A>, left, right);
+    }
+
+    template <simd_abi A, typename L, typename R>
+    requires (extended_vector<L> || extended_vector<R>) &&
+        unqualified_extended_sign<L, R, A>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto native(A abi, L left, R right) noexcept {
+        return sign(left, right);
     }
 
     template <arithmetic_type E, simd_abi A>
@@ -67,79 +101,84 @@ private:
         }
     }
 
-    template <simd_vector S, typename M, simd_vector T>
-    requires mx::maskable_operator<sign_t, S, M, T> &&
-        mx::canonical_operator_args<S, M, T> && requires(S src, M mask, T val) {
-            sign(internal::abi<T>, src, mask, val);
+    template <simd_vector S, typename M, simd_vector L, simd_vector R>
+    requires mx::canonical_masked_math_operator<sign_t, S, M, L, R> &&
+        requires(S src, M mask, L lhs, R rhs) {
+            sign(internal::abi<common_abi_t<L, R>>, src, mask, lhs, rhs);
         }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL masked(S src, M mask, T val) noexcept {
-        return sign(internal::abi<T>, src, mask, val);
+    static constexpr auto DPL_VECTORCALL masked(
+        S src, M mask, L lhs, R rhs) noexcept {
+        return sign(internal::abi<common_abi_t<L, R>>, src, mask, lhs, rhs);
     }
 
-    template <simd_vector S, typename M, simd_vector T>
-    requires mx::maskable_operator<sign_t, S, M, T> &&
-        (!mx::canonical_operator_args<S, M, T>) &&
-        requires(S src, M mask, T val) { sign(src, mask, val); }
+    template <simd_vector S, typename M, simd_vector L, simd_vector R>
+    requires mx::extended_masked_math_operator<sign_t, S, M, L, R> &&
+        requires(S src, M mask, L lhs, R rhs) { sign(src, mask, lhs, rhs); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL masked(S src, M mask, T val) noexcept {
-        return sign(src, mask, val);
+    static constexpr auto DPL_VECTORCALL masked(
+        S src, M mask, L lhs, R rhs) noexcept {
+        return sign(src, mask, lhs, rhs);
     }
 
-    template <typename M, simd_vector T>
-    requires mx::maskable_zoperator<sign_t, M, T> &&
-        mx::canonical_zoperator_args<sign_t, M, T> &&
-        requires(M mask, T val) { sign(internal::abi<T>, dx::zero, mask, val); }
+    template <typename M, simd_vector L, simd_vector R>
+    requires mx::canonical_masked_math_zoperator<sign_t, M, L, R> &&
+        requires(M mask, L lhs, R rhs) {
+            sign(internal::abi<common_abi_t<L, R>>, dx::zero, mask, lhs, rhs);
+        }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
-        return sign(internal::abi<T>, dx::zero, mask, val);
+    static constexpr auto DPL_VECTORCALL masked(M mask, L lhs, R rhs) noexcept {
+        return sign(
+            internal::abi<common_abi_t<L, R>>, dx::zero, mask, lhs, rhs);
     }
 
-    template <typename M, simd_vector T>
-    requires mx::maskable_zoperator<sign_t, M, T> &&
-        (!mx::canonical_zoperator_args<sign_t, M, T>) &&
-        requires(M mask, T val) { sign(dx::zero, mask, val); }
+    template <typename M, simd_vector L, simd_vector R>
+    requires mx::extended_masked_math_zoperator<sign_t, M, L, R> &&
+        requires(M mask, L lhs, R rhs) { sign(dx::zero, mask, lhs, rhs); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
-        return sign(dx::zero, mask, val);
+    static constexpr auto DPL_VECTORCALL masked(M mask, L lhs, R rhs) noexcept {
+        return sign(dx::zero, mask, lhs, rhs);
     }
 
 public:
-    template <canonical_vector T>
-    requires arithmetic_vector<T>
+    template <simd_abi A, simd_element_for<A> E>
+    requires arithmetic_type<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T left, T right) noexcept {
-        if constexpr (unqualified_sign<T, T, T>) {
+    static constexpr auto operator()(
+        basic_vector<E, A> lhs, basic_vector<E, A> rhs) noexcept {
+        if constexpr (unqualified_canonical_sign<basic_vector<E, A>,
+                          basic_vector<E, A>>) {
             if consteval {
-                return fallback(left, right);
+                return fallback(lhs, rhs);
             } else {
-                return sign(internal::abi<T>, left, right);
+                return sign(internal::abi<A>, lhs, rhs);
             }
         } else {
-            return fallback(left, right);
+            return fallback(lhs, rhs);
         }
     }
 
-    template <simd_vector L, common_arithmetic_simd_with<L> R>
-    requires arithmetic_vector<L> && arithmetic_vector<R> &&
-        common_order_simd_with<L, R> && only_unqualified<L, R> &&
-        unqualified_sign<common_abi_t<L, R>, L, R>
+    template <simd_abi LA, simd_element_for<LA> E, common_abi_with<LA> RA>
+    requires simd_element_for<E, RA> &&
+        (different_from<LA, RA> || !arithmetic_type<E>) &&
+        unqualified_canonical_sign<basic_vector<E, LA>, basic_vector<E, RA>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L left, R right) noexcept
-        -> simd_with<typename L::value_type, common_abi_t<L, R>> auto {
-        using A = common_abi_t<L, R>;
-        return sign(internal::abi<A>, left, right);
+    static constexpr auto operator()(
+        basic_vector<E, LA> lhs, basic_vector<E, RA> rhs) noexcept {
+        return sign(internal::abi<common_abi_t<LA, RA>>, lhs, rhs);
     }
 
-    template <simd_vector L, common_arithmetic_simd_with<L> R>
-    requires arithmetic_vector<L> && arithmetic_vector<R> &&
-        common_order_simd_with<L, R> &&
-        (!canonical_vector<L> || !canonical_vector<R>) &&
-        (!unqualified_sign<common_abi_t<L, R>, L, R>)
+    template <simd_vector L, simd_vector R>
+    requires (extended_vector<L> || extended_vector<R>) && extended_sign<L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L left, R right) noexcept
-        -> simd_with<typename L::value_type, common_abi_t<L, R>> auto {
-        return operator()(dx::to_canonical(left), dx::to_canonical(right));
+    static constexpr auto operator()(L lhs, R rhs) noexcept {
+        if constexpr (unqualified_extended_sign<L, R>) {
+            return sign(lhs, rhs);
+        } else if constexpr (expression_sign<L, R>) {
+            return operator()(dx::evaluate(lhs), dx::evaluate(rhs));
+        } else {
+            return operator()(dx::to_canonical(lhs), dx::to_canonical(rhs));
+        }
     }
 
     using binary_operation_base<sign_t>::operator();

@@ -17,8 +17,9 @@
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
-
 void isfinite(...) noexcept = delete;
+
+struct isfinite_t;
 
 template <typename T>
 concept unqualified_canonical_isfinite = requires(T arg) {
@@ -27,8 +28,21 @@ concept unqualified_canonical_isfinite = requires(T arg) {
 
 template <typename T>
 concept unqualified_extended_isfinite = requires(T arg) {
-    { isfinite(arg) } -> compatible_mask_with<T>;
+    { isfinite(arg) } -> extended_operation_mask<typename T::abi_type>;
 };
+
+template <typename T>
+concept expression_isfinite =
+    simd_expression<T> && invocable<isfinite_t, simd_expression_result_t<T>>;
+
+template <typename T>
+concept decayable_isfinite =
+    decayable_vector_for<T, operation_category::lane_agnostic> &&
+    regular_invocable<isfinite_t, canonical_type_t<T>>;
+
+template <typename T>
+concept extended_isfinite = unqualified_extended_isfinite<T> ||
+    expression_isfinite<T> || decayable_isfinite<T>;
 
 struct isfinite_t : private mx::masked_predicate<isfinite_t> {
 private:
@@ -42,22 +56,19 @@ private:
     }
 
     template <typename M, simd_vector T>
-    requires mx::maskable_predicate<isfinite_t, M, T> &&
-        mx::canonical_predicate_args<isfinite_t, M, T> &&
-        requires(
-            M mask, T val) { isfinite(internal::abi<T>, dx::zero, mask, val); }
+    requires mx::canonical_masked_math_predicate<isfinite_t, M, T> &&
+        requires(M mask, T val) { isfinite(internal::abi<T>, mask, val); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
-        return isfinite(internal::abi<T>, dx::zero, mask, val);
+        return isfinite(internal::abi<T>, mask, val);
     }
 
     template <typename M, simd_vector T>
-    requires mx::maskable_predicate<isfinite_t, M, T> &&
-        (!mx::canonical_predicate_args<isfinite_t, M, T>) &&
-        requires(M mask, T val) { isfinite(dx::zero, mask, val); }
+    requires mx::extended_masked_math_predicate<isfinite_t, M, T> &&
+        requires(M mask, T val) { isfinite(mask, val); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
-        return isfinite(dx::zero, mask, val);
+        return isfinite(mask, val);
     }
 
 public:
@@ -86,13 +97,13 @@ public:
     }
 
     template <extended_vector T>
-    requires unqualified_extended_isfinite<T> ||
-        (decayable_vector_for<T, operation_category::lane_agnostic> &&
-            regular_invocable<isfinite_t, canonical_type_t<T>>)
+    requires extended_isfinite<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T arg) noexcept {
         if constexpr (unqualified_extended_isfinite<T>) {
             return isfinite(arg);
+        } else if constexpr (expression_isfinite<T>) {
+            return operator()(dx::evaluate(arg));
         } else {
             return operator()(dx::to_canonical(arg));
         }
