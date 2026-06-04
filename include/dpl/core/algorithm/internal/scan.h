@@ -13,6 +13,7 @@
 #  include "dpl/core/constants/one.h"
 #  include "dpl/core/operations/arithmetic/add.h"
 #  include "dpl/core/operations/broadcast_lane.h"
+#  include "dpl/core/operations/evaluate.h"
 #  include "dpl/core/type_traits/basic_type.h"
 #  include "dpl/core/type_traits/simd_abi_traits.h"
 #  include "dpl/std/concepts/integral_constant_like.h"
@@ -179,11 +180,13 @@ struct exscan_sum_base : protected scan_base {
         }
     }
 
-    template <extended_vector T, broadcastable_to<T> I>
+    template <extended_vector T, broadcastable_to<canonical_type_t<T>> I>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T val, I init) noexcept {
         if constexpr (unqualified_extended_exscan_sum<T, I>) {
             return exscan_sum(val, init);
+        } else if constexpr (simd_expression<T>) {
+            return operator()(dx::evaluate(val), init);
         } else {
             return scan_base::exclusive(val, dx::broadcast<T>(init), dx::add);
         }
@@ -215,6 +218,8 @@ struct exscan_sum_base : protected scan_base {
     static constexpr auto operator()(T mask) noexcept {
         if constexpr (unqualified_extended_mask_scan<T>) {
             return exscan_sum(mask);
+        } else if constexpr (simd_expression<T>) {
+            return operator()(dx::evaluate(mask));
         } else {
             using idx_type = decltype(dx::lane_index<T>());
             auto const vec =
@@ -257,6 +262,8 @@ struct scan_sum_base : protected scan_base {
     static constexpr auto operator()(T val) noexcept {
         if constexpr (unqualified_extended_scan_sum<T>) {
             return scan_sum(val);
+        } else if constexpr (simd_expression<T>) {
+            return operator()(dx::evaluate(val));
         } else {
             return scan_base::inclusive(val, dx::add);
         }

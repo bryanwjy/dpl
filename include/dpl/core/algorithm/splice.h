@@ -110,6 +110,10 @@ public:
     static constexpr auto operator()(M mask, L lhs, R rhs) noexcept {
         if constexpr (unqualified_extended_splice<M, L, R>) {
             return splice(mask, lhs, rhs);
+        } else if constexpr (simd_expression<M> || simd_expression<L> ||
+            simd_expression<R>) {
+            return operator()(
+                dx::evaluate(mask), dx::evaluate(lhs), dx::evaluate(rhs));
         } else {
             return splice_t::fallback(mask, lhs, rhs);
         }
@@ -147,6 +151,8 @@ public:
         M mask, T val, dx::zero_t tag = dx::zero) noexcept {
         if constexpr (unqualified_extended_splice<M, T, dx::zero_t>) {
             return splice(mask, val, tag);
+        } else if constexpr (simd_expression<M> || simd_expression<T>) {
+            return operator()(dx::evaluate(mask), dx::evaluate(val));
         } else {
             using R = broadcast_type<M, T>;
             return operator()(mask, val, dx::broadcast<R>(tag));
@@ -200,6 +206,8 @@ public:
         }(mask);
         if constexpr (unqualified_extended_splice<M, L, R>) {
             return splice(cmask, lhs, rhs);
+        } else if constexpr (simd_expression<L> || simd_expression<R>) {
+            return operator()(mask, dx::evaluate(lhs), dx::evaluate(rhs));
         } else {
             return splice_t::fallback(cmask, lhs, rhs);
         }
@@ -230,6 +238,8 @@ public:
         M mask, T val, dx::zero_t tag = dx::zero) noexcept {
         if constexpr (unqualified_extended_splicei<M, T, dx::zero_t>) {
             return splice(dx::to_compatible_const_mask<T>(mask), val, tag);
+        } else if constexpr (simd_expression<T>) {
+            return operator()(mask, dx::evaluate(val));
         } else {
             return operator()(mask, val, dx::broadcast<T>(tag));
         }

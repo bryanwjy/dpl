@@ -107,6 +107,10 @@ public:
     static constexpr auto operator()(S src, M mask, T val) noexcept {
         if constexpr (unqualified_extended_expand<S, M, T>) {
             return expand(src, mask, val);
+        } else if constexpr (simd_expression<S> || simd_expression<M> ||
+            simd_expression<T>) {
+            return operator()(
+                dx::evaluate(src), dx::evaluate(mask), dx::evaluate(val));
         } else {
             return expand_t::fallback(src, mask, val);
         }
@@ -142,14 +146,15 @@ public:
     static constexpr auto operator()(M mask, T val) noexcept {
         if constexpr (unqualified_extended_expand<zero_t, M, T>) {
             return expand(dx::zero, mask, val);
+        } else if constexpr (simd_expression<M> || simd_expression<T>) {
+            return operator()(dx::evaluate(mask), dx::evaluate(val));
         } else {
-            using S = broadcast_type<M, T>;
-            return operator()(dx::broadcast<S>(dx::zero), mask, val);
+            return expand_t::fallback(dx::zero, mask, val);
         }
     }
 
     template <simd_mask M, simd_vector T>
-    requires requires(M mask, T val) { expand_t::operator()(mask, val); }
+    requires invocable<expand_t, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(dx::zero_t, M mask, T val) noexcept {
         return operator()(mask, val);
@@ -186,6 +191,8 @@ public:
         constexpr auto cmask = dx::to_compatible_const_mask<S>(mask);
         if constexpr (unqualified_extended_iexpand<S, M, T>) {
             return expand(src, cmask, val);
+        } else if constexpr (simd_expression<S> || simd_expression<T>) {
+            return operator()(dx::evaluate(src), cmask, dx::evaluate(val));
         } else {
             return expand_t::fallbacki(src, cmask, val);
         }
@@ -196,15 +203,15 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, T val) noexcept {
         using A = simd_abi_type_t<T>;
+        constexpr auto cmask = dx::to_compatible_const_mask<T>(mask);
         if constexpr (unqualified_canonical_iexpand<zero_t, M, T>) {
             if consteval {
-                return expand_t::fallbacki(dx::zero, mask, val);
+                return expand_t::fallbacki(dx::zero, cmask, val);
             } else {
-                constexpr auto cmask = dx::to_compatible_const_mask<T>(mask);
                 return expand(internal::abi<A>, dx::zero, cmask, val);
             }
         } else {
-            return expand_t::fallbacki(dx::zero, mask, val);
+            return expand_t::fallbacki(dx::zero, cmask, val);
         }
     }
 
@@ -212,16 +219,18 @@ public:
     requires const_mask_for<M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, T val) noexcept {
+        constexpr auto cmask = dx::to_compatible_const_mask<T>(mask);
         if constexpr (unqualified_extended_iexpand<zero_t, M, T>) {
-            return expand(dx::zero, dx::to_compatible_const_mask<T>(mask), val);
+            return expand(dx::zero, cmask, val);
+        } else if constexpr (simd_expression<T>) {
+            return operator()(cmask, dx::evaluate(val));
         } else {
-            return expand_t::fallbacki(dx::zero, mask, val);
+            return expand_t::fallbacki(dx::zero, cmask, val);
         }
     }
 
     template <typename M, extended_vector T>
-    requires const_mask_for<M, T> &&
-        requires(M mask, T val) { expand_t::operator()(mask, val); }
+    requires const_mask_for<M, T> && invocable<expand_t, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(dx::zero_t, M mask, T val) noexcept {
         return operator()(mask, val);

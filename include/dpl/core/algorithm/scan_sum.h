@@ -118,6 +118,10 @@ public:
     static constexpr auto operator()(S src, M mask, T val, I init) noexcept {
         if constexpr (unqualified_extended_mexscan_sum<S, M, T, I>) {
             return exscan_sum(src, mask, val, init);
+        } else if constexpr (simd_expression<S> || simd_expression<M> ||
+            simd_expression<T>) {
+            return operator()(
+                dx::evaluate(src), dx::evaluate(mask), dx::evaluate(val), init);
         } else {
             return exscan_sum_t::fallback(src, mask, val, init);
         }
@@ -156,16 +160,16 @@ public:
     static constexpr auto operator()(M mask, T val, I init) noexcept {
         if constexpr (unqualified_extended_mexscan_sum<zero_t, M, T, I>) {
             return exscan_sum(dx::zero, mask, val, init);
+        } else if constexpr (simd_expression<M> || simd_expression<T>) {
+            return operator()(dx::evaluate(mask), dx::evaluate(val), init);
         } else {
-            using S = broadcast_type<M, T>;
             return exscan_sum_t::fallback(dx::zero, mask, val, init);
         }
     }
 
     template <simd_mask M, simd_vector T,
         broadcastable_to<broadcast_type<M, T>> I>
-    requires requires(
-        M mask, T val, I init) { exscan_sum_t::operator()(mask, val, init); }
+    requires invocable<exscan_sum_t, M, T, I>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         dx::zero_t, M mask, T val, I init) noexcept {
@@ -205,6 +209,8 @@ public:
         constexpr auto cmask = dx::to_compatible_const_mask<S>(mask);
         if constexpr (unqualified_extended_imexscan_sum<S, M, T, I>) {
             return exscan_sum(src, cmask, val, init);
+        } else if constexpr (simd_expression<S> || simd_expression<T>) {
+            return operator()(dx::evaluate(src), mask, dx::evaluate(val), init);
         } else {
             return exscan_sum_t::fallbacki(src, cmask, val, init);
         }
@@ -218,32 +224,33 @@ public:
         constexpr auto cmask = dx::to_compatible_const_mask<T>(mask);
         if constexpr (unqualified_canonical_imexscan_sum<zero_t, M, T, I>) {
             if consteval {
-                return exscan_sum_t::fallbacki(dx::zero, mask, val, init);
+                return exscan_sum_t::fallbacki(dx::zero, cmask, val, init);
             } else {
-
                 return exscan_sum(internal::abi<A>, dx::zero, cmask, val, init);
             }
         } else {
-            return exscan_sum_t::fallbacki(dx::zero, mask, val, init);
+            return exscan_sum_t::fallbacki(dx::zero, cmask, val, init);
         }
     }
 
-    template <typename M, extended_vector T, broadcastable_to<T> I>
+    template <typename M, extended_vector T,
+        broadcastable_to<canonical_type_t<T>> I>
     requires const_mask_for<M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, T val, I init) noexcept {
         constexpr auto cmask = dx::to_compatible_const_mask<T>(mask);
         if constexpr (unqualified_extended_imexscan_sum<zero_t, M, T, I>) {
             return exscan_sum(dx::zero, cmask, val, init);
+        } else if constexpr (simd_expression<T>) {
+            return operator()(mask, dx::evaluate(val), init);
         } else {
             return exscan_sum_t::fallbacki(dx::zero, cmask, val, init);
         }
     }
 
-    template <typename M, extended_vector T, broadcastable_to<T> I>
-    requires const_mask_for<M, T> && requires(M mask, T val, I init) {
-        exscan_sum_t::operator()(mask, val, init);
-    }
+    template <typename M, extended_vector T,
+        broadcastable_to<canonical_type_t<T>> I>
+    requires const_mask_for<M, T> && invocable<exscan_sum_t, M, T, I>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         dx::zero_t, M mask, T val, I init) noexcept {
@@ -334,6 +341,10 @@ public:
     static constexpr auto operator()(S src, M mask, T val) noexcept {
         if constexpr (unqualified_extended_mscan_sum<S, M, T>) {
             return scan_sum(src, mask, val);
+        } else if constexpr (simd_expression<S> || simd_expression<M> ||
+            simd_expression<T>) {
+            return operator()(
+                dx::evaluate(src), dx::evaluate(mask), dx::evaluate(val));
         } else {
             return scan_sum_t::fallback(src, mask, val);
         }
@@ -344,7 +355,6 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, T val) noexcept {
         using A = simd_abi_type_t<M>;
-        using S = broadcast_type<M, T>;
         if constexpr (same_as<simd_abi_type_t<T>, simd_abi_type_t<M>>) {
             if constexpr (unqualified_canonical_mscan_sum<zero_t, M, T>) {
                 if consteval {
@@ -369,14 +379,15 @@ public:
     static constexpr auto operator()(M mask, T val) noexcept {
         if constexpr (unqualified_extended_mscan_sum<zero_t, M, T>) {
             return scan_sum(dx::zero, mask, val);
+        } else if constexpr (simd_expression<M> || simd_expression<T>) {
+            return operator()(dx::evaluate(mask), dx::evaluate(val));
         } else {
-            using S = broadcast_type<M, T>;
-            return operator()(dx::broadcast<S>(dx::zero), mask, val);
+            return scan_sum_t::fallback(dx::zero, mask, val);
         }
     }
 
     template <simd_mask M, simd_vector T>
-    requires requires(M mask, T val) { scan_sum_t::operator()(mask, val); }
+    requires invocable<scan_sum_t, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(dx::zero_t, M mask, T val) noexcept {
         return operator()(mask, val);
@@ -413,6 +424,8 @@ public:
         constexpr auto cmask = dx::to_compatible_const_mask<S>(mask);
         if constexpr (unqualified_extended_imscan_sum<S, M, T>) {
             return scan_sum(src, cmask, val);
+        } else if constexpr (simd_expression<S> || simd_expression<T>) {
+            return operator()(dx::evaluate(src), mask, dx::evaluate(val));
         } else {
             return scan_sum_t::fallbacki(src, cmask, val);
         }
@@ -439,17 +452,18 @@ public:
     requires const_mask_for<M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, T val) noexcept {
+        constexpr auto cmask = dx::to_compatible_const_mask<T>(mask);
         if constexpr (unqualified_extended_imscan_sum<zero_t, M, T>) {
-            return scan_sum(
-                dx::zero, dx::to_compatible_const_mask<T>(mask), val);
+            return scan_sum(dx::zero, cmask, val);
+        } else if constexpr (simd_expression<T>) {
+            return operator()(mask, dx::evaluate(val));
         } else {
-            return scan_sum_t::fallbacki(dx::zero, mask, val);
+            return scan_sum_t::fallbacki(dx::zero, cmask, val);
         }
     }
 
     template <typename M, simd_vector T>
-    requires const_mask_for<M, T> &&
-        requires(M mask, T val) { scan_sum_t::operator()(mask, val); }
+    requires const_mask_for<M, T> && invocable<scan_sum_t, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(dx::zero_t, M mask, T val) noexcept {
         return operator()(mask, val);

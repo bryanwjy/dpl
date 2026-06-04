@@ -21,7 +21,7 @@ concept unqualified_canonical_hmax = requires(T val) {
 
 template <typename T>
 concept unqualified_extended_hmax = requires(T val) {
-    { hmax(val) } -> extended_arithmetic_result<T>;
+    { hmax(val) } -> extended_operation_vector<typename T::abi_type>;
 };
 
 template <typename S, typename M, typename T, typename A = common_abi_t<M, T>>
@@ -33,23 +33,21 @@ concept unqualified_canonical_mhmax = requires(S src, M mask, T val) {
 
 template <typename S, typename M, typename T, typename A = common_abi_t<M, T>>
 concept unqualified_extended_mhmax = requires(S src, M mask, T val) {
-    {
-        hmax(src, mask, val)
-    } -> extended_arithmetic_result<canonical_if_zero_t<S, T, A>>;
+    { hmax(src, mask, val) } -> extended_operation_vector<A>;
 };
 
 template <typename S, typename M, typename T, typename A = common_abi_t<S, T>>
 concept unqualified_canonical_imhmax = requires(S src, T val) {
     {
         hmax(internal::abi<A>, src, internal::select_mask<M, S, T>(), val)
-    } -> extended_arithmetic_result<canonical_if_zero_t<S, T, A>>;
+    } -> canonical_arithmetic_result<canonical_if_zero_t<S, T, A>>;
 };
 
 template <typename S, typename M, typename T, typename A = common_abi_t<S, T>>
 concept unqualified_extended_imhmax = requires(S src, T val) {
     {
         hmax(src, internal::select_mask<M, S, T>(), val)
-    } -> extended_arithmetic_result<canonical_if_zero_t<S, T, A>>;
+    } -> extended_operation_vector<A>;
 };
 
 struct hmax_t : private reduction_base {
@@ -126,6 +124,10 @@ public:
     static constexpr auto operator()(S src, M mask, T val) noexcept {
         if constexpr (unqualified_extended_mhmax<S, M, T>) {
             return hmax(src, mask, val);
+        } else if constexpr (simd_expression<S> || simd_expression<M> ||
+            simd_expression<T>) {
+            return operator()(
+                dx::evaluate(src), dx::evaluate(mask), dx::evaluate(val));
         } else {
             return hmax_t::fallback(src, mask, val);
         }
@@ -160,13 +162,15 @@ public:
     static constexpr auto operator()(M mask, T val) noexcept {
         if constexpr (unqualified_extended_mhmax<zero_t, M, T>) {
             return hmax(dx::zero, mask, val);
+        } else if constexpr (simd_expression<M> || simd_expression<T>) {
+            return operator()(dx::evaluate(mask), dx::evaluate(val));
         } else {
             return hmax_t::fallback(dx::zero, mask, val);
         }
     }
 
     template <simd_mask M, simd_vector T>
-    requires requires(M mask, T val) { hmax_t::operator()(mask, val); }
+    requires invocable<hmax_t, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(dx::zero_t, M mask, T val) noexcept {
         return operator()(mask, val);
@@ -203,6 +207,8 @@ public:
         constexpr auto cmask = dx::to_compatible_const_mask<S>(mask);
         if constexpr (unqualified_extended_imhmax<S, M, T>) {
             return hmax(src, cmask, val);
+        } else if constexpr (simd_expression<S> || simd_expression<T>) {
+            return operator()(dx::evaluate(src), cmask, dx::evaluate(val));
         } else {
             return hmax_t::fallbacki(src, cmask, val);
         }
@@ -232,14 +238,15 @@ public:
         constexpr auto cmask = dx::to_compatible_const_mask<T>(mask);
         if constexpr (unqualified_extended_imhmax<zero_t, M, T>) {
             return hmax(dx::zero, cmask, val);
+        } else if constexpr (simd_expression<T>) {
+            return operator()(cmask, dx::evaluate(val));
         } else {
             return hmax_t::fallbacki(dx::zero, cmask, val);
         }
     }
 
     template <typename M, extended_vector T>
-    requires const_mask_for<M, T> &&
-        requires(M mask, T val) { hmax_t::operator()(mask, val); }
+    requires const_mask_for<M, T> && invocable<hmax_t, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(dx::zero_t, M mask, T val) noexcept {
         return operator()(mask, val);

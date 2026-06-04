@@ -21,7 +21,7 @@ concept unqualified_canonical_hsum = requires(T val) {
 
 template <typename T>
 concept unqualified_extended_hsum = requires(T val) {
-    { hsum(val) } -> extended_arithmetic_result<T>;
+    { hsum(val) } -> extended_operation_vector<typename T::abi_type>;
 };
 
 template <typename S, typename M, typename T, typename A = common_abi_t<M, T>>
@@ -33,23 +33,21 @@ concept unqualified_canonical_mhsum = requires(S src, M mask, T val) {
 
 template <typename S, typename M, typename T, typename A = common_abi_t<M, T>>
 concept unqualified_extended_mhsum = requires(S src, M mask, T val) {
-    {
-        hsum(src, mask, val)
-    } -> extended_arithmetic_result<canonical_if_zero_t<S, T, A>>;
+    { hsum(src, mask, val) } -> extended_operation_vector<A>;
 };
 
 template <typename S, typename M, typename T, typename A = common_abi_t<S, T>>
 concept unqualified_canonical_imhsum = requires(S src, T val) {
     {
         hsum(internal::abi<A>, src, internal::select_mask<M, S, T>(), val)
-    } -> extended_arithmetic_result<canonical_if_zero_t<S, T, A>>;
+    } -> canonical_arithmetic_result<canonical_if_zero_t<S, T, A>>;
 };
 
 template <typename S, typename M, typename T, typename A = common_abi_t<S, T>>
 concept unqualified_extended_imhsum = requires(S src, T val) {
     {
         hsum(src, internal::select_mask<M, S, T>(), val)
-    } -> extended_arithmetic_result<canonical_if_zero_t<S, T, A>>;
+    } -> extended_operation_vector<A>;
 };
 
 struct hsum_t : private reduction_base {
@@ -77,12 +75,12 @@ public:
         basic_vector<E, A> val) noexcept {
         if constexpr (unqualified_canonical_hsum<basic_vector<E, A>>) {
             if consteval {
-                return reduction_base::execute(val, dx::add);
+                return reduction_base::execute(val, dx::max);
             } else {
                 return hsum(internal::abi<A>, val);
             }
         } else {
-            return reduction_base::execute(val, dx::add);
+            return reduction_base::execute(val, dx::max);
         }
     }
 
@@ -92,7 +90,7 @@ public:
         if constexpr (unqualified_extended_hsum<T>) {
             return hsum(val);
         } else {
-            return reduction_base::execute(val, dx::add);
+            return reduction_base::execute(val, dx::max);
         }
     }
 
@@ -126,6 +124,10 @@ public:
     static constexpr auto operator()(S src, M mask, T val) noexcept {
         if constexpr (unqualified_extended_mhsum<S, M, T>) {
             return hsum(src, mask, val);
+        } else if constexpr (simd_expression<S> || simd_expression<M> ||
+            simd_expression<T>) {
+            return operator()(
+                dx::evaluate(src), dx::evaluate(mask), dx::evaluate(val));
         } else {
             return hsum_t::fallback(src, mask, val);
         }
@@ -160,13 +162,15 @@ public:
     static constexpr auto operator()(M mask, T val) noexcept {
         if constexpr (unqualified_extended_mhsum<zero_t, M, T>) {
             return hsum(dx::zero, mask, val);
+        } else if constexpr (simd_expression<M> || simd_expression<T>) {
+            return operator()(dx::evaluate(mask), dx::evaluate(val));
         } else {
             return hsum_t::fallback(dx::zero, mask, val);
         }
     }
 
     template <simd_mask M, simd_vector T>
-    requires requires(M mask, T val) { hsum_t::operator()(mask, val); }
+    requires invocable<hsum_t, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(dx::zero_t, M mask, T val) noexcept {
         return operator()(mask, val);
@@ -203,6 +207,8 @@ public:
         constexpr auto cmask = dx::to_compatible_const_mask<S>(mask);
         if constexpr (unqualified_extended_imhsum<S, M, T>) {
             return hsum(src, cmask, val);
+        } else if constexpr (simd_expression<S> || simd_expression<T>) {
+            return operator()(dx::evaluate(src), cmask, dx::evaluate(val));
         } else {
             return hsum_t::fallbacki(src, cmask, val);
         }
@@ -232,14 +238,15 @@ public:
         constexpr auto cmask = dx::to_compatible_const_mask<T>(mask);
         if constexpr (unqualified_extended_imhsum<zero_t, M, T>) {
             return hsum(dx::zero, cmask, val);
+        } else if constexpr (simd_expression<T>) {
+            return operator()(cmask, dx::evaluate(val));
         } else {
             return hsum_t::fallbacki(dx::zero, cmask, val);
         }
     }
 
     template <typename M, extended_vector T>
-    requires const_mask_for<M, T> &&
-        requires(M mask, T val) { hsum_t::operator()(mask, val); }
+    requires const_mask_for<M, T> && invocable<hsum_t, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(dx::zero_t, M mask, T val) noexcept {
         return operator()(mask, val);

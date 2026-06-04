@@ -134,6 +134,8 @@ public:
     static constexpr auto operator()(L lhs, R rhs, size_t count) noexcept {
         if constexpr (unqualified_extended_slide_left<L, R>) {
             return slide_left(lhs, rhs, count);
+        } else if constexpr (simd_expression<L> || simd_expression<R>) {
+            return operator()(dx::evaluate(lhs), dx::evaluate(rhs), count);
         } else {
             return slide_left_t::fallback(lhs, rhs, count);
         }
@@ -168,6 +170,8 @@ public:
     static constexpr auto operator()(L lhs, R rhs, N count) noexcept {
         if constexpr (unqualified_extended_slide_lefti<L, R, N>) {
             return slide_left(lhs, rhs, count);
+        } else if constexpr (simd_expression<L> || simd_expression<R>) {
+            return operator()(dx::evaluate(lhs), dx::evaluate(rhs), count);
         } else {
             return operator()(lhs, rhs, N::value);
         }
@@ -217,6 +221,8 @@ public:
     static constexpr auto operator()(L lhs, R rhs, size_t count) noexcept {
         if constexpr (unqualified_extended_slide_right<L, R>) {
             return slide_right(lhs, rhs, count);
+        } else if constexpr (simd_expression<L> || simd_expression<R>) {
+            return operator()(dx::evaluate(lhs), dx::evaluate(rhs), count);
         } else {
             return slide_right_t::fallback(lhs, rhs, count);
         }
@@ -251,6 +257,8 @@ public:
     static constexpr auto operator()(L lhs, R rhs, N count) noexcept {
         if constexpr (unqualified_extended_slide_righti<L, R, N>) {
             return slide_right(lhs, rhs, count);
+        } else if constexpr (simd_expression<L> || simd_expression<R>) {
+            return operator()(dx::evaluate(lhs), dx::evaluate(rhs), count);
         } else {
             return operator()(lhs, rhs, N::value);
         }

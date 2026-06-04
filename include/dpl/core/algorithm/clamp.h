@@ -8,6 +8,7 @@
 #  include "dpl/core/concepts/operation_category.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/operations/arithmetic/result.h"
+#  include "dpl/core/operations/evaluate.h"
 #  include "dpl/core/operations/minmax.h"
 #  include "dpl/core/operations/operation_base.h"
 #  include "dpl/std/concepts/totally_ordered.h"
@@ -125,6 +126,10 @@ public:
     static constexpr auto operator()(AT a, BT b, CT c) noexcept {
         if constexpr (unqualified_extended_clamp<AT, BT, CT>) {
             return clamp(a, b, c);
+        } else if constexpr (simd_expression<AT> || simd_expression<BT> ||
+            simd_expression<CT>) {
+            return operator()(
+                dx::evaluate(a), dx::evaluate(b), dx::evaluate(c));
         } else {
             return operator()(
                 dx::to_canonical(a), dx::to_canonical(b), dx::to_canonical(c));

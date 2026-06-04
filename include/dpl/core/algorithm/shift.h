@@ -120,6 +120,8 @@ public:
     static constexpr auto operator()(T val, size_t shift) noexcept {
         if constexpr (unqualified_extended_shift_left<T>) {
             return shift_left(val, shift);
+        } else if constexpr (simd_expression<T>) {
+            return operator()(dx::evaluate(val), shift);
         } else {
             return shift_left_t::fallback(val, shift);
         }
@@ -207,6 +209,8 @@ public:
     static constexpr auto operator()(T val, N shift) noexcept {
         if constexpr (unqualified_extended_shift_righti<T, N>) {
             return shift_right(val, shift);
+        } else if constexpr (simd_expression<T>) {
+            return operator()(dx::evaluate(val), shift);
         } else {
             return operator()(val, N::value);
         }

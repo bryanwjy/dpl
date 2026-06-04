@@ -173,6 +173,8 @@ public:
         is_nothrow_invocable_v<Op, T, T>) {
         if constexpr (unqualified_extended_reduce<T, Op>) {
             return reduce(val, __DPL forward<Op>(op));
+        } else if constexpr (simd_expression<T>) {
+            return operator()(dx::evaluate(val), __DPL forward<Op>(op));
         } else {
             return reduction_base::execute(val, __DPL forward<Op>(op));
         }
@@ -216,6 +218,10 @@ public:
         is_nothrow_invocable_v<Op, T, T>) {
         if constexpr (unqualified_extended_mreduce<S, M, T, Op>) {
             return reduce(src, mask, val, __DPL forward<Op>(op));
+        } else if constexpr (simd_expression<S> || simd_expression<M> ||
+            simd_expression<T>) {
+            return operator()(dx::evaluate(src), dx::evaluate(mask),
+                dx::evaluate(val), __DPL forward<Op>(op));
         } else {
             return reduce_t::fallback(src, mask, val, __DPL forward<Op>(op));
         }
@@ -257,6 +263,9 @@ public:
         is_nothrow_invocable_v<Op, T, T>) {
         if constexpr (unqualified_extended_mreduce<zero_t, M, T, Op>) {
             return reduce(dx::zero, mask, val, __DPL forward<Op>(op));
+        } else if constexpr (simd_expression<M> || simd_expression<T>) {
+            return operator()(
+                dx::evaluate(mask), dx::evaluate(val), __DPL forward<Op>(op));
         } else {
             return reduce_t::fallback(
                 dx::zero, mask, val, __DPL forward<Op>(op));
@@ -264,9 +273,7 @@ public:
     }
 
     template <simd_mask M, simd_vector T, reduction_operator_for<T> Op>
-    requires requires(M mask, T val, Op&& op) {
-        reduce_t::operator()(mask, val, __DPL forward<Op>(op));
-    }
+    requires invocable<reduce_t, M, T, Op>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(dx::zero_t, M mask, T val,
         Op&& op) noexcept(is_nothrow_invocable_v<Op, T, T>) {
@@ -312,6 +319,9 @@ public:
         constexpr auto cmask = dx::to_compatible_const_mask<S>(mask);
         if constexpr (unqualified_extended_imreduce<S, M, T, Op>) {
             return reduce(src, cmask, val, __DPL forward<Op>(op));
+        } else if constexpr (simd_expression<T> || simd_expression<S>) {
+            return operator()(dx::evaluate(src), cmask, dx::evaluate(val),
+                __DPL forward<Op>(op));
         } else {
             return reduce_t::fallback(src, cmask, val, __DPL forward<Op>(op));
         }
@@ -343,19 +353,19 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, T val, Op&& op) noexcept(
         is_nothrow_invocable_v<Op, T, T>) {
+        constexpr auto cmask = dx::to_compatible_const_mask<T>(mask);
         if constexpr (unqualified_extended_imreduce<zero_t, M, T, Op>) {
-            return reduce(dx::zero, dx::to_compatible_const_mask<T>(mask), val,
-                __DPL forward<Op>(op));
+            return reduce(dx::zero, cmask, val, __DPL forward<Op>(op));
+        } else if constexpr (simd_expression<T>) {
+            return operator()(mask, dx::evaluate(val), __DPL forward<Op>(op));
         } else {
             return reduce_t::fallbacki(
-                dx::zero, mask, val, __DPL forward<Op>(op));
+                dx::zero, cmask, val, __DPL forward<Op>(op));
         }
     }
 
     template <typename M, simd_vector T, reduction_operator_for<T> Op>
-    requires const_mask_for<M, T> && requires(M mask, T val, Op&& op) {
-        reduce_t::operator()(mask, val, __DPL forward<Op>(op));
-    }
+    requires const_mask_for<M, T> && invocable<reduce_t, M, T, Op>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(dx::zero_t, M mask, T val,
         Op&& op) noexcept(is_nothrow_invocable_v<Op, T, T>) {

@@ -114,6 +114,8 @@ public:
     static constexpr auto operator()(T val, size_t shift) noexcept {
         if constexpr (unqualified_extended_rotate_right<T>) {
             return rotate_right(val, shift);
+        } else if constexpr (simd_expression<T>) {
+            return operator()(dx::evaluate(val), shift);
         } else {
             return rotate_right_t::fallback(val, shift);
         }
@@ -138,6 +140,8 @@ public:
     static constexpr auto operator()(T val, N shift) noexcept {
         if constexpr (unqualified_extended_rotate_righti<T, N>) {
             return rotate_right(val, shift);
+        } else if constexpr (simd_expression<T>) {
+            return operator()(dx::evaluate(val), shift);
         } else {
             return rotate_right_t::fallback(val, shift);
         }
@@ -181,6 +185,8 @@ public:
     static constexpr auto operator()(T val, size_t shift) noexcept {
         if constexpr (unqualified_extended_rotate_left<T>) {
             return rotate_left(val, shift);
+        } else if constexpr (simd_expression<T>) {
+            return operator()(dx::evaluate(val), shift);
         } else {
             return rotate_left_t::fallback(val, shift);
         }
@@ -205,6 +211,8 @@ public:
     static constexpr auto operator()(T val, N shift) noexcept {
         if constexpr (unqualified_extended_rotate_lefti<T, N>) {
             return rotate_left(val, shift);
+        } else if constexpr (simd_expression<T>) {
+            return operator()(dx::evaluate(val), shift);
         } else {
             return rotate_left_t::fallback(val, shift);
         }

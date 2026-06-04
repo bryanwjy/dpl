@@ -24,7 +24,7 @@ concept unqualified_canonical_inner_product = requires(L lhs, R rhs) {
 
 template <typename L, typename R, typename A = common_abi_t<L, R>>
 concept unqualified_extended_inner_product = requires(L lhs, R rhs) {
-    { inner_product(lhs, rhs) } -> extended_arithmetic_result<L, R, A>;
+    { inner_product(lhs, rhs) } -> extended_operation_vector<A>;
 };
 
 template <typename S, typename M, typename L, typename R,
@@ -39,13 +39,10 @@ concept unqualified_canonical_minner_product = requires(
 
 template <typename S, typename M, typename L, typename R,
     typename A = common_abi_t<L, R, M>>
-concept unqualified_extended_minner_product = requires(
-    S src, M mask, L lhs, R rhs) {
-    {
-        inner_product(src, mask, lhs, rhs)
-    } -> extended_arithmetic_result<
-        canonical_if_zero_t<S, operation_result_t<inner_product_t, L, R>, A>>;
-};
+concept unqualified_extended_minner_product =
+    requires(S src, M mask, L lhs, R rhs) {
+        { inner_product(src, mask, lhs, rhs) } -> extended_operation_vector<A>;
+    };
 
 template <typename S, typename M, typename L, typename R,
     typename A = common_abi_t<L, R, M>>
@@ -55,21 +52,20 @@ concept unqualified_canonical_iminner_product = requires(
         inner_product(internal::abi<A>, src,
             internal::to_const_mask<A, inner_product_t, S, L, R>(mask), lhs,
             rhs)
-    } -> extended_arithmetic_result<
+    } -> canonical_arithmetic_result<
         canonical_if_zero_t<S, operation_result_t<inner_product_t, L, R>, A>>;
 };
 
 template <typename S, typename M, typename L, typename R,
     typename A = common_abi_t<L, R, M>>
-concept unqualified_extended_iminner_product = requires(
-    S src, M mask, L lhs, R rhs) {
-    {
-        inner_product(src,
-            internal::to_const_mask<A, inner_product_t, S, L, R>(mask), lhs,
-            rhs)
-    } -> extended_arithmetic_result<
-        canonical_if_zero_t<S, operation_result_t<inner_product_t, L, R>, A>>;
-};
+concept unqualified_extended_iminner_product =
+    requires(S src, M mask, L lhs, R rhs) {
+        {
+            inner_product(src,
+                internal::to_const_mask<A, inner_product_t, S, L, R>(mask), lhs,
+                rhs)
+        } -> extended_operation_vector<A>;
+    };
 
 struct inner_product_t : private binary_operation_base<inner_product_t> {
 private:
@@ -199,8 +195,7 @@ public:
     }
 
     template <simd_mask M, simd_vector L, simd_vector R>
-    requires requires(
-        M mask, L lhs, R rhs) { inner_product_t::operator()(mask, lhs, rhs); }
+    requires invocable<inner_product_t, M, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         dx::zero_t, M mask, L lhs, R rhs) noexcept {
@@ -248,7 +243,7 @@ public:
     }
 
     template <typename M, canonical_vector L, canonical_vector R>
-    requires const_mask_for<M, L> && const_mask_for<M, R>
+    requires const_mask_for<M, operation_result_t<inner_product_t, L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, L lhs, R rhs) noexcept {
         using S = operation_result_t<inner_product_t, L, R>;
@@ -268,7 +263,7 @@ public:
 
     template <typename M, simd_vector L, simd_vector R>
     requires (extended_vector<L> || extended_vector<R>) &&
-        const_mask_for<M, L> && const_mask_for<M, R>
+        const_mask_for<M, operation_result_t<inner_product_t, L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, L lhs, R rhs) noexcept {
         using S = operation_result_t<inner_product_t, L, R>;
@@ -282,10 +277,8 @@ public:
     }
 
     template <typename M, simd_vector L, simd_vector R>
-    requires const_mask_for<M, L> && const_mask_for<M, R> &&
-        requires(M mask, L lhs, R rhs) {
-            inner_product_t::operator()(mask, lhs, rhs);
-        }
+    requires const_mask_for<M, operation_result_t<inner_product_t, L, R>> &&
+        invocable<inner_product_t, M, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         dx::zero_t, M mask, L lhs, R rhs) noexcept {

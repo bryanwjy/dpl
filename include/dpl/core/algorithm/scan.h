@@ -85,7 +85,8 @@ struct exscan_t : private scan_base {
         S src, M mask, T val, I init, BinaryOp&& op) noexcept {
         return dx::select(dx::lane_index<S>() < dx::popcount(mask),
             scan_base::exclusive(dx::popcount(mask), dx::compress(mask, val),
-                dx::broadcast<T>(init), __DPL forward<BinaryOp>(op)),
+                dx::broadcast<canonical_type_t<T>>(init),
+                __DPL forward<BinaryOp>(op)),
             src);
     }
 
@@ -97,7 +98,8 @@ struct exscan_t : private scan_base {
         constexpr auto N = dx::popcount(cmask);
         return dx::selecti<V>(
             scan_base::exclusive(imm<N>, dx::compress(cmask, val),
-                dx::broadcast<S>(init), __DPL forward<BinaryOp>(op)),
+                dx::broadcast<canonical_type_t<S>>(init),
+                __DPL forward<BinaryOp>(op)),
             src);
     }
 
@@ -113,27 +115,33 @@ public:
         is_nothrow_invocable_v<Op, T, T>) {
         if constexpr (unqualified_canonical_exscan<T, I, Op>) {
             if consteval {
-                return scan_base::exclusive(
-                    val, dx::broadcast<T>(init), __DPL forward<Op>(op));
+                return scan_base::exclusive(val,
+                    dx::broadcast<canonical_type_t<T>>(init),
+                    __DPL forward<Op>(op));
             } else {
                 return exscan(
                     internal::abi<T>, val, init, __DPL forward<Op>(op));
             }
         } else {
-            return scan_base::exclusive(
-                val, dx::broadcast<T>(init), __DPL forward<Op>(op));
+            return scan_base::exclusive(val,
+                dx::broadcast<canonical_type_t<T>>(init),
+                __DPL forward<Op>(op));
         }
     }
 
-    template <extended_vector T, broadcastable_to<T> I, scan_operator_for<T> Op>
+    template <extended_vector T, broadcastable_to<canonical_type_t<T>> I,
+        scan_operator_for<T> Op>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T val, I init, Op&& op) noexcept(
         is_nothrow_invocable_v<Op, T, T>) {
         if constexpr (unqualified_extended_exscan<T, I, Op>) {
             return exscan(val, init, __DPL forward<Op>(op));
+        } else if constexpr (simd_expression<T>) {
+            return operator()(dx::evaluate(val), init, __DPL forward<Op>(op));
         } else {
-            return scan_base::exclusive(
-                val, dx::broadcast<T>(init), __DPL forward<Op>(op));
+            return scan_base::exclusive(val,
+                dx::broadcast<canonical_type_t<T>>(init),
+                __DPL forward<Op>(op));
         }
     }
 
@@ -176,6 +184,10 @@ public:
         Op&& op) noexcept(is_nothrow_invocable_v<Op, T, T>) {
         if constexpr (unqualified_extended_mexscan<S, M, T, I, Op>) {
             return exscan(src, mask, val, init, __DPL forward<Op>(op));
+        } else if constexpr (simd_expression<S> || simd_expression<M> ||
+            simd_expression<T>) {
+            return operator()(dx::evaluate(src), dx::evaluate(mask),
+                dx::evaluate(val), init, __DPL forward<Op>(op));
         } else {
             return exscan_t::fallback(
                 src, mask, val, init, __DPL forward<Op>(op));
@@ -220,6 +232,9 @@ public:
         is_nothrow_invocable_v<Op, T, T>) {
         if constexpr (unqualified_extended_mexscan<zero_t, M, T, I, Op>) {
             return exscan(dx::zero, mask, val, init, __DPL forward<Op>(op));
+        } else if constexpr (simd_expression<M> || simd_expression<T>) {
+            return operator()(dx::evaluate(mask), dx::evaluate(val), init,
+                __DPL forward<Op>(op));
         } else {
             return exscan_t::fallback(
                 dx::zero, mask, val, init, __DPL forward<Op>(op));
@@ -228,9 +243,7 @@ public:
 
     template <simd_mask M, simd_vector T,
         broadcastable_to<broadcast_type<M, T>> I, scan_operator_for<T> Op>
-    requires requires(M mask, T val, I init, Op&& op) {
-        exscan_t::operator()(mask, val, init, __DPL forward<Op>(op));
-    }
+    requires invocable<exscan_t, M, T, I, Op>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(dx::zero_t, M mask, T val, I init,
         Op&& op) noexcept(is_nothrow_invocable_v<Op, T, T>) {
@@ -277,6 +290,9 @@ public:
         constexpr auto cmask = dx::to_compatible_const_mask<S>(mask);
         if constexpr (unqualified_extended_imexscan<S, M, T, I, Op>) {
             return exscan(src, cmask, val, init, __DPL forward<Op>(op));
+        } else if constexpr (simd_expression<S> || simd_expression<T>) {
+            return operator()(dx::evaluate(src), cmask, dx::evaluate(val), init,
+                __DPL forward<Op>(op));
         } else {
             return exscan_t::fallbacki(
                 src, cmask, val, init, __DPL forward<Op>(op));
@@ -305,8 +321,8 @@ public:
         }
     }
 
-    template <typename M, extended_vector T, broadcastable_to<T> I,
-        scan_operator_for<T> Op>
+    template <typename M, extended_vector T,
+        broadcastable_to<canonical_type_t<T>> I, scan_operator_for<T> Op>
     requires const_mask_for<M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, T val, I init, Op&& op) noexcept(
@@ -314,6 +330,9 @@ public:
         if constexpr (unqualified_extended_imexscan<zero_t, M, T, I, Op>) {
             return exscan(dx::zero, dx::to_compatible_const_mask<T>(mask), val,
                 init, __DPL forward<Op>(op));
+        } else if constexpr (simd_expression<T>) {
+            return operator()(
+                mask, dx::evaluate(val), init, __DPL forward<Op>(op));
         } else {
             return exscan_t::fallbacki(
                 dx::zero, mask, val, init, __DPL forward<Op>(op));
@@ -322,9 +341,7 @@ public:
 
     template <typename M, simd_vector T, broadcastable_to<T> I,
         scan_operator_for<T> Op>
-    requires const_mask_for<M, T> && requires(M mask, T val, I init, Op&& op) {
-        exscan_t::operator()(mask, val, init, __DPL forward<Op>(op));
-    }
+    requires const_mask_for<M, T> && invocable<exscan_t, M, T, I, Op>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(dx::zero_t, M mask, T val, I init,
         Op&& op) noexcept(is_nothrow_invocable_v<Op, T, T>) {
@@ -428,6 +445,8 @@ public:
         is_nothrow_invocable_v<Op, T, T>) {
         if constexpr (unqualified_extended_scan<T, Op>) {
             return scan(val, __DPL forward<Op>(op));
+        } else if constexpr (simd_expression<T>) {
+            return operator()(dx::evaluate(val), __DPL forward<Op>(op));
         } else {
             return scan_base::inclusive(val, __DPL forward<Op>(op));
         }
@@ -470,6 +489,10 @@ public:
         is_nothrow_invocable_v<Op, T, T>) {
         if constexpr (unqualified_extended_mscan<S, M, T, Op>) {
             return scan(src, mask, val, __DPL forward<Op>(op));
+        } else if constexpr (simd_expression<S> || simd_expression<M> ||
+            simd_expression<T>) {
+            return operator()(dx::evaluate(src), dx::evaluate(mask),
+                dx::evaluate(val), __DPL forward<Op>(op));
         } else {
             return scan_t::fallback(src, mask, val, __DPL forward<Op>(op));
         }
@@ -511,17 +534,17 @@ public:
         is_nothrow_invocable_v<Op, T, T>) {
         if constexpr (unqualified_extended_mscan<zero_t, M, T, Op>) {
             return scan(dx::zero, mask, val, __DPL forward<Op>(op));
+        } else if constexpr (simd_expression<M> || simd_expression<T>) {
+            return operator()(
+                dx::evaluate(mask), dx::evaluate(val), __DPL forward<Op>(op));
         } else {
-            using S = broadcast_type<M, T>;
             return scan_t::fallback(
                 dx::zero, mask, val, __DPL forward<Op>(op));
         }
     }
 
     template <simd_mask M, simd_vector T, scan_operator_for<T> Op>
-    requires requires(M mask, T val, Op&& op) {
-        scan_t::operator()(mask, val, __DPL forward<Op>(op));
-    }
+    requires invocable<scan_t, M, T, Op>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(dx::zero_t, M mask, T val,
         Op&& op) noexcept(is_nothrow_invocable_v<Op, T, T>) {
@@ -567,6 +590,9 @@ public:
         constexpr auto cmask = dx::to_compatible_const_mask<S>(mask);
         if constexpr (unqualified_extended_imscan<S, M, T, Op>) {
             return scan(src, cmask, val, __DPL forward<Op>(op));
+        } else if constexpr (simd_expression<S> || simd_expression<T>) {
+            return operator()(dx::evaluate(src), cmask, dx::evaluate(val),
+                __DPL forward<Op>(op));
         } else {
             return scan_t::fallbacki(src, cmask, val, __DPL forward<Op>(op));
         }
@@ -601,6 +627,8 @@ public:
         if constexpr (unqualified_extended_imscan<zero_t, M, T, Op>) {
             return scan(dx::zero, dx::to_compatible_const_mask<T>(mask), val,
                 __DPL forward<Op>(op));
+        } else if constexpr (simd_expression<T>) {
+            return operator()(mask, dx::evaluate(val), __DPL forward<Op>(op));
         } else {
             return scan_t::fallbacki(
                 dx::zero, mask, val, __DPL forward<Op>(op));
@@ -608,9 +636,7 @@ public:
     }
 
     template <typename M, simd_vector T, scan_operator_for<T> Op>
-    requires const_mask_for<M, T> && requires(M mask, T val, Op&& op) {
-        scan_t::operator()(mask, val, __DPL forward<Op>(op));
-    }
+    requires const_mask_for<M, T> && invocable<scan_t, M, T, Op>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(dx::zero_t, M mask, T val,
         Op&& op) noexcept(is_nothrow_invocable_v<Op, T, T>) {
