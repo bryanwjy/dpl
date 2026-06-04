@@ -61,15 +61,22 @@ private:
     friend mx::masked_operation<pow_t>;
 
     template <simd_abi A, typename L, typename R>
+    requires (canonical_vector<L> || canonical_vector<R>) &&
+        requires(L lhs, R rhs) {
+            { pow(internal::abi<A>, lhs, rhs) } -> vector_with_abi<A>;
+        }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto native(A abi, L left, R right) noexcept
-    requires requires {
-        {
-            pow(internal::abi<A>, left, right)
-        } -> floating_point_simd_with_abi<A>;
+    static constexpr auto native(A abi, L lhs, R rhs) noexcept {
+        return pow(internal::abi<A>, lhs, rhs);
     }
-    {
-        return pow(internal::abi<A>, left, right);
+
+    template <simd_abi A, typename L, typename R>
+    requires (extended_vector<L> || extended_vector<R>) &&
+        unqualified_extended_pow<L, R, A>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto native(A, L lhs, R rhs) noexcept(
+        noexcept(pow(lhs, rhs))) {
+        return pow(lhs, rhs);
     }
 
     template <simd_abi A>
@@ -302,7 +309,7 @@ public:
     template <simd_vector L, simd_vector R>
     requires (extended_vector<L> || extended_vector<R>) && extended_pow<L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L lhs, R rhs) noexcept {
+    static constexpr auto operator()(L lhs, R rhs) {
         if constexpr (unqualified_extended_pow<L, R>) {
             return pow(lhs, rhs);
         } else if constexpr (expression_pow<L, R>) {

@@ -150,26 +150,22 @@ private:
     friend binary_operation_base<divide_t>;
 
     template <simd_abi A, typename L, typename R>
-    requires (canonical_vector<L> || canonical_vector<R>)
+    requires (!simd_class<L> || canonical_vector<L>) &&
+        (!simd_class<R> || canonical_vector<R>) && requires(L lhs, R rhs) {
+            { divide(internal::abi<A>, lhs, rhs) } -> vector_with_abi<A>;
+        }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto native(A abi, L lhs, R rhs) noexcept
-    requires requires {
-        {
-            divide(internal::abi<A>, lhs, rhs)
-        } -> broadcasting_arithmetic_result<A>;
-    }
-    {
+    static constexpr auto native(A abi, L lhs, R rhs) noexcept {
         return divide(internal::abi<A>, lhs, rhs);
     }
 
     template <simd_abi A, typename L, typename R>
-    requires (extended_vector<L> || extended_vector<R>)
+    requires (!simd_class<L> || extended_vector<L>) &&
+        (!simd_class<R> || extended_vector<R>) &&
+        unqualified_extended_divide<L, R, A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto native(A abi, L lhs, R rhs) noexcept
-    requires requires {
-        { divide(lhs, rhs) } -> extended_operation_vector<A>;
-    }
-    {
+    static constexpr auto native(A abi, L lhs, R rhs) noexcept(
+        noexcept(divide(lhs, rhs))) {
         return divide(lhs, rhs);
     }
 
@@ -183,7 +179,7 @@ private:
 
 public:
     template <fixed_width_abi A, simd_element_for<A> E>
-    requires floating_point<E>
+    requires arithmetic_type<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A> operator()(
         basic_vector<E, A> lhs, basic_vector<E, A> rhs) noexcept {
@@ -202,7 +198,7 @@ public:
     template <simd_abi LA, common_abi_with<LA> RA, typename E>
     requires simd_element_for<E, LA> && simd_element_for<E, RA> &&
         (scalable_abi<LA> || scalable_abi<RA> || different_from<LA, RA> ||
-            !floating_point<E>) &&
+            !arithmetic_type<E>) &&
         unqualified_canonical_divide<basic_vector<E, LA>, basic_vector<E, RA>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, common_abi_t<LA, RA>> operator()(
@@ -226,7 +222,7 @@ public:
     using binary_operation_base<divide_t>::operator();
 
     template <fixed_width_abi A, simd_element_for<A> E, common_size_with<E> ME>
-    requires floating_point<E>
+    requires arithmetic_type<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A> operator()(basic_vector<E, A> src,
         basic_mask<ME, A> mask, basic_vector<E, A> lhs,
@@ -247,7 +243,7 @@ public:
     template <simd_abi SA, simd_element_for<SA> E, common_size_with<E> ME,
         simd_abi LA, common_abi_with<LA> RA>
     requires (different_from<LA, RA> || scalable_abi<SA> || scalable_abi<LA> ||
-                 scalable_abi<RA> || !floating_point<E>) &&
+                 scalable_abi<RA> || !arithmetic_type<E>) &&
         simd_element_for<E, LA> && simd_element_for<E, RA> &&
         maskable_args<basic_vector<E, SA>, basic_mask<ME, SA>,
             basic_vector<E, LA>, basic_vector<E, RA>> &&
@@ -278,7 +274,7 @@ public:
     }
 
     template <fixed_width_abi A, simd_element_for<A> E, common_size_with<E> ME>
-    requires floating_point<E>
+    requires arithmetic_type<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A> operator()(basic_mask<ME, A> mask,
         basic_vector<E, A> lhs, basic_vector<E, A> rhs) noexcept {
@@ -298,7 +294,7 @@ public:
         simd_abi LA, common_abi_with<LA> RA>
     requires (different_from<SA, common_abi_t<LA, RA>> ||
                  different_from<LA, RA> || scalable_abi<SA> ||
-                 scalable_abi<LA> || scalable_abi<RA> || !floating_point<E>) &&
+                 scalable_abi<LA> || scalable_abi<RA> || !arithmetic_type<E>) &&
         simd_element_for<E, LA> && simd_element_for<E, RA> &&
         zmaskable_args<basic_mask<ME, SA>, basic_vector<E, LA>,
             basic_vector<E, RA>> &&
@@ -328,8 +324,7 @@ public:
     }
 
     template <simd_mask M, simd_vector L, simd_vector R>
-    requires requires(
-        M mask, L lhs, R rhs) { divide_t::operator()(mask, lhs, rhs); }
+    requires invocable<divide_t, M, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         dx::zero_t, M mask, L lhs, R rhs) noexcept {
@@ -338,7 +333,7 @@ public:
 
     template <fixed_width_abi A, simd_element_for<A> E,
         const_mask_for<basic_vector<E, A>> M>
-    requires floating_point<E>
+    requires arithmetic_type<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A> operator()(basic_vector<E, A> src,
         M mask, basic_vector<E, A> lhs, basic_vector<E, A> rhs) noexcept {
@@ -361,7 +356,7 @@ public:
         common_abi_with<LA> RA>
     requires (different_from<SA, common_abi_t<LA, RA>> ||
                  different_from<LA, RA> || scalable_abi<SA> ||
-                 scalable_abi<LA> || scalable_abi<RA> || !floating_point<E>) &&
+                 scalable_abi<LA> || scalable_abi<RA> || !arithmetic_type<E>) &&
         simd_element_for<E, LA> && simd_element_for<E, RA> &&
         imm_maskable_args<basic_vector<E, SA>, basic_vector<E, LA>,
             basic_vector<E, RA>> &&
@@ -392,7 +387,7 @@ public:
 
     template <fixed_width_abi A, simd_element_for<A> E,
         const_mask_for<basic_vector<E, A>> M>
-    requires floating_point<E>
+    requires arithmetic_type<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A> operator()(
         M mask, basic_vector<E, A> lhs, basic_vector<E, A> rhs) noexcept {
@@ -414,7 +409,7 @@ public:
         simd_element_for<common_abi_t<LA, RA>> E,
         const_mask_for<basic_vector<E, common_abi_t<LA, RA>>> M>
     requires (different_from<LA, RA> || scalable_abi<LA> || scalable_abi<RA> ||
-                 !floating_point<E>) &&
+                 !arithmetic_type<E>) &&
         simd_element_for<E, LA> && simd_element_for<E, RA> &&
         imm_zmaskable_args<basic_vector<E, LA>, basic_vector<E, RA>> &&
         unqualified_canonical_imdivide<zero_t, M, basic_vector<E, LA>,
@@ -445,9 +440,9 @@ public:
         }
     }
 
-    template <simd_vector L, simd_vector R, const_mask_like M>
-    requires requires(
-        M mask, L lhs, R rhs) { divide_t::operator()(mask, lhs, rhs); }
+    template <simd_vector L, simd_vector R,
+        const_mask_for<operation_result_t<divide_t, L, R>> M>
+    requires invocable<divide_t, M, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         dx::zero_t, M mask, L lhs, R rhs) noexcept {

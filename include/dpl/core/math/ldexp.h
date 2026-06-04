@@ -34,7 +34,7 @@ template <typename T, typename I, typename A = common_abi_t<T, I>>
 concept unqualified_canonical_ldexp = requires(T val, I exp) {
     {
         ldexp(internal::abi<T>, val, exp)
-    } -> canonical_arithmetic_result<T, T, typename T::abi_type>;
+    } -> canonical_arithmetic_result<T, T, A>;
 };
 
 template <typename T, typename I, typename A = common_abi_t<T, I>>
@@ -65,18 +65,21 @@ struct ldexp_t :
 
     template <simd_abi A, typename L, typename R>
     requires (canonical_vector<L> || canonical_vector<R>) &&
-        unqualified_canonical_ldexp<L, R, A>
+        requires(L lhs, R rhs) {
+            { ldexp(internal::abi<A>, lhs, rhs) } -> vector_with_abi<A>;
+        }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto native(A abi, L left, R right) noexcept {
-        return ldexp(internal::abi<A>, left, right);
+    static constexpr auto native(A abi, L lhs, R rhs) noexcept {
+        return ldexp(internal::abi<A>, lhs, rhs);
     }
 
     template <simd_abi A, typename L, typename R>
     requires (extended_vector<L> || extended_vector<R>) &&
         unqualified_extended_ldexp<L, R, A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto native(A abi, L left, R right) noexcept {
-        return ldexp(left, right);
+    static constexpr auto native(A abi, L lhs, R rhs) noexcept(
+        noexcept(ldexp(lhs, rhs))) {
+        return ldexp(lhs, rhs);
     }
 
     template <signed_integral E, simd_abi A>

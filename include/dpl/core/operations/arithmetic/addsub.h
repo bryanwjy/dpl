@@ -204,26 +204,22 @@ private:
     friend binary_operation_base<addsub_t>;
 
     template <simd_abi A, typename L, typename R>
-    requires (canonical_vector<L> || canonical_vector<R>)
+    requires (!simd_class<L> || canonical_vector<L>) &&
+        (!simd_class<R> || canonical_vector<R>) && requires(L lhs, R rhs) {
+            { addsub(internal::abi<A>, lhs, rhs) } -> vector_with_abi<A>;
+        }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto native(A abi, L lhs, R rhs) noexcept
-    requires requires {
-        {
-            addsub(internal::abi<A>, lhs, rhs)
-        } -> broadcasting_arithmetic_result<A>;
-    }
-    {
+    static constexpr auto native(A abi, L lhs, R rhs) noexcept {
         return addsub(internal::abi<A>, lhs, rhs);
     }
 
     template <simd_abi A, typename L, typename R>
-    requires (extended_vector<L> || extended_vector<R>)
+    requires (!simd_class<L> || extended_vector<L>) &&
+        (!simd_class<R> || extended_vector<R>) &&
+        unqualified_extended_addsub<L, R, A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto native(A abi, L lhs, R rhs) noexcept
-    requires requires {
-        { addsub(lhs, rhs) } -> extended_operation_vector<A>;
-    }
-    {
+    static constexpr auto native(A abi, L lhs, R rhs) noexcept(
+        noexcept(addsub(lhs, rhs))) {
         return addsub(lhs, rhs);
     }
 
@@ -381,8 +377,7 @@ public:
     }
 
     template <simd_mask M, simd_vector L, simd_vector R>
-    requires requires(
-        M mask, L lhs, R rhs) { addsub_t::operator()(mask, lhs, rhs); }
+    requires invocable<addsub_t, M, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         dx::zero_t, M mask, L lhs, R rhs) noexcept {
@@ -498,9 +493,9 @@ public:
         }
     }
 
-    template <simd_vector L, simd_vector R, const_mask_like M>
-    requires requires(
-        M mask, L lhs, R rhs) { addsub_t::operator()(mask, lhs, rhs); }
+    template <simd_vector L, simd_vector R,
+        const_mask_for<operation_result_t<addsub_t, L, R>> M>
+    requires invocable<addsub_t, M, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         dx::zero_t, M mask, L lhs, R rhs) noexcept {

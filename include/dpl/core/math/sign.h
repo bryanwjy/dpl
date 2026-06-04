@@ -74,30 +74,33 @@ private:
 
     template <simd_abi A, typename L, typename R>
     requires (canonical_vector<L> || canonical_vector<R>) &&
-        unqualified_canonical_sign<L, R, A>
+        requires(L lhs, R rhs) {
+            { sign(internal::abi<A>, lhs, rhs) } -> vector_with_abi<A>;
+        }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto native(A abi, L left, R right) noexcept {
-        return sign(internal::abi<A>, left, right);
+    static constexpr auto native(A abi, L lhs, R rhs) noexcept {
+        return sign(internal::abi<A>, lhs, rhs);
     }
 
     template <simd_abi A, typename L, typename R>
     requires (extended_vector<L> || extended_vector<R>) &&
         unqualified_extended_sign<L, R, A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto native(A abi, L left, R right) noexcept {
-        return sign(left, right);
+    static constexpr auto native(A abi, L lhs, R rhs) noexcept(
+        noexcept(sign(lhs, rhs))) {
+        return sign(lhs, rhs);
     }
 
     template <arithmetic_type E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A>
         DPL_VECTORCALL fallback(
-            basic_vector<E, A> left, basic_vector<E, A> right) noexcept {
+            basic_vector<E, A> lhs, basic_vector<E, A> rhs) noexcept {
         if constexpr (floating_point<E>) {
-            return left ^ (right & dx::msb);
+            return lhs ^ (rhs & dx::msb);
         } else {
-            auto const negated = dx::negate(left, right < dx::zero, left);
-            return dx::select(right == dx::zero, dx::zero, negated);
+            auto const negated = dx::negate(lhs, rhs < dx::zero, lhs);
+            return dx::select(rhs == dx::zero, dx::zero, negated);
         }
     }
 

@@ -169,30 +169,25 @@ private:
     friend ternary_operation_base<fnmsub_t>;
 
     template <simd_abi A, typename AT, typename BT, typename CT>
-    requires ((canonical_vector<AT> || !simd_vector<AT>) &&
-        (canonical_vector<BT> || !simd_vector<BT>) &&
-        (canonical_vector<CT> || !simd_vector<CT>))
+    requires (!simd_class<AT> || canonical_vector<AT>) &&
+        (!simd_class<BT> || canonical_vector<BT>) &&
+        (!simd_class<CT> || canonical_vector<CT>) &&
+        requires(AT a, BT b, CT c) {
+            { fnmsub(internal::abi<A>, a, b, c) } -> vector_with_abi<A>;
+        }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto native(A abi, AT a, BT b, CT c) noexcept
-    requires requires {
-        {
-            fnmsub(internal::abi<A>, a, b, c)
-        } -> broadcasting_arithmetic_result<A>;
-    }
-    {
+    static constexpr auto native(A abi, AT a, BT b, CT c) noexcept {
         return fnmsub(internal::abi<A>, a, b, c);
     }
 
     template <simd_abi A, typename AT, typename BT, typename CT>
-    requires ((extended_vector<AT> || !simd_vector<AT>) ||
-        (extended_vector<BT> || !simd_vector<BT>) ||
-        (extended_vector<CT> || !simd_vector<CT>))
+    requires (!simd_class<AT> || extended_vector<AT>) &&
+        (!simd_class<BT> || extended_vector<BT>) &&
+        (!simd_class<CT> || extended_vector<CT>) &&
+        unqualified_fnmsub<AT, BT, CT, A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto native(A abi, AT a, BT b, CT c) noexcept
-    requires requires {
-        { fnmsub(a, b, c) } -> extended_operation_vector<A>;
-    }
-    {
+    static constexpr auto native(A, AT a, BT b, CT c) noexcept(
+        noexcept(fnmsub(a, b, c))) {
         return fnmsub(a, b, c);
     }
 
@@ -370,8 +365,7 @@ public:
     }
 
     template <simd_mask M, simd_vector AT, simd_vector BT, simd_vector CT>
-    requires requires(
-        M mask, AT a, BT b, CT c) { fnmsub_t::operator()(mask, a, b, c); }
+    requires invocable<fnmsub_t, M, AT, BT, CT>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         dx::zero_t, M mask, AT a, BT b, CT c) noexcept {
@@ -502,9 +496,9 @@ public:
         }
     }
 
-    template <simd_vector AT, simd_vector BT, simd_vector CT, const_mask_like M>
-    requires requires(
-        M mask, AT a, BT b, CT c) { fnmsub_t::operator()(mask, a, b, c); }
+    template <simd_vector AT, simd_vector BT, simd_vector CT,
+        const_mask_for<operation_result_t<fnmsub_t, AT, BT, CT>> M>
+    requires invocable<fnmsub_t, M, AT, BT, CT>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         dx::zero_t, M mask, AT a, BT b, CT c) noexcept {

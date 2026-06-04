@@ -167,26 +167,42 @@ private:
     friend binary_operation_base<bwand_t>;
 
     template <simd_abi A, typename L, typename R>
-    requires (canonical_class<L> || canonical_class<R>)
+    requires (!simd_class<L> || canonical_vector<L>) &&
+        (!simd_class<R> || canonical_vector<R>) && requires(L lhs, R rhs) {
+            { bwand(internal::abi<A>, lhs, rhs) } -> vector_with_abi<A>;
+        }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto native(A abi, L lhs, R rhs) noexcept
-    requires requires {
-        {
-            bwand(internal::abi<A>, lhs, rhs)
-        } -> broadcasting_bitwise_result<A, L, R>;
-    }
-    {
+    static constexpr auto native(A abi, L lhs, R rhs) noexcept {
         return bwand(internal::abi<A>, lhs, rhs);
     }
 
     template <simd_abi A, typename L, typename R>
-    requires (extended_class<L> || extended_class<R>)
+    requires (!simd_class<L> || extended_vector<L>) &&
+        (!simd_class<R> || extended_vector<R>) &&
+        unqualified_extended_bwand<L, R, A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto native(A abi, L lhs, R rhs) noexcept
-    requires requires {
-        { bwand(lhs, rhs) } -> extended_operation_result<A>;
+    static constexpr auto native(A, L lhs, R rhs) noexcept(
+        noexcept(bwand(lhs, rhs))) {
+        return bwand(lhs, rhs);
     }
-    {
+
+    template <simd_abi A, typename L, typename R>
+    requires (!simd_class<L> || canonical_mask<L>) &&
+        (!simd_class<R> || canonical_mask<R>) && requires(L lhs, R rhs) {
+            { bwand(internal::abi<A>, lhs, rhs) } -> mask_with_abi<A>;
+        }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto native(A abi, L lhs, R rhs) noexcept {
+        return bwand(internal::abi<A>, lhs, rhs);
+    }
+
+    template <simd_abi A, typename L, typename R>
+    requires (!simd_class<L> || extended_mask<L>) &&
+        (!simd_class<R> || extended_mask<R>) &&
+        unqualified_extended_mask_bwand<L, R, A>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto native(A, L lhs, R rhs) noexcept(
+        noexcept(bwand(lhs, rhs))) {
         return bwand(lhs, rhs);
     }
 

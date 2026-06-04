@@ -167,26 +167,42 @@ private:
     friend binary_operation_base<bwxor_t>;
 
     template <simd_abi A, typename L, typename R>
-    requires (canonical_class<L> || canonical_class<R>)
+    requires (!simd_class<L> || canonical_vector<L>) &&
+        (!simd_class<R> || canonical_vector<R>) && requires(L lhs, R rhs) {
+            { bwxor(internal::abi<A>, lhs, rhs) } -> vector_with_abi<A>;
+        }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto native(A abi, L lhs, R rhs) noexcept
-    requires requires {
-        {
-            bwxor(internal::abi<A>, lhs, rhs)
-        } -> broadcasting_bitwise_result<A, L, R>;
-    }
-    {
+    static constexpr auto native(A abi, L lhs, R rhs) noexcept {
         return bwxor(internal::abi<A>, lhs, rhs);
     }
 
     template <simd_abi A, typename L, typename R>
-    requires (extended_class<L> || extended_class<R>)
+    requires (!simd_class<L> || extended_vector<L>) &&
+        (!simd_class<R> || extended_vector<R>) &&
+        unqualified_extended_bwxor<L, R, A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto native(A abi, L lhs, R rhs) noexcept
-    requires requires {
-        { bwxor(lhs, rhs) } -> extended_operation_vector<A>;
+    static constexpr auto native(A, L lhs, R rhs) noexcept(
+        noexcept(bwxor(lhs, rhs))) {
+        return bwxor(lhs, rhs);
     }
-    {
+
+    template <simd_abi A, typename L, typename R>
+    requires (!simd_class<L> || canonical_mask<L>) &&
+        (!simd_class<R> || canonical_mask<R>) && requires(L lhs, R rhs) {
+            { bwxor(internal::abi<A>, lhs, rhs) } -> mask_with_abi<A>;
+        }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto native(A abi, L lhs, R rhs) noexcept {
+        return bwxor(internal::abi<A>, lhs, rhs);
+    }
+
+    template <simd_abi A, typename L, typename R>
+    requires (!simd_class<L> || extended_mask<L>) &&
+        (!simd_class<R> || extended_mask<R>) &&
+        unqualified_extended_mask_bwxor<L, R, A>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto native(A, L lhs, R rhs) noexcept(
+        noexcept(bwxor(lhs, rhs))) {
         return bwxor(lhs, rhs);
     }
 

@@ -21,26 +21,10 @@ concept canonical_compare_result =
     same_abi_as<A, typename T::abi_type>;
 
 template <typename T, typename L, typename R, typename A = common_abi_t<L, R>>
-concept extended_compare_result =
-    simd_mask<T> && same_as<typename L::value_type, typename T::value_type> &&
-    same_as<typename R::value_type, typename T::value_type> &&
-    common_abi_with<typename T::abi_type, A>;
-
-template <typename T, typename L, typename R, typename A = common_abi_t<L, R>>
 concept canonical_compare_mask = simd_mask<T> &&
     common_size_with<typename L::value_type, typename T::value_type> &&
     common_size_with<typename R::value_type, typename T::value_type> &&
     same_abi_as<A, typename T::abi_type>;
-
-template <typename T, typename L, typename R, typename A = common_abi_t<L, R>>
-concept extended_compare_mask = simd_mask<T> &&
-    common_size_with<typename L::value_type, typename T::value_type> &&
-    common_size_with<typename R::value_type, typename T::value_type> &&
-    common_abi_with<typename T::abi_type, A>;
-
-template <typename T, typename A>
-concept broadcasting_compare_result =
-    simd_mask<T> && common_abi_with<typename T::abi_type, A>;
 } // namespace datapar::internal
 
 DPL_DEFAULT_NAMESPACE_END

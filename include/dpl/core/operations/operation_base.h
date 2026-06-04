@@ -71,7 +71,9 @@ public:
     requires (simd_class<L> && !simd_class<R> && broadcastable_to<R, L>) ||
         (simd_class<R> && !simd_class<L> && broadcastable_to<L, R>)
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-        static constexpr auto operator()(L lhs, R rhs) noexcept
+        static constexpr auto operator()(L lhs, R rhs) noexcept(
+            (!simd_class<L> || canonical_class<L>) &&
+            (!simd_class<R> || canonical_class<R>))
     requires requires(
         T impl) { impl(selective_cast<L, R>(lhs), selective_cast<L, R>(rhs)); }
     {
@@ -209,7 +211,10 @@ public:
         (simd_class<CT> && !simd_class<AT> && !simd_class<BT> &&
             broadcastable_to<AT, CT> && broadcastable_to<BT, CT>)
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-        static constexpr auto operator()(AT a, BT b, CT c) noexcept
+        static constexpr auto operator()(AT a, BT b, CT c) noexcept(
+            (!simd_class<AT> || canonical_class<AT>) &&
+            (!simd_class<BT> || canonical_class<BT>) &&
+            (!simd_class<CT> || canonical_class<CT>))
     requires requires(T impl) {
         impl(selective_cast<AT, BT, CT>(a), selective_cast<AT, BT, CT>(b),
             selective_cast<AT, BT, CT>(c));

@@ -4,12 +4,12 @@
 #include "dpl/config.h"
 
 #include "dpl/core/concepts/common_class_with.h"
+#include "dpl/core/concepts/simd_lane_type.h"
 #include "dpl/core/concepts/simd_mask.h"
 #include "dpl/core/concepts/simd_vector.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/fwd/basic.h"
-#  include "dpl/core/type_traits/simd_lane_type.h"
 #  include "dpl/std/concepts/same_as.h"
 #endif
 
@@ -42,14 +42,10 @@ DPL_EXPORT template <typename T, typename A>
 concept simd_with_abi =
     atom::simd_basics<T> && simd_with<T, typename T::value_type, A>;
 
-DPL_EXPORT template <typename T, typename A>
-concept mask_with_abi =
-    atom::simd_basics<T> && mask_with<T, simd_lane_type_t<T>, A>;
-
-DPL_EXPORT template <typename T, typename A>
-concept simd_class_with_abi = atom::simd_basics<T> &&
-    (simd_with<T, typename T::value_type, A> ||
-        mask_with<T, simd_lane_type_t<T>, A>);
+template <typename T, typename A>
+concept vector_with_abi = simd_vector<T> && same_as<A, typename T::abi_type>;
+template <typename T, typename A>
+concept mask_with_abi = simd_mask<T> && same_as<A, typename T::abi_type>;
 
 } // namespace datapar
 
