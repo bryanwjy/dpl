@@ -3,6 +3,8 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/operations/evaluate.h"
+#include "dpl/core/operations/extended_operations.h"
 #include "dpl/core/operations/masked.h"
 
 #if !DPL_MODULES
@@ -21,6 +23,7 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 template <size_t...>
+void permute(...) noexcept = delete;
 void permute(...) noexcept = delete;
 
 template <size_t... Is>
@@ -46,46 +49,58 @@ concept unqualified_extended_permutei = requires(T val) {
 };
 
 template <typename T, size_t... Is>
-concept unqualified_permutei = unqualified_extended_permutei<T, Is...> ||
-    (decayable_vector_for<T, operation_category::lane_permutation> &&
-        regular_invocable<permutei_t<Is...>, T>);
+concept expression_permutei = simd_expression<T> &&
+    invocable<permutei_t<Is...>, simd_expression_result_t<T>>;
 
-template <typename Op, typename S, typename C, typename T,
-    typename A = common_abi_t<C, T>>
-concept unqualified_canonical_mpermutei = requires(S src, C mask, T val) {
+template <typename T, size_t... Is>
+concept decayable_permutei =
+    decayable_vector_for<T, operation_category::lane_permutation> &&
+    regular_invocable<permutei_t<Is...>, canonical_type_t<T>>;
+
+template <typename T, size_t... Is>
+concept extended_permutei = unqualified_extended_permutei<T, Is...> ||
+    expression_permutei<T, Is...> || decayable_permutei<T, Is...>;
+
+template <typename Op, typename S, typename M, typename T,
+    typename A = common_abi_t<M, T>>
+concept unqualified_canonical_mpermutei = requires(S src, M mask, T val) {
     {
         Op::native(internal::abi<A>, src, mask, val)
     } -> canonical_permute_result<canonical_if_zero_t<S, T, A>>;
 };
 
-template <typename Op, typename S, typename C, typename T,
-    typename A = common_abi_t<C, T>>
-concept unqualified_extended_mpermutei = requires(S src, C mask, T val) {
-    {
-        Op::native(src, mask, val)
-    } -> permute_result<canonical_if_zero_t<S, T, A>>;
+template <typename Op, typename S, typename M, typename T,
+    typename A = common_abi_t<M, T>>
+concept unqualified_extended_mpermutei = requires(S src, M mask, T val) {
+    { Op::native(src, mask, val) } -> extended_operation_vector<A>;
 };
 
-template <typename Op, typename S, typename C, typename T,
-    typename A = common_abi_t<T, C>>
+template <typename Op, typename S, typename M, typename T>
+concept expression_mpermutei =
+    (simd_expression<S> || simd_expression<M> || simd_expression<T>) &&
+    regular_invocable<Op, expression_result_or_zero_t<S>,
+        simd_expression_result_t<M>, simd_expression_result_t<T>>;
+
+template <typename Op, typename S, typename M, typename T,
+    typename A = common_abi_t<T, M>>
 concept decayable_mpermutei = decayable_vector_for<canonical_if_zero_t<S, T, A>,
                                   operation_category::lane_permutation> &&
     decayable_vector_for<T, operation_category::lane_permutation> &&
-    decayable_mask_for<C, operation_category::lane_permutation> &&
-    requires(Op op, canonical_or_zero_t<S, T, A> s, canonical_type_t<C> c,
-        canonical_type_t<T> t) { op(s, c, t); };
+    decayable_mask_for<M, operation_category::lane_permutation> &&
+    regular_invocable<Op, canonical_or_zero_t<S, T, A>, canonical_type_t<M>,
+        canonical_type_t<T>>;
 
-template <typename Op, typename S, typename C, typename T,
-    typename A = common_abi_t<T, C>>
-concept extended_mpermutei = unqualified_extended_mpermutei<Op, S, C, T, A> ||
-    decayable_mpermutei<Op, S, C, T, A>;
+template <typename Op, typename S, typename M, typename T,
+    typename A = common_abi_t<T, M>>
+concept extended_mpermutei = unqualified_extended_mpermutei<Op, S, M, T, A> ||
+    expression_mpermutei<Op, S, M, T> || decayable_mpermutei<Op, S, M, T, A>;
 
 template <typename Op, typename S, typename M, typename T,
     typename A = common_abi_t<canonical_if_zero_t<S, T>, T>>
 concept unqualified_canonical_impermutei = requires(S src, M mask, T val) {
     {
         Op::native(internal::abi<A>, src,
-            internal::to_const_mask<A, permutei_t, S, T>(mask), val)
+            internal::to_const_mask<A, Op, S, T>(mask), val)
     } -> canonical_permute_result<canonical_if_zero_t<S, T, A>>;
 };
 
@@ -93,22 +108,26 @@ template <typename Op, typename S, typename M, typename T,
     typename A = common_abi_t<canonical_if_zero_t<S, T>, T>>
 concept unqualified_extended_impermutei = requires(S src, M mask, T val) {
     {
-        Op::native(src, internal::to_const_mask<A, permutei_t, S, T>(mask), val)
-    } -> permute_result<canonical_if_zero_t<S, T, A>>;
+        Op::native(src, internal::to_const_mask<A, Op, S, T>(mask), val)
+    } -> extended_operation_vector<A>;
 };
+
+template <typename Op, typename S, typename M, typename T>
+concept expression_impermutei = (simd_expression<S> || simd_expression<T>) &&
+    regular_invocable<Op, expression_result_or_zero_t<S>, M,
+        simd_expression_result_t<T>>;
 
 template <typename Op, typename S, typename M, typename T,
     typename A = common_abi_t<canonical_if_zero_t<S, T>, T>>
 concept decayable_impermutei = decayable_vector_for<canonical_if_zero_t<S, T>,
                                    operation_category::lane_permutation> &&
     decayable_vector_for<T, operation_category::lane_permutation> &&
-    requires(Op op, canonical_or_zero_t<S, T, A> s, M mask,
-        canonical_type_t<T> t) { op(s, mask, t); };
+    regular_invocable<Op, canonical_or_zero_t<S, T, A>, M, canonical_type_t<T>>;
 
 template <typename Op, typename S, typename M, typename T,
     typename A = common_abi_t<canonical_if_zero_t<S, T>, T>>
 concept extended_impermutei = unqualified_extended_impermutei<Op, S, M, T, A> ||
-    decayable_impermutei<Op, S, M, T, A>;
+    expression_impermutei<Op, S, M, T> || decayable_impermutei<Op, S, M, T, A>;
 
 template <size_t... Is>
 struct permutei_t {
@@ -245,11 +264,13 @@ public:
     template <fixed_width_vector T>
     requires extended_vector<T> &&
         (sizeof...(Is) == simd_abi_traits<T>::size) &&
-        unqualified_permutei<T, Is...>
+        extended_permutei<T, Is...>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T arg) noexcept {
         if constexpr (unqualified_extended_permutei<T, Is...>) {
             return permute<Is...>(arg);
+        } else if constexpr (expression_permutei<T, Is...>) {
+            return operator()(dx::evaluate(arg));
         } else {
             return operator()(dx::to_canonical(arg));
         }
@@ -307,6 +328,9 @@ public:
     static constexpr auto operator()(S src, M mask, T val) noexcept {
         if constexpr (unqualified_extended_mpermutei<permutei_t, S, M, T>) {
             return permute<Is...>(src, mask, val);
+        } else if constexpr (expression_mpermutei<permutei_t, S, M, T>) {
+            return operator()(
+                dx::evaluate(src), dx::evaluate(mask), dx::evaluate(val));
         } else {
             return operator()(dx::to_canonical(src), dx::to_canonical(mask),
                 dx::to_canonical(val));
@@ -351,13 +375,16 @@ public:
         if constexpr (unqualified_extended_mpermutei<permutei_t, dx::zero_t, M,
                           T>) {
             return permute<Is...>(mask, val);
+        } else if constexpr (expression_mpermutei<permutei_t, dx::zero_t, M,
+                                 T>) {
+            return operator()(dx::evaluate(mask), dx::evaluate(val));
         } else {
             return operator()(dx::to_canonical(mask), dx::to_canonical(val));
         }
     }
 
     template <simd_mask M, simd_vector T>
-    requires requires(M mask, T val) { permutei_t::operator()(mask, val); }
+    requires invocable<permutei_t, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(dx::zero_t, M mask, T val) noexcept {
         return operator()(mask, val);
@@ -400,12 +427,14 @@ public:
         imm_maskable_args<S, T> && extended_impermutei<permutei_t, S, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(S src, M mask, T val) noexcept {
-        if constexpr (unqualified_extended_mpermutei<permutei_t, S, M, T>) {
+        if constexpr (unqualified_extended_impermutei<permutei_t, S, M, T>) {
             return permute<Is...>(
                 src, dx::to_compatible_const_mask<S>(mask), val);
+        } else if constexpr (expression_impermutei<permutei_t, S, M, T>) {
+            return operator()(dx::evaluate(src), mask, dx::evaluate(val));
         } else {
-            return operator()(dx::to_canonical(src),
-                dx::to_compatible_const_mask<S>(mask), dx::to_canonical(val));
+            return operator()(
+                dx::to_canonical(src), mask, dx::to_canonical(val));
         }
     }
 
@@ -437,14 +466,16 @@ public:
                           T>) {
             return permute<Is...>(
                 dx::zero, dx::to_compatible_const_mask<T>(mask), val);
+        } else if constexpr (expression_impermutei<permutei_t, dx::zero_t, M,
+                                 T>) {
+            return operator()(mask, dx::evaluate(val));
         } else {
-            return operator()(
-                dx::to_compatible_const_mask<T>(mask), dx::to_canonical(val));
+            return operator()(mask, dx::to_canonical(val));
         }
     }
 
     template <simd_vector T, const_mask_for<T> M>
-    requires requires(M mask, T val) { permutei_t::operator()(mask, val); }
+    requires invocable<permutei_t, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(dx::zero_t, M mask, T val) noexcept {
         return operator()(mask, val);
@@ -460,53 +491,59 @@ concept unqualified_canonical_permute = requires(T val, I idx) {
 
 template <typename T, typename I, typename A = common_abi_t<T, I>>
 concept unqualified_extended_permute = requires(T val, I idx) {
-    {
-        permute(val, idx)
-    } -> permute_result<basic_vector<typename T::value_type, A>>;
+    { permute(val, idx) } -> extended_operation_vector<A>;
 };
 
-template <typename T, typename I, typename A = common_abi_t<T, I>>
-concept unqualified_permute = unqualified_extended_permute<T, I, A> ||
-    (decayable_vector_for<T, operation_category::lane_permutation> &&
-        decayable_vector_for<T, operation_category::lane_permutation> &&
-        regular_invocable<permute_t, T, I, A>);
+template <typename T, typename I>
+concept expression_permute =
+    simd_expression<T> && invocable<permute_t, simd_expression_result_t<T>, I>;
 
-template <typename S, typename C, typename L, typename R,
-    typename A = common_abi_t<L, R, C>>
-concept unqualified_canonical_mpermute = requires(S src, C mask, L lhs, R rhs) {
+template <typename T, typename I>
+concept decayable_permute =
+    decayable_vector_for<T, operation_category::lane_permutation> &&
+    regular_invocable<permute_t, canonical_type_t<T>, I>;
+
+template <typename T, typename I, typename A = common_abi_t<T, I>>
+concept extended_permute = unqualified_extended_permute<T, I, A> ||
+    expression_permute<T, I> || decayable_permute<T, I>;
+
+template <typename S, typename M, typename L, typename R,
+    typename A = common_abi_t<L, R, M>>
+concept unqualified_canonical_mpermute = requires(S src, M mask, L lhs, R rhs) {
     {
         permute(internal::abi<A>, src, mask, lhs, rhs)
     } -> equivalent_simd_as<
         canonical_if_zero_t<S, operation_result_t<permute_t, L, R>, A>>;
 };
 
-template <typename S, typename C, typename L, typename R,
-    typename A = common_abi_t<L, R, C>>
-concept unqualified_extended_mpermute = requires(S src, C mask, L lhs, R rhs) {
-    {
-        permute(src, mask, lhs, rhs)
-    } -> equivalent_simd_as<
-        canonical_if_zero_t<S, operation_result_t<permute_t, L, R>, A>>;
+template <typename S, typename M, typename L, typename R,
+    typename A = common_abi_t<L, R, M>>
+concept unqualified_extended_mpermute = requires(S src, M mask, L lhs, R rhs) {
+    { permute(src, mask, lhs, rhs) } -> extended_operation_vector<A>;
 };
 
-template <typename S, typename C, typename L, typename R,
-    typename A = common_abi_t<L, R, C>>
+template <typename S, typename M, typename L, typename R>
+concept expression_mpermute =
+    (simd_expression<S> || simd_expression<M> || simd_expression<L>) &&
+    invocable<permute_t, expression_result_or_zero_t<S>,
+        simd_expression_result_t<M>, simd_expression_result_t<L>, R>;
+
+template <typename S, typename M, typename L, typename R,
+    typename A = common_abi_t<L, R, M>>
 concept decayable_mpermute =
     decayable_vector_for<
         canonical_if_zero_t<S, operation_result_t<permute_t, L, R>, A>,
         operation_category::lane_permutation> &&
-    decayable_mask_for<C, operation_category::lane_permutation> &&
+    decayable_mask_for<M, operation_category::lane_permutation> &&
     decayable_vector_for<L, operation_category::lane_permutation> &&
-    decayable_vector_for<R, operation_category::lane_permutation> &&
-    requires(permute_t op,
-        canonical_if_zero_t<S, operation_result_t<permute_t, L, R>, A> s,
-        canonical_type_t<C> c, canonical_type_t<L> l,
-        canonical_type_t<R> r) { op(s, c, l, r); };
+    regular_invocable<permute_t,
+        canonical_or_zero_t<S, operation_result_t<permute_t, L, R>, A>,
+        canonical_type_t<M>, canonical_type_t<L>, R>;
 
-template <typename S, typename C, typename L, typename R,
-    typename A = common_abi_t<L, R, C>>
-concept extended_mpermute = unqualified_extended_mpermute<S, C, L, R, A> ||
-    decayable_mpermute<S, C, L, R, A>;
+template <typename S, typename M, typename L, typename R,
+    typename A = common_abi_t<L, R, M>>
+concept extended_mpermute = unqualified_extended_mpermute<S, M, L, R, A> ||
+    expression_mpermute<S, M, L, R> || decayable_mpermute<S, M, L, R, A>;
 
 template <typename S, typename M, typename L, typename R,
     typename A = common_abi_t<
@@ -529,9 +566,14 @@ concept unqualified_extended_impermute = requires(S src, M mask, L lhs, R rhs) {
     {
         permute(
             src, internal::to_const_mask<A, permute_t, S, L, R>(mask), lhs, rhs)
-    } -> equivalent_simd_as<
-        canonical_if_zero_t<S, operation_result_t<permute_t, L, R>, A>>;
+    } -> extended_operation_vector<A>;
 };
+
+template <typename S, typename M, typename L, typename R>
+concept expression_impermute =
+    (simd_expression<S> || simd_expression<M> || simd_expression<L>) &&
+    regular_invocable<permute_t, expression_result_or_zero_t<S>, M,
+        simd_expression_result_t<L>, R>;
 
 template <typename S, typename M, typename L, typename R,
     typename A = common_abi_t<
@@ -543,17 +585,16 @@ concept decayable_impermute =
         operation_category::lane_permutation> &&
     decayable_vector_for<L, operation_category::lane_permutation> &&
     decayable_vector_for<R, operation_category::lane_permutation> &&
-    requires(permute_t op,
-        canonical_if_zero_t<S, operation_result_t<permute_t, L, R>, A> s,
-        M mask, canonical_type_t<L> l,
-        canonical_type_t<R> r) { op(s, mask, l, r); };
+    regular_invocable<permute_t,
+        canonical_or_zero_t<S, operation_result_t<permute_t, L, R>, A>, M,
+        canonical_type_t<L>, R>;
 
 template <typename S, typename M, typename L, typename R,
     typename A = common_abi_t<
         canonical_if_zero_t<S, operation_result_t<permute_t, L, R>>,
         operation_result_t<permute_t, L, R>>>
 concept extended_impermute = unqualified_extended_impermute<S, M, L, R, A> ||
-    decayable_impermute<S, M, L, R, A>;
+    expression_impermute<S, M, L, R> || decayable_impermute<S, M, L, R, A>;
 
 struct permute_t {
 private:
@@ -576,9 +617,9 @@ public:
     template <simd_vector T, size_t... Is>
     requires regular_invocable<permutei_t<Is...>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T arg, index_sequence<Is...>) noexcept {
+    static constexpr auto operator()(T val, index_sequence<Is...>) noexcept {
         constexpr permutei_t<Is...> permute{};
-        return permute(arg);
+        return permute(val);
     }
 
     template <typename S, simd_mask M, simd_vector T, size_t... Is>
@@ -622,16 +663,16 @@ public:
     requires common_size_with<E, I> && integral<I>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
-        basic_vector<E, A> arg, basic_vector<I, A> idx) noexcept {
+        basic_vector<E, A> val, basic_vector<I, A> idx) noexcept {
         if constexpr (unqualified_canonical_permute<basic_vector<E, A>,
                           basic_vector<I, A>>) {
             if consteval {
-                return fallback(arg, idx);
+                return fallback(val, idx);
             } else {
-                return permute(internal::abi<A>, arg, idx);
+                return permute(internal::abi<A>, val, idx);
             }
         } else {
-            return fallback(arg, idx);
+            return fallback(val, idx);
         }
     }
 
@@ -642,20 +683,20 @@ public:
         unqualified_canonical_permute<basic_vector<E, RA>, basic_vector<I, LA>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
-        basic_vector<E, LA> arg, basic_vector<I, RA> idx) noexcept {
-        return permute(internal::abi<common_abi_t<LA, RA>>, arg, idx);
+        basic_vector<E, LA> val, basic_vector<I, RA> idx) noexcept {
+        return permute(internal::abi<common_abi_t<LA, RA>>, val, idx);
     }
 
-    template <simd_vector T, simd_vector I>
-    requires (extended_vector<T> || extended_vector<I>) &&
-        common_size_with<typename T::value_type, typename I::value_type> &&
-        integral<typename I::value_type> && unqualified_permute<T, I>
+    template <extended_vector T, canonical_vector I>
+    requires integral<typename I::value_type> && extended_permute<T, I>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T arg, I idx) noexcept {
+    static constexpr auto operator()(T val, I idx) noexcept {
         if constexpr (unqualified_extended_permute<T, I>) {
-            return permute(arg, idx);
+            return permute(val, idx);
+        } else if constexpr (expression_permute<T, I>) {
+            return operator()(dx::evaluate(val), idx);
         } else {
-            return operator()(dx::to_canonical(arg), dx::to_canonical(idx));
+            return operator()(dx::to_canonical(val), idx);
         }
     }
 
@@ -681,9 +722,9 @@ public:
 
     template <simd_abi SA, simd_element_for<SA> LE, common_size_with<LE> ME,
         simd_abi LA, common_abi_with<LA> RA, simd_element_for<RA> RE>
-    requires integral<RE> && common_size_with<LE, RE> &&
-        (different_from<LA, RA> || scalable_abi<SA> || scalable_abi<LA> ||
-            scalable_abi<RA>) &&
+    requires integral<RE> &&
+        (common_size_with<LE, RE> || different_from<LA, RA> ||
+            scalable_abi<SA> || scalable_abi<LA> || scalable_abi<RA>) &&
         simd_element_for<LE, LA> &&
         maskable_args<basic_vector<LE, SA>, basic_mask<ME, SA>,
             basic_vector<LE, LA>, basic_vector<RE, RA>> &&
@@ -696,16 +737,17 @@ public:
         return permute(internal::abi<SA>, src, mask, lhs, rhs);
     }
 
-    template <simd_vector S, simd_mask M, simd_vector L, simd_vector R>
+    template <simd_vector S, simd_mask M, simd_vector L, canonical_vector R>
     requires integral<typename R::value_type> &&
-        common_size_with<typename L::value_type, typename R::value_type> &&
-        (extended_vector<S> || extended_mask<M> || extended_vector<L> ||
-            extended_vector<R>) &&
+        (extended_vector<S> || extended_mask<M> || extended_vector<L>) &&
         maskable_args<S, M, L, R> && extended_mpermute<S, M, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(S src, M mask, L lhs, R rhs) noexcept {
         if constexpr (unqualified_extended_mpermute<S, M, L, R>) {
             return permute(src, mask, lhs, rhs);
+        } else if constexpr (expression_mpermute<S, M, L, R>) {
+            return operator()(
+                dx::evaluate(src), dx::evaluate(mask), dx::evaluate(lhs), rhs);
         } else {
             return operator()(dx::to_canonical(src), dx::to_canonical(mask),
                 dx::to_canonical(lhs), dx::to_canonical(rhs));
@@ -714,6 +756,7 @@ public:
 
     template <fixed_width_abi A, simd_element_for<A> LE, simd_element_for<A> RE,
         common_size_with<LE> ME>
+    requires integral<RE> && common_size_with<LE, RE>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<LE, A> operator()(basic_mask<ME, A> mask,
         basic_vector<LE, A> lhs, basic_vector<RE, A> rhs) noexcept {
@@ -730,51 +773,55 @@ public:
     }
 
     template <simd_abi SA, simd_element_for<SA> E, common_size_with<E> ME,
-        simd_abi LA, common_abi_with<LA> RA>
-    requires (different_from<SA, common_abi_t<LA, RA>> ||
-                 different_from<LA, RA> || scalable_abi<SA> ||
-                 scalable_abi<LA> || scalable_abi<RA>) &&
-        simd_element_for<E, LA> && simd_element_for<E, RA> &&
+        simd_abi LA, common_abi_with<LA> RA, simd_element_for<RA> RE>
+    requires integral<RE> &&
+        (different_from<SA, common_abi_t<LA, RA>> || different_from<LA, RA> ||
+            scalable_abi<SA> || scalable_abi<LA> || scalable_abi<RA> ||
+            !common_size_with<E, RE>) &&
+        simd_element_for<E, LA> &&
         zmaskable_args<basic_mask<ME, SA>, basic_vector<E, LA>,
-            basic_vector<E, RA>> &&
+            basic_vector<RE, RA>> &&
         unqualified_canonical_mpermute<zero_t, basic_mask<ME, SA>,
-            basic_vector<E, LA>, basic_vector<E, RA>>
+            basic_vector<E, LA>, basic_vector<RE, RA>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(basic_mask<ME, SA> mask,
-        basic_vector<E, LA> lhs, basic_vector<E, RA> rhs) noexcept {
+        basic_vector<E, LA> lhs, basic_vector<RE, RA> rhs) noexcept {
         return permute(
             internal::abi<common_abi_t<LA, RA>>, dx::zero, mask, lhs, rhs);
     }
 
-    template <simd_mask M, simd_vector L, simd_vector R>
-    requires (extended_mask<M> || extended_vector<L> || extended_vector<R>) &&
-        zmaskable_args<M, L, R> && extended_mpermute<zero_t, M, L, R>
+    template <simd_mask M, simd_vector L, canonical_vector R>
+    requires (extended_mask<M> || extended_vector<L>) &&
+        integral<typename R::value_type> && zmaskable_args<M, L, R> &&
+        extended_mpermute<zero_t, M, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, L lhs, R rhs) noexcept {
         if constexpr (unqualified_extended_mpermute<zero_t, M, L, R>) {
-            return permute(mask, lhs, rhs);
+            return permute(dx::zero, mask, lhs, rhs);
+        } else if constexpr (expression_mpermute<zero_t, M, L, R>) {
+            return operator()(dx::evaluate(mask), dx::evaluate(lhs), rhs);
         } else {
-            return operator()(dx::to_canonical(mask), dx::to_canonical(lhs),
-                dx::to_canonical(rhs));
+            return operator()(
+                dx::to_canonical(mask), dx::to_canonical(lhs), rhs);
         }
     }
 
     template <simd_mask M, simd_vector L, simd_vector R>
-    requires requires(
-        M mask, L lhs, R rhs) { permute_t::operator()(mask, lhs, rhs); }
+    requires invocable<permute_t, M, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         dx::zero_t, M mask, L lhs, R rhs) noexcept {
         return operator()(mask, lhs, rhs);
     }
 
-    template <fixed_width_abi A, simd_element_for<A> E,
+    template <fixed_width_abi A, simd_element_for<A> E, simd_element_for<A> RE,
         const_mask_for<basic_vector<E, A>> M>
+    requires integral<RE> && common_size_with<E, RE>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A> operator()(basic_vector<E, A> src,
-        M mask, basic_vector<E, A> lhs, basic_vector<E, A> rhs) noexcept {
+        M mask, basic_vector<E, A> lhs, basic_vector<RE, A> rhs) noexcept {
         if constexpr (unqualified_canonical_impermute<basic_vector<E, A>, M,
-                          basic_vector<E, A>, basic_vector<E, A>>) {
+                          basic_vector<E, A>, basic_vector<RE, A>>) {
             if consteval {
                 return internal::masked<permute_t>(src, mask, lhs, rhs);
             } else {
@@ -789,43 +836,50 @@ public:
 
     template <simd_abi SA, simd_element_for<SA> E,
         const_mask_for<basic_vector<E, SA>> M, simd_abi LA,
-        common_abi_with<LA> RA>
-    requires (different_from<SA, common_abi_t<LA, RA>> ||
-                 different_from<LA, RA> || scalable_abi<SA> ||
-                 scalable_abi<LA> || scalable_abi<RA>) &&
-        simd_element_for<E, LA> && simd_element_for<E, RA> &&
+        common_abi_with<LA> RA, simd_element_for<RA> RE>
+    requires integral<RE> &&
+        (different_from<SA, common_abi_t<LA, RA>> || different_from<LA, RA> ||
+            scalable_abi<SA> || scalable_abi<LA> || scalable_abi<RA> ||
+            !common_size_with<RE, E>) &&
+        simd_element_for<E, LA> &&
         imm_maskable_args<basic_vector<E, SA>, basic_vector<E, LA>,
             basic_vector<E, RA>> &&
         unqualified_canonical_impermute<basic_vector<E, SA>, M,
             basic_vector<E, LA>, basic_vector<E, RA>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, SA> operator()(basic_vector<E, SA> src,
-        M mask, basic_vector<E, LA> lhs, basic_vector<E, RA> rhs) noexcept {
+        M mask, basic_vector<E, LA> lhs, basic_vector<RE, RA> rhs) noexcept {
         return permute(internal::abi<SA>, src,
             dx::to_compatible_const_mask<basic_vector<E, SA>>(mask), lhs, rhs);
     }
 
-    template <simd_vector S, const_mask_for<S> M, simd_vector L, simd_vector R>
-    requires (extended_vector<S> || extended_vector<L> || extended_vector<R>) &&
-        imm_maskable_args<S, L, R> && extended_impermute<S, M, L, R>
+    template <simd_vector S, const_mask_for<S> M, simd_vector L,
+        canonical_vector R>
+    requires (extended_vector<S> || extended_vector<L>) &&
+        integral<typename R::value_type> && imm_maskable_args<S, L, R> &&
+        extended_impermute<S, M, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(S src, M mask, L lhs, R rhs) noexcept {
         if constexpr (unqualified_extended_impermute<S, M, L, R>) {
             return permute(
                 src, dx::to_compatible_const_mask<S>(mask), lhs, rhs);
+        } else if constexpr (expression_impermute<S, M, L, R>) {
+            return operator()(
+                dx::evaluate(src), mask, dx::evaluate(lhs), dx::evaluate(rhs));
         } else {
             return operator()(dx::to_canonical(src), mask,
                 dx::to_canonical(lhs), dx::to_canonical(rhs));
         }
     }
 
-    template <fixed_width_abi A, simd_element_for<A> E,
+    template <fixed_width_abi A, simd_element_for<A> E, simd_element_for<A> RE,
         const_mask_for<basic_vector<E, A>> M>
+    requires integral<RE> && common_size_with<RE, E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A> operator()(
-        M mask, basic_vector<E, A> lhs, basic_vector<E, A> rhs) noexcept {
+        M mask, basic_vector<E, A> lhs, basic_vector<RE, A> rhs) noexcept {
         if constexpr (unqualified_canonical_impermute<zero_t, M,
-                          basic_vector<E, A>, basic_vector<E, A>>) {
+                          basic_vector<E, A>, basic_vector<RE, A>>) {
             if consteval {
                 return internal::masked<permute_t>(mask, lhs, rhs);
             } else {
@@ -834,45 +888,48 @@ public:
                     rhs);
             }
         } else {
-            return operator()(dx::zero_v<basic_vector<E, A>>, mask, lhs, rhs);
+            return internal::masked<permute_t>(mask, lhs, rhs);
         }
     }
 
     template <simd_abi LA, common_abi_with<LA> RA,
-        simd_element_for<common_abi_t<LA, RA>> E,
+        simd_element_for<common_abi_t<LA, RA>> E, simd_element_for<RA> RE,
         const_mask_for<basic_vector<E, common_abi_t<LA, RA>>> M>
-    requires (different_from<LA, RA> || scalable_abi<LA> || scalable_abi<RA>) &&
-        simd_element_for<E, LA> && simd_element_for<E, RA> &&
-        imm_zmaskable_args<basic_vector<E, LA>, basic_vector<E, RA>> &&
+    requires integral<RE> &&
+        (different_from<LA, RA> || scalable_abi<LA> || scalable_abi<RA> ||
+            !common_size_with<RE, E>) &&
+        simd_element_for<E, LA> &&
+        imm_zmaskable_args<basic_vector<E, LA>, basic_vector<RE, RA>> &&
         unqualified_canonical_impermute<zero_t, M, basic_vector<E, LA>,
-            basic_vector<E, RA>>
+            basic_vector<RE, RA>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, common_abi_t<LA, RA>> operator()(
-        M mask, basic_vector<E, LA> lhs, basic_vector<E, RA> rhs) noexcept {
+        M mask, basic_vector<E, LA> lhs, basic_vector<RE, RA> rhs) noexcept {
         using A = common_abi_t<LA, RA>;
         return permute(internal::abi<A>, dx::zero,
             dx::to_compatible_const_mask<basic_vector<E, A>>(mask), lhs, rhs);
     }
 
-    template <simd_vector L, simd_vector R,
+    template <extended_vector L, canonical_vector R,
         const_mask_for<operation_result_t<permute_t, L, R>> M>
-    requires (extended_vector<L> || extended_vector<R>) &&
-        imm_zmaskable_args<L, R> && extended_impermute<zero_t, M, L, R>
+    requires imm_zmaskable_args<L, R> && extended_impermute<zero_t, M, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, L lhs, R rhs) noexcept {
         using S = operation_result_t<permute_t, L, R>;
         if constexpr (unqualified_extended_impermute<zero_t, M, L, R>) {
             return permute(
                 dx::zero, dx::to_compatible_const_mask<S>(mask), lhs, rhs);
+        } else if constexpr (expression_impermute<zero_t, M, L, R>) {
+            return operator()(mask, dx::evaluate(lhs), dx::evaluate(rhs));
         } else {
-            return operator()(dx::to_compatible_const_mask<S>(mask),
-                dx::to_canonical(lhs), dx::to_canonical(rhs));
+            return operator()(
+                mask, dx::to_canonical(lhs), dx::to_canonical(rhs));
         }
     }
 
-    template <simd_vector L, simd_vector R, const_mask_like M>
-    requires requires(
-        M mask, L lhs, R rhs) { permute_t::operator()(mask, lhs, rhs); }
+    template <simd_vector L, simd_vector R,
+        const_mask_for<operation_result_t<permute_t, L, R>> M>
+    requires invocable<permute_t, M, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         dx::zero_t, M mask, L lhs, R rhs) noexcept {

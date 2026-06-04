@@ -34,10 +34,18 @@ concept unqualified_extended_some_of = requires(T val) {
     { some_of(val) } -> boolean_testable;
 };
 
+template <typename T>
+concept expression_some_of = mask_expression<T> &&
+    regular_invocable<some_of_t, simd_expression_result_t<T>>;
+
+template <typename T>
+concept decayable_some_of =
+    decayable_mask_for<T, operation_category::lane_reduction> &&
+    regular_invocable<some_of_t, canonical_type_t<T>>;
+
 template <typename T, typename A = typename T::abi_type>
-concept unqualified_some_of = unqualified_extended_some_of<T, A> ||
-    (decayable_mask_for<T, operation_category::lane_reduction> &&
-        regular_invocable<some_of_t, canonical_type_t<T>>);
+concept extended_some_of = unqualified_extended_some_of<T, A> ||
+    expression_some_of<T> || decayable_some_of<T>;
 
 struct some_of_t {
 private:
@@ -71,11 +79,13 @@ public:
     }
 
     template <extended_mask T>
-    requires unqualified_some_of<T>
+    requires extended_some_of<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T val) noexcept {
         if constexpr (unqualified_extended_some_of<T>) {
             return some_of(val);
+        } else if constexpr (expression_some_of<T>) {
+            return operator()(dx::evaluate(val));
         } else {
             return operator()(dx::to_canonical(val));
         }

@@ -74,7 +74,7 @@ public:
     template <extended_mask T>
     requires unqualified_logical_not<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T val) noexcept {
+    static constexpr auto operator()(T val) {
         if constexpr (unqualified_extended_logical_not<T>) {
             return logical_not(val);
         } else {

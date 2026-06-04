@@ -35,7 +35,7 @@ template <typename M, typename L, typename R,
     typename A =
         common_abi_t<L, canonical_if_zero_t<R, L, common_abi_t<L, M>>, M>>
 concept unqualified_extended_splice = requires(M mask, L lhs, R rhs) {
-    { splice(mask, lhs, rhs) } -> extended_select_vector<M, L, R, A>;
+    { splice(mask, lhs, rhs) } -> extended_operation_vector<A>;
 };
 
 template <typename M, typename L, typename R,
@@ -51,7 +51,7 @@ template <typename M, typename L, typename R,
 concept unqualified_extended_splicei = requires(L lhs, R rhs) {
     {
         splice(internal::select_mask<M, L, R>(), lhs, rhs)
-    } -> extended_selecti_vector<L, R, A>;
+    } -> extended_operation_vector<A>;
 };
 
 struct splice_t {

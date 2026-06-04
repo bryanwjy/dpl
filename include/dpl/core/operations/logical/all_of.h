@@ -5,6 +5,8 @@
 
 // IWYU pragma: always_keep
 
+#include "dpl/core/operations/evaluate.h"
+
 #if !DPL_MODULES
 #  include "dpl/core/basic/to_canonical.h"
 #  include "dpl/core/concepts/decayable.h"
@@ -32,10 +34,18 @@ concept unqualified_extended_all_of = requires(T val) {
     { all_of(val) } -> boolean_testable;
 };
 
+template <typename T>
+concept expression_all_of = mask_expression<T> &&
+    regular_invocable<all_of_t, simd_expression_result_t<T>>;
+
+template <typename T>
+concept decayable_all_of =
+    decayable_mask_for<T, operation_category::lane_reduction> &&
+    regular_invocable<all_of_t, canonical_type_t<T>>;
+
 template <typename T, typename A = typename T::abi_type>
-concept unqualified_all_of = unqualified_extended_all_of<T, A> ||
-    (decayable_mask_for<T, operation_category::lane_reduction> &&
-        regular_invocable<all_of_t, canonical_type_t<T>>);
+concept extended_all_of = unqualified_extended_all_of<T, A> ||
+    expression_all_of<T> || decayable_all_of<T>;
 
 struct all_of_t {
 private:
@@ -71,11 +81,13 @@ public:
     }
 
     template <extended_mask T>
-    requires unqualified_all_of<T>
+    requires extended_all_of<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T val) noexcept {
+    static constexpr auto operator()(T val) {
         if constexpr (unqualified_extended_all_of<T>) {
             return all_of(val);
+        } else if constexpr (expression_all_of<T>) {
+            return operator()(dx::evaluate(val));
         } else {
             return operator()(dx::to_canonical(val));
         }

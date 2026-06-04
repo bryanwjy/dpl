@@ -42,6 +42,8 @@ DPL_EXPORT template <typename T, typename A>
 concept simd_with_abi =
     atom::simd_basics<T> && simd_with<T, typename T::value_type, A>;
 
+template <typename T, typename E, typename A = typename T::abi_type>
+concept vector_with = simd_with<T, E, A>;
 template <typename T, typename A>
 concept vector_with_abi = simd_vector<T> && same_as<A, typename T::abi_type>;
 template <typename T, typename A>

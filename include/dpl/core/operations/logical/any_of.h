@@ -32,10 +32,18 @@ concept unqualified_extended_any_of = requires(T val) {
     { any_of(val) } -> boolean_testable;
 };
 
+template <typename T>
+concept expression_any_of = mask_expression<T> &&
+    regular_invocable<any_of_t, simd_expression_result_t<T>>;
+
+template <typename T>
+concept decayable_any_of =
+    decayable_mask_for<T, operation_category::lane_reduction> &&
+    regular_invocable<any_of_t, canonical_type_t<T>>;
+
 template <typename T, typename A = typename T::abi_type>
-concept unqualified_any_of = unqualified_extended_any_of<T, A> ||
-    (decayable_mask_for<T, operation_category::lane_reduction> &&
-        regular_invocable<any_of_t, canonical_type_t<T>>);
+concept extended_any_of = unqualified_extended_any_of<T, A> ||
+    expression_any_of<T> || decayable_any_of<T>;
 
 struct any_of_t {
 private:
@@ -71,11 +79,13 @@ public:
     }
 
     template <extended_mask T>
-    requires unqualified_any_of<T>
+    requires extended_any_of<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T val) noexcept {
+    static constexpr auto operator()(T val) {
         if constexpr (unqualified_extended_any_of<T>) {
             return any_of(val);
+        } else if constexpr (expression_any_of<T>) {
+            return operator()(dx::evaluate(val));
         } else {
             return operator()(dx::to_canonical(val));
         }

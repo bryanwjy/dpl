@@ -3,6 +3,8 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/operations/evaluate.h"
+
 #if !DPL_MODULES
 #  include "dpl/core/basic/immediate.h"
 #  include "dpl/core/basic/initialize.h"
@@ -157,6 +159,24 @@ concept unqualified_extended_concat = requires(T arg, Ts... args) {
         concat_target_t<typename T::abi_type, typename Ts::abi_type...>>>;
 };
 
+template <typename T, typename... Ts>
+concept expression_concat =
+    (simd_expression<T> || ... || simd_expression<Ts>) &&
+    invocable<concat_t, simd_expression_result_t<T>,
+        simd_expression_result_t<Ts>...>;
+
+template <typename T, typename... Ts>
+concept decayable_concat =
+    (decayable_simd_for<T, operation_category::structural_transformation> &&
+        ... &&
+        decayable_simd_for<Ts,
+            operation_category::structural_transformation>) &&
+    regular_invocable<concat_t, canonical_type_t<T>, canonical_type_t<Ts>...>;
+
+template <typename T, typename... Ts>
+concept extended_concat = unqualified_extended_concat<T, Ts...> ||
+    expression_concat<T, Ts...> || decayable_concat<T, Ts...>;
+
 struct concat_t {
 private:
     template <typename AT, typename E, typename... As>
@@ -205,9 +225,6 @@ private:
             return dx::initialize<AT>(buffer[Is]...);
         }(iota_sequence<E, AT>);
     }
-
-    static constexpr operation_category policy =
-        operation_category::structural_transformation;
 
 public:
     template <typename E, fixed_width_abi A, fixed_width_abi... As>
@@ -264,12 +281,7 @@ public:
 
     template <fixed_width_class T, fixed_width_class... Ts>
     requires (extended_class<T> || ... || extended_class<Ts>) &&
-        concatable<T, Ts...> &&
-        (unqualified_extended_concat<T, Ts...> ||
-            ((decayable_simd_for<T, concat_t::policy> && ... &&
-                 decayable_simd_for<Ts, concat_t::policy>) &&
-                regular_invocable<concat_t, canonical_type_t<T>,
-                    canonical_type_t<Ts>...>))
+        concatable<T, Ts...> && extended_concat<T, Ts...>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(
         T arg, Ts... args) noexcept {
@@ -277,6 +289,8 @@ public:
             concat_target_t<typename T::abi_type, typename Ts::abi_type...>;
         if constexpr (unqualified_extended_concat<T, Ts...>) {
             return concat<To>(arg, args...);
+        } else if constexpr (expression_concat<T, Ts...>) {
+            return operator()(dx::evaluate(arg), dx::evaluate(args)...);
         } else {
             return operator()(dx::to_canonical(arg), dx::to_canonical(args)...);
         }

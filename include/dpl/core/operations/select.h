@@ -3,6 +3,7 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/operations/evaluate.h"
 #include "dpl/core/operations/transform.h"
 
 #if !DPL_MODULES
@@ -77,14 +78,24 @@ concept unqualified_extended_select = requires(M mask, L lhs, R rhs) {
     { select(mask, lhs, rhs) } -> extended_select_vector<M, L, R, A>;
 };
 
+template <typename M, typename L, typename R>
+concept expression_select =
+    (simd_expression<M> || simd_expression<L> || simd_expression<R>) &&
+    invocable<select_t, simd_expression_result_t<M>,
+        simd_expression_result_t<L>, simd_expression_result_t<R>>;
+
+template <typename M, typename L, typename R>
+concept decayable_select =
+    decayable_vector_for<L, operation_category::lane_agnostic> &&
+    decayable_vector_for<R, operation_category::lane_agnostic> &&
+    decayable_mask_for<M, operation_category::lane_agnostic> &&
+    regular_invocable<select_t, canonical_type_t<M>, canonical_type_t<L>,
+        canonical_type_t<R>>;
+
 template <typename M, typename L, typename R,
     typename A = common_abi_t<L, R, M>>
-concept unqualified_select = unqualified_extended_select<M, L, R, A> ||
-    (decayable_vector_for<L, operation_category::lane_agnostic> &&
-        decayable_vector_for<R, operation_category::lane_agnostic> &&
-        decayable_mask_for<M, operation_category::lane_agnostic> &&
-        regular_invocable<select_t, canonical_type_t<M>, canonical_type_t<L>,
-            canonical_type_t<R>>);
+concept extended_select = unqualified_extended_select<M, L, R, A> ||
+    expression_select<M, L, R> || decayable_select<M, L, R>;
 
 template <typename M, typename L, typename R,
     typename A = common_abi_t<L, R, M>>
@@ -100,28 +111,30 @@ concept unqualified_extended_mask_select = requires(M mask, L lhs, R rhs) {
     { select(mask, lhs, rhs) } -> extended_select_mask<M, L, R, A>;
 };
 
+template <typename M, typename L, typename R>
+concept expression_mask_select =
+    (simd_expression<L> || simd_expression<R> || simd_expression<M>) &&
+    invocable<select_t, simd_expression_result_t<M>,
+        simd_expression_result_t<L>, simd_expression_result_t<R>>;
+
+template <typename M, typename L, typename R>
+concept decayable_mask_select =
+    decayable_mask_for<L, operation_category::lane_agnostic> &&
+    decayable_mask_for<R, operation_category::lane_agnostic> &&
+    decayable_mask_for<M, operation_category::lane_agnostic> &&
+    regular_invocable<select_t, canonical_type_t<M>, canonical_type_t<L>,
+        canonical_type_t<R>>;
+
 template <typename M, typename L, typename R,
     typename A = common_abi_t<L, R, M>>
-concept unqualified_mask_select =
-    unqualified_canonical_mask_select<M, L, R, A> ||
-    unqualified_extended_mask_select<M, L, R, A> ||
-    (decayable_mask_for<L, operation_category::lane_agnostic> &&
-        decayable_mask_for<R, operation_category::lane_agnostic> &&
-        decayable_mask_for<M, operation_category::lane_agnostic> &&
-        regular_invocable<select_t, canonical_type_t<M>, canonical_type_t<L>,
-            canonical_type_t<R>>);
+concept extended_mask_select = unqualified_extended_mask_select<M, L, R, A> ||
+    expression_mask_select<M, L, R> || decayable_mask_select<M, L, R>;
 
 template <typename T, typename M, typename R, typename A = common_abi_t<R, M>>
 concept canonical_masked_vector =
     simd_vector<T> && same_as<typename R::value_type, typename T::value_type> &&
     common_size_with<simd_lane_type_t<M>, typename R::value_type> &&
     same_abi_as<A, typename T::abi_type>;
-
-template <typename T, typename M, typename R, typename A = common_abi_t<R, M>>
-concept extended_masked_vector =
-    simd_vector<T> && same_as<typename R::value_type, typename T::value_type> &&
-    common_size_with<simd_lane_type_t<M>, typename R::value_type> &&
-    common_abi_with<A, typename T::abi_type>;
 
 template <typename M, typename R, typename A = common_abi_t<R, M>>
 concept unqualified_canonical_bitkeep = requires(M mask, R val) {
@@ -132,15 +145,24 @@ concept unqualified_canonical_bitkeep = requires(M mask, R val) {
 
 template <typename M, typename R, typename A = common_abi_t<R, M>>
 concept unqualified_extended_bitkeep = requires(M mask, R val) {
-    { select(mask, val, dx::zero) } -> extended_masked_vector<M, R, A>;
+    { select(mask, val, dx::zero) } -> extended_operation_vector<A>;
 };
 
+template <typename M, typename R>
+concept expression_bitkeep = (simd_expression<R> || simd_expression<M>) &&
+    invocable<select_t, simd_expression_result_t<M>,
+        simd_expression_result_t<R>, dx::zero_t>;
+
+template <typename M, typename R>
+concept decayable_bitkeep =
+    decayable_mask_for<R, operation_category::lane_agnostic> &&
+    decayable_mask_for<M, operation_category::lane_agnostic> &&
+    regular_invocable<select_t, canonical_type_t<M>, canonical_type_t<R>,
+        dx::zero_t>;
+
 template <typename M, typename R, typename A = common_abi_t<R, M>>
-concept unqualified_bitkeep = unqualified_extended_bitkeep<M, R, A> ||
-    (decayable_vector_for<R, operation_category::lane_agnostic> &&
-        decayable_mask_for<M, operation_category::lane_agnostic> &&
-        regular_invocable<select_t, canonical_type_t<M>, canonical_type_t<R>,
-            dx::zero_t>);
+concept extended_bitkeep = unqualified_extended_bitkeep<M, R, A> ||
+    expression_bitkeep<M, R> || decayable_bitkeep<M, R>;
 
 template <typename M, typename R, typename A = common_abi_t<R, M>>
 concept unqualified_canonical_bitdrop = requires(M mask, R val) {
@@ -151,15 +173,24 @@ concept unqualified_canonical_bitdrop = requires(M mask, R val) {
 
 template <typename M, typename R, typename A = common_abi_t<R, M>>
 concept unqualified_extended_bitdrop = requires(M mask, R val) {
-    { select(mask, dx::zero, val) } -> extended_masked_vector<M, R, A>;
+    { select(mask, dx::zero, val) } -> extended_operation_vector<A>;
 };
 
+template <typename M, typename R>
+concept expression_bitdrop = (simd_expression<R> || simd_expression<M>) &&
+    invocable<select_t, simd_expression_result_t<M>, dx::zero_t,
+        simd_expression_result_t<R>>;
+
+template <typename M, typename R>
+concept decayable_bitdrop =
+    decayable_mask_for<R, operation_category::lane_agnostic> &&
+    decayable_mask_for<M, operation_category::lane_agnostic> &&
+    regular_invocable<select_t, canonical_type_t<M>, dx::zero_t,
+        canonical_type_t<R>>;
+
 template <typename M, typename R, typename A = common_abi_t<R, M>>
-concept unqualified_bitdrop = unqualified_extended_bitdrop<M, R, A> ||
-    (decayable_vector_for<R, operation_category::lane_agnostic> &&
-        decayable_mask_for<M, operation_category::lane_agnostic> &&
-        regular_invocable<select_t, canonical_type_t<M>, dx::zero_t,
-            canonical_type_t<R>>);
+concept extended_bitdrop = unqualified_extended_bitdrop<M, R, A> ||
+    expression_bitdrop<M, R> || decayable_bitdrop<M, R>;
 
 template <typename M, typename R, typename A = common_abi_t<R, M>>
 concept unqualified_canonical_bitfill = requires(M mask, R val) {
@@ -170,15 +201,24 @@ concept unqualified_canonical_bitfill = requires(M mask, R val) {
 
 template <typename M, typename R, typename A = common_abi_t<R, M>>
 concept unqualified_extended_bitfill = requires(M mask, R val) {
-    { select(mask, dx::all_bits, val) } -> extended_masked_vector<M, R, A>;
+    { select(mask, dx::all_bits, val) } -> extended_operation_vector<A>;
 };
 
+template <typename M, typename R>
+concept expression_bitfill = (simd_expression<R> || simd_expression<M>) &&
+    invocable<select_t, simd_expression_result_t<M>, dx::all_bits_t,
+        simd_expression_result_t<R>>;
+
+template <typename M, typename R>
+concept decayable_bitfill =
+    decayable_mask_for<R, operation_category::lane_agnostic> &&
+    decayable_mask_for<M, operation_category::lane_agnostic> &&
+    regular_invocable<select_t, canonical_type_t<M>, dx::all_bits_t,
+        canonical_type_t<R>>;
+
 template <typename M, typename R, typename A = common_abi_t<R, M>>
-concept unqualified_bitfill = unqualified_extended_bitfill<M, R, A> ||
-    (decayable_vector_for<R, operation_category::lane_agnostic> &&
-        decayable_mask_for<M, operation_category::lane_agnostic> &&
-        regular_invocable<select_t, canonical_type_t<M>, dx::all_bits_t,
-            canonical_type_t<R>>);
+concept extended_bitfill = unqualified_extended_bitfill<M, R, A> ||
+    expression_bitfill<M, R> || decayable_bitfill<M, R>;
 
 template <typename M, typename R, typename A = common_abi_t<R, M>>
 concept unqualified_canonical_bitspill = requires(M mask, R val) {
@@ -189,35 +229,38 @@ concept unqualified_canonical_bitspill = requires(M mask, R val) {
 
 template <typename M, typename R, typename A = common_abi_t<R, M>>
 concept unqualified_extended_bitspill = requires(M mask, R val) {
-    { select(mask, val, dx::all_bits) } -> extended_masked_vector<M, R, A>;
+    { select(mask, val, dx::all_bits) } -> extended_operation_vector<A>;
 };
 
-template <typename M, typename R, typename A = common_abi_t<R, M>>
-concept unqualified_bitspill = unqualified_extended_bitspill<M, R, A> ||
-    (decayable_vector_for<R, operation_category::lane_agnostic> &&
-        decayable_mask_for<M, operation_category::lane_agnostic> &&
-        regular_invocable<select_t, canonical_type_t<M>, canonical_type_t<R>,
-            dx::all_bits_t>);
+template <typename M, typename R>
+concept expression_bitspill = (simd_expression<R> || simd_expression<M>) &&
+    invocable<select_t, simd_expression_result_t<M>,
+        simd_expression_result_t<R>, dx::all_bits_t>;
 
-template <typename T, typename L, typename R, typename A = common_abi_t<L, R>>
-concept extended_selecti_vector =
-    simd_vector<T> && same_as<typename L::value_type, typename T::value_type> &&
-    same_as<typename R::value_type, typename T::value_type> &&
-    common_abi_with<A, typename T::abi_type>;
+template <typename M, typename R>
+concept decayable_bitspill =
+    decayable_mask_for<R, operation_category::lane_agnostic> &&
+    decayable_mask_for<M, operation_category::lane_agnostic> &&
+    regular_invocable<select_t, canonical_type_t<M>, canonical_type_t<R>,
+        dx::all_bits_t>;
+
+template <typename M, typename R, typename A = common_abi_t<R, M>>
+concept extended_bitspill = unqualified_extended_bitspill<M, R, A> ||
+    expression_bitspill<M, R> || decayable_bitspill<R, M>;
 
 template <typename T, typename L, typename R, typename A = common_abi_t<L, R>>
 concept canonical_selecti_vector =
-    extended_selecti_vector<T, L, R, A> && same_as<A, typename T::abi_type>;
+    simd_vector<T> && same_as<typename L::value_type, typename T::value_type> &&
+    same_as<typename R::value_type, typename T::value_type> &&
+    common_abi_with<A, typename T::abi_type> &&
+    same_as<A, typename T::abi_type>;
 
 template <typename T, typename L, typename R, typename A = common_abi_t<L, R>>
-concept extended_selecti_mask = simd_mask<T> &&
+concept canonical_selecti_mask = simd_mask<T> &&
     common_size_with<typename L::value_type, typename T::value_type> &&
     common_size_with<typename R::value_type, typename T::value_type> &&
-    common_abi_with<A, typename T::abi_type>;
-
-template <typename T, typename L, typename R, typename A = common_abi_t<L, R>>
-concept canonical_selecti_mask =
-    extended_selecti_mask<T, L, R, A> && same_as<A, typename T::abi_type>;
+    common_abi_with<A, typename T::abi_type> &&
+    same_as<A, typename T::abi_type>;
 
 template <typename M, typename L, typename R>
 consteval auto select_mask() noexcept {
@@ -241,15 +284,23 @@ template <typename M, typename L, typename R, typename A = common_abi_t<L, R>>
 concept unqualified_extended_selecti = requires(L lhs, R rhs) {
     {
         select(internal::select_mask<M, L, R>(), lhs, rhs)
-    } -> extended_selecti_vector<L, R, A>;
+    } -> extended_operation_vector<A>;
 };
 
+template <typename M, typename L, typename R>
+concept expression_selecti = (simd_expression<L> || simd_expression<R>) &&
+    invocable<select_t, M, simd_expression_result_t<L>,
+        simd_expression_result_t<R>>;
+
+template <typename M, typename L, typename R>
+concept decayable_selecti =
+    decayable_vector_for<L, operation_category::lane_agnostic> &&
+    decayable_vector_for<R, operation_category::lane_agnostic> &&
+    regular_invocable<select_t, M, canonical_type_t<L>, canonical_type_t<R>>;
+
 template <typename M, typename L, typename R, typename A = common_abi_t<L, R>>
-concept unqualified_selecti = unqualified_extended_selecti<M, L, R, A> ||
-    (decayable_vector_for<L, operation_category::lane_agnostic> &&
-        decayable_vector_for<R, operation_category::lane_agnostic> &&
-        regular_invocable<select_t, M, canonical_type_t<L>,
-            canonical_type_t<R>>);
+concept extended_selecti = unqualified_extended_selecti<M, L, R, A> ||
+    expression_selecti<M, L, R> || decayable_selecti<M, L, R>;
 
 template <typename M, typename L, typename R, typename A = common_abi_t<L, R>>
 concept unqualified_canonical_mask_selecti = requires(L lhs, R rhs) {
@@ -262,17 +313,23 @@ template <typename M, typename L, typename R, typename A = common_abi_t<L, R>>
 concept unqualified_extended_mask_selecti = requires(L lhs, R rhs) {
     {
         select(internal::select_mask<M, L, R>(), lhs, rhs)
-    } -> extended_selecti_mask<L, R, A>;
+    } -> extended_operation_mask<A>;
 };
 
+template <typename M, typename L, typename R>
+concept expression_mask_selecti = (simd_expression<L> || simd_expression<R>) &&
+    invocable<select_t, M, simd_expression_result_t<L>,
+        simd_expression_result_t<R>>;
+
+template <typename M, typename L, typename R>
+concept decayable_mask_selecti =
+    decayable_mask_for<L, operation_category::lane_agnostic> &&
+    decayable_mask_for<R, operation_category::lane_agnostic> &&
+    regular_invocable<select_t, M, canonical_type_t<L>, canonical_type_t<R>>;
+
 template <typename M, typename L, typename R, typename A = common_abi_t<L, R>>
-concept unqualified_mask_selecti =
-    unqualified_canonical_mask_selecti<M, L, R, A> ||
-    unqualified_extended_mask_selecti<M, L, R, A> ||
-    (decayable_mask_for<L, operation_category::lane_agnostic> &&
-        decayable_mask_for<R, operation_category::lane_agnostic> &&
-        regular_invocable<select_t, M, canonical_type_t<L>,
-            canonical_type_t<R>>);
+concept extended_mask_selecti = unqualified_extended_mask_selecti<M, L, R, A> ||
+    expression_mask_selecti<M, L, R> || decayable_mask_selecti<M, L, R>;
 
 template <typename M, typename R>
 concept unqualified_canonical_bitkeepi = requires(M mask, R val) {
@@ -286,13 +343,21 @@ template <typename M, typename R>
 concept unqualified_extended_bitkeepi = requires(M mask, R val) {
     {
         select(dx::to_compatible_const_mask<R>(mask), val, dx::zero)
-    } -> extended_selecti_vector<R, R, typename R::abi_type>;
+    } -> extended_operation_vector<typename R::abi_type>;
 };
 
 template <typename M, typename R>
-concept unqualified_bitkeepi = unqualified_extended_bitkeepi<M, R> ||
-    (decayable_simd_for<R, operation_category::lane_agnostic> &&
-        regular_invocable<select_t, M, canonical_type_t<R>, dx::zero_t>);
+concept expression_bitkeepi = simd_expression<R> &&
+    invocable<select_t, M, simd_expression_result_t<R>, dx::zero_t>;
+
+template <typename M, typename R>
+concept decayable_bitkeepi =
+    decayable_mask_for<R, operation_category::lane_agnostic> &&
+    regular_invocable<select_t, M, canonical_type_t<R>, dx::zero_t>;
+
+template <typename M, typename R>
+concept extended_bitkeepi = unqualified_extended_bitkeepi<M, R> ||
+    expression_bitkeepi<M, R> || decayable_bitkeepi<M, R>;
 
 template <typename M, typename R>
 concept unqualified_canonical_bitdropi = requires(M mask, R val) {
@@ -306,13 +371,21 @@ template <typename M, typename R>
 concept unqualified_extended_bitdropi = requires(M mask, R val) {
     {
         select(dx::to_compatible_const_mask<R>(mask), dx::zero, val)
-    } -> extended_selecti_vector<R, R, typename R::abi_type>;
+    } -> extended_operation_vector<typename R::abi_type>;
 };
 
 template <typename M, typename R>
-concept unqualified_bitdropi = unqualified_extended_bitdropi<M, R> ||
-    (decayable_simd_for<R, operation_category::lane_agnostic> &&
-        regular_invocable<select_t, M, dx::zero_t, canonical_type_t<R>>);
+concept expression_bitdropi = simd_expression<R> &&
+    invocable<select_t, M, dx::zero_t, simd_expression_result_t<R>>;
+
+template <typename M, typename R>
+concept decayable_bitdropi =
+    decayable_mask_for<R, operation_category::lane_agnostic> &&
+    regular_invocable<select_t, M, dx::zero_t, canonical_type_t<R>>;
+
+template <typename M, typename R>
+concept extended_bitdropi = unqualified_extended_bitdropi<M, R> ||
+    expression_bitdropi<M, R> || decayable_bitdropi<M, R>;
 
 template <typename M, typename R>
 concept unqualified_canonical_bitfilli = requires(M mask, R val) {
@@ -326,13 +399,21 @@ template <typename M, typename R>
 concept unqualified_extended_bitfilli = requires(M mask, R val) {
     {
         select(dx::to_compatible_const_mask<R>(mask), dx::all_bits, val)
-    } -> extended_selecti_vector<R, R, typename R::abi_type>;
+    } -> extended_operation_vector<typename R::abi_type>;
 };
 
 template <typename M, typename R>
-concept unqualified_bitfilli = unqualified_extended_bitfilli<M, R> ||
-    (decayable_simd_for<R, operation_category::lane_agnostic> &&
-        regular_invocable<select_t, M, dx::all_bits_t, canonical_type_t<R>>);
+concept expression_bitfilli = simd_expression<R> &&
+    invocable<select_t, M, dx::all_bits_t, simd_expression_result_t<R>>;
+
+template <typename M, typename R>
+concept decayable_bitfilli =
+    decayable_mask_for<R, operation_category::lane_agnostic> &&
+    regular_invocable<select_t, M, dx::all_bits_t, canonical_type_t<R>>;
+
+template <typename M, typename R>
+concept extended_bitfilli = unqualified_extended_bitfilli<M, R> ||
+    expression_bitfilli<M, R> || decayable_bitfilli<M, R>;
 
 template <typename M, typename R>
 concept unqualified_canonical_bitspilli = requires(M mask, R val) {
@@ -346,13 +427,21 @@ template <typename M, typename R>
 concept unqualified_extended_bitspilli = requires(M mask, R val) {
     {
         select(dx::to_compatible_const_mask<R>(mask), val, dx::all_bits)
-    } -> extended_selecti_vector<R, R, typename R::abi_type>;
+    } -> extended_operation_vector<typename R::abi_type>;
 };
 
 template <typename M, typename R>
-concept unqualified_bitspilli = unqualified_extended_bitspilli<M, R> ||
-    (decayable_simd_for<R, operation_category::lane_agnostic> &&
-        regular_invocable<select_t, M, canonical_type_t<R>, dx::all_bits_t>);
+concept expression_bitspilli = simd_expression<R> &&
+    invocable<select_t, M, simd_expression_result_t<R>, dx::all_bits_t>;
+
+template <typename M, typename R>
+concept decayable_bitspilli =
+    decayable_mask_for<R, operation_category::lane_agnostic> &&
+    regular_invocable<select_t, M, canonical_type_t<R>, dx::all_bits_t>;
+
+template <typename M, typename R>
+concept extended_bitspilli = unqualified_extended_bitspilli<M, R> ||
+    expression_bitspilli<M, R> || decayable_bitspilli<M, R>;
 
 struct select_t {
 private:
@@ -440,16 +529,16 @@ public:
     requires common_size_with<ME, E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A> operator()(basic_mask<ME, A> mask,
-        basic_vector<E, A> tval, basic_vector<E, A> fval) noexcept {
+        basic_vector<E, A> lhs, basic_vector<E, A> rhs) noexcept {
         if constexpr (unqualified_canonical_select<basic_mask<ME, A>,
                           basic_vector<E, A>, basic_vector<E, A>, A>) {
             if consteval {
-                return fallback(mask, tval, fval);
+                return fallback(mask, lhs, rhs);
             } else {
-                return select(internal::abi<A>, mask, tval, fval);
+                return select(internal::abi<A>, mask, lhs, rhs);
             }
         } else {
-            return fallback(mask, tval, fval);
+            return fallback(mask, lhs, rhs);
         }
     }
 
@@ -463,10 +552,10 @@ public:
             basic_vector<E, RA>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, common_abi_t<LA, RA, MA>> operator()(
-        basic_mask<ME, MA> mask, basic_vector<E, LA> tval,
-        basic_vector<E, RA> fval) noexcept {
+        basic_mask<ME, MA> mask, basic_vector<E, LA> lhs,
+        basic_vector<E, RA> rhs) noexcept {
         using A = common_abi_t<LA, RA, MA>;
-        return select(internal::abi<A>, mask, tval, fval);
+        return select(internal::abi<A>, mask, lhs, rhs);
     }
 
     template <simd_mask M, simd_vector L, simd_vector R>
@@ -474,14 +563,17 @@ public:
         common_size_with<typename L::value_type, typename R::value_type> &&
         common_size_with<typename M::value_type, typename R::value_type> &&
         common_size_with<typename M::value_type, typename L::value_type> &&
-        unqualified_select<M, L, R>
+        extended_select<M, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(M mask, L tval, R fval) noexcept {
+    static constexpr auto operator()(M mask, L lhs, R rhs) noexcept {
         if constexpr (unqualified_extended_select<M, L, R>) {
-            return select(mask, tval, fval);
+            return select(mask, lhs, rhs);
+        } else if constexpr (expression_select<M, L, R>) {
+            return operator()(
+                dx::evaluate(mask), dx::evaluate(lhs), dx::evaluate(rhs));
         } else {
-            return operator()(dx::to_canonical(mask), dx::to_canonical(tval),
-                dx::to_canonical(fval));
+            return operator()(dx::to_canonical(mask), dx::to_canonical(lhs),
+                dx::to_canonical(rhs));
         }
     }
 
@@ -490,17 +582,17 @@ public:
     requires common_size_with<ME, LE> && common_size_with<ME, RE>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_mask<common_size_type_t<LE, RE>, A> operator()(
-        basic_mask<ME, A> mask, basic_mask<LE, A> tval,
-        basic_mask<RE, A> fval) noexcept {
+        basic_mask<ME, A> mask, basic_mask<LE, A> lhs,
+        basic_mask<RE, A> rhs) noexcept {
         if constexpr (unqualified_canonical_mask_select<basic_mask<ME, A>,
                           basic_mask<LE, A>, basic_mask<RE, A>, A>) {
             if consteval {
-                return fallback(mask, tval, fval);
+                return fallback(mask, lhs, rhs);
             } else {
-                return select(internal::abi<A>, mask, tval, fval);
+                return select(internal::abi<A>, mask, lhs, rhs);
             }
         } else {
-            return fallback(mask, tval, fval);
+            return fallback(mask, lhs, rhs);
         }
     }
 
@@ -515,9 +607,9 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_mask<common_size_type_t<LE, RE>,
         common_abi_t<LA, RA, MA>> operator()(basic_mask<ME, MA> mask,
-        basic_mask<LE, LA> tval, basic_mask<RE, RA> fval) noexcept {
+        basic_mask<LE, LA> lhs, basic_mask<RE, RA> fval) noexcept {
         using A = common_abi_t<LA, RA, MA>;
-        return select(internal::abi<A>, mask, tval, fval);
+        return select(internal::abi<A>, mask, lhs, fval);
     }
 
     template <simd_mask M, simd_mask L, simd_mask R>
@@ -525,14 +617,17 @@ public:
         common_size_with<typename L::value_type, typename R::value_type> &&
         common_size_with<typename M::value_type, typename R::value_type> &&
         common_size_with<typename M::value_type, typename L::value_type> &&
-        unqualified_mask_select<M, L, R>
+        extended_mask_select<M, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(M mask, L tval, R fval) noexcept {
+    static constexpr auto operator()(M mask, L lhs, R rhs) noexcept {
         if constexpr (unqualified_extended_mask_select<M, L, R>) {
-            return select(mask, tval, fval);
+            return select(mask, lhs, rhs);
+        } else if constexpr (expression_mask_select<M, L, R>) {
+            return operator()(
+                dx::evaluate(mask), dx::evaluate(lhs), dx::evaluate(rhs));
         } else {
-            return operator()(dx::to_canonical(mask), dx::to_canonical(tval),
-                dx::to_canonical(fval));
+            return operator()(dx::to_canonical(mask), dx::to_canonical(lhs),
+                dx::to_canonical(rhs));
         }
     }
 
@@ -575,15 +670,16 @@ public:
     }
 
     template <simd_mask M, simd_vector R>
-    requires (extended_mask<M> || extended_vector<R>) &&
-        unqualified_bitdrop<M, R>
+    requires (extended_mask<M> || extended_vector<R>) && extended_bitdrop<M, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(M mask, dx::zero_t tag, R fval) noexcept {
+    static constexpr auto operator()(M mask, dx::zero_t tag, R val) noexcept {
         if constexpr (unqualified_extended_bitdrop<M, R>) {
-            return select(mask, tag, fval);
+            return select(mask, tag, val);
+        } else if constexpr (expression_bitdrop<M, R>) {
+            return operator()(dx::evaluate(mask), tag, dx::evaluate(val));
         } else {
             return operator()(
-                dx::to_canonical(mask), tag, dx::to_canonical(fval));
+                dx::to_canonical(mask), tag, dx::to_canonical(val));
         }
     }
 
@@ -626,12 +722,13 @@ public:
     }
 
     template <simd_mask M, simd_vector R>
-    requires (extended_mask<M> || extended_vector<R>) &&
-        unqualified_bitkeep<M, R>
+    requires (extended_mask<M> || extended_vector<R>) && extended_bitkeep<M, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, R val, dx::zero_t tag) noexcept {
         if constexpr (unqualified_extended_bitkeep<M, R>) {
             return select(mask, val, tag);
+        } else if constexpr (expression_bitkeep<M, R>) {
+            return operator()(dx::evaluate(mask), dx::evaluate(val), tag);
         } else {
             return operator()(
                 dx::to_canonical(mask), dx::to_canonical(val), tag);
@@ -677,13 +774,14 @@ public:
     }
 
     template <simd_mask M, simd_vector R>
-    requires (extended_mask<M> || extended_vector<R>) &&
-        unqualified_bitfill<M, R>
+    requires (extended_mask<M> || extended_vector<R>) && extended_bitfill<M, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         M mask, dx::all_bits_t tag, R val) noexcept {
         if constexpr (unqualified_extended_bitfill<M, R>) {
             return select(mask, tag, val);
+        } else if constexpr (expression_bitfill<M, R>) {
+            return operator()(dx::evaluate(mask), tag, dx::evaluate(val));
         } else {
             return operator()(
                 dx::to_canonical(mask), tag, dx::to_canonical(val));
@@ -729,13 +827,14 @@ public:
     }
 
     template <simd_mask M, simd_vector R>
-    requires (extended_mask<M> || extended_vector<R>) &&
-        unqualified_bitspill<M, R>
+    requires (extended_mask<M> || extended_vector<R>) && extended_bitspill<M, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         M mask, R val, dx::all_bits_t tag) noexcept {
         if constexpr (unqualified_extended_bitspill<M, R>) {
             return select(mask, val, tag);
+        } else if constexpr (expression_bitspill<M, R>) {
+            return operator()(dx::evaluate(mask), dx::evaluate(val), tag);
         } else {
             return operator()(
                 dx::to_canonical(mask), dx::to_canonical(val), tag);
@@ -782,12 +881,14 @@ public:
     template <const_mask_like M, fixed_width_vector L, fixed_width_vector R>
     requires (extended_vector<L> || extended_vector<R>) &&
         common_size_with<typename L::value_type, typename R::value_type> &&
-        unqualified_selecti<M, L, R>
+        extended_selecti<M, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, L lhs, R rhs) noexcept {
         if constexpr (unqualified_extended_selecti<M, L, R>) {
             constexpr auto cmask = internal::select_mask<M, L, R>();
             return select(cmask, lhs, rhs);
+        } else if constexpr (expression_selecti<M, L, R>) {
+            return operator()(mask, dx::evaluate(lhs), dx::evaluate(rhs));
         } else {
             return operator()(
                 mask, dx::to_canonical(lhs), dx::to_canonical(rhs));
@@ -819,7 +920,8 @@ public:
     requires simd_element_for<E, RA> && different_from<LA, RA> &&
         const_mask_for<M, basic_mask<E, LA>> &&
         const_mask_for<M, basic_mask<E, RA>> &&
-        unqualified_canonical_selecti<M, basic_mask<E, LA>, basic_mask<E, RA>>
+        unqualified_canonical_mask_selecti<M, basic_mask<E, LA>,
+            basic_mask<E, RA>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_mask<E, common_abi_t<LA, RA>> operator()(
         M mask, basic_mask<E, LA> lhs, basic_mask<E, RA> rhs) noexcept {
@@ -832,12 +934,14 @@ public:
 
     template <typename M, fixed_width_mask L, fixed_width_mask R>
     requires (extended_mask<L> || extended_mask<R>) && const_mask_for<M, L> &&
-        const_mask_for<M, R> && unqualified_selecti<M, L, R>
+        const_mask_for<M, R> && extended_mask_selecti<M, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, L lhs, R rhs) noexcept {
-        if constexpr (unqualified_extended_selecti<M, L, R>) {
+        if constexpr (unqualified_extended_mask_selecti<M, L, R>) {
             constexpr auto cmask = internal::select_mask<M, L, R>();
             return select(cmask, lhs, rhs);
+        } else if constexpr (expression_mask_selecti<M, L, R>) {
+            return operator()(mask, dx::evaluate(lhs), dx::evaluate(rhs));
         } else {
             return operator()(
                 mask, dx::to_canonical(lhs), dx::to_canonical(rhs));
@@ -882,14 +986,16 @@ public:
 
     template <typename M, extended_class R>
     requires fixed_width_class<R> && const_mask_for<M, R> &&
-        unqualified_bitdropi<M, R>
+        extended_bitdropi<M, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(M mask, dx::zero_t tag, R fval) noexcept {
+    static constexpr auto operator()(M mask, dx::zero_t tag, R val) noexcept {
         if constexpr (unqualified_extended_bitdropi<M, R>) {
             constexpr auto cmask = dx::to_compatible_const_mask<R>(mask);
-            return select(cmask, tag, fval);
+            return select(cmask, tag, val);
+        } else if constexpr (expression_bitdropi<M, R>) {
+            return operator()(mask, tag, dx::evaluate(val));
         } else {
-            return operator()(mask, tag, dx::to_canonical(fval));
+            return operator()(mask, tag, dx::to_canonical(val));
         }
     }
 
@@ -931,12 +1037,14 @@ public:
 
     template <typename M, extended_class R>
     requires fixed_width_class<R> && const_mask_for<M, R> &&
-        unqualified_bitkeepi<M, R>
+        extended_bitkeepi<M, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, R val, dx::zero_t tag) noexcept {
         if constexpr (unqualified_extended_bitkeepi<M, R>) {
             constexpr auto cmask = dx::to_compatible_const_mask<R>(mask);
             return select(cmask, val, tag);
+        } else if constexpr (expression_bitkeepi<M, R>) {
+            return operator()(mask, dx::evaluate(val), tag);
         } else {
             return operator()(mask, dx::to_canonical(val), tag);
         }
@@ -980,13 +1088,15 @@ public:
 
     template <typename M, extended_class R>
     requires fixed_width_class<R> && const_mask_for<M, R> &&
-        unqualified_bitfilli<M, R>
+        extended_bitfilli<M, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         M mask, dx::all_bits_t tag, R val) noexcept {
         if constexpr (unqualified_extended_bitfilli<M, R>) {
             constexpr auto cmask = dx::to_compatible_const_mask<R>(mask);
             return select(cmask, tag, val);
+        } else if constexpr (expression_bitfilli<M, R>) {
+            return operator()(mask, tag, dx::evaluate(val));
         } else {
             return operator()(mask, tag, dx::to_canonical(val));
         }
@@ -1030,13 +1140,15 @@ public:
 
     template <typename M, extended_class R>
     requires fixed_width_class<R> && const_mask_for<M, R> &&
-        unqualified_bitspilli<M, R>
+        extended_bitspilli<M, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         M mask, R val, dx::all_bits_t tag) noexcept {
         if constexpr (unqualified_extended_bitspilli<M, R>) {
             constexpr auto cmask = dx::to_compatible_const_mask<R>(mask);
             return select(cmask, val, tag);
+        } else if constexpr (expression_bitspilli<M, R>) {
+            return operator()(mask, dx::evaluate(val), tag);
         } else {
             return operator()(mask, dx::to_canonical(val), tag);
         }

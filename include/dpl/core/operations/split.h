@@ -136,6 +136,19 @@ concept unqualified_extended_split = requires(T arg) {
 };
 
 template <typename T, size_t N>
+concept expression_split =
+    simd_expression<T> && invocable<split_t<N>, simd_expression_result_t<T>>;
+
+template <typename T, size_t N>
+concept decayable_split =
+    decayable_simd_for<T, operation_category::structural_transformation> &&
+    regular_invocable<split_t<N>, canonical_type_t<T>>;
+
+template <typename T, size_t N>
+concept extended_split = unqualified_extended_split<T, N> ||
+    expression_split<T, N> || decayable_split<T, N>;
+
+template <typename T, size_t N>
 concept splittable =
     fixed_width_class<T> && ((T::abi_type::size % N) == 0) && requires {
         typename demote_abi_t<typename T::abi_type>;
@@ -243,17 +256,15 @@ public:
         }
     }
 
-    template <splittable<N> T>
-    requires extended_class<T> &&
-        (unqualified_extended_split<T, N> ||
-            (decayable_simd_for<T,
-                 operation_category::structural_transformation> &&
-                regular_invocable<split_t, canonical_type_t<T>>))
+    template <extended_class T>
+    requires splittable<T, N> && extended_split<T, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto operator()(T src) noexcept {
         if constexpr (unqualified_extended_split<T, N>) {
             using A = split_target_t<N, T>;
             return split<A>(src);
+        } else if constexpr (expression_split<T, N>) {
+            return operator()(dx::evaluate(src));
         } else {
             return operator()(dx::to_canonical(src));
         }

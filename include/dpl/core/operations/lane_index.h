@@ -25,6 +25,9 @@ namespace datapar::internal {
 template <typename, typename = __DPL ignore_t>
 struct lane_index_t {};
 
+/**
+ * Lane indices must ALWAYS return canonical simd types
+ */
 template <typename>
 void lane_index(...) noexcept = delete;
 
@@ -69,7 +72,7 @@ public:
     }
 };
 
-template <canonical_class T>
+template <simd_class T>
 struct lane_index_t<T> {
 private:
     using E DPL_NODEBUG = simd_lane_type_t<T>;
@@ -81,31 +84,6 @@ public:
     requires regular_invocable<lane_index_t<A, E>>
     {
         return lane_index_t<A, E>::operator()();
-    }
-};
-
-template <extended_class T>
-struct lane_index_t<T> {
-private:
-    using E DPL_NODEBUG = typename T::value_type;
-    using base_type DPL_NODEBUG = lane_index_t<canonical_type_t<T>>;
-    using result_type DPL_NODEBUG =
-        rebind_simd_t<simd_vector_type_t<T>, signed_representation_t<E>>;
-
-public:
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr result_type operator()() noexcept
-    requires regular_invocable<base_type> && extended_vector<result_type> &&
-        constructible_from<result_type, indices_t>
-    {
-        return result_type(dx::indices);
-    }
-
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr result_type operator()() noexcept
-    requires regular_invocable<base_type> && canonical_vector<result_type>
-    {
-        return base_type::operator()();
     }
 };
 

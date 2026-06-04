@@ -85,7 +85,7 @@ public:
     requires (extended_mask<L> || extended_mask<R>) &&
         unqualified_logical_and<L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L lhs, R rhs) noexcept {
+    static constexpr auto operator()(L lhs, R rhs) {
         if constexpr (unqualified_extended_logical_and<L, R>) {
             return logical_and(lhs, rhs);
         } else {
