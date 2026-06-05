@@ -8,7 +8,6 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/broadcastable_base.h"
-#  include "dpl/core/concepts/common_bits_with.h"
 #  include "dpl/core/type_traits/representation.h"
 #  include "dpl/std/bit/bit_cast.h"
 #  include "dpl/std/concepts/convertible_to.h"
@@ -20,7 +19,7 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
 template <floating_point T>
-struct nexponent_mask_t : broadcastable_base {
+struct nexponent_mask_t : broadcastable_base<nexponent_mask_t<T>> {
     __DPL_HIDE_FROM_ABI explicit constexpr nexponent_mask_t() noexcept =
         default;
 
@@ -33,7 +32,7 @@ struct nexponent_mask_t : broadcastable_base {
 };
 
 template <floating_point T>
-struct exponent_mask_t : broadcastable_base {
+struct exponent_mask_t : broadcastable_base<exponent_mask_t<T>> {
     __DPL_HIDE_FROM_ABI explicit constexpr exponent_mask_t() noexcept = default;
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
@@ -61,7 +60,7 @@ inline constexpr exponent_mask_t<T> exponent_mask{};
 
 template <floating_point T, integral U>
 requires explicitly_convertible_to<exponent_mask_t<T>, U> &&
-    common_bits_with<T, U>
+    (sizeof(T) == sizeof(U))
 inline constexpr auto exponent_mask_v = static_cast<U>(exponent_mask<T>);
 
 } // namespace datapar

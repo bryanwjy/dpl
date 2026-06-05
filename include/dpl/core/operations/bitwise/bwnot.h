@@ -9,12 +9,11 @@
 #include "dpl/core/operations/bitwise/result.h"
 #include "dpl/core/operations/internal/masked.h"
 #include "dpl/core/operations/internal/transform.h"
-
 #if !DPL_MODULES
+#  include "dpl/core/basic/internal/abi.h"
 #  include "dpl/core/concepts/decayable.h"
-#  include "dpl/core/concepts/operation_category.h"
+#  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/concepts/simd_equivalence.h"
 #  include "dpl/core/constants/all_bits.h"
 #endif
 
@@ -33,7 +32,7 @@ concept unqualified_canonical_bwnot = requires(T val) {
 
 template <typename T>
 concept unqualified_extended_bwnot = requires(T val) {
-    { bwnot(val) } -> extended_operation_vector<typename T::abi_type>;
+    { bwnot(val) } -> vector_with_common_abi<typename T::abi_type>;
 };
 
 template <typename T>
@@ -53,12 +52,12 @@ template <typename S, typename M, typename T, typename A = common_abi_t<M, T>>
 concept unqualified_canonical_mbwnot = requires(S src, M mask, T val) {
     {
         bwnot(internal::abi<A>, src, mask, val)
-    } -> equivalent_simd_as<canonical_if_zero_t<S, T, A>>;
+    } -> equivalent_simd_type_with<canonical_if_zero_t<S, T, A>>;
 };
 
 template <typename S, typename M, typename T, typename A = common_abi_t<M, T>>
 concept unqualified_extended_mbwnot = requires(S src, M mask, T val) {
-    { bwnot(src, mask, val) } -> extended_operation_vector<A>;
+    { bwnot(src, mask, val) } -> vector_with_common_abi<A>;
 };
 
 template <typename S, typename M, typename T>
@@ -85,7 +84,7 @@ concept unqualified_canonical_imbwnot = requires(S src, M mask, T val) {
     {
         bwnot(internal::abi<A>, src,
             internal::to_const_mask<A, bwnot_t, S, T>(mask), val)
-    } -> equivalent_simd_as<canonical_if_zero_t<S, T, A>>;
+    } -> equivalent_simd_type_with<canonical_if_zero_t<S, T, A>>;
 };
 
 template <typename S, typename M, typename T,
@@ -93,7 +92,7 @@ template <typename S, typename M, typename T,
 concept unqualified_extended_imbwnot = requires(S src, M mask, T val) {
     {
         bwnot(src, internal::to_const_mask<A, bwnot_t, S, T>(mask), val)
-    } -> extended_operation_vector<A>;
+    } -> vector_with_common_abi<A>;
 };
 
 template <typename S, typename M, typename T>
@@ -123,7 +122,7 @@ concept unqualified_canonical_mask_bwnot = requires(T val) {
 
 template <typename T, typename A = typename T::abi_type>
 concept unqualified_extended_mask_bwnot = requires(T val) {
-    { bwnot(val) } -> extended_operation_mask<A>;
+    { bwnot(val) } -> mask_with_common_abi<A>;
 };
 
 template <typename T>

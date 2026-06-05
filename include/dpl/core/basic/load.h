@@ -4,14 +4,14 @@
 #include "dpl/config.h"
 
 #include "dpl/core/basic/aligned.h"
+#include "dpl/core/basic/internal/abi.h"
 #include "dpl/core/basic/loading.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/fwd.h"
 
-#  include "dpl/core/concepts/basic_type.h"
-#  include "dpl/core/type_traits/basic_type.h"
-#  include "dpl/std/concepts/convertible_to.h"
+#  include "dpl/core/concepts/canonical.h"
+#  include "dpl/core/type_traits/canonical_type.h"
 #  include "dpl/std/concepts/invocable.h"
 #  include "dpl/std/concepts/same_as.h"
 #endif

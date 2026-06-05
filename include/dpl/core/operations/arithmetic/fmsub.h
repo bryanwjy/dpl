@@ -8,16 +8,14 @@
 #include "dpl/core/operations/arithmetic/result.h"
 #include "dpl/core/operations/arithmetic/subtract.h"
 #include "dpl/core/operations/evaluate.h"
-#include "dpl/core/operations/internal/extended_operations.h"
 #include "dpl/core/operations/internal/masked.h"
 #include "dpl/core/operations/internal/operation_base.h"
-
 #if !DPL_MODULES
-#  include "dpl/core/concepts/arithmetic_type.h"
+#  include "dpl/core/basic/internal/abi.h"
 #  include "dpl/core/concepts/decayable.h"
-#  include "dpl/core/concepts/operation_category.h"
+#  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/concepts/simd_equivalence.h"
+#  include "dpl/core/concepts/simd_element.h"
 #  include "dpl/core/concepts/simd_expression.h"
 #  include "dpl/core/constants/zero.h"
 #  include "dpl/core/type_traits/simd_expression_result.h"
@@ -38,7 +36,7 @@ concept unqualified_canonical_fmsub = requires(AT a, BT b, CT c) {
 template <typename AT, typename BT, typename CT,
     typename A = common_abi_t<AT, BT, CT>>
 concept unqualified_extended_fmsub = requires(AT a, BT b, CT c) {
-    { fmsub(a, b, c) } -> extended_operation_vector<A>;
+    { fmsub(a, b, c) } -> vector_with_common_abi<A>;
 };
 
 template <typename AT, typename BT, typename CT>
@@ -67,7 +65,7 @@ concept unqualified_canonical_mfmsub =
     requires(S src, M mask, AT a, BT b, CT c) {
         {
             fmsub(internal::abi<A>, src, mask, a, b, c)
-        } -> equivalent_simd_as<
+        } -> equivalent_simd_type_with<
             canonical_if_zero_t<S, operation_result_t<fmsub_t, AT, BT, CT>, A>>;
     };
 
@@ -75,7 +73,7 @@ template <typename S, typename M, typename AT, typename BT, typename CT,
     typename A = common_abi_t<AT, BT, CT, M>>
 concept unqualified_extended_mfmsub =
     requires(S src, M mask, AT a, BT b, CT c) {
-        { fmsub(src, mask, a, b, c) } -> extended_operation_vector<A>;
+        { fmsub(src, mask, a, b, c) } -> vector_with_common_abi<A>;
     };
 template <typename S, typename M, typename AT, typename BT, typename CT>
 concept expression_mfmsub =
@@ -115,7 +113,7 @@ concept unqualified_canonical_imfmsub = requires(
     {
         fmsub(internal::abi<A>, src,
             internal::to_const_mask<A, fmsub_t, S, AT, BT, CT>(mask), a, b, c)
-    } -> equivalent_simd_as<
+    } -> equivalent_simd_type_with<
         canonical_if_zero_t<S, operation_result_t<fmsub_t, AT, BT, CT>, A>>;
 };
 
@@ -128,7 +126,7 @@ concept unqualified_extended_imfmsub =
         {
             fmsub(src, internal::to_const_mask<A, fmsub_t, S, AT, BT, CT>(mask),
                 a, b, c)
-        } -> extended_operation_vector<A>;
+        } -> vector_with_common_abi<A>;
     };
 
 template <typename S, typename M, typename AT, typename BT, typename CT>
@@ -166,10 +164,9 @@ private:
     friend ternary_operation_base<fmsub_t>;
 
     template <simd_abi A, typename AT, typename BT, typename CT>
-    requires (!simd_class<AT> || canonical_vector<AT>) &&
-        (!simd_class<BT> || canonical_vector<BT>) &&
-        (!simd_class<CT> || canonical_vector<CT>) &&
-        requires(AT a, BT b, CT c) {
+    requires (!simd_type<AT> || canonical_vector<AT>) &&
+        (!simd_type<BT> || canonical_vector<BT>) &&
+        (!simd_type<CT> || canonical_vector<CT>) && requires(AT a, BT b, CT c) {
             { fmsub(internal::abi<A>, a, b, c) } -> vector_with_abi<A>;
         }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -178,9 +175,9 @@ private:
     }
 
     template <simd_abi A, typename AT, typename BT, typename CT>
-    requires (!simd_class<AT> || extended_vector<AT>) &&
-        (!simd_class<BT> || extended_vector<BT>) &&
-        (!simd_class<CT> || extended_vector<CT>) &&
+    requires (!simd_type<AT> || extended_vector<AT>) &&
+        (!simd_type<BT> || extended_vector<BT>) &&
+        (!simd_type<CT> || extended_vector<CT>) &&
         unqualified_fmsub<AT, BT, CT, A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto native(A, AT a, BT b, CT c) noexcept(
@@ -197,7 +194,7 @@ private:
 
 public:
     template <fixed_width_abi A, simd_element_for<A> E>
-    requires arithmetic_type<E>
+    requires basic_element<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A> operator()(basic_vector<E, A> a,
         basic_vector<E, A> b, basic_vector<E, A> c) noexcept {
@@ -220,7 +217,7 @@ public:
         simd_element_for<E, CA> &&
         (scalable_abi<AA> || scalable_abi<BA> || scalable_abi<CA> ||
             different_from<AA, BA> || different_from<AA, CA> ||
-            different_from<BA, CA> || !arithmetic_type<E>) &&
+            different_from<BA, CA> || !basic_element<E>) &&
         unqualified_canonical_fmsub<basic_vector<E, AA>, basic_vector<E, BA>,
             basic_vector<E, CA>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -250,7 +247,7 @@ public:
     using ternary_operation_base<fmsub_t>::operator();
 
     template <fixed_width_abi A, simd_element_for<A> E, common_size_with<E> ME>
-    requires arithmetic_type<E>
+    requires basic_element<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A> operator()(basic_vector<E, A> src,
         basic_mask<ME, A> mask, basic_vector<E, A> a, basic_vector<E, A> b,
@@ -275,7 +272,7 @@ public:
         simd_element_for<E, CA> &&
         (scalable_abi<AA> || scalable_abi<BA> || scalable_abi<CA> ||
             different_from<AA, BA> || different_from<AA, CA> ||
-            different_from<BA, CA> || !arithmetic_type<E>) &&
+            different_from<BA, CA> || !basic_element<E>) &&
         maskable_args<basic_vector<E, SA>, basic_mask<ME, SA>,
             basic_vector<E, AA>, basic_vector<E, BA>, basic_vector<E, CA>> &&
         unqualified_canonical_mfmsub<basic_vector<E, SA>, basic_mask<ME, SA>,
@@ -306,7 +303,7 @@ public:
     }
 
     template <fixed_width_abi A, simd_element_for<A> E, common_size_with<E> ME>
-    requires arithmetic_type<E>
+    requires basic_element<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A> operator()(basic_mask<ME, A> mask,
         basic_vector<E, A> a, basic_vector<E, A> b,
@@ -331,7 +328,7 @@ public:
         simd_element_for<E, CA> &&
         (scalable_abi<AA> || scalable_abi<BA> || scalable_abi<CA> ||
             different_from<AA, BA> || different_from<AA, CA> ||
-            different_from<BA, CA> || !arithmetic_type<E>) &&
+            different_from<BA, CA> || !basic_element<E>) &&
         zmaskable_args<basic_mask<ME, SA>, basic_vector<E, AA>,
             basic_vector<E, BA>, basic_vector<E, CA>> &&
         unqualified_canonical_mfmsub<zero_t, basic_mask<ME, SA>,
@@ -371,7 +368,7 @@ public:
 
     template <fixed_width_abi A, simd_element_for<A> E,
         const_mask_for<basic_vector<E, A>> M>
-    requires arithmetic_type<E>
+    requires basic_element<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A> operator()(basic_vector<E, A> src,
         M mask, basic_vector<E, A> a, basic_vector<E, A> b,
@@ -399,7 +396,7 @@ public:
         simd_element_for<E, CA> &&
         (scalable_abi<AA> || scalable_abi<BA> || scalable_abi<CA> ||
             different_from<AA, BA> || different_from<AA, CA> ||
-            different_from<BA, CA> || !arithmetic_type<E>) &&
+            different_from<BA, CA> || !basic_element<E>) &&
         imm_maskable_args<basic_vector<E, SA>, basic_vector<E, AA>,
             basic_vector<E, BA>, basic_vector<E, CA>> &&
         unqualified_canonical_imfmsub<basic_vector<E, SA>, M,
@@ -432,7 +429,7 @@ public:
 
     template <fixed_width_abi A, simd_element_for<A> E,
         const_mask_for<basic_vector<E, A>> M>
-    requires arithmetic_type<E>
+    requires basic_element<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A> operator()(M mask, basic_vector<E, A> a,
         basic_vector<E, A> b, basic_vector<E, A> c) noexcept {
@@ -458,7 +455,7 @@ public:
         const_mask_for<M, basic_vector<E, common_abi_t<AA, BA, CA>>> &&
         (scalable_abi<AA> || scalable_abi<BA> || scalable_abi<CA> ||
             different_from<AA, BA> || different_from<AA, CA> ||
-            different_from<BA, CA> || !arithmetic_type<E>) &&
+            different_from<BA, CA> || !basic_element<E>) &&
         imm_zmaskable_args<basic_vector<E, AA>, basic_vector<E, BA>,
             basic_vector<E, CA>> &&
         unqualified_canonical_imfmsub<zero_t, M, basic_vector<E, AA>,

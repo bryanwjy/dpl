@@ -7,7 +7,8 @@
 #include "dpl/core/math/internal/masked_op.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/concepts/basic_type.h"
+#  include "dpl/core/concepts/canonical.h"
+#  include "dpl/core/concepts/extended.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/constants/msb.h"
 #  include "dpl/core/operations/arithmetic.h"
@@ -29,7 +30,7 @@ concept unqualified_canonical_copysign = requires(L lhs, R rhs) {
 
 template <typename L, typename R = L, typename A = common_abi_t<L, R>>
 concept unqualified_extended_copysign = requires(L lhs, R rhs) {
-    { copysign(lhs, rhs) } -> extended_operation_vector<A>;
+    { copysign(lhs, rhs) } -> vector_with_common_abi<A>;
 };
 
 template <typename L, typename R>

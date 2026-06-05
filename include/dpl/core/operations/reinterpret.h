@@ -4,20 +4,20 @@
 #include "dpl/config.h"
 
 #include "dpl/core/operations/evaluate.h"
+#include "dpl/core/operations/internal/array_for.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/initialize.h"
+#  include "dpl/core/basic/internal/abi.h"
+#  include "dpl/core/basic/internal/iota_sequence.h"
 #  include "dpl/core/basic/load.h"
 #  include "dpl/core/basic/store.h"
 #  include "dpl/core/basic/to_canonical.h"
-#  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/common_size_with.h"
 #  include "dpl/core/concepts/decayable.h"
-#  include "dpl/core/concepts/operation_category.h"
-#  include "dpl/core/concepts/simd_abi_traits.h"
-#  include "dpl/core/concepts/simd_equivalence.h"
-#  include "dpl/core/type_traits/array_for.h"
-#  include "dpl/core/type_traits/iota_sequence.h"
+#  include "dpl/core/concepts/equivalence.h"
+#  include "dpl/core/concepts/extended.h"
+#  include "dpl/core/type_traits/simd_abi_traits.h"
 #  include "dpl/core/type_traits/simd_abi_type.h"
 #  include "dpl/core/type_traits/simd_expression_result.h"
 #  include "dpl/std/bit/bit_cast.h"
@@ -35,12 +35,12 @@ struct reinterpret_t;
 
 template <typename T, typename ToE, typename A>
 concept extended_reinterpreted_vector =
-    simd_vector<T> && same_as<simd_lane_type_t<T>, ToE> &&
+    simd_vector<T> && same_as<simd_element_type_t<T>, ToE> &&
     common_abi_with<A, typename T::abi_type>;
 
 template <typename T, typename ToE, typename A>
 concept extended_reinterpreted_mask =
-    simd_mask<T> && same_as<simd_lane_type_t<T>, ToE> &&
+    simd_mask<T> && same_as<simd_element_type_t<T>, ToE> &&
     common_abi_with<A, typename T::abi_type>;
 
 template <typename T, typename ToE, typename A>
@@ -90,7 +90,7 @@ concept expression_reinterpret = simd_expression<From> &&
 
 template <typename From, typename To>
 inline constexpr auto reinterpret_lane_policy =
-    sizeof(simd_lane_type_t<From>) == sizeof(To)
+    sizeof(simd_element_type_t<From>) == sizeof(To)
     ? operation_category::lane_agnostic
     : (operation_category::structural_transformation |
           operation_category::lane_agnostic);
@@ -109,7 +109,7 @@ struct reinterpret_t {
 private:
     template <typename From>
     static constexpr auto policy = []() {
-        if constexpr (sizeof(simd_lane_type_t<From>) == sizeof(ToE)) {
+        if constexpr (sizeof(simd_element_type_t<From>) == sizeof(ToE)) {
             return operation_category::lane_agnostic;
         } else {
             return operation_category::structural_transformation |
@@ -189,9 +189,9 @@ public:
         }
     }
 
-    template <extended_class From>
+    template <extended_simd_type From>
     requires (simd_vector<From> ||
-                 common_size_with<simd_lane_type_t<From>, ToE>) &&
+                 common_size_with<simd_element_type_t<From>, ToE>) &&
         extended_reinterpret<From, ToE>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(From val) noexcept {
@@ -245,13 +245,13 @@ public:
     }
 };
 
-template <extended_class To>
+template <extended_simd_type To>
 struct reinterpret_t<To> {
     using ToA DPL_NODEBUG = typename To::abi_type;
-    using ToE DPL_NODEBUG = simd_lane_type_t<To>;
+    using ToE DPL_NODEBUG = simd_element_type_t<To>;
 
 public:
-    template <simd_with_abi<ToA> From>
+    template <simd_type_with_abi<ToA> From>
     requires regular_invocable<reinterpret_t<ToE>, From> &&
         same_as<invoke_result_t<reinterpret_t<ToE>, From>, To>
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)

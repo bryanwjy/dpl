@@ -25,28 +25,28 @@ template <typename S, typename M, typename T, typename A = common_abi_t<M, T>>
 concept unqualified_canonical_expand = requires(S src, M mask, T val) {
     {
         expand(internal::abi<A>, src, mask, val)
-    } -> equivalent_simd_as<canonical_if_zero_t<S, T, A>>;
+    } -> equivalent_simd_type_with<canonical_if_zero_t<S, T, A>>;
 };
 
 template <typename S, typename M, typename T, typename A = common_abi_t<M, T>>
 concept unqualified_extended_expand = requires(S src, M mask, T val) {
     {
         expand(src, mask, val)
-    } -> equivalent_simd_as<canonical_if_zero_t<S, T, A>>;
+    } -> equivalent_simd_type_with<canonical_if_zero_t<S, T, A>>;
 };
 
 template <typename S, typename M, typename R, typename A = common_abi_t<S, R>>
 concept unqualified_canonical_iexpand = requires(S src, R val) {
     {
         expand(internal::abi<A>, src, internal::select_mask<M, S, R>(), val)
-    } -> equivalent_simd_as<S>;
+    } -> equivalent_simd_type_with<S>;
 };
 
 template <typename S, typename M, typename R, typename A = common_abi_t<S, R>>
 concept unqualified_extended_iexpand = requires(S src, R val) {
     {
         expand(src, internal::select_mask<M, S, R>(), val)
-    } -> equivalent_simd_as<S>;
+    } -> equivalent_simd_type_with<S>;
 };
 
 struct expand_t {
@@ -63,7 +63,7 @@ private:
     static constexpr auto DPL_VECTORCALL fallbacki(
         S src, M cmask, T val) noexcept {
         using A = common_abi_t<canonical_if_zero_t<S, T>, T>;
-        using I = signed_representation_t<simd_lane_type_t<T>>;
+        using I = signed_representation_t<simd_element_type_t<T>>;
         constexpr auto rank =
             exscan_sum_base::operator()(basic_mask<I, A>(cmask));
         constexpr auto seq = []<size_t... Is>(index_sequence<Is...>) {
@@ -74,7 +74,7 @@ private:
 
     template <typename M, typename T>
     using broadcast_type DPL_NODEBUG =
-        rebind_simd_t<T, simd_lane_type_t<T>, typename M::abi_type>;
+        rebind_simd_t<T, simd_element_type_t<T>, typename M::abi_type>;
 
 public:
     template <canonical_vector S, canonical_mask M, canonical_vector T>
@@ -258,8 +258,8 @@ public:
         return expand_t::operator()(src, cmask, val);
     }
 
-    template <simd_class S, typename R>
-    requires (!simd_class<R>) && requires { typename mask_type<S>; } &&
+    template <simd_type S, typename R>
+    requires (!simd_type<R>) && requires { typename mask_type<S>; } &&
         regular_invocable<expand_t, S, mask_type<S>, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(S src, R val) noexcept {
@@ -267,8 +267,8 @@ public:
         return expand_t::operator()(src, cmask, val);
     }
 
-    template <typename S, simd_class R>
-    requires (!simd_class<S>) && requires { typename mask_type<R>; } &&
+    template <typename S, simd_type R>
+    requires (!simd_type<S>) && requires { typename mask_type<R>; } &&
         regular_invocable<expand_t, S, mask_type<R>, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(S src, R val) noexcept {

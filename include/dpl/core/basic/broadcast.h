@@ -5,15 +5,17 @@
 
 #include "dpl/core/basic/broadcastable_base.h"
 #include "dpl/core/basic/broadcasting.h"
+#include "dpl/core/basic/internal/abi.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/fwd.h"
 
-#  include "dpl/core/concepts/basic_type.h"
 #  include "dpl/core/concepts/broadcastable_to.h"
-#  include "dpl/core/type_traits/basic_type.h"
+#  include "dpl/core/concepts/canonical.h"
+#  include "dpl/core/concepts/extended.h"
+#  include "dpl/core/type_traits/canonical_type.h"
 #  include "dpl/core/type_traits/simd_abi_type.h"
-#  include "dpl/core/type_traits/simd_lane_type.h"
+#  include "dpl/core/type_traits/simd_element_type.h"
 #  include "dpl/std/concepts/integral_constant_like.h"
 #  include "dpl/std/concepts/invocable.h"
 #  include "dpl/std/utility/forward.h"
@@ -84,10 +86,10 @@ public:
     }
 };
 
-template <canonical_class T>
+template <canonical_simd_type T>
 struct broadcast_t<T> {
 private:
-    using E DPL_NODEBUG = simd_lane_type_t<T>;
+    using E DPL_NODEBUG = simd_element_type_t<T>;
     using A DPL_NODEBUG = simd_abi_type_t<T>;
 
 public:
@@ -114,10 +116,10 @@ public:
     }
 };
 
-template <extended_class T>
+template <extended_simd_type T>
 struct broadcast_t<T> {
 private:
-    using E DPL_NODEBUG = simd_lane_type_t<T>;
+    using E DPL_NODEBUG = simd_element_type_t<T>;
     using base_type DPL_NODEBUG = broadcast_t<canonical_type_t<T>>;
 
 public:

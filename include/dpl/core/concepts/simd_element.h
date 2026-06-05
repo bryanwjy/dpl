@@ -3,41 +3,36 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/concepts/basic_element.h"
 #include "dpl/core/concepts/simd_abi.h"
-#include "dpl/core/concepts/simd_class.h"
 
 #if !DPL_MODULES
-#  include "dpl/std/bit/has_single_bit.h"
-#  include "dpl/std/concepts/semiregular.h"
-#  include "dpl/std/type_traits/is_empty.h"
-#  include "dpl/std/type_traits/is_object.h"
-#  include "dpl/std/type_traits/is_trivially_copyable.h"
+#  include "dpl/core/type_traits/simd_element_representation.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar {
-// TODO  Create example, e.g. bfloat16 on MSVC
-/**
- * Custom builtins depending on ABI
- */
-DPL_EXPORT template <typename T>
-inline constexpr bool enable_extension_floating_point = false;
-DPL_EXPORT template <typename T>
-inline constexpr bool enable_extension_integral = false;
 
-namespace internal {
-template <typename T>
-concept extension_element =
-    (enable_extension_floating_point<T> || enable_extension_integral<T>) &&
-    !is_empty_v<T> && is_object_v<T> && is_trivially_copyable_v<T> &&
-    semiregular<T> && (__DPL has_single_bit(sizeof(T)));
-} // namespace internal
+template <typename E>
+concept basic_element = !same_as<E, bool> && (integral<E> || floating_point<E>);
 
-DPL_EXPORT template <typename T>
-concept simd_element =
-    !same_as<T, bool> && (basic_element<T> || internal::extension_element<T>);
+DPL_EXPORT template <typename E, typename A>
+concept simd_element_for = simd_abi<A> && requires {
+    // required by ABI to determine what vector type to use
+    typename simd_element_representation_t<A, E>;
+    requires basic_element<simd_element_representation_t<A, E>> &&
+        sizeof(E) == sizeof(simd_element_representation_t<A, E>);
+    typename A::template native_vector<E>;
+    typename A::template native_mask<E>;
+    typename A::template native_vector<simd_element_representation_t<A, E>>;
+    typename A::template native_mask<simd_element_representation_t<A, E>>;
+    requires same_as<
+        typename A::template native_vector<simd_element_representation_t<A, E>>,
+        typename A::template native_vector<E>>;
+    requires same_as<
+        typename A::template native_mask<simd_element_representation_t<A, E>>,
+        typename A::template native_mask<E>>;
+};
 
 } // namespace datapar
 

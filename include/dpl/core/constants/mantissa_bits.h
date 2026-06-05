@@ -17,8 +17,7 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
-DPL_EXPORT
-struct mantissa_bits_t : broadcastable_base {
+DPL_EXPORT struct mantissa_bits_t : broadcastable_base<mantissa_bits_t> {
     __DPL_HIDE_FROM_ABI explicit constexpr mantissa_bits_t() noexcept = default;
 
     template <floating_point T>
@@ -31,8 +30,7 @@ struct mantissa_bits_t : broadcastable_base {
     }
 };
 
-DPL_EXPORT
-inline constexpr mantissa_bits_t mantissa_bits{};
+DPL_EXPORT inline constexpr mantissa_bits_t mantissa_bits{};
 
 DPL_EXPORT template <typename T>
 requires explicitly_convertible_to<mantissa_bits_t, T>

@@ -9,12 +9,13 @@
 #include "dpl/core/math/internal/masked_op.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/concepts/basic_type.h"
+#  include "dpl/core/concepts/canonical.h"
+#  include "dpl/core/concepts/extended.h"
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/concepts/simd_traits.h"
 #  include "dpl/core/concepts/simd_vector.h"
 #  include "dpl/core/operations/arithmetic.h"
 #  include "dpl/core/type_traits/representation.h"
+#  include "dpl/core/type_traits/simd_traits.h"
 #  include "dpl/core/utility/fpfix.h"
 #endif
 
@@ -33,7 +34,7 @@ concept unqualified_canonical_rcp = requires(T val) {
 
 template <typename T>
 concept unqualified_extended_rcp = requires(T val) {
-    { rcp(val) } -> extended_operation_vector<typename T::abi_type>;
+    { rcp(val) } -> vector_with_common_abi<typename T::abi_type>;
 };
 
 template <typename T>

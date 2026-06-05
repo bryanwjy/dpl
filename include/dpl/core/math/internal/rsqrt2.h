@@ -49,7 +49,7 @@ private:
         return refine(result, half_x, imm<N - 1>);
     }
 
-    struct one : broadcastable_base {
+    struct one : broadcastable_base<one> {
         __DPL_HIDE_FROM_ABI explicit constexpr one() noexcept = default;
 
         template <floating_point T>

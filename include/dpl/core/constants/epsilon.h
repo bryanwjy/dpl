@@ -15,7 +15,7 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
-inline constexpr struct epsilon_t : broadcastable_base {
+inline constexpr struct epsilon_t : broadcastable_base<epsilon_t> {
     __DPL_HIDE_FROM_ABI explicit constexpr epsilon_t() noexcept = default;
 
     template <floating_point T>

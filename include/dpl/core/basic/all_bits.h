@@ -6,17 +6,18 @@
 #include "dpl/core/basic/broadcastable_base.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/concepts/common_bits_with.h"
-#  include "dpl/core/type_traits/representation.h"
 #  include "dpl/std/bit/bit_cast.h"
 #  include "dpl/std/concepts/integral.h"
+#  include "dpl/std/utility/apply.h"
+#  include "dpl/std/utility/ignore.h"
+#  include "dpl/std/utility/sequence.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar {
 
-DPL_EXPORT struct all_bits_t : broadcastable_base {
+DPL_EXPORT struct all_bits_t : broadcastable_base<all_bits_t> {
     __DPL_HIDE_FROM_ABI explicit constexpr all_bits_t() noexcept = default;
 
     template <integral T>
@@ -26,11 +27,17 @@ DPL_EXPORT struct all_bits_t : broadcastable_base {
     }
 
     template <typename T>
-    requires (!integral<T> && common_bits_with<unsigned_representation_t<T>, T>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     constexpr operator T(this all_bits_t self) noexcept {
-        return __DPL bit_cast<T>(
-            static_cast<unsigned_representation_t<T>>(self));
+        struct bits {
+            char data[sizeof(T)];
+        };
+        return __DPL apply(
+            [](auto... args) {
+                return __DPL bit_cast<T>(
+                    bits{static_cast<char>((__DPL ignore = args, -1))...});
+            },
+            make_index_sequence<sizeof(T)>{});
     }
 };
 

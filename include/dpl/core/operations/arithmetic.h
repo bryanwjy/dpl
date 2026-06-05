@@ -8,8 +8,8 @@
 #include "dpl/core/operations/reinterpret.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/concepts/arithmetic_type.h"
-#  include "dpl/core/concepts/simd_equivalence.h"
+#  include "dpl/core/concepts/equivalence.h"
+#  include "dpl/core/concepts/simd_element.h"
 #  include "dpl/std/type_traits/enable_if.h"
 #endif
 
@@ -160,7 +160,7 @@ public:
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     constexpr D operator-(this D self) noexcept
-    requires simd_vector<D> && arithmetic_type<typename D::value_type> &&
+    requires simd_vector<D> && basic_element<typename D::value_type> &&
         regular_invocable<internal::negate_t, D>
     {
         return internal::negate_t::operator()(self);
@@ -201,28 +201,28 @@ constexpr invoke_result_t<internal::divide_t, L, R> operator/(
 DPL_EXPORT template <typename L, typename R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
 constexpr auto operator+=(L& lhs, R rhs) noexcept
-    -> enable_if_t<equivalent_simd_as<L, decltype(lhs + rhs)>, L&> {
+    -> enable_if_t<equivalent_simd_type_with<L, decltype(lhs + rhs)>, L&> {
     return lhs = datapar::reinterpret<L>(lhs + rhs);
 }
 
 DPL_EXPORT template <typename L, typename R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
 constexpr auto operator-=(L& lhs, R rhs) noexcept
-    -> enable_if_t<equivalent_simd_as<L, decltype(lhs - rhs)>, L&> {
+    -> enable_if_t<equivalent_simd_type_with<L, decltype(lhs - rhs)>, L&> {
     return lhs = datapar::reinterpret<L>(lhs - rhs);
 }
 
 DPL_EXPORT template <typename L, typename R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
 constexpr auto operator*=(L& lhs, R rhs) noexcept
-    -> enable_if_t<equivalent_simd_as<L, decltype(lhs * rhs)>, L&> {
+    -> enable_if_t<equivalent_simd_type_with<L, decltype(lhs * rhs)>, L&> {
     return lhs = datapar::reinterpret<L>(lhs * rhs);
 }
 
 DPL_EXPORT template <typename L, typename R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
 constexpr auto operator/=(L& lhs, R rhs) noexcept
-    -> enable_if_t<equivalent_simd_as<L, decltype(lhs / rhs)>, L&> {
+    -> enable_if_t<equivalent_simd_type_with<L, decltype(lhs / rhs)>, L&> {
     return lhs = datapar::reinterpret<L>(lhs / rhs);
 }
 

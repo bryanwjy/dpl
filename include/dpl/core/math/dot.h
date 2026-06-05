@@ -8,13 +8,11 @@
 #if !DPL_MODULES
 #  include "dpl/core/basic/to_canonical.h"
 #  include "dpl/core/concepts/decayable.h"
-#  include "dpl/core/concepts/operation_category.h"
-#  include "dpl/core/concepts/simd_equivalence.h"
+#  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/operations/arithmetic.h"
 #  include "dpl/core/operations/bitwise.h"
 #  include "dpl/core/operations/cast.h"
 #  include "dpl/core/operations/evaluate.h"
-#  include "dpl/core/operations/internal/extended_operations.h"
 #  include "dpl/core/operations/lane_index.h"
 #  include "dpl/core/operations/permute.h"
 #  include "dpl/core/type_traits/common_abi.h"
@@ -50,13 +48,13 @@ template <typename S, typename L, typename R,
 concept unqualified_canonical_dp = requires(S acc, L left, R right) {
     {
         dot_product(internal::abi<A>, acc, left, right)
-    } -> equivalent_simd_as<S>;
+    } -> equivalent_simd_type_with<S>;
 };
 
 template <typename S, typename L, typename R,
     typename A = common_abi_t<L, R, S>>
 concept unqualified_extended_dp = requires(S acc, L left, R right) {
-    { dot_product(acc, left, right) } -> extended_operation_vector<A>;
+    { dot_product(acc, left, right) } -> vector_with_common_abi<A>;
 };
 
 template <typename S, typename L, typename R>

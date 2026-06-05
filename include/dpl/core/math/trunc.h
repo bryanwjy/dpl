@@ -9,15 +9,16 @@
 #include "dpl/core/math/internal/masked_op.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/concepts/basic_type.h"
+#  include "dpl/core/concepts/canonical.h"
+#  include "dpl/core/concepts/extended.h"
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/concepts/simd_traits.h"
 #  include "dpl/core/concepts/simd_vector.h"
 #  include "dpl/core/constants/one.h"
 #  include "dpl/core/operations/arithmetic.h"
 #  include "dpl/core/operations/bit.h"
 #  include "dpl/core/operations/select.h"
 #  include "dpl/core/type_traits/representation.h"
+#  include "dpl/core/type_traits/simd_traits.h"
 #  include "dpl/core/utility/rounding.h"
 #endif
 
@@ -37,7 +38,7 @@ template <typename T>
 concept unqualified_extended_trunc = requires(T val) {
     {
         round(val, rounding::to_pos_inf)
-    } -> extended_operation_vector<typename T::abi_type>;
+    } -> vector_with_common_abi<typename T::abi_type>;
 };
 
 template <typename T>
@@ -57,14 +58,14 @@ template <typename T>
 concept unqualified_canonical_truncne = requires(T val) {
     {
         round(internal::abi<T>, val, rounding::to_pos_inf | rounding::no_exc)
-    } -> equivalent_simd_as<T>;
+    } -> equivalent_simd_type_with<T>;
 };
 
 template <typename T>
 concept unqualified_extended_truncne = requires(T val) {
     {
         round(val, rounding::to_pos_inf | rounding::no_exc)
-    } -> extended_operation_vector<typename T::abi_type>;
+    } -> vector_with_common_abi<typename T::abi_type>;
 };
 
 template <typename T>

@@ -17,8 +17,7 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
-DPL_EXPORT
-struct min_value_t : broadcastable_base {
+DPL_EXPORT struct min_value_t : broadcastable_base<min_value_t> {
     __DPL_HIDE_FROM_ABI explicit constexpr min_value_t() noexcept = default;
 
     template <integral T>
@@ -41,8 +40,7 @@ struct min_value_t : broadcastable_base {
     }
 };
 
-DPL_EXPORT
-inline constexpr min_value_t min_value{};
+DPL_EXPORT inline constexpr min_value_t min_value{};
 
 DPL_EXPORT template <typename T>
 requires explicitly_convertible_to<min_value_t, T>

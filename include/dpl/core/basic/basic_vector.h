@@ -11,7 +11,7 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/concepts/simd_element_for.h"
+#  include "dpl/core/concepts/simd_element.h"
 #  include "dpl/core/type_traits/simd_abi_traits.h"
 #  include "dpl/std/concepts/different_from.h"
 #endif

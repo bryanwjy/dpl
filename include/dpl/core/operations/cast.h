@@ -3,20 +3,24 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/operations/bitwise.h"
+#include "dpl/core/operations/evaluate.h"
+#include "dpl/core/operations/internal/array_for.h"
 
 #if !DPL_MODULES
+#  include "dpl/core/basic/initialize.h"
+#  include "dpl/core/basic/internal/abi.h"
+#  include "dpl/core/basic/internal/iota_sequence.h"
 #  include "dpl/core/basic/load.h"
+#  include "dpl/core/basic/store.h"
 #  include "dpl/core/basic/to_canonical.h"
 #  include "dpl/core/concepts/decayable.h"
+#  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/concepts/simd_equivalence.h"
+#  include "dpl/core/concepts/simd_expression.h"
 #  include "dpl/core/constants/max_value.h"
 #  include "dpl/core/constants/min_value.h"
 #  include "dpl/core/constants/zero.h"
-#  include "dpl/core/type_traits/array_for.h"
-#  include "dpl/core/type_traits/basic_type.h"
-#  include "dpl/core/type_traits/iota_sequence.h"
+#  include "dpl/core/type_traits/canonical_type.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -38,8 +42,9 @@ template <typename>
 void simd_cast(...) noexcept = delete;
 
 template <typename T, typename E, typename A>
-concept extended_ecast_vector = simd_vector<T> &&
-    same_as<simd_lane_type_t<T>, E> && common_abi_with<simd_abi_type_t<T>, A>;
+concept extended_ecast_vector =
+    simd_vector<T> && same_as<simd_element_type_t<T>, E> &&
+    common_abi_with<simd_abi_type_t<T>, A>;
 template <typename T, typename E, typename A>
 concept canonical_ecast_vector =
     extended_ecast_vector<T, E, A> && same_as<simd_abi_type_t<T>, A>;
@@ -71,7 +76,8 @@ concept expression_ecastable = vector_expression<From> &&
 
 template <typename From, typename To>
 concept decayable_ecastable =
-    decayable_vector_for<From, ecast_lane_policy<simd_lane_type_t<From>, To>> &&
+    decayable_vector_for<From,
+        ecast_lane_policy<simd_element_type_t<From>, To>> &&
     regular_invocable<element_cast_t<To>, canonical_type_t<From>>;
 
 template <typename From, typename To>
@@ -177,46 +183,46 @@ public:
 
 template <typename From, typename To>
 concept canonical_vector_target_acastable = simd_vector<From> && simd_abi<To> &&
-    simd_element_for<simd_lane_type_t<From>, To> && requires(From arg) {
+    simd_element_for<simd_element_type_t<From>, To> && requires(From arg) {
         {
             abi_cast<To>(internal::abi<From>, arg)
-        } -> vector_with<simd_lane_type_t<From>, To>;
+        } -> vector_with<simd_element_type_t<From>, To>;
     };
 
 template <typename From, typename To>
 concept canonical_vector_source_acastable = simd_vector<From> && simd_abi<To> &&
-    simd_element_for<simd_lane_type_t<From>, To> && requires(From arg) {
+    simd_element_for<simd_element_type_t<From>, To> && requires(From arg) {
         {
             abi_cast(internal::abi<To>, arg)
-        } -> vector_with<simd_lane_type_t<From>, To>;
+        } -> vector_with<simd_element_type_t<From>, To>;
     };
 
 template <typename From, typename To>
 concept canonical_mask_target_acastable = simd_mask<From> && simd_abi<To> &&
-    simd_element_for<simd_lane_type_t<From>, To> && requires(From arg) {
+    simd_element_for<simd_element_type_t<From>, To> && requires(From arg) {
         {
             abi_cast<To>(internal::abi<From>, arg)
-        } -> mask_with<simd_lane_type_t<From>, To>;
+        } -> mask_with<simd_element_type_t<From>, To>;
     };
 
 template <typename From, typename To>
 concept canonical_mask_source_acastable = simd_mask<From> && simd_abi<To> &&
-    simd_element_for<simd_lane_type_t<From>, To> && requires(From arg) {
+    simd_element_for<simd_element_type_t<From>, To> && requires(From arg) {
         {
             abi_cast(internal::abi<To>, arg)
-        } -> mask_with<simd_lane_type_t<From>, To>;
+        } -> mask_with<simd_element_type_t<From>, To>;
     };
 
 template <typename From, typename To>
 concept unqualified_extended_vector_acastable =
     simd_vector<From> && simd_abi<To> &&
-    simd_element_for<simd_lane_type_t<From>, To> && requires(From arg) {
+    simd_element_for<simd_element_type_t<From>, To> && requires(From arg) {
         { abi_cast<To>(arg) } -> vector_with_abi<To>;
     };
 
 template <typename From, typename To>
 concept unqualified_extended_mask_acastable = simd_mask<From> && simd_abi<To> &&
-    simd_element_for<simd_lane_type_t<From>, To> && requires(From arg) {
+    simd_element_for<simd_element_type_t<From>, To> && requires(From arg) {
         { abi_cast<To>(arg) } -> mask_with_abi<To>;
     };
 
@@ -379,7 +385,7 @@ public:
         }
     }
     ///
-    template <extended_class From>
+    template <extended_simd_type From>
     requires extended_acastable<From, To>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(From val) noexcept
@@ -397,13 +403,13 @@ public:
 
 template <typename From, typename To>
 concept unqualified_canonical_castable_to =
-    common_class_with<From, To> && requires(From from) {
+    common_simd_type_with<From, To> && requires(From from) {
         { simd_cast<To>(internal::abi<From>, from) } -> same_as<To>;
     };
 
 template <typename From, typename To>
 concept unqualified_canonical_castable_from =
-    common_class_with<From, To> && requires(From from) {
+    common_simd_type_with<From, To> && requires(From from) {
         { simd_cast<To>(internal::abi<To>, from) } -> same_as<To>;
     };
 template <typename From, typename To>
@@ -419,7 +425,7 @@ template <typename From, typename To>
 concept extended_castable =
     explicitly_convertible_to<From, To> || expression_castable<From, To>;
 
-template <canonical_class To>
+template <canonical_simd_type To>
 struct simd_cast_t<To> {
 private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -427,7 +433,7 @@ private:
         return from;
     }
 
-    template <canonical_class From>
+    template <canonical_simd_type From>
     requires unqualified_canonical_castable<From, To>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr To operator()(From from) noexcept {
@@ -438,7 +444,7 @@ private:
         }
     }
 
-    template <extended_class From>
+    template <extended_simd_type From>
     requires same_as<canonical_type_t<From>, To>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr To operator()(From from) noexcept {
@@ -449,7 +455,7 @@ private:
         }
     }
 
-    template <extended_class From>
+    template <extended_simd_type From>
     requires (!same_as<canonical_type_t<From>, To>) &&
         extended_castable<From, To>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -461,10 +467,10 @@ private:
         }
     }
 
-    template <simd_class From>
+    template <simd_type From>
     requires (!same_as<canonical_type_t<From>, To> &&
                  !extended_castable<From, To> &&
-                 !(canonical_class<From> &&
+                 !(canonical_simd_type<From> &&
                      unqualified_canonical_castable<From, To>)) &&
         regular_invocable<abi_cast_t<simd_abi_type_t<To>>, From> &&
         same_as<invoke_result_t<abi_cast_t<simd_abi_type_t<To>>, From>, To>
@@ -473,23 +479,24 @@ private:
         return abi_cast_t<simd_abi_type_t<To>>::operator()(from);
     }
 
-    template <simd_class From>
+    template <simd_type From>
     requires (!same_as<canonical_type_t<From>, To> &&
                  !extended_castable<From, To> &&
-                 !(canonical_class<From> &&
+                 !(canonical_simd_type<From> &&
                      unqualified_canonical_castable<From, To>)) &&
-        regular_invocable<element_cast_t<simd_lane_type_t<To>>, From> &&
-        same_as<invoke_result_t<element_cast_t<simd_lane_type_t<To>>, From>, To>
+        regular_invocable<element_cast_t<simd_element_type_t<To>>, From> &&
+        same_as<invoke_result_t<element_cast_t<simd_element_type_t<To>>, From>,
+            To>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr To operator()(From from) noexcept {
-        return element_cast_t<simd_lane_type_t<To>>::operator()(from);
+        return element_cast_t<simd_element_type_t<To>>::operator()(from);
     }
 };
 
-template <extended_class To>
+template <extended_simd_type To>
 struct simd_cast_t<To> {
 public:
-    template <simd_class From>
+    template <simd_type From>
     requires (!explicitly_convertible_to<From, To>) &&
         regular_invocable<abi_cast_t<simd_abi_type_t<To>>, From> &&
         same_as<invoke_result_t<abi_cast_t<simd_abi_type_t<To>>, From>, To>
@@ -498,16 +505,17 @@ public:
         return abi_cast_t<simd_abi_type_t<To>>::operator()(from);
     }
 
-    template <simd_class From>
+    template <simd_type From>
     requires (!explicitly_convertible_to<From, To>) &&
-        regular_invocable<element_cast_t<simd_lane_type_t<To>>, From> &&
-        same_as<invoke_result_t<element_cast_t<simd_lane_type_t<To>>, From>, To>
+        regular_invocable<element_cast_t<simd_element_type_t<To>>, From> &&
+        same_as<invoke_result_t<element_cast_t<simd_element_type_t<To>>, From>,
+            To>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr To operator()(From from) noexcept {
-        return element_cast_t<simd_lane_type_t<To>>::operator()(from);
+        return element_cast_t<simd_element_type_t<To>>::operator()(from);
     }
 
-    template <simd_class From>
+    template <simd_type From>
     requires explicitly_convertible_to<From, To>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr To operator()(From from) noexcept {

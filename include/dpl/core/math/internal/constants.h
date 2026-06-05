@@ -18,7 +18,7 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::fmath {
 namespace dx = __DPL datapar;
 
-struct toint_t : broadcastable_base {
+struct toint_t : broadcastable_base<toint_t> {
     __DPL_HIDE_FROM_ABI explicit constexpr toint_t() noexcept = default;
 
     template <floating_point T>
@@ -30,7 +30,7 @@ struct toint_t : broadcastable_base {
 
 inline constexpr toint_t toint{};
 
-struct maxint_t : broadcastable_base {
+struct maxint_t : broadcastable_base<maxint_t> {
     __DPL_HIDE_FROM_ABI explicit constexpr maxint_t() noexcept = default;
 
     template <floating_point T>
@@ -43,7 +43,7 @@ struct maxint_t : broadcastable_base {
 
 inline constexpr maxint_t maxint{};
 
-struct half_t : broadcastable_base {
+struct half_t : broadcastable_base<half_t> {
     __DPL_HIDE_FROM_ABI explicit constexpr half_t() noexcept = default;
 
     template <floating_point T>
@@ -55,7 +55,7 @@ struct half_t : broadcastable_base {
 
 inline constexpr half_t half{};
 
-struct underhalf_t : broadcastable_base {
+struct underhalf_t : broadcastable_base<underhalf_t> {
     __DPL_HIDE_FROM_ABI explicit constexpr underhalf_t() noexcept = default;
 
     template <floating_point T>
@@ -70,7 +70,7 @@ struct underhalf_t : broadcastable_base {
 inline constexpr underhalf_t underhalf{};
 
 template <typename T>
-struct bit_width_of_t : broadcastable_base {
+struct bit_width_of_t : broadcastable_base<bit_width_of_t<T>> {
     __DPL_HIDE_FROM_ABI explicit constexpr bit_width_of_t() noexcept = default;
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
@@ -81,7 +81,7 @@ struct bit_width_of_t : broadcastable_base {
 template <typename T>
 inline constexpr bit_width_of_t<T> bit_width_of{};
 
-struct inv_ln2_t : broadcastable_base {
+struct inv_ln2_t : broadcastable_base<inv_ln2_t> {
     __DPL_HIDE_FROM_ABI explicit constexpr inv_ln2_t() noexcept = default;
 
     template <floating_point T>

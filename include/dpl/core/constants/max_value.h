@@ -18,8 +18,7 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
-DPL_EXPORT
-struct max_value_t : broadcastable_base {
+DPL_EXPORT struct max_value_t : broadcastable_base<max_value_t> {
     __DPL_HIDE_FROM_ABI explicit constexpr max_value_t() noexcept = default;
 
     template <integral T>
@@ -38,8 +37,7 @@ struct max_value_t : broadcastable_base {
     }
 };
 
-DPL_EXPORT
-inline constexpr max_value_t max_value{};
+DPL_EXPORT inline constexpr max_value_t max_value{};
 
 DPL_EXPORT template <typename T>
 requires explicitly_convertible_to<max_value_t, T>

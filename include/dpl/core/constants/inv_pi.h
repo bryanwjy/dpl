@@ -6,13 +6,13 @@
 #if !DPL_MODULES
 #  include "dpl/core/basic/broadcastable_base.h"
 #  include "dpl/std/concepts/convertible_to.h"
+#  include "dpl/std/concepts/floating_point.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
-DPL_EXPORT
-struct inv_pi_t : broadcastable_base {
+DPL_EXPORT struct inv_pi_t : broadcastable_base<inv_pi_t> {
     __DPL_HIDE_FROM_ABI explicit constexpr inv_pi_t() noexcept = default;
 
     template <floating_point T>
@@ -22,8 +22,7 @@ struct inv_pi_t : broadcastable_base {
     }
 };
 
-DPL_EXPORT
-inline constexpr inv_pi_t inv_pi{};
+DPL_EXPORT inline constexpr inv_pi_t inv_pi{};
 
 DPL_EXPORT template <typename T>
 requires explicitly_convertible_to<inv_pi_t, T>

@@ -9,13 +9,11 @@
 #include "dpl/core/operations/internal/masked.h"
 #include "dpl/core/operations/internal/operation_base.h"
 #include "dpl/core/operations/internal/transform.h"
-
 #if !DPL_MODULES
+#  include "dpl/core/basic/internal/abi.h"
 #  include "dpl/core/concepts/decayable.h"
-#  include "dpl/core/concepts/operation_category.h"
+#  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/concepts/simd_equivalence.h"
-#  include "dpl/core/type_traits/common_bits_type.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -33,12 +31,13 @@ concept unqualified_canonical_bwandnot = requires(L lhs, R rhs) {
 
 template <typename L, typename R, typename A = common_abi_t<L, R>>
 concept unqualified_extended_bwandnot = requires(L lhs, R rhs) {
-    { bwandnot(lhs, rhs) } -> extended_operation_vector<A>;
+    { bwandnot(lhs, rhs) } -> vector_with_common_abi<A>;
 };
 
 template <typename L, typename R>
 concept expression_bwandnot = (simd_expression<L> || simd_expression<R>) &&
-    invocable<abs_t, simd_expression_result_t<L>, simd_expression_result_t<R>>;
+    invocable<bwandnot_t, simd_expression_result_t<L>,
+        simd_expression_result_t<R>>;
 
 template <typename L, typename R, typename A = common_abi_t<L, R>>
 concept decayable_bwandnot = (decayable_vector_for<L,
@@ -56,14 +55,14 @@ concept unqualified_canonical_mbwandnot =
     requires(S src, M mask, L lhs, R rhs) {
         {
             bwandnot(internal::abi<A>, src, mask, lhs, rhs)
-        } -> equivalent_simd_as<
+        } -> equivalent_simd_type_with<
             canonical_if_zero_t<S, operation_result_t<bwandnot_t, L, R>, A>>;
     };
 
 template <typename S, typename M, typename L, typename R,
     typename A = common_abi_t<L, R, M>>
 concept unqualified_extended_mbwandnot = requires(S src, M mask, L lhs, R rhs) {
-    { bwandnot(src, mask, lhs, rhs) } -> extended_operation_vector<A>;
+    { bwandnot(src, mask, lhs, rhs) } -> vector_with_common_abi<A>;
 };
 
 template <typename S, typename M, typename L, typename R>
@@ -100,7 +99,7 @@ concept unqualified_canonical_imbwandnot =
         {
             bwandnot(internal::abi<A>, src,
                 internal::to_const_mask<A, bwandnot_t, S, L, R>(mask), lhs, rhs)
-        } -> equivalent_simd_as<
+        } -> equivalent_simd_type_with<
             canonical_if_zero_t<S, operation_result_t<bwandnot_t, L, R>, A>>;
     };
 
@@ -113,7 +112,7 @@ concept unqualified_extended_imbwandnot =
         {
             bwandnot(src, internal::to_const_mask<A, bwandnot_t, S, L, R>(mask),
                 lhs, rhs)
-        } -> extended_operation_vector<A>;
+        } -> vector_with_common_abi<A>;
     };
 
 template <typename S, typename M, typename L, typename R>
@@ -151,7 +150,7 @@ concept unqualified_canonical_mask_bwandnot = requires(L lhs, R rhs) {
 
 template <typename L, typename R, typename A = common_abi_t<L, R>>
 concept unqualified_extended_mask_bwandnot = requires(L lhs, R rhs) {
-    { bwandnot(lhs, rhs) } -> extended_operation_mask<A>;
+    { bwandnot(lhs, rhs) } -> mask_with_common_abi<A>;
 };
 
 template <typename L, typename R>
@@ -174,8 +173,8 @@ private:
     friend binary_operation_base<bwandnot_t>;
 
     template <simd_abi A, typename L, typename R>
-    requires (!simd_class<L> || canonical_vector<L>) &&
-        (!simd_class<R> || canonical_vector<R>) && requires(L lhs, R rhs) {
+    requires (!simd_type<L> || canonical_vector<L>) &&
+        (!simd_type<R> || canonical_vector<R>) && requires(L lhs, R rhs) {
             { bwandnot(internal::abi<A>, lhs, rhs) } -> vector_with_abi<A>;
         }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -184,8 +183,8 @@ private:
     }
 
     template <simd_abi A, typename L, typename R>
-    requires (!simd_class<L> || extended_vector<L>) &&
-        (!simd_class<R> || extended_vector<R>) &&
+    requires (!simd_type<L> || extended_vector<L>) &&
+        (!simd_type<R> || extended_vector<R>) &&
         unqualified_extended_bwandnot<L, R, A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto native(A, L lhs, R rhs) noexcept(
@@ -194,8 +193,8 @@ private:
     }
 
     template <simd_abi A, typename L, typename R>
-    requires (!simd_class<L> || canonical_mask<L>) &&
-        (!simd_class<R> || canonical_mask<R>) && requires(L lhs, R rhs) {
+    requires (!simd_type<L> || canonical_mask<L>) &&
+        (!simd_type<R> || canonical_mask<R>) && requires(L lhs, R rhs) {
             { bwandnot(internal::abi<A>, lhs, rhs) } -> mask_with_abi<A>;
         }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -204,8 +203,8 @@ private:
     }
 
     template <simd_abi A, typename L, typename R>
-    requires (!simd_class<L> || extended_mask<L>) &&
-        (!simd_class<R> || extended_mask<R>) &&
+    requires (!simd_type<L> || extended_mask<L>) &&
+        (!simd_type<R> || extended_mask<R>) &&
         unqualified_extended_mask_bwandnot<L, R, A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto native(A, L lhs, R rhs) noexcept(
@@ -217,7 +216,7 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(
         basic_vector<L, A> lhs, basic_vector<R, A> rhs) noexcept {
-        using T = common_bits_type_t<L, R>;
+        using T = common_size_type_t<L, R>;
         return internal::transform<basic_vector<T, A>>(
             [](auto lhs, auto rhs) {
                 using bit_type = bitset<sizeof(T) * char_bit_v>;

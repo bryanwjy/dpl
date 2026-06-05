@@ -14,8 +14,7 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
-DPL_EXPORT
-struct lsb_t : broadcastable_base {
+DPL_EXPORT struct lsb_t : broadcastable_base<lsb_t> {
     __DPL_HIDE_FROM_ABI explicit constexpr lsb_t() noexcept = default;
 
     template <integral T>
@@ -40,8 +39,7 @@ struct lsb_t : broadcastable_base {
     }
 };
 
-DPL_EXPORT
-inline constexpr lsb_t lsb{};
+DPL_EXPORT inline constexpr lsb_t lsb{};
 
 DPL_EXPORT template <typename T>
 requires explicitly_convertible_to<lsb_t, T>

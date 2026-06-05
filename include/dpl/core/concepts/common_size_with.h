@@ -3,18 +3,28 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/concepts/common_abi_with.h"
-#include "dpl/core/concepts/common_class_with.h"
-#include "dpl/core/concepts/simd_lane_type.h"
+#if !DPL_MODULES
+#  include "dpl/core/type_traits/common_size_type.h"
+#endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
-namespace datapar {
-DPL_EXPORT template <typename A, typename B>
-concept common_size_with = sizeof(A) == sizeof(B);
 
-DPL_EXPORT template <typename A, typename B>
-concept common_size_simd_with = common_class_with<A, B> &&
-    common_size_with<simd_lane_type_t<A>, simd_lane_type_t<B>>;
+namespace datapar {
+namespace atom {
+template <typename T, typename U>
+concept common_size_with =
+    sizeof(T) == sizeof(U) && sizeof(common_size_type_t<T, U>) == sizeof(T) &&
+    sizeof(common_size_type_t<T, U>) == sizeof(U);
+}
+
+DPL_EXPORT template <typename T, typename U>
+concept common_size_with =
+    requires {
+        typename common_size_type_t<T, U>;
+        typename common_size_type_t<U, T>;
+    } && same_as<common_size_type_t<U, T>, common_size_type_t<T, U>> &&
+    atom::common_size_with<T, U> && atom::common_size_with<U, T>;
+
 } // namespace datapar
 
 DPL_DEFAULT_NAMESPACE_END

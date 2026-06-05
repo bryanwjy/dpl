@@ -3,7 +3,6 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/math/internal/floating_point_simd.h"
 #include "dpl/core/math/internal/masked_op.h"
 #include "dpl/core/math/isfinite.h"
 #include "dpl/core/math/isinf.h"
@@ -13,9 +12,8 @@
 #include "dpl/core/math/signbit.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/concepts/basic_type.h"
+#  include "dpl/core/concepts/extended.h"
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/concepts/simd_traits.h"
 #  include "dpl/core/concepts/simd_vector.h"
 #  include "dpl/core/constants/nan.h"
 #  include "dpl/core/constants/zero.h"
@@ -42,7 +40,7 @@ concept unqualified_canonical_fixup = requires(L lhs, R rhs, C conditions) {
 
 template <typename L, typename R, typename C, typename A = common_abi_t<L, R>>
 concept unqualified_extended_fixup = requires(L lhs, R rhs, C conditions) {
-    { fixup(lhs, rhs, conditions) } -> extended_operation_vector<A>;
+    { fixup(lhs, rhs, conditions) } -> vector_with_common_abi<A>;
 };
 
 template <typename L, typename R, typename C, typename A = common_abi_t<L, R>>

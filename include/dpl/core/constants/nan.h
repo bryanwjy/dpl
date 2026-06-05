@@ -8,24 +8,23 @@
 #if !DPL_MODULES
 #  include "dpl/core/basic/broadcastable_base.h"
 #  include "dpl/std/concepts/convertible_to.h"
+#  include "dpl/std/concepts/floating_point.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
-DPL_EXPORT
-struct nan_t : broadcastable_base {
+DPL_EXPORT struct nan_t : broadcastable_base<nan_t> {
     __DPL_HIDE_FROM_ABI explicit constexpr nan_t() noexcept = default;
 
-    template <simd_element T>
+    template <floating_point T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     constexpr operator T(this nan_t) noexcept {
         return all_bits_v<T>;
     }
 };
 
-DPL_EXPORT
-inline constexpr nan_t nan{};
+DPL_EXPORT inline constexpr nan_t nan{};
 
 DPL_EXPORT template <typename T>
 requires explicitly_convertible_to<nan_t, T>

@@ -7,17 +7,14 @@
 #if !DPL_MODULES
 #  include "dpl/core/basic/immediate.h"
 #  include "dpl/core/concepts/common_abi_with.h"
-#  include "dpl/core/concepts/decayable.h"
-#  include "dpl/core/concepts/operation_category.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/constants/one.h"
 #  include "dpl/core/operations/arithmetic/add.h"
 #  include "dpl/core/operations/broadcast_lane.h"
 #  include "dpl/core/operations/evaluate.h"
-#  include "dpl/core/type_traits/basic_type.h"
+#  include "dpl/core/type_traits/canonical_type.h"
 #  include "dpl/core/type_traits/simd_abi_traits.h"
 #  include "dpl/std/concepts/integral_constant_like.h"
-#  include "dpl/std/concepts/invocable.h"
 #  include "dpl/std/utility/apply.h"
 #endif
 
@@ -141,13 +138,13 @@ concept unqualified_canonical_exscan_sum = requires(T val, I init) {
 
 template <typename T, typename I>
 concept unqualified_extended_exscan_sum = requires(T val, I init) {
-    { exscan_sum(val, init) } -> extended_arithmetic_result<T>;
+    { exscan_sum(val, init) } -> vector_with_common_abi<simd_abi_type_t<T>>;
 };
 
 template <typename T, typename M>
 concept extended_mask_scan_result =
     simd_mask<M> && simd_vector<T> && signed_integral<typename T::value_type> &&
-    common_size_with<typename T::value_type, simd_lane_type_t<M>> &&
+    common_size_with<typename T::value_type, simd_element_type_t<M>> &&
     common_abi_with<typename T::abi_type, typename M::abi_type>;
 
 template <typename T, typename M>
@@ -161,7 +158,7 @@ concept unqualified_canonical_mask_scan = requires(T val) {
 
 template <typename T>
 concept unqualified_extended_mask_scan = requires(T val) {
-    { exscan_sum(val) } -> extended_mask_scan_result<T>;
+    { exscan_sum(val) } -> vector_with_common_abi<simd_abi_type_t<T>>;
 };
 
 struct exscan_sum_base : protected scan_base {
@@ -238,7 +235,7 @@ concept unqualified_canonical_scan_sum = requires(T val) {
 
 template <typename T>
 concept unqualified_extended_scan_sum = requires(T val) {
-    { scan_sum(val) } -> extended_arithmetic_result<T>;
+    { scan_sum(val) } -> vector_with_common_abi<simd_abi_type_t<T>>;
 };
 
 struct scan_sum_base : protected scan_base {

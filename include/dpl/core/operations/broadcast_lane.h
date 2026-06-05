@@ -5,16 +5,15 @@
 
 #include "dpl/core/operations/internal/masked.h"
 #include "dpl/core/operations/permute.h"
-
 #if !DPL_MODULES
 #  include "dpl/core/basic/broadcast.h"
 #  include "dpl/core/basic/immediate.h"
+#  include "dpl/core/basic/internal/abi.h"
+#  include "dpl/core/basic/internal/iota_sequence.h"
 #  include "dpl/core/basic/to_canonical.h"
 #  include "dpl/core/concepts/common_size_with.h"
 #  include "dpl/core/concepts/decayable.h"
-#  include "dpl/core/concepts/operation_category.h"
-#  include "dpl/core/concepts/simd_equivalence.h"
-#  include "dpl/core/type_traits/iota_sequence.h"
+#  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/std/utility/sequence.h"
 #endif
 
@@ -37,7 +36,7 @@ template <typename T, typename N>
 concept unqualified_extended_broadcast_lanei = requires(T val, N idx) {
     {
         broadcast_lane(val, idx)
-    } -> extended_operation_vector<typename T::abi_type>;
+    } -> vector_with_common_abi<typename T::abi_type>;
 };
 
 template <typename T, typename N>
@@ -59,14 +58,14 @@ concept unqualified_canonical_mbroadcast_lanei =
     requires(S src, M mask, L val, R idx) {
         {
             broadcast_lane(internal::abi<A>, src, mask, val, idx)
-        } -> equivalent_simd_as<canonical_if_zero_t<S, L, A>>;
+        } -> equivalent_simd_type_with<canonical_if_zero_t<S, L, A>>;
     };
 
 template <typename S, typename M, typename L, typename R,
     typename A = common_abi_t<M, L>>
 concept unqualified_extended_mbroadcast_lanei =
     requires(S src, M mask, L val, R idx) {
-        { broadcast_lane(src, mask, val, idx) } -> extended_operation_vector<A>;
+        { broadcast_lane(src, mask, val, idx) } -> vector_with_common_abi<A>;
     };
 
 template <typename S, typename M, typename L, typename R,
@@ -102,7 +101,7 @@ concept unqualified_canonical_imbroadcast_lanei = requires(
             internal::to_const_mask<A, broadcast_lanei_t<R::value>, S, L, R>(
                 mask),
             val, idx)
-    } -> equivalent_simd_as<canonical_if_zero_t<S, L, A>>;
+    } -> equivalent_simd_type_with<canonical_if_zero_t<S, L, A>>;
 };
 
 template <typename S, typename M, typename L, typename R,
@@ -114,7 +113,7 @@ concept unqualified_extended_imbroadcast_lanei = requires(
             internal::to_const_mask<A, broadcast_lanei_t<R::value>, S, L, R>(
                 mask),
             val, idx)
-    } -> extended_operation_vector<A>;
+    } -> vector_with_common_abi<A>;
 };
 
 template <typename S, typename M, typename L, typename R,
@@ -153,7 +152,7 @@ template <typename T>
 concept unqualified_extended_broadcast_lane = requires(T val, size_t idx) {
     {
         broadcast_lane(val, idx)
-    } -> extended_operation_vector<typename T::abi_type>;
+    } -> vector_with_common_abi<typename T::abi_type>;
 };
 
 template <typename T>
@@ -174,13 +173,13 @@ concept unqualified_canonical_mbroadcast_lane =
     requires(S src, M mask, T val, size_t idx) {
         {
             broadcast_lane(internal::abi<A>, src, mask, val, idx)
-        } -> equivalent_simd_as<canonical_if_zero_t<S, T, A>>;
+        } -> equivalent_simd_type_with<canonical_if_zero_t<S, T, A>>;
     };
 
 template <typename S, typename M, typename T, typename A = common_abi_t<M, T>>
 concept unqualified_extended_mbroadcast_lane =
     requires(S src, M mask, T val, size_t idx) {
-        { broadcast_lane(src, mask, val, idx) } -> extended_operation_vector<A>;
+        { broadcast_lane(src, mask, val, idx) } -> vector_with_common_abi<A>;
     };
 
 template <typename S, typename M, typename T, typename A = common_abi_t<M, T>>
@@ -212,7 +211,7 @@ concept unqualified_canonical_imbroadcast_lane = requires(
         broadcast_lane(internal::abi<A>, src,
             internal::to_const_mask<A, broadcast_lane_t, S, T, size_t>(mask),
             val, idx)
-    } -> equivalent_simd_as<canonical_if_zero_t<S, T, A>>;
+    } -> equivalent_simd_type_with<canonical_if_zero_t<S, T, A>>;
 };
 
 template <typename S, typename M, typename T,
@@ -223,7 +222,7 @@ concept unqualified_extended_imbroadcast_lane = requires(
         broadcast_lane(src,
             internal::to_const_mask<A, broadcast_lane_t, S, T, size_t>(mask),
             val, idx)
-    } -> extended_operation_vector<A>;
+    } -> vector_with_common_abi<A>;
 };
 
 template <typename S, typename M, typename T, typename A = common_abi_t<M, T>>

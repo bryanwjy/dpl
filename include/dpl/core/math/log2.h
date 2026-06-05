@@ -11,15 +11,16 @@
 #include "dpl/core/math/internal/polynomial.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/concepts/basic_type.h"
+#  include "dpl/core/concepts/canonical.h"
+#  include "dpl/core/concepts/extended.h"
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/concepts/simd_traits.h"
 #  include "dpl/core/concepts/simd_vector.h"
 #  include "dpl/core/constants/infinity.h"
 #  include "dpl/core/constants/nan.h"
 #  include "dpl/core/operations/arithmetic.h" // IWYU pragma: keep
 #  include "dpl/core/operations/bitwise.h"    // IWYU pragma: keep
 #  include "dpl/core/operations/compare.h"    // IWYU pragma: keep
+#  include "dpl/core/type_traits/simd_traits.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -37,7 +38,7 @@ concept unqualified_canonical_log2 = requires(T val) {
 
 template <typename T>
 concept unqualified_extended_log2 = requires(T val) {
-    { log2(val) } -> extended_operation_vector<typename T::abi_type>;
+    { log2(val) } -> vector_with_common_abi<typename T::abi_type>;
 };
 
 template <typename T>

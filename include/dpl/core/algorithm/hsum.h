@@ -21,7 +21,7 @@ concept unqualified_canonical_hsum = requires(T val) {
 
 template <typename T>
 concept unqualified_extended_hsum = requires(T val) {
-    { hsum(val) } -> extended_operation_vector<typename T::abi_type>;
+    { hsum(val) } -> vector_with_common_abi<typename T::abi_type>;
 };
 
 template <typename S, typename M, typename T, typename A = common_abi_t<M, T>>
@@ -33,7 +33,7 @@ concept unqualified_canonical_mhsum = requires(S src, M mask, T val) {
 
 template <typename S, typename M, typename T, typename A = common_abi_t<M, T>>
 concept unqualified_extended_mhsum = requires(S src, M mask, T val) {
-    { hsum(src, mask, val) } -> extended_operation_vector<A>;
+    { hsum(src, mask, val) } -> vector_with_common_abi<A>;
 };
 
 template <typename S, typename M, typename T, typename A = common_abi_t<S, T>>
@@ -47,7 +47,7 @@ template <typename S, typename M, typename T, typename A = common_abi_t<S, T>>
 concept unqualified_extended_imhsum = requires(S src, T val) {
     {
         hsum(src, internal::select_mask<M, S, T>(), val)
-    } -> extended_operation_vector<A>;
+    } -> vector_with_common_abi<A>;
 };
 
 struct hsum_t : private reduction_base {

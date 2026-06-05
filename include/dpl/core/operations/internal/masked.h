@@ -4,7 +4,6 @@
 #include "dpl/config.h"
 
 #include "dpl/core/operations/select.h"
-
 #if !DPL_MODULES
 #  include "dpl/core/basic/zero.h"
 #  include "dpl/core/constants/zero.h"
@@ -70,11 +69,11 @@ using operation_result_t DPL_NODEBUG =
 
 template <typename T, typename U, typename A = typename U::abi_type>
 using canonical_if_zero_t DPL_NODEBUG = conditional_t<is_same_v<T, zero_t>,
-    basic_vector<simd_lane_type_t<U>, A>, T>;
+    basic_vector<simd_element_type_t<U>, A>, T>;
 
 template <typename T, typename U, typename A = typename U::abi_type>
 using canonical_or_zero_t DPL_NODEBUG = conditional_t<is_same_v<T, zero_t>, T,
-    basic_vector<simd_lane_type_t<U>, A>>;
+    basic_vector<simd_element_type_t<U>, A>>;
 
 template <typename T>
 using expression_result_or_zero_t DPL_NODEBUG =
@@ -89,7 +88,7 @@ consteval auto to_const_mask(M mask) noexcept {
 template <typename S, typename M, typename... Args>
 concept maskable_args =
     simd_vector<S> && simd_mask<M> && (... && simd_vector<Args>) &&
-    common_size_with<simd_lane_type_t<S>, simd_lane_type_t<M>> &&
+    common_size_with<simd_element_type_t<S>, simd_element_type_t<M>> &&
     same_abi_as<typename S::abi_type, typename M::abi_type> &&
     all_common_abi<typename Args::abi_type...> &&
     common_abi_with<common_abi_t<Args...>, typename S::abi_type> &&

@@ -14,10 +14,8 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
-DPL_EXPORT
-struct ninfinity_t;
-DPL_EXPORT
-struct infinity_t : broadcastable_base {
+DPL_EXPORT struct ninfinity_t;
+DPL_EXPORT struct infinity_t : broadcastable_base<infinity_t> {
     __DPL_HIDE_FROM_ABI explicit constexpr infinity_t() noexcept = default;
 
     template <floating_point T>
@@ -28,12 +26,9 @@ struct infinity_t : broadcastable_base {
 
     consteval auto operator-(this infinity_t) noexcept;
 };
-DPL_EXPORT
-using pinfinity_t = infinity_t;
-DPL_EXPORT
-inline constexpr pinfinity_t pinfinity{};
-DPL_EXPORT
-inline constexpr infinity_t infinity{};
+DPL_EXPORT using pinfinity_t = infinity_t;
+DPL_EXPORT inline constexpr pinfinity_t pinfinity{};
+DPL_EXPORT inline constexpr infinity_t infinity{};
 
 DPL_EXPORT template <typename T>
 requires explicitly_convertible_to<infinity_t, T>
@@ -43,8 +38,7 @@ DPL_EXPORT template <typename T>
 requires explicitly_convertible_to<pinfinity_t, T>
 inline constexpr auto pinfinity_v = static_cast<T>(pinfinity);
 
-DPL_EXPORT
-struct ninfinity_t : broadcastable_base {
+DPL_EXPORT struct ninfinity_t : broadcastable_base<ninfinity_t> {
     __DPL_HIDE_FROM_ABI explicit constexpr ninfinity_t() noexcept = default;
 
     template <floating_point T>
@@ -56,8 +50,7 @@ struct ninfinity_t : broadcastable_base {
     consteval auto operator-(this ninfinity_t) noexcept;
 };
 
-DPL_EXPORT
-inline constexpr ninfinity_t ninfinity{};
+DPL_EXPORT inline constexpr ninfinity_t ninfinity{};
 
 DPL_EXPORT template <typename T>
 requires explicitly_convertible_to<ninfinity_t, T>

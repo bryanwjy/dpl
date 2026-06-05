@@ -7,7 +7,7 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/broadcastable_base.h"
-#  include "dpl/core/concepts/arithmetic_type.h"
+#  include "dpl/core/concepts/simd_element.h"
 #  include "dpl/std/bit/bit_cast.h"
 #  include "dpl/std/bit/bit_type.h"
 #  include "dpl/std/bit/countr.h"
@@ -17,7 +17,7 @@
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
-template <arithmetic_type T>
+template <basic_element T>
 consteval int digits_of() noexcept {
     if constexpr (signed_integral<T>) {
         return sizeof(T) * char_bit_v - 1;
@@ -30,15 +30,17 @@ consteval int digits_of() noexcept {
     }
 }
 
-DPL_EXPORT template <arithmetic_type T>
-struct digits_t : integral_constant<int, digits_of<T>()>, broadcastable_base {
+DPL_EXPORT template <basic_element T>
+struct digits_t :
+    integral_constant<int, digits_of<T>()>,
+    broadcastable_base<digits_t<T>> {
     __DPL_HIDE_FROM_ABI explicit constexpr digits_t() noexcept = default;
 };
 
-DPL_EXPORT template <arithmetic_type T>
+DPL_EXPORT template <basic_element T>
 inline constexpr digits_t<T> digits{};
 
-DPL_EXPORT template <arithmetic_type T>
+DPL_EXPORT template <basic_element T>
 inline constexpr int digits_v = digits<T>;
 
 } // namespace datapar

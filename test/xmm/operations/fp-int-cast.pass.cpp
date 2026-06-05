@@ -99,7 +99,7 @@ constexpr void parallel_int_to_fp() noexcept {
             constexpr I zero = 0;
             return dpp::initialize<F, xmm::abi_tag>(
                 static_cast<F>(Is < keep ? ptr[Is] : zero)...);
-        }(dpp::iota_sequence<F, xmm::abi_tag>);
+        }(dpl::make_index_sequence<xmm::abi_tag::size / sizeof(F)>{});
     };
 
     assert((inputs.size() % element_count<I, xmm::abi_tag>) == 0);
@@ -322,7 +322,7 @@ template <dpl::floating_point F, dpl::integral I>
 constexpr void large_fp_to_long() noexcept {
     static_assert(sizeof(I) == sizeof(double));
     auto const inputs = []() {
-        if constexpr (dpp::common_float_with<F, float>) {
+        if constexpr (dpl::same_as<F, float>) {
             return [](auto... vals) {
                 if constexpr (dpl::unsigned_integral<I>) {
                     return array{vals...};
@@ -340,7 +340,7 @@ constexpr void large_fp_to_long() noexcept {
             }(BF16(0x1.p24), BF16(0x1.p24) + BF16(1.0), BF16(0x1.p40),
                        BF16(0x1.p40) + BF16(1.0), BF16(0x1.p56));
         } else {
-            static_assert(dpp::common_float_with<F, double>);
+            static_assert(dpl::same_as<F, double>);
             return [](auto... vals) {
                 if constexpr (dpl::unsigned_integral<I>) {
                     return array{vals...};
@@ -383,7 +383,7 @@ constexpr void parallel_fp_to_int() noexcept {
             constexpr F zero = 0;
             return dpp::initialize<I, xmm::abi_tag>(
                 static_cast<I>(Is < keep ? ptr[Is] : zero)...);
-        }(dpp::iota_sequence<I, xmm::abi_tag>);
+        }(dpl::make_index_sequence<xmm::abi_tag::size / sizeof(I)>{});
     };
 
     assert((inputs.size() % element_count<F, xmm::abi_tag>) == 0);

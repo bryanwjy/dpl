@@ -9,12 +9,11 @@
 #include "dpl/core/operations/internal/masked.h"
 #include "dpl/core/operations/internal/operation_base.h"
 #include "dpl/core/operations/internal/transform.h"
-
 #if !DPL_MODULES
+#  include "dpl/core/basic/internal/abi.h"
 #  include "dpl/core/concepts/decayable.h"
-#  include "dpl/core/concepts/operation_category.h"
+#  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/concepts/simd_equivalence.h"
 #  include "dpl/core/type_traits/common_size_type.h"
 #  include "dpl/std/concepts/equality_comparable.h"
 #  include "dpl/std/concepts/invocable.h"
@@ -33,7 +32,7 @@ concept unqualified_canonical_cmpeq = requires(L lhs, R rhs) {
 
 template <typename L, typename R, typename A = common_abi_t<L, R>>
 concept unqualified_extended_cmpeq = requires(L lhs, R rhs) {
-    { cmpeq(lhs, rhs) } -> extended_operation_mask<A>;
+    { cmpeq(lhs, rhs) } -> mask_with_common_abi<A>;
 };
 
 template <typename L, typename R>
@@ -62,7 +61,7 @@ concept unqualified_canonical_mcmpeq = requires(M mask, L lhs, R rhs) {
 template <typename M, typename L, typename R,
     typename A = common_abi_t<L, R, M>>
 concept unqualified_extended_mcmpeq = requires(M mask, L lhs, R rhs) {
-    { cmpeq(mask, lhs, rhs) } -> extended_operation_mask<A>;
+    { cmpeq(mask, lhs, rhs) } -> mask_with_common_abi<A>;
 };
 
 template <typename M, typename L, typename R>
@@ -101,7 +100,7 @@ concept unqualified_extended_imcmpeq = requires(M mask, L lhs, R rhs) {
         cmpeq(dx::to_compatible_const_mask<operation_result_t<cmpeq_t, L, R>>(
                   mask),
             lhs, rhs)
-    } -> extended_operation_mask<A>;
+    } -> mask_with_common_abi<A>;
 };
 
 template <typename M, typename L, typename R>
@@ -126,7 +125,7 @@ concept unqualified_canonical_mask_cmpeq = requires(L lhs, R rhs) {
 
 template <typename L, typename R, typename A = common_abi_t<L, R>>
 concept unqualified_extended_mask_cmpeq = requires(L lhs, R rhs) {
-    { cmpeq(lhs, rhs) } -> extended_operation_mask<A>;
+    { cmpeq(lhs, rhs) } -> mask_with_common_abi<A>;
 };
 
 template <typename L, typename R>
@@ -149,8 +148,8 @@ private:
     friend binary_operation_base<cmpeq_t>;
 
     template <simd_abi A, typename L, typename R>
-    requires (!simd_class<L> || canonical_vector<L>) &&
-        (!simd_class<R> || canonical_vector<R>) && requires(L lhs, R rhs) {
+    requires (!simd_type<L> || canonical_vector<L>) &&
+        (!simd_type<R> || canonical_vector<R>) && requires(L lhs, R rhs) {
             { cmpeq(internal::abi<A>, lhs, rhs) } -> mask_with_abi<A>;
         }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -159,8 +158,8 @@ private:
     }
 
     template <simd_abi A, typename L, typename R>
-    requires (!simd_class<L> || extended_vector<L>) &&
-        (!simd_class<R> || extended_vector<R>) &&
+    requires (!simd_type<L> || extended_vector<L>) &&
+        (!simd_type<R> || extended_vector<R>) &&
         unqualified_extended_cmpeq<L, R, A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto native(A, L lhs, R rhs) noexcept(
@@ -169,8 +168,8 @@ private:
     }
 
     template <simd_abi A, typename L, typename R>
-    requires (!simd_class<L> || canonical_mask<L>) &&
-        (!simd_class<R> || canonical_mask<R>) && requires(L lhs, R rhs) {
+    requires (!simd_type<L> || canonical_mask<L>) &&
+        (!simd_type<R> || canonical_mask<R>) && requires(L lhs, R rhs) {
             { cmpeq(internal::abi<A>, lhs, rhs) } -> mask_with_abi<A>;
         }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -179,8 +178,8 @@ private:
     }
 
     template <simd_abi A, typename L, typename R>
-    requires (!simd_class<L> || extended_mask<L>) &&
-        (!simd_class<R> || extended_mask<R>) &&
+    requires (!simd_type<L> || extended_mask<L>) &&
+        (!simd_type<R> || extended_mask<R>) &&
         unqualified_extended_mask_cmpeq<L, R, A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto native(A, L lhs, R rhs) noexcept(

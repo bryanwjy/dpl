@@ -12,7 +12,7 @@ using abi = xmm::abi_tag;
 template <typename... Ts>
 constexpr auto element_count = dpp::simd_abi_traits<Ts...>::size;
 
-static_assert(dpp::simd_class<dpp::basic_vector<float, abi> const>);
+static_assert(dpp::simd_type<dpp::basic_vector<float, abi> const>);
 
 #if DPL_SUPPORTS_EXT_BFLOAT16 & !defined(__BFLT16_MAX__)
 consteval dpl::bfloat16 operator""_bf16(long double val) noexcept {

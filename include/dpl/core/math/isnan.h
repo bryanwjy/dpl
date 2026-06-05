@@ -7,8 +7,8 @@
 #include "dpl/core/math/internal/masked_op.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/concepts/basic_type.h"
-#  include "dpl/core/concepts/compatible_mask_with.h"
+#  include "dpl/core/concepts/extended.h"
+#  include "dpl/core/concepts/mask_compatibility.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/constants/infinity.h"
 #  include "dpl/core/constants/value_bits.h"
@@ -30,7 +30,7 @@ concept unqualified_canonical_isnan = requires(T arg) {
 
 template <typename T>
 concept unqualified_extended_isnan = requires(T arg) {
-    { isnan(arg) } -> extended_operation_mask<typename T::abi_type>;
+    { isnan(arg) } -> mask_with_common_abi<simd_abi_type_t<T>>;
 };
 
 template <typename T>

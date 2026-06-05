@@ -4,18 +4,19 @@
 #include "dpl/config.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/concepts/simd_class.h"
-#  include "dpl/core/type_traits/simd_lane_type.h"
+#  include "dpl/core/concepts/simd_type.h"
+#  include "dpl/core/concepts/simd_vector.h"
+#  include "dpl/core/type_traits/simd_element_type.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
-DPL_EXPORT template <simd_class T>
+DPL_EXPORT template <simd_type T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr auto DPL_VECTORCALL to_native_type(T src) noexcept {
     using A = typename T::abi_type;
-    using E = simd_lane_type_t<T>;
+    using E = simd_element_type_t<T>;
     if constexpr (simd_vector<T>) {
         using native_vector = typename A::template native_vector<E>;
         return static_cast<native_vector>(src);

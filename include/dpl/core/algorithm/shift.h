@@ -6,13 +6,12 @@
 #if !DPL_MODULES
 #  include "dpl/core/concepts/common_abi_with.h"
 #  include "dpl/core/concepts/decayable.h"
-#  include "dpl/core/concepts/operation_category.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/constants/zero.h"
 #  include "dpl/core/operations/lane_index.h"
 #  include "dpl/core/operations/permute.h"
 #  include "dpl/core/operations/select.h"
-#  include "dpl/core/type_traits/basic_type.h"
+#  include "dpl/core/type_traits/canonical_type.h"
 #  include "dpl/core/type_traits/representation.h"
 #  include "dpl/core/type_traits/simd_abi_traits.h"
 #  include "dpl/std/concepts/integral_constant_like.h"
@@ -220,7 +219,7 @@ public:
 template <size_t V>
 struct shift_lefti_t {
 public:
-    template <simd_class T>
+    template <simd_type T>
     requires regular_invocable<shift_left_t, T, immediate<V>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T arg) noexcept {
@@ -231,7 +230,7 @@ public:
 template <size_t V>
 struct shift_righti_t {
 public:
-    template <simd_class T>
+    template <simd_type T>
     requires regular_invocable<shift_right_t, T, immediate<V>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T arg) noexcept {

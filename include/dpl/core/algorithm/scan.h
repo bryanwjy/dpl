@@ -8,8 +8,6 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/immediate.h"
-#  include "dpl/core/concepts/common_abi_with.h"
-#  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/operations/compare/max.h"
 #  include "dpl/core/type_traits/simd_abi_type.h"
 #  include "dpl/std/concepts/invocable.h"
@@ -20,7 +18,7 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 template <typename F, typename T>
 concept scan_operator_for = simd_vector<T> && regular_invocable<F, T, T> &&
-    equivalent_simd_as<T, invoke_result_t<F, T, T>>;
+    equivalent_simd_type_with<T, invoke_result_t<F, T, T>>;
 
 struct scan_t;
 
@@ -37,7 +35,9 @@ concept unqualified_canonical_exscan =
 template <typename T, typename I, typename BinaryOp>
 concept unqualified_extended_exscan =
     requires(T val, I init, BinaryOp && (*op)()) {
-        { exscan(val, init, op()) } -> extended_arithmetic_result<T>;
+        {
+            exscan(val, init, op())
+        } -> vector_with_common_abi<simd_abi_type_t<T>>;
     };
 
 template <typename S, typename M, typename T, typename I, typename BinaryOp,
@@ -53,9 +53,7 @@ template <typename S, typename M, typename T, typename I, typename BinaryOp,
     typename A = common_abi_t<M, T>>
 concept unqualified_extended_mexscan =
     requires(S src, M mask, T val, I init, BinaryOp && (*op)()) {
-        {
-            exscan(src, mask, val, init, op())
-        } -> extended_arithmetic_result<canonical_if_zero_t<S, T, A>>;
+        { exscan(src, mask, val, init, op()) } -> vector_with_common_abi<A>;
     };
 
 template <typename S, typename M, typename T, typename I, typename BinaryOp,
@@ -75,7 +73,7 @@ concept unqualified_extended_imexscan =
         {
             exscan(src, internal::to_const_mask<A, exscan_t, S, T>(mask), val,
                 init, op())
-        } -> extended_arithmetic_result<canonical_if_zero_t<S, T, A>>;
+        } -> vector_with_common_abi<A>;
     };
 
 struct exscan_t : private scan_base {
@@ -105,7 +103,7 @@ struct exscan_t : private scan_base {
 
     template <typename M, typename T>
     using broadcast_type DPL_NODEBUG =
-        rebind_simd_t<T, simd_lane_type_t<T>, typename M::abi_type>;
+        rebind_simd_t<T, simd_element_type_t<T>, typename M::abi_type>;
 
 public:
     template <canonical_vector T, broadcastable_to<T> I,
@@ -356,7 +354,7 @@ concept unqualified_canonical_scan = requires(T val, BinaryOp && (*op)()) {
 
 template <typename T, typename BinaryOp>
 concept unqualified_extended_scan = requires(T val, BinaryOp && (*op)()) {
-    { scan(val, op()) } -> extended_arithmetic_result<T>;
+    { scan(val, op()) } -> vector_with_common_abi<simd_abi_type_t<T>>;
 };
 
 template <typename S, typename M, typename T, typename BinaryOp,
@@ -372,9 +370,7 @@ template <typename S, typename M, typename T, typename BinaryOp,
     typename A = common_abi_t<M, T>>
 concept unqualified_extended_mscan =
     requires(S src, M mask, T val, BinaryOp && (*op)()) {
-        {
-            scan(src, mask, val, op())
-        } -> extended_arithmetic_result<canonical_if_zero_t<S, T, A>>;
+        { scan(src, mask, val, op()) } -> vector_with_common_abi<A>;
     };
 
 template <typename S, typename M, typename T, typename BinaryOp,
@@ -393,7 +389,7 @@ concept unqualified_extended_imscan =
     requires(S src, M mask, T val, BinaryOp && (*op)()) {
         {
             scan(src, internal::to_const_mask<A, scan_t, S, T>(mask), val, op())
-        } -> extended_arithmetic_result<canonical_if_zero_t<S, T, A>>;
+        } -> vector_with_common_abi<A>;
     };
 
 struct scan_t : private scan_base {
@@ -421,7 +417,7 @@ struct scan_t : private scan_base {
 
     template <typename M, typename T>
     using broadcast_type DPL_NODEBUG =
-        rebind_simd_t<T, simd_lane_type_t<T>, typename M::abi_type>;
+        rebind_simd_t<T, simd_element_type_t<T>, typename M::abi_type>;
 
 public:
     template <canonical_vector T, scan_operator_for<T> Op>

@@ -5,12 +5,13 @@
 
 #include "dpl/core/basic/all_bits.h"
 #include "dpl/core/basic/immediate.h"
+#include "dpl/core/basic/internal/iota_sequence.h"
 #include "dpl/core/basic/zero.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/concepts/const_mask_like.h"
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/type_traits/iota_sequence.h"
+#  include "dpl/core/concepts/simd_type.h"
+#  include "dpl/core/type_traits/enable_const_mask.h"
 #  include "dpl/core/type_traits/simd_abi_traits.h"
 #  include "dpl/std/bit/bit_type.h"
 #  include "dpl/std/bit/char_bit.h"
@@ -54,10 +55,7 @@ DPL_EXPORT template <size_t W, internal::mask_value_t<W> V>
 struct const_mask;
 
 DPL_EXPORT template <size_t W, internal::mask_value_t<W> V>
-inline constexpr bool enable_const_mask<const_mask<W, V>> = true;
-
-DPL_EXPORT template <size_t W, internal::mask_value_t<W> V>
-struct const_mask {
+struct const_mask : const_mask_base<const_mask<W, V>> {
     using value_type = internal::mask_value_t<W>;
     using type = const_mask;
     static constexpr size_t width = W;
@@ -255,7 +253,7 @@ struct make_const_mask {};
 template <typename C, auto V>
 using make_const_mask_t DPL_NODEBUG = typename make_const_mask<C, V>::type;
 
-template <fixed_width_class C, auto V>
+template <fixed_width_simd_type C, auto V>
 struct make_const_mask<C, V> {
     using type DPL_NODEBUG = const_mask<simd_abi_traits<C>::size, V>;
 };
@@ -269,30 +267,30 @@ concept const_mask_from_constant =
     };
 
 DPL_EXPORT template <typename M, typename T>
-concept const_mask_for = fixed_width_class<T> &&
+concept const_mask_for = fixed_width_simd_type<T> &&
     (const_mask_from_constant<M, T> || same_as<datapar::zero_t, M> ||
         same_as<datapar::all_bits_t, M>);
 
-DPL_EXPORT template <fixed_width_class T, const_mask_for<T> M>
+DPL_EXPORT template <fixed_width_simd_type T, const_mask_for<T> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr auto to_compatible_const_mask(M mask) noexcept {
     return static_cast<const_mask<simd_abi_traits<T>::size, M::value>>(mask);
 }
 
-DPL_EXPORT template <fixed_width_class T>
+DPL_EXPORT template <fixed_width_simd_type T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr auto to_compatible_const_mask(datapar::zero_t) noexcept {
     return const_mask<simd_abi_traits<T>::size, 0>();
 }
 
-DPL_EXPORT template <fixed_width_class T>
+DPL_EXPORT template <fixed_width_simd_type T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr auto to_compatible_const_mask(datapar::all_bits_t) noexcept {
     constexpr auto V = static_cast<bit_type_t<simd_abi_traits<T>::size>>(-1);
     return const_mask<simd_abi_traits<T>::size, V>();
 }
 
-template <fixed_width_class T, const_mask_for<T> M>
+template <fixed_width_simd_type T, const_mask_for<T> M>
 inline constexpr auto const_mask_v =
     decltype(datapar::to_compatible_const_mask<T>(M{}))::value;
 

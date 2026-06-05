@@ -13,8 +13,7 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/immediate.h"
-#  include "dpl/core/concepts/common_float_with.h"
-#  include "dpl/core/concepts/simd_element_for.h"
+#  include "dpl/core/concepts/simd_element.h"
 #  include "dpl/std/bit/bit_cast.h"
 
 #  include <immintrin.h>
@@ -23,7 +22,7 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::xmm {
-DPL_EXPORT template <simd_element_for<abi_tag> E>
+DPL_EXPORT template <simd_element E>
 __DPL_HIDE_FROM_ABI constexpr void store(
     abi_tag tag, simd<E> src, E* dst) noexcept {
     if consteval {
@@ -37,14 +36,14 @@ __DPL_HIDE_FROM_ABI constexpr void store(
             }
         }(tag, src, dst);
     } else {
-        if constexpr (same_as<float, lane_representation_t<E>>) {
+        if constexpr (same_as<float, representation_t<E>>) {
             _mm_storeu_ps(reinterpret_cast<float*>(dst), +src);
-        } else if constexpr (same_as<double, lane_representation_t<E>>) {
+        } else if constexpr (same_as<double, representation_t<E>>) {
             _mm_storeu_pd(reinterpret_cast<double*>(dst), +src);
-        } else if constexpr (integral<lane_representation_t<E>>) {
-            static_assert(integral<lane_representation_t<E>>);
+        } else if constexpr (integral<representation_t<E>>) {
+            static_assert(integral<representation_t<E>>);
             _mm_storeu_si128(reinterpret_cast<__m128i*>(dst), +src);
-        } else if constexpr (bfloat16_like<lane_representation_t<E>>) {
+        } else if constexpr (bfloat16_like<representation_t<E>>) {
             _mm_storeu_si128(reinterpret_cast<__m128i*>(dst),
                 __DPL bit_cast<__m128i>(+src));
         } else {
@@ -59,20 +58,20 @@ __DPL_HIDE_FROM_ABI constexpr void store(
     }
 }
 
-DPL_EXPORT template <simd_element_for<abi_tag> E>
+DPL_EXPORT template <simd_element E>
 __DPL_HIDE_FROM_ABI constexpr void aligned_store(
     abi_tag tag, simd<E> src, E* dst) noexcept {
     if consteval {
         return dx::xmm::store(tag, src, dst);
     } else {
-        if constexpr (same_as<float, lane_representation_t<E>>) {
+        if constexpr (same_as<float, representation_t<E>>) {
             _mm_store_ps(reinterpret_cast<float*>(dst), +src);
-        } else if constexpr (same_as<double, lane_representation_t<E>>) {
+        } else if constexpr (same_as<double, representation_t<E>>) {
             _mm_store_pd(reinterpret_cast<double*>(dst), +src);
-        } else if constexpr (integral<lane_representation_t<E>>) {
+        } else if constexpr (integral<representation_t<E>>) {
             static_assert(integral<E>);
             _mm_store_si128(reinterpret_cast<__m128i*>(dst), +src);
-        } else if constexpr (bfloat16_like<lane_representation_t<E>>) {
+        } else if constexpr (bfloat16_like<representation_t<E>>) {
             _mm_store_si128(reinterpret_cast<__m128i*>(dst),
                 __DPL bit_cast<__m128i>(+src));
         } else {
@@ -87,12 +86,12 @@ __DPL_HIDE_FROM_ABI constexpr void aligned_store(
     }
 }
 
-DPL_EXPORT template <simd_element_for<abi_tag> E>
+DPL_EXPORT template <simd_element E>
 __DPL_HIDE_FROM_ABI constexpr void store(simd<E> src, E* dst) noexcept {
     xmm::store(xmm::abi, src, dst);
 }
 
-DPL_EXPORT template <simd_element_for<abi_tag> E>
+DPL_EXPORT template <simd_element E>
 __DPL_HIDE_FROM_ABI constexpr void aligned_store(simd<E> src, E* dst) noexcept {
     xmm::aligned_store(xmm::abi, src, dst);
 }

@@ -5,9 +5,9 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/immediate.h"
-#  include "dpl/core/concepts/basic_type.h"
+#  include "dpl/core/basic/internal/iota_sequence.h"
+#  include "dpl/core/concepts/canonical.h"
 #  include "dpl/core/concepts/common_abi_with.h"
-#  include "dpl/core/type_traits/iota_sequence.h"
 #  include "dpl/std/type_traits/is_invocable.h"
 #  include "dpl/std/utility/bitset.h"
 #  include "dpl/std/utility/sequence.h"
@@ -18,7 +18,7 @@ namespace datapar::internal {
 
 template <typename F, typename R, typename... Args>
 concept value_invocable_r =
-    (canonical_class<R> && ... && canonical_class<Args>) &&
+    (canonical_simd_type<R> && ... && canonical_simd_type<Args>) &&
     (... && (simd_abi_traits<R>::size == simd_abi_traits<Args>::size)) &&
     is_invocable_r_v<typename R::value_type, F, typename Args::value_type...>;
 
@@ -31,14 +31,14 @@ consteval bool invocable(index_sequence<Is...>) noexcept {
 
 template <typename F, typename R, typename... Args>
 concept ivalue_invocable_r =
-    (canonical_class<R> && ... && canonical_class<Args>) &&
+    (canonical_simd_type<R> && ... && canonical_simd_type<Args>) &&
     (... && (simd_abi_traits<R>::size == simd_abi_traits<Args>::size)) &&
     internal::invocable<R, F, Args...>(iota_sequence<R>);
 
-template <canonical_class Result, canonical_class... Ts,
+template <canonical_simd_type Result, canonical_simd_type... Ts,
     ivalue_invocable_r<Result, Ts...> Op>
-requires (... && same_abi_simd_as<Result, Ts>) &&
-    (fixed_width_class<Result> && ... && fixed_width_class<Ts>)
+requires (... && same_abi_as<simd_abi_type_t<Result>, simd_abi_type_t<Ts>>) &&
+    (fixed_width_simd_type<Result> && ... && fixed_width_simd_type<Ts>)
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, FLATTEN, NODISCARD)
 constexpr Result itransform(Op func, Ts... args) noexcept {
 
@@ -57,10 +57,10 @@ constexpr Result itransform(Op func, Ts... args) noexcept {
     }(args..., func, iota_sequence<Result>);
 }
 
-template <canonical_class Result, canonical_class... Ts,
+template <canonical_simd_type Result, canonical_simd_type... Ts,
     value_invocable_r<Result, Ts...> Op>
-requires (... && same_abi_simd_as<Result, Ts>) &&
-    (fixed_width_class<Result> && ... && fixed_width_class<Ts>)
+requires (... && same_abi_as<simd_abi_type_t<Result>, simd_abi_type_t<Ts>>) &&
+    (fixed_width_simd_type<Result> && ... && fixed_width_simd_type<Ts>)
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, FLATTEN, NODISCARD)
 constexpr Result transform(Op func, Ts... args) noexcept {
     return internal::itransform<Result>(

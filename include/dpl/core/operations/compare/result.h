@@ -6,7 +6,9 @@
 // IWYU pragma: always_keep
 
 #if !DPL_MODULES
+#  include "dpl/core/concepts/common_abi_with.h"
 #  include "dpl/core/concepts/common_size_with.h"
+#  include "dpl/core/concepts/simd_mask.h"
 #  include "dpl/core/type_traits/common_abi.h"
 #  include "dpl/std/concepts/same_as.h"
 #endif

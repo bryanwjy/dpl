@@ -12,9 +12,7 @@
 #include "dpl/xmm/basic/initialize.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/concepts/common_float_with.h"
-#  include "dpl/core/concepts/simd_element_for.h"
-#  include "dpl/core/type_traits/iota_sequence.h"
+#  include "dpl/core/concepts/simd_element.h"
 #  include "dpl/std/bit/bit_cast.h"
 #  include "dpl/std/type_traits/is_const.h"
 #  include "dpl/std/type_traits/is_volatile.h"
@@ -34,16 +32,16 @@ constexpr simd<E> load(abi_tag tag, E const* data) noexcept {
         return []<size_t... Is>(
                    index_sequence<Is...>, abi_tag tag, E const* data) {
             return dx::xmm::initialize<E>(tag, data[Is]...);
-        }(iota_sequence<E, abi_tag>, tag, data);
+        }(iota<E>, tag, data);
     } else {
-        if constexpr (same_as<float, lane_representation_t<E>>) {
+        if constexpr (same_as<float, representation_t<E>>) {
             return _mm_loadu_ps(reinterpret_cast<float const*>(data));
-        } else if constexpr (same_as<double, lane_representation_t<E>>) {
+        } else if constexpr (same_as<double, representation_t<E>>) {
             return _mm_loadu_pd(reinterpret_cast<double const*>(data));
-        } else if constexpr (bfloat16_like<lane_representation_t<E>>) {
+        } else if constexpr (bfloat16_like<representation_t<E>>) {
             return __DPL bit_cast<native_vector_t<E>>(
                 _mm_loadu_si128(reinterpret_cast<__m128i const*>(data)));
-        } else if constexpr (float16_like<lane_representation_t<E>>) {
+        } else if constexpr (float16_like<representation_t<E>>) {
 #if DPL_SIMD_X86_AVX512FP16
             return _mm_castsi128_ph(
                 _mm_loadu_si128(reinterpret_cast<__m128i const*>(data)));
@@ -64,14 +62,14 @@ constexpr simd<E> aligned_load(abi_tag tag, E const* data) noexcept {
     if consteval {
         return xmm::load(tag, data);
     } else {
-        if constexpr (same_as<float, lane_representation_t<E>>) {
+        if constexpr (same_as<float, representation_t<E>>) {
             return _mm_load_ps(reinterpret_cast<float const*>(data));
-        } else if constexpr (same_as<double, lane_representation_t<E>>) {
+        } else if constexpr (same_as<double, representation_t<E>>) {
             return _mm_load_pd(reinterpret_cast<double const*>(data));
-        } else if constexpr (bfloat16_like<lane_representation_t<E>>) {
+        } else if constexpr (bfloat16_like<representation_t<E>>) {
             return __DPL bit_cast<native_vector_t<E>>(
                 _mm_load_si128(reinterpret_cast<__m128i const*>(data)));
-        } else if constexpr (float16_like<lane_representation_t<E>>) {
+        } else if constexpr (float16_like<representation_t<E>>) {
             return _mm_castsi128_ph(
                 _mm_load_si128(reinterpret_cast<__m128i const*>(data)));
         } else {
@@ -80,13 +78,13 @@ constexpr simd<E> aligned_load(abi_tag tag, E const* data) noexcept {
     }
 }
 
-DPL_EXPORT template <simd_element_for<abi_tag> E>
+DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
 constexpr simd<E> load(E const* data) noexcept {
     return xmm::load(xmm::abi, data);
 }
 
-DPL_EXPORT template <simd_element_for<abi_tag> E>
+DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
 constexpr simd<E> aligned_load(E const* data) noexcept {
     return xmm::aligned_load(xmm::abi, data);

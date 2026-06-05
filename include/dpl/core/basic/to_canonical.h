@@ -6,14 +6,15 @@
 #include "dpl/core/basic/to_native_type.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/concepts/basic_type.h"
-#  include "dpl/core/type_traits/basic_type.h"
+#  include "dpl/core/concepts/canonical.h"
+#  include "dpl/core/concepts/extended.h"
+#  include "dpl/core/type_traits/canonical_type.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
-DPL_EXPORT template <canonical_class T>
+DPL_EXPORT template <canonical_simd_type T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr T to_canonical(T src) noexcept {
     return src;

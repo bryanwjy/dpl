@@ -5,6 +5,7 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/broadcastable_base.h"
+#  include "dpl/core/concepts/simd_element.h"
 #  include "dpl/std/bit/bit_cast.h"
 #  include "dpl/std/bit/bit_type.h"
 #  include "dpl/std/bit/char_bit.h"
@@ -16,11 +17,10 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
-DPL_EXPORT
-struct value_bits_t : broadcastable_base {
+DPL_EXPORT struct value_bits_t : broadcastable_base<value_bits_t> {
     __DPL_HIDE_FROM_ABI explicit constexpr value_bits_t() noexcept = default;
 
-    template <simd_element T>
+    template <basic_element T>
     requires signed_integral<T> || floating_point<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     constexpr operator T(this value_bits_t) noexcept {
@@ -29,7 +29,7 @@ struct value_bits_t : broadcastable_base {
             static_cast<bit_type>(static_cast<bit_type>(-1) >> 1));
     }
 
-    template <simd_element T>
+    template <basic_element T>
     requires unsigned_integral<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     constexpr operator T(this value_bits_t) noexcept {
@@ -37,8 +37,7 @@ struct value_bits_t : broadcastable_base {
     }
 };
 
-DPL_EXPORT
-inline constexpr value_bits_t value_bits{};
+DPL_EXPORT inline constexpr value_bits_t value_bits{};
 
 DPL_EXPORT template <typename T>
 requires explicitly_convertible_to<value_bits_t, T>

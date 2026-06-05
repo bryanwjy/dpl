@@ -5,17 +5,15 @@
 
 #include "dpl/core/math/frexp.h"
 #include "dpl/core/math/internal/accuracy.h"
-#include "dpl/core/math/internal/floating_point_simd.h"
 #include "dpl/core/math/internal/ldexp.h"
 #include "dpl/core/math/internal/masked_op.h"
 #include "dpl/core/math/internal/rsqrt2.h"
 #include "dpl/core/math/isfinite.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/concepts/basic_type.h"
+#  include "dpl/core/concepts/equivalence.h"
+#  include "dpl/core/concepts/extended.h"
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/concepts/simd_equivalence.h"
-#  include "dpl/core/concepts/simd_traits.h"
 #  include "dpl/core/concepts/simd_vector.h"
 #  include "dpl/core/operations/arithmetic.h"
 #  include "dpl/core/operations/bitwise.h"
@@ -39,7 +37,7 @@ concept unqualified_canonical_sqrt = requires(T val) {
 
 template <typename T>
 concept unqualified_extended_sqrt = requires(T val) {
-    { sqrt(val) } -> extended_operation_vector<typename T::abi_type>;
+    { sqrt(val) } -> vector_with_common_abi<typename T::abi_type>;
 };
 
 template <typename T>
@@ -59,7 +57,7 @@ struct sqrt_t : private mx::masked_operation<sqrt_t> {
 private:
     friend mx::masked_operation<sqrt_t>;
 
-    template <simd_element E, simd_abi A>
+    template <typename E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(
         basic_vector<E, A> val) noexcept {

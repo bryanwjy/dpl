@@ -12,14 +12,14 @@ namespace datapar {
 
 namespace atom {
 template <typename A, typename B>
-concept common_class_with =
-    (simd_vector<A> && simd_vector<B>) || (simd_mask<A> && simd_mask<B>);
+concept common_simd_type_with =
+    (datapar::simd_vector<A> && datapar::simd_vector<B>) ||
+    (datapar::simd_mask<A> && datapar::simd_mask<B>);
 }
 
 DPL_EXPORT template <typename A, typename B>
-concept common_class_with = atom::common_class_with<A, B> &&
-    atom::common_abi_with<typename remove_cv_t<A>::abi_type,
-        typename remove_cv_t<B>::abi_type>;
+concept common_simd_type_with = atom::common_simd_type_with<A, B> &&
+    common_abi_with<simd_abi_type_t<A>, simd_abi_type_t<B>>;
 
 } // namespace datapar
 

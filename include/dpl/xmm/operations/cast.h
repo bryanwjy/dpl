@@ -20,7 +20,6 @@
 #if !DPL_MODULES
 #  include "dpl/core/fwd.h"
 
-#  include "dpl/core/concepts/arithmetic_type.h"
 #  include "dpl/core/constants/infinity.h"
 #  include "dpl/core/constants/max_value.h"
 #  include "dpl/core/constants/msb.h"
@@ -36,522 +35,31 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::xmm {
 template <typename T, typename U>
-concept integral_cast_target_like = integral<U> &&
-    integral<lane_representation_t<T>> && (sizeof(U) == sizeof(T));
+concept integral_cast_target_like =
+    integral<U> && integral<representation_t<T>> && (sizeof(U) == sizeof(T));
 
 namespace details {
 template <typename>
 struct convert_t;
 
-template <integral_cast_target_like<int64> To>
-struct convert_t<To> {
-    template <typename E>
-    requires integral<lane_representation_t<E>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To>
-        DPL_VECTORCALL operator()(simd<E> src) noexcept {
-        if constexpr (sizeof(E) == sizeof(To)) {
-            return +src;
-        } else if constexpr (sizeof(E) == sizeof(int32)) {
-            if constexpr (unsigned_integral<lane_representation_t<E>>) {
-                return _mm_cvtepu32_epi64(+src);
-            } else {
-                return _mm_cvtepi32_epi64(+src);
-            }
-        } else if constexpr (sizeof(E) == sizeof(int16)) {
-            if constexpr (unsigned_integral<lane_representation_t<E>>) {
-                return _mm_cvtepu16_epi64(+src);
-            } else {
-                return _mm_cvtepi16_epi64(+src);
-            }
-        } else {
-            static_assert(sizeof(E) == sizeof(int8));
-            if constexpr (unsigned_integral<lane_representation_t<E>>) {
-                return _mm_cvtepu8_epi64(+src);
-            } else {
-                return _mm_cvtepi8_epi64(+src);
-            }
-        }
-    }
-
-    template <typename E>
-    requires floating_point<lane_representation_t<E>> &&
-        (same_as<float, lane_representation_t<E>> ||
-            same_as<double, lane_representation_t<E>>)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To>
-        DPL_VECTORCALL operator()(simd<E> src) noexcept {
-        if constexpr (same_as<double, lane_representation_t<E>>) {
-#if DPL_SIMD_X86_AVX512DQ & DPL_SIMD_X86_AVX512VL
-            if constexpr (unsigned_integral<lane_representation_t<To>>) {
-                return _mm_cvttpd_epu64(+src);
-            } else {
-                return _mm_cvttpd_epi64(+src);
-            }
-#else
-            return _mm_set_epi64x(
-                static_cast<To>(src[imm<1>]), static_cast<To>(src[imm<0>]));
-#endif
-        } else {
-#if DPL_SIMD_X86_AVX512DQ & DPL_SIMD_X86_AVX512VL
-            if constexpr (unsigned_integral<lane_representation_t<To>>) {
-                return _mm_cvttps_epu64(+src);
-            } else {
-                return _mm_cvttps_epi64(+src);
-            }
-#else
-            return _mm_unpacklo_epi64(
-                _mm_cvtsi64_si128(static_cast<int64>(src[imm<0>])),
-                _mm_cvtsi64_si128(static_cast<int64>(src[imm<1>])));
-#endif
-        }
-    }
-
-    template <typename E>
-    requires float16_like<lane_representation_t<E>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To>
-        DPL_VECTORCALL operator()(simd<E> src) noexcept {
-#if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
-        if constexpr (unsigned_integral<lane_representation_t<To>>) {
-            return _mm_cvttph_epu64(+src);
-        } else {
-            return _mm_cvttph_epi64(+src);
-        }
-#else
-        constexpr convert_t<front_t<float, E>> convert{};
-        return operator()(convert(src));
-#endif
-    }
-
-    template <typename E>
-    requires bfloat16_like<lane_representation_t<E>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To>
-        DPL_VECTORCALL operator()(simd<E> src) noexcept {
-        constexpr convert_t<front_t<float, E>> convert{};
-        return operator()(convert(src));
-    }
-};
-
-template <integral_cast_target_like<int32> To>
-struct convert_t<To> {
-    template <typename E>
-    requires integral<lane_representation_t<E>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To>
-        DPL_VECTORCALL operator()(simd<E> src) noexcept {
-        if constexpr (sizeof(E) == sizeof(int64)) {
-#if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
-            return _mm_cvtepi64_epi32(+src);
-#else
-            return _mm_castps_si128(_mm_shuffle_ps(_mm_castsi128_ps(+src),
-                _mm_setzero_ps(), _MM_SHUFFLE(2, 0, 2, 0)));
-#endif
-        } else if constexpr (sizeof(E) == sizeof(To)) {
-            return +src;
-        } else if constexpr (sizeof(E) == sizeof(int16)) {
-            if constexpr (unsigned_integral<lane_representation_t<E>>) {
-                return _mm_cvtepu16_epi32(+src);
-            } else {
-                return _mm_cvtepi16_epi32(+src);
-            }
-        } else {
-            static_assert(sizeof(E) == sizeof(int8));
-            if constexpr (unsigned_integral<lane_representation_t<E>>) {
-                return _mm_cvtepu8_epi32(+src);
-            } else {
-                return _mm_cvtepi8_epi32(+src);
-            }
-        }
-    }
-
-    template <typename E>
-    requires floating_point<lane_representation_t<E>> &&
-        (same_as<float, lane_representation_t<E>> ||
-            same_as<double, lane_representation_t<E>>)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To>
-        DPL_VECTORCALL operator()(simd<E> src) noexcept {
-        if constexpr (same_as<double, lane_representation_t<E>>) {
-            if constexpr (unsigned_integral<lane_representation_t<To>>) {
-#if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
-                return _mm_cvttpd_epu32(+src);
-#else
-                return _mm_set_epi32(0, 0, static_cast<uint32>(src[imm<1>]),
-                    static_cast<uint32>(src[imm<0>]));
-#endif
-            } else {
-                return _mm_cvttpd_epi32(+src);
-            }
-        } else {
-            if constexpr (unsigned_integral<lane_representation_t<To>>) {
-#if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
-                return _mm_cvttps_epu32(+src);
-#else
-                constexpr int32 magic = 0x4f000000;
-                auto xmm0 = +src;
-                auto xmm2 = _mm_castsi128_ps(_mm_set1_epi32(magic));
-                auto xmm1 = _mm_cmple_ps(xmm2, xmm0);
-                xmm2 = _mm_and_ps(xmm1, xmm2);
-                xmm1 = _mm_castps_si128(
-                    _mm_slli_epi32(_mm_castps_si128(xmm1), 31));
-                xmm0 = _mm_sub_ps(xmm0, xmm2);
-                xmm0 = _mm_cvttps_epi32(xmm0);
-                return _mm_xor_ps(xmm0, xmm1);
-#endif
-            } else {
-                return _mm_cvttps_epi32(+src);
-            }
-        }
-    }
-
-    template <typename E>
-    requires float16_like<lane_representation_t<E>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To>
-        DPL_VECTORCALL operator()(simd<E> src) noexcept {
-#if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
-        if constexpr (signed_integral<To>) {
-            return _mm_cvttph_epi32(+src);
-        } else {
-            return _mm_cvttph_epu32(+src);
-        }
-#else
-        constexpr convert_t<front_t<float, E>> to_fp32{};
-        if constexpr (signed_integral<To>) {
-            // Cheaper to convert to float first
-            return _mm_cvttps_epi32(+to_fp32(src));
-        } else {
-            constexpr auto mantissa_width = 23u;
-            constexpr auto hidden_bit = 1u << mantissa_width;
-            constexpr auto bias = 127;
-            // There's likely a faster way, but this is just easier :p
-            auto const f32 = +to_fp32(src);
-            auto const u32 = _mm_castps_si128(f32);
-            auto const valid =
-                _mm_andnot_si128(_mm_cmplt_epi32(u32, _mm_setzero_si128()),
-                    _mm_cmplt_epi32(u32, _mm_set1_epi32(0x7f800000)));
-            auto const result = _mm_cvttps_epi32(f32);
-            return _mm_castps_si128(_mm_blendv_ps(
-                _mm_set1_ps(-0.0f), result, _mm_castsi128_ps(valid)));
-        }
-#endif
-    }
-
-    template <typename E>
-    requires bfloat16_like<lane_representation_t<E>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To>
-        DPL_VECTORCALL operator()(simd<E> src) noexcept {
-        constexpr convert_t<front_t<float, E>> convert{};
-        return operator()(convert(src));
-    }
-};
-
-template <integral_cast_target_like<int16> To>
-struct convert_t<To> {
-    template <typename E>
-    requires integral<lane_representation_t<E>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To>
-        DPL_VECTORCALL operator()(simd<E> src) noexcept {
-        if constexpr (sizeof(E) == sizeof(int64)) {
-#if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
-            return _mm_cvtepi64_epi16(+src);
-#else
-            auto const qwords = _mm_and_si128(+src, _mm_set1_epi64x(0xffff));
-            // Extract low 32 bits of each 64-bit lane
-            auto const dwords =
-                _mm_shuffle_epi32(qwords, _MM_SHUFFLE(3, 1, 2, 0));
-            return _mm_packus_epi32(dwords, _mm_setzero_si128());
-#endif
-        } else if constexpr (sizeof(E) == sizeof(int32)) {
-#if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
-            return _mm_cvtepi32_epi16(+src);
-#else
-            auto const dwords = _mm_and_si128(+src, _mm_set1_epi32(0xffff));
-            return _mm_packus_epi32(dwords, _mm_setzero_si128());
-#endif
-        } else if constexpr (sizeof(E) == sizeof(To)) {
-            return +src;
-        } else {
-            static_assert(sizeof(E) == sizeof(int8));
-            if constexpr (unsigned_integral<lane_representation_t<E>>) {
-                return _mm_cvtepu8_epi16(+src);
-            } else {
-                return _mm_cvtepi8_epi16(+src);
-            }
-        }
-    }
-
-    template <typename E>
-    requires floating_point<lane_representation_t<E>> &&
-        (same_as<float, lane_representation_t<E>> ||
-            same_as<double, lane_representation_t<E>>)
-        DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-        static inline simd<To>
-            DPL_VECTORCALL operator()(simd<E> src) noexcept
-    requires requires(convert_t<int32> cvtepi32) { cvtepi32(src); }
-    {
-        constexpr convert_t<int32> to_int;
-        return operator()(to_int(src));
-    }
-
-    template <typename E>
-    requires float16_like<lane_representation_t<E>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To>
-        DPL_VECTORCALL operator()(simd<E> src) noexcept {
-#if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
-        if constexpr (unsigned_integral<lane_representation_t<To>>) {
-            cosntexpr auto cmp_lt_oq = 17; // lessthan, ordered, quiet
-            auto const error = xmm::broadcast<E>(dx::msb);
-            auto const neg = _mm_cmp_ph(+src, xmm::broadcast<E>(0), cmp_lt_oq);
-            return _mm_mask_blend_ph(neg, _mm_cvttph_epi16(+src), error);
-        } else {
-            return _mm_cvttph_epi16(+src);
-        }
-#else
-        constexpr convert_t<int32> to_int32;
-        auto const hi = simd<E>(__DPL bit_cast<__m128h>(_mm_unpackhi_epi64(
-            __DPL bit_cast<__m128i>(+src), _mm_setzero_si128())));
-        auto const lo_mask = _mm_set1_epi32(0xffff);
-        auto const left = operator()(to_int32(src));
-        auto const right = operator()(to_int32(hi));
-        auto result = _mm_unpacklo_epi64(+left, +right);
-        if constexpr (unsigned_integral<lane_representation_t<To>>) {
-            auto const error = _mm_set1_epi16(static_cast<int16>(0x8000));
-            return _mm_blendv_epi8(result, error,
-                _mm_cmplt_epi16(
-                    __DPL bit_cast<__m128i>(+src), _mm_setzero_si128()));
-        } else {
-            return result;
-        }
-#endif
-    }
-
-    template <typename E>
-    requires bfloat16_like<lane_representation_t<E>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To>
-        DPL_VECTORCALL operator()(simd<E> src) noexcept {
-        constexpr convert_t<int32> to_int32;
-        auto const hi = simd<E>(__DPL bit_cast<__m128bh>(_mm_unpackhi_epi64(
-            __DPL bit_cast<__m128i>(+src), _mm_setzero_si128())));
-        auto const lo_mask = _mm_set1_epi32(0xffff);
-        auto const left = operator()(to_int32(src));
-        auto const right = operator()(to_int32(hi));
-        auto result = _mm_unpacklo_epi64(+left, +right);
-        if constexpr (unsigned_integral<lane_representation_t<To>>) {
-            auto const error = _mm_set1_epi16(static_cast<int16>(0x8000));
-            return _mm_blendv_epi8(result, error,
-                _mm_cmplt_epi16(
-                    __DPL bit_cast<__m128i>(+src), _mm_setzero_si128()));
-        } else {
-            return result;
-        }
-    }
-};
-
-template <integral_cast_target_like<int8> To>
-struct convert_t<To> {
-    template <typename E>
-    requires integral<lane_representation_t<E>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To>
-        DPL_VECTORCALL operator()(simd<E> src) noexcept {
-        if constexpr (sizeof(E) == sizeof(int64)) {
-#if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
-            return _mm_cvtepi64_epi8(+src);
-#else
-            auto const qwords = _mm_and_si128(+src, _mm_set1_epi64x(0xff));
-            // Extract low 32 bits of each 64-bit lane
-            auto const dwords =
-                _mm_shuffle_epi32(qwords, _MM_SHUFFLE(3, 1, 2, 0));
-            auto const zero = _mm_setzero_si128();
-            return _mm_packus_epi16(_mm_packus_epi32(dwords, zero), zero);
-#endif
-        } else if constexpr (sizeof(E) == sizeof(int32)) {
-#if DPL_SIMD_X86_AVX512BW & DPL_SIMD_X86_AVX512VL
-            return _mm_cvtepi32_epi8(+src);
-#else
-            auto const masked = _mm_and_si128(+src, _mm_set1_epi32(0xff));
-            auto const zero = _mm_setzero_si128();
-            return _mm_packus_epi16(_mm_packus_epi32(masked, zero), zero);
-#endif
-        } else if constexpr (sizeof(E) == sizeof(int16)) {
-#if DPL_SIMD_X86_AVX512BW & DPL_SIMD_X86_AVX512VL
-            return _mm_cvtepi16_epi8(+src);
-#else
-            auto const masked = _mm_and_si128(+src, _mm_set1_epi16(0xff));
-            return _mm_packus_epi16(masked, _mm_setzero_si128());
-#endif
-        } else {
-            static_assert(sizeof(E) == sizeof(To));
-            return +src;
-        }
-    }
-
-    template <typename E>
-    requires floating_point<lane_representation_t<E>> &&
-        (same_as<float, lane_representation_t<E>> ||
-            same_as<double, lane_representation_t<E>>) &&
-        (sizeof(E) > sizeof(int16))
-        DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-        static inline simd<To>
-            DPL_VECTORCALL operator()(simd<E> src) noexcept
-    requires requires(convert_t<int32> cvtepi32) { cvtepi32(src); }
-    {
-        // AVX10.X supports fp8
-        static_assert(sizeof(E) > sizeof(To));
-        constexpr convert_t<int32> cvtepi32;
-        return operator()(cvtepi32(src));
-    }
-
-    template <typename E>
-    requires floating_point<lane_representation_t<E>> &&
-        (same_as<float, lane_representation_t<E>> ||
-            same_as<double, lane_representation_t<E>>) &&
-        (sizeof(E) == sizeof(int16))
-        DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-        static inline simd<To>
-            DPL_VECTORCALL operator()(simd<E> src) noexcept
-    requires requires(convert_t<int16> cvtepi16) { cvtepi16(src); }
-    {
-        constexpr convert_t<int16> cvtepi16;
-        return operator()(cvtepi16(src));
-    }
-};
-
 template <typename To>
-requires same_as<lane_representation_t<To>, double>
+requires same_as<float, representation_t<To>>
 struct convert_t<To> {
     template <typename E>
-    requires integral<lane_representation_t<E>>
+    requires integral<representation_t<E>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static inline simd<To>
         DPL_VECTORCALL operator()(simd<E> src) noexcept {
         if constexpr (sizeof(E) == sizeof(int64)) {
 #if DPL_SIMD_X86_AVX512DQ & DPL_SIMD_X86_AVX512VL
-            return _mm_cvtepi64_pd(+src);
-#else
-            // Without AVX512, it is simply not worth it to vectorize
-            if constexpr (signed_integral<lane_representation_t<E>>) {
-                return _mm_setr_pd(
-                    static_cast<double>(_mm_extract_epi64(src, 0)),
-                    static_cast<double>(_mm_extract_epi64(src, 1)));
-            } else {
-                return _mm_setr_pd(static_cast<double>( __DPL to_unsigned(
-                                       _mm_extract_epi64(src, 0))),
-                    static_cast<double>(
-                        __DPL to_unsigned(_mm_extract_epi64(src, 1))));
-            }
-#endif
-        } else if constexpr (sizeof(E) == sizeof(int32)) {
-            if constexpr (signed_integral<lane_representation_t<E>>) {
-                return _mm_cvtepi32_pd(+src);
-            } else {
-                auto const large = _mm_cmplt_epi32(+src, _mm_setzero_si128());
-                auto const islolarge =
-                    _mm_castsi128_pd(_mm_unpacklo_epi32(large, large));
-                return _mm_add_pd(_mm_and_pd(islolarge, _mm_set1_pd(0x1p32)),
-                    _mm_cvtepi32_pd(+src));
-            }
-        } else if constexpr (sizeof(E) == sizeof(int16)) {
-            if constexpr (unsigned_integral<lane_representation_t<E>>) {
-                return _mm_cvtepi32_pd(_mm_cvtepu16_epi32(+src));
-            } else {
-                return _mm_cvtepi32_pd(_mm_cvtepi16_epi32(+src));
-            }
-        } else {
-            static_assert(sizeof(E) == sizeof(int8));
-            if constexpr (unsigned_integral<lane_representation_t<E>>) {
-                auto const lo = _mm_cvtepu16_epi32(
-                    _mm_unpacklo_epi8(+src, _mm_setzero_si128()));
-                return _mm_cvtepi32_pd(lo);
-            } else {
-                auto const lo = _mm_cvtepi16_epi32(_mm_srai_epi16(
-                    _mm_unpacklo_epi8(_mm_setzero_si128(), +src), 8));
-                return _mm_cvtepi32_pd(lo);
-            }
-        }
-    }
-
-    template <typename E>
-    requires floating_point<lane_representation_t<E>> &&
-        (same_as<float, lane_representation_t<E>> ||
-            same_as<double, lane_representation_t<E>>)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To>
-        DPL_VECTORCALL operator()(simd<E> src) noexcept {
-        if constexpr (same_as<lane_representation_t<To>,
-                          lane_representation_t<E>>) {
-            return +src;
-        } else {
-            static_assert(same_as<float, lane_representation_t<E>>);
-            return _mm_cvtps_pd(+src);
-        }
-    }
-
-    template <typename E>
-    requires float16_like<lane_representation_t<E>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To>
-        DPL_VECTORCALL operator()(simd<E> src) noexcept {
-#if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
-        return _mm_cvtph_pd(+src);
-#else
-        using uint = unsigned_representation_t<To>;
-        constexpr convert_t<uint> to_uint;
-        auto const arg = to_uint(xmm::reinterpret<uint16>(src));
-        auto const msb = xmm::broadcast<uint>(0x8000);
-        auto const signs =
-            xmm::reinterpret<To>(xmm::bwshift_left<48>(xmm::bwand(arg, msb)));
-        auto const parg = xmm::bwshift_left<42>(xmm::bwandnot(arg, msb));
-
-        constexpr auto exp_mask = xmm::broadcast<uint>(0x1full << 52);
-        auto const isfinite = simd<uint>(_mm_cmpgt_epi64(+exp_mask, +parg));
-
-        constexpr auto inf64 = xmm::broadcast<uint>(
-            __DPL bit_cast<uint>(dx::infinity_v<double>));
-        auto const nonfinite = xmm::bwandnot(xmm::bwor(inf64, parg), isfinite);
-        constexpr auto shift = xmm::broadcast<To>(0x1p1008);
-        auto const shifted = xmm::multiply(xmm::reinterpret<To>(parg), shift);
-        auto const abs_f64 =
-            xmm::bwor(xmm::reinterpret<To>(nonfinite), shifted);
-        return xmm::bwor(abs_f64, signs);
-#endif
-    }
-
-    template <typename E>
-    requires bfloat16_like<lane_representation_t<E>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To>
-        DPL_VECTORCALL operator()(simd<E> src) noexcept {
-        constexpr convert_t<front_t<float, E>> to_float32;
-        return operator()(to_float32(src));
-    }
-};
-
-template <typename To>
-requires same_as<float, lane_representation_t<To>>
-struct convert_t<To> {
-    template <typename E>
-    requires integral<lane_representation_t<E>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To>
-        DPL_VECTORCALL operator()(simd<E> src) noexcept {
-        if constexpr (sizeof(E) == sizeof(int64)) {
-#if DPL_SIMD_X86_AVX512DQ & DPL_SIMD_X86_AVX512VL
-            if constexpr (unsigned_integral<lane_representation_t<E>>) {
+            if constexpr (unsigned_integral<representation_t<E>>) {
                 return _mm_cvtepu64_ps(+src);
             } else {
                 return _mm_cvtepi64_ps(+src);
             }
 #else
             auto const zero = _mm_setzero_si128();
-            if constexpr (signed_integral<lane_representation_t<E>>) {
+            if constexpr (signed_integral<representation_t<E>>) {
                 auto const hisign =
                     _mm_and_si128(_mm_set1_epi64x(1ll << 63), +src);
                 auto const losign = _mm_castsi128_ps(
@@ -596,7 +104,7 @@ struct convert_t<To> {
             }
 #endif
         } else if constexpr (sizeof(E) == sizeof(int32)) {
-            if constexpr (signed_integral<lane_representation_t<E>>) {
+            if constexpr (signed_integral<representation_t<E>>) {
                 return _mm_cvtepi32_ps(+src);
             } else {
                 constexpr auto max = max_value_v<make_signed_t<E>>;
@@ -605,13 +113,13 @@ struct convert_t<To> {
                     _mm_and_ps(gt, _mm_set1_ps(0x1p32f)));
             }
         } else if constexpr (sizeof(E) == sizeof(int16)) {
-            if constexpr (unsigned_integral<lane_representation_t<E>>) {
+            if constexpr (unsigned_integral<representation_t<E>>) {
                 return _mm_cvtepi32_ps(_mm_cvtepu16_epi32(+src));
             } else {
                 return _mm_cvtepi32_ps(_mm_cvtepi16_epi32(+src));
             }
         } else {
-            if constexpr (unsigned_integral<lane_representation_t<E>>) {
+            if constexpr (unsigned_integral<representation_t<E>>) {
                 auto const lo = _mm_cvtepu16_epi32(
                     _mm_unpacklo_epi8(+src, _mm_setzero_si128()));
                 return _mm_cvtepi32_ps(lo);
@@ -624,13 +132,13 @@ struct convert_t<To> {
     }
 
     template <typename E>
-    requires floating_point<lane_representation_t<E>> &&
-        (same_as<float, lane_representation_t<E>> ||
-            same_as<double, lane_representation_t<E>>)
+    requires floating_point<representation_t<E>> &&
+        (same_as<float, representation_t<E>> ||
+            same_as<double, representation_t<E>>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static inline simd<To>
         DPL_VECTORCALL operator()(simd<E> src) noexcept {
-        if constexpr (same_as<double, lane_representation_t<E>>) {
+        if constexpr (same_as<double, representation_t<E>>) {
             return _mm_cvtpd_ps(+src);
         } else {
             return +src;
@@ -638,7 +146,7 @@ struct convert_t<To> {
     }
 
     template <typename E>
-    requires float16_like<lane_representation_t<E>>
+    requires float16_like<representation_t<E>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static inline simd<To>
         DPL_VECTORCALL operator()(simd<E> src) noexcept {
@@ -668,7 +176,7 @@ struct convert_t<To> {
     }
 
     template <typename E>
-    requires bfloat16_like<lane_representation_t<E>>
+    requires bfloat16_like<representation_t<E>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static inline simd<To>
         DPL_VECTORCALL operator()(simd<E> src) noexcept {
@@ -681,11 +189,501 @@ struct convert_t<To> {
     }
 };
 
+template <integral_cast_target_like<int64> To>
+struct convert_t<To> {
+    template <typename E>
+    requires integral<representation_t<E>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static inline simd<To>
+        DPL_VECTORCALL operator()(simd<E> src) noexcept {
+        if constexpr (sizeof(E) == sizeof(To)) {
+            return +src;
+        } else if constexpr (sizeof(E) == sizeof(int32)) {
+            if constexpr (unsigned_integral<representation_t<E>>) {
+                return _mm_cvtepu32_epi64(+src);
+            } else {
+                return _mm_cvtepi32_epi64(+src);
+            }
+        } else if constexpr (sizeof(E) == sizeof(int16)) {
+            if constexpr (unsigned_integral<representation_t<E>>) {
+                return _mm_cvtepu16_epi64(+src);
+            } else {
+                return _mm_cvtepi16_epi64(+src);
+            }
+        } else {
+            static_assert(sizeof(E) == sizeof(int8));
+            if constexpr (unsigned_integral<representation_t<E>>) {
+                return _mm_cvtepu8_epi64(+src);
+            } else {
+                return _mm_cvtepi8_epi64(+src);
+            }
+        }
+    }
+
+    template <typename E>
+    requires floating_point<representation_t<E>> &&
+        (same_as<float, representation_t<E>> ||
+            same_as<double, representation_t<E>>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static inline simd<To>
+        DPL_VECTORCALL operator()(simd<E> src) noexcept {
+        if constexpr (same_as<double, representation_t<E>>) {
+#if DPL_SIMD_X86_AVX512DQ & DPL_SIMD_X86_AVX512VL
+            if constexpr (unsigned_integral<representation_t<To>>) {
+                return _mm_cvttpd_epu64(+src);
+            } else {
+                return _mm_cvttpd_epi64(+src);
+            }
+#else
+            return _mm_set_epi64x(
+                static_cast<To>(src[imm<1>]), static_cast<To>(src[imm<0>]));
+#endif
+        } else {
+#if DPL_SIMD_X86_AVX512DQ & DPL_SIMD_X86_AVX512VL
+            if constexpr (unsigned_integral<representation_t<To>>) {
+                return _mm_cvttps_epu64(+src);
+            } else {
+                return _mm_cvttps_epi64(+src);
+            }
+#else
+            return _mm_unpacklo_epi64(
+                _mm_cvtsi64_si128(static_cast<int64>(src[imm<0>])),
+                _mm_cvtsi64_si128(static_cast<int64>(src[imm<1>])));
+#endif
+        }
+    }
+
+    template <typename E>
+    requires float16_like<representation_t<E>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static inline simd<To>
+        DPL_VECTORCALL operator()(simd<E> src) noexcept {
+#if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
+        if constexpr (unsigned_integral<representation_t<To>>) {
+            return _mm_cvttph_epu64(+src);
+        } else {
+            return _mm_cvttph_epi64(+src);
+        }
+#else
+        constexpr convert_t<float> convert{};
+        return operator()(convert(src));
+#endif
+    }
+
+    template <typename E>
+    requires bfloat16_like<representation_t<E>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static inline simd<To>
+        DPL_VECTORCALL operator()(simd<E> src) noexcept {
+        constexpr convert_t<float> convert{};
+        return operator()(convert(src));
+    }
+};
+
+template <integral_cast_target_like<int32> To>
+struct convert_t<To> {
+    template <typename E>
+    requires integral<representation_t<E>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static inline simd<To>
+        DPL_VECTORCALL operator()(simd<E> src) noexcept {
+        if constexpr (sizeof(E) == sizeof(int64)) {
+#if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
+            return _mm_cvtepi64_epi32(+src);
+#else
+            return _mm_castps_si128(_mm_shuffle_ps(_mm_castsi128_ps(+src),
+                _mm_setzero_ps(), _MM_SHUFFLE(2, 0, 2, 0)));
+#endif
+        } else if constexpr (sizeof(E) == sizeof(To)) {
+            return +src;
+        } else if constexpr (sizeof(E) == sizeof(int16)) {
+            if constexpr (unsigned_integral<representation_t<E>>) {
+                return _mm_cvtepu16_epi32(+src);
+            } else {
+                return _mm_cvtepi16_epi32(+src);
+            }
+        } else {
+            static_assert(sizeof(E) == sizeof(int8));
+            if constexpr (unsigned_integral<representation_t<E>>) {
+                return _mm_cvtepu8_epi32(+src);
+            } else {
+                return _mm_cvtepi8_epi32(+src);
+            }
+        }
+    }
+
+    template <typename E>
+    requires floating_point<representation_t<E>> &&
+        (same_as<float, representation_t<E>> ||
+            same_as<double, representation_t<E>>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static inline simd<To>
+        DPL_VECTORCALL operator()(simd<E> src) noexcept {
+        if constexpr (same_as<double, representation_t<E>>) {
+            if constexpr (unsigned_integral<representation_t<To>>) {
+#if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
+                return _mm_cvttpd_epu32(+src);
+#else
+                return _mm_set_epi32(0, 0, static_cast<uint32>(src[imm<1>]),
+                    static_cast<uint32>(src[imm<0>]));
+#endif
+            } else {
+                return _mm_cvttpd_epi32(+src);
+            }
+        } else {
+            if constexpr (unsigned_integral<representation_t<To>>) {
+#if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
+                return _mm_cvttps_epu32(+src);
+#else
+                constexpr int32 magic = 0x4f000000;
+                auto xmm0 = +src;
+                auto xmm2 = _mm_castsi128_ps(_mm_set1_epi32(magic));
+                auto xmm1 = _mm_cmple_ps(xmm2, xmm0);
+                xmm2 = _mm_and_ps(xmm1, xmm2);
+                xmm1 = _mm_castps_si128(
+                    _mm_slli_epi32(_mm_castps_si128(xmm1), 31));
+                xmm0 = _mm_sub_ps(xmm0, xmm2);
+                xmm0 = _mm_cvttps_epi32(xmm0);
+                return _mm_xor_ps(xmm0, xmm1);
+#endif
+            } else {
+                return _mm_cvttps_epi32(+src);
+            }
+        }
+    }
+
+    template <typename E>
+    requires float16_like<representation_t<E>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static inline simd<To>
+        DPL_VECTORCALL operator()(simd<E> src) noexcept {
+#if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
+        if constexpr (signed_integral<To>) {
+            return _mm_cvttph_epi32(+src);
+        } else {
+            return _mm_cvttph_epu32(+src);
+        }
+#else
+        constexpr convert_t<float> to_fp32{};
+        if constexpr (signed_integral<To>) {
+            // Cheaper to convert to float first
+            return _mm_cvttps_epi32(+to_fp32(src));
+        } else {
+            constexpr auto mantissa_width = 23u;
+            constexpr auto hidden_bit = 1u << mantissa_width;
+            constexpr auto bias = 127;
+            // There's likely a faster way, but this is just easier :p
+            auto const f32 = +to_fp32(src);
+            auto const u32 = _mm_castps_si128(f32);
+            auto const valid =
+                _mm_andnot_si128(_mm_cmplt_epi32(u32, _mm_setzero_si128()),
+                    _mm_cmplt_epi32(u32, _mm_set1_epi32(0x7f800000)));
+            auto const result = _mm_cvttps_epi32(f32);
+            return _mm_castps_si128(_mm_blendv_ps(
+                _mm_set1_ps(-0.0f), result, _mm_castsi128_ps(valid)));
+        }
+#endif
+    }
+
+    template <typename E>
+    requires bfloat16_like<representation_t<E>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static inline simd<To>
+        DPL_VECTORCALL operator()(simd<E> src) noexcept {
+        constexpr convert_t<float> convert{};
+        return operator()(convert(src));
+    }
+};
+
+template <integral_cast_target_like<int16> To>
+struct convert_t<To> {
+    template <typename E>
+    requires integral<representation_t<E>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static inline simd<To>
+        DPL_VECTORCALL operator()(simd<E> src) noexcept {
+        if constexpr (sizeof(E) == sizeof(int64)) {
+#if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
+            return _mm_cvtepi64_epi16(+src);
+#else
+            auto const qwords = _mm_and_si128(+src, _mm_set1_epi64x(0xffff));
+            // Extract low 32 bits of each 64-bit lane
+            auto const dwords =
+                _mm_shuffle_epi32(qwords, _MM_SHUFFLE(3, 1, 2, 0));
+            return _mm_packus_epi32(dwords, _mm_setzero_si128());
+#endif
+        } else if constexpr (sizeof(E) == sizeof(int32)) {
+#if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
+            return _mm_cvtepi32_epi16(+src);
+#else
+            auto const dwords = _mm_and_si128(+src, _mm_set1_epi32(0xffff));
+            return _mm_packus_epi32(dwords, _mm_setzero_si128());
+#endif
+        } else if constexpr (sizeof(E) == sizeof(To)) {
+            return +src;
+        } else {
+            static_assert(sizeof(E) == sizeof(int8));
+            if constexpr (unsigned_integral<representation_t<E>>) {
+                return _mm_cvtepu8_epi16(+src);
+            } else {
+                return _mm_cvtepi8_epi16(+src);
+            }
+        }
+    }
+
+    template <typename E>
+    requires floating_point<representation_t<E>> &&
+        (same_as<float, representation_t<E>> ||
+            same_as<double, representation_t<E>>)
+        DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+        static inline simd<To>
+            DPL_VECTORCALL operator()(simd<E> src) noexcept
+    requires requires(convert_t<int32> cvtepi32) { cvtepi32(src); }
+    {
+        constexpr convert_t<int32> to_int;
+        return operator()(to_int(src));
+    }
+
+    template <typename E>
+    requires float16_like<representation_t<E>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static inline simd<To>
+        DPL_VECTORCALL operator()(simd<E> src) noexcept {
+#if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
+        if constexpr (unsigned_integral<representation_t<To>>) {
+            cosntexpr auto cmp_lt_oq = 17; // lessthan, ordered, quiet
+            auto const error = xmm::broadcast<E>(dx::msb);
+            auto const neg = _mm_cmp_ph(+src, xmm::broadcast<E>(0), cmp_lt_oq);
+            return _mm_mask_blend_ph(neg, _mm_cvttph_epi16(+src), error);
+        } else {
+            return _mm_cvttph_epi16(+src);
+        }
+#else
+        constexpr convert_t<int32> to_int32;
+        auto const hi = simd<E>(__DPL bit_cast<__m128h>(_mm_unpackhi_epi64(
+            __DPL bit_cast<__m128i>(+src), _mm_setzero_si128())));
+        auto const lo_mask = _mm_set1_epi32(0xffff);
+        auto const left = operator()(to_int32(src));
+        auto const right = operator()(to_int32(hi));
+        auto result = _mm_unpacklo_epi64(+left, +right);
+        if constexpr (unsigned_integral<representation_t<To>>) {
+            auto const error = _mm_set1_epi16(static_cast<int16>(0x8000));
+            return _mm_blendv_epi8(result, error,
+                _mm_cmplt_epi16(
+                    __DPL bit_cast<__m128i>(+src), _mm_setzero_si128()));
+        } else {
+            return result;
+        }
+#endif
+    }
+
+    template <typename E>
+    requires bfloat16_like<representation_t<E>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static inline simd<To>
+        DPL_VECTORCALL operator()(simd<E> src) noexcept {
+        constexpr convert_t<int32> to_int32;
+        auto const hi = simd<E>(__DPL bit_cast<__m128bh>(_mm_unpackhi_epi64(
+            __DPL bit_cast<__m128i>(+src), _mm_setzero_si128())));
+        auto const lo_mask = _mm_set1_epi32(0xffff);
+        auto const left = operator()(to_int32(src));
+        auto const right = operator()(to_int32(hi));
+        auto result = _mm_unpacklo_epi64(+left, +right);
+        if constexpr (unsigned_integral<representation_t<To>>) {
+            auto const error = _mm_set1_epi16(static_cast<int16>(0x8000));
+            return _mm_blendv_epi8(result, error,
+                _mm_cmplt_epi16(
+                    __DPL bit_cast<__m128i>(+src), _mm_setzero_si128()));
+        } else {
+            return result;
+        }
+    }
+};
+
+template <integral_cast_target_like<int8> To>
+struct convert_t<To> {
+    template <typename E>
+    requires integral<representation_t<E>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static inline simd<To>
+        DPL_VECTORCALL operator()(simd<E> src) noexcept {
+        if constexpr (sizeof(E) == sizeof(int64)) {
+#if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
+            return _mm_cvtepi64_epi8(+src);
+#else
+            auto const qwords = _mm_and_si128(+src, _mm_set1_epi64x(0xff));
+            // Extract low 32 bits of each 64-bit lane
+            auto const dwords =
+                _mm_shuffle_epi32(qwords, _MM_SHUFFLE(3, 1, 2, 0));
+            auto const zero = _mm_setzero_si128();
+            return _mm_packus_epi16(_mm_packus_epi32(dwords, zero), zero);
+#endif
+        } else if constexpr (sizeof(E) == sizeof(int32)) {
+#if DPL_SIMD_X86_AVX512BW & DPL_SIMD_X86_AVX512VL
+            return _mm_cvtepi32_epi8(+src);
+#else
+            auto const masked = _mm_and_si128(+src, _mm_set1_epi32(0xff));
+            auto const zero = _mm_setzero_si128();
+            return _mm_packus_epi16(_mm_packus_epi32(masked, zero), zero);
+#endif
+        } else if constexpr (sizeof(E) == sizeof(int16)) {
+#if DPL_SIMD_X86_AVX512BW & DPL_SIMD_X86_AVX512VL
+            return _mm_cvtepi16_epi8(+src);
+#else
+            auto const masked = _mm_and_si128(+src, _mm_set1_epi16(0xff));
+            return _mm_packus_epi16(masked, _mm_setzero_si128());
+#endif
+        } else {
+            static_assert(sizeof(E) == sizeof(To));
+            return +src;
+        }
+    }
+
+    template <typename E>
+    requires floating_point<representation_t<E>> &&
+        (same_as<float, representation_t<E>> ||
+            same_as<double, representation_t<E>>) &&
+        (sizeof(E) > sizeof(int16))
+        DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+        static inline simd<To>
+            DPL_VECTORCALL operator()(simd<E> src) noexcept
+    requires requires(convert_t<int32> cvtepi32) { cvtepi32(src); }
+    {
+        // AVX10.X supports fp8
+        static_assert(sizeof(E) > sizeof(To));
+        constexpr convert_t<int32> cvtepi32;
+        return operator()(cvtepi32(src));
+    }
+
+    template <typename E>
+    requires floating_point<representation_t<E>> &&
+        (same_as<float, representation_t<E>> ||
+            same_as<double, representation_t<E>>) &&
+        (sizeof(E) == sizeof(int16))
+        DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+        static inline simd<To>
+            DPL_VECTORCALL operator()(simd<E> src) noexcept
+    requires requires(convert_t<int16> cvtepi16) { cvtepi16(src); }
+    {
+        constexpr convert_t<int16> cvtepi16;
+        return operator()(cvtepi16(src));
+    }
+};
+
+template <typename To>
+requires same_as<representation_t<To>, double>
+struct convert_t<To> {
+    template <typename E>
+    requires integral<representation_t<E>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static inline simd<To>
+        DPL_VECTORCALL operator()(simd<E> src) noexcept {
+        if constexpr (sizeof(E) == sizeof(int64)) {
+#if DPL_SIMD_X86_AVX512DQ & DPL_SIMD_X86_AVX512VL
+            return _mm_cvtepi64_pd(+src);
+#else
+            // Without AVX512, it is simply not worth it to vectorize
+            if constexpr (signed_integral<representation_t<E>>) {
+                return _mm_setr_pd(
+                    static_cast<double>(_mm_extract_epi64(src, 0)),
+                    static_cast<double>(_mm_extract_epi64(src, 1)));
+            } else {
+                return _mm_setr_pd(static_cast<double>( __DPL to_unsigned(
+                                       _mm_extract_epi64(src, 0))),
+                    static_cast<double>(
+                        __DPL to_unsigned(_mm_extract_epi64(src, 1))));
+            }
+#endif
+        } else if constexpr (sizeof(E) == sizeof(int32)) {
+            if constexpr (signed_integral<representation_t<E>>) {
+                return _mm_cvtepi32_pd(+src);
+            } else {
+                auto const large = _mm_cmplt_epi32(+src, _mm_setzero_si128());
+                auto const islolarge =
+                    _mm_castsi128_pd(_mm_unpacklo_epi32(large, large));
+                return _mm_add_pd(_mm_and_pd(islolarge, _mm_set1_pd(0x1p32)),
+                    _mm_cvtepi32_pd(+src));
+            }
+        } else if constexpr (sizeof(E) == sizeof(int16)) {
+            if constexpr (unsigned_integral<representation_t<E>>) {
+                return _mm_cvtepi32_pd(_mm_cvtepu16_epi32(+src));
+            } else {
+                return _mm_cvtepi32_pd(_mm_cvtepi16_epi32(+src));
+            }
+        } else {
+            static_assert(sizeof(E) == sizeof(int8));
+            if constexpr (unsigned_integral<representation_t<E>>) {
+                auto const lo = _mm_cvtepu16_epi32(
+                    _mm_unpacklo_epi8(+src, _mm_setzero_si128()));
+                return _mm_cvtepi32_pd(lo);
+            } else {
+                auto const lo = _mm_cvtepi16_epi32(_mm_srai_epi16(
+                    _mm_unpacklo_epi8(_mm_setzero_si128(), +src), 8));
+                return _mm_cvtepi32_pd(lo);
+            }
+        }
+    }
+
+    template <typename E>
+    requires floating_point<representation_t<E>> &&
+        (same_as<float, representation_t<E>> ||
+            same_as<double, representation_t<E>>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static inline simd<To>
+        DPL_VECTORCALL operator()(simd<E> src) noexcept {
+        if constexpr (same_as<representation_t<To>, representation_t<E>>) {
+            return +src;
+        } else {
+            static_assert(same_as<float, representation_t<E>>);
+            return _mm_cvtps_pd(+src);
+        }
+    }
+
+    template <typename E>
+    requires float16_like<representation_t<E>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static inline simd<To>
+        DPL_VECTORCALL operator()(simd<E> src) noexcept {
+#if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
+        return _mm_cvtph_pd(+src);
+#else
+        using uint = unsigned_representation_t<To>;
+        constexpr convert_t<uint> to_uint;
+        auto const arg = to_uint(xmm::reinterpret<uint16>(src));
+        auto const msb = xmm::broadcast<uint>(0x8000);
+        auto const signs =
+            xmm::reinterpret<To>(xmm::bwshift_left<48>(xmm::bwand(arg, msb)));
+        auto const parg = xmm::bwshift_left<42>(xmm::bwandnot(arg, msb));
+
+        constexpr auto exp_mask = xmm::broadcast<uint>(0x1full << 52);
+        auto const isfinite = simd<uint>(_mm_cmpgt_epi64(+exp_mask, +parg));
+
+        constexpr auto inf64 = xmm::broadcast<uint>(
+            __DPL bit_cast<uint>(dx::infinity_v<double>));
+        auto const nonfinite = xmm::bwandnot(xmm::bwor(inf64, parg), isfinite);
+        constexpr auto shift = xmm::broadcast<To>(0x1p1008);
+        auto const shifted = xmm::multiply(xmm::reinterpret<To>(parg), shift);
+        auto const abs_f64 =
+            xmm::bwor(xmm::reinterpret<To>(nonfinite), shifted);
+        return xmm::bwor(abs_f64, signs);
+#endif
+    }
+
+    template <typename E>
+    requires bfloat16_like<representation_t<E>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static inline simd<To>
+        DPL_VECTORCALL operator()(simd<E> src) noexcept {
+        constexpr convert_t<float> to_float32;
+        return operator()(to_float32(src));
+    }
+};
+
 template <float16_like To>
 struct convert_t<To> {
 private:
     template <typename E>
-    requires same_as<lane_representation_t<E>, float>
+    requires same_as<representation_t<E>, float>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static inline simd<To>
         DPL_VECTORCALL to_postive_inthalf(simd<E> f32) noexcept {
@@ -703,21 +701,21 @@ private:
 
 public:
     template <typename E>
-    requires integral<lane_representation_t<E>>
+    requires integral<representation_t<E>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static inline simd<To>
         DPL_VECTORCALL operator()(simd<E> src) noexcept {
         constexpr convert_t<float> to_fp32;
         if constexpr (sizeof(E) == sizeof(int64)) {
 #if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
-            if constexpr (unsigned_integral<lane_representation_t<E>>) {
+            if constexpr (unsigned_integral<representation_t<E>>) {
                 return _mm_cvtepu64_ph(+src);
             } else {
                 return _mm_cvtepi64_ph(+src);
             }
 #else
             auto const zero = _mm_setzero_si128();
-            if constexpr (unsigned_integral<lane_representation_t<E>>) {
+            if constexpr (unsigned_integral<representation_t<E>>) {
                 using u16 = unsigned_representation_t<To>;
                 using s32 =
                     make_signed_t<bit_type_t<sizeof(u16) * 2 * char_bit_v>>;
@@ -744,7 +742,7 @@ public:
 #endif
         } else if constexpr (sizeof(E) == sizeof(int32)) {
 #if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
-            if constexpr (unsigned_integral<lane_representation_t<E>>) {
+            if constexpr (unsigned_integral<representation_t<E>>) {
                 return _mm_cvtepu32_ph(+src);
             } else {
                 return _mm_cvtepi32_ph(+src);
@@ -752,7 +750,7 @@ public:
 #else
             auto const zero = _mm_setzero_si128();
             using u16 = unsigned_representation_t<To>;
-            if constexpr (unsigned_integral<lane_representation_t<E>>) {
+            if constexpr (unsigned_integral<representation_t<E>>) {
                 auto const all = _mm_set1_epi32(0xffff);
                 auto const isinf = mask<u16>(
                     _mm_packs_epi32(_mm_cmpgt_epi32(+src, all), zero));
@@ -773,13 +771,13 @@ public:
 #endif
         } else if constexpr (sizeof(E) == sizeof(int16)) {
 #if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
-            if constexpr (unsigned_integral<lane_representation_t<E>>) {
+            if constexpr (unsigned_integral<representation_t<E>>) {
                 return _mm_cvtepu16_ph(+src);
             } else {
                 return _mm_cvtepi16_ph(+src);
             }
 #else
-            if constexpr (unsigned_integral<lane_representation_t<E>>) {
+            if constexpr (unsigned_integral<representation_t<E>>) {
                 auto const zero = _mm_setzero_si128();
                 using u32 = bit_type_t<sizeof(E) * 2 * char_bit_v>;
                 auto const lo =
@@ -809,7 +807,7 @@ public:
             constexpr convert_t<i16> to_i16;
             return _mm_cvtepi16_ph(+to_i16(src));
 #else
-            if constexpr (unsigned_integral<lane_representation_t<E>>) {
+            if constexpr (unsigned_integral<representation_t<E>>) {
                 constexpr convert_t<uint16> to_uint16;
                 return operator()(to_uint16(src));
             } else {
@@ -821,13 +819,12 @@ public:
     }
 
     template <typename E>
-    requires floating_point<lane_representation_t<E>> ||
-        bfloat16_like<lane_representation_t<E>> ||
-        float16_like<lane_representation_t<E>>
+    requires floating_point<representation_t<E>> ||
+        bfloat16_like<representation_t<E>> || float16_like<representation_t<E>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static inline simd<To>
         DPL_VECTORCALL operator()(simd<E> src) noexcept {
-        if constexpr (same_as<lane_representation_t<E>, double>) {
+        if constexpr (same_as<representation_t<E>, double>) {
 #if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
             return _mm_cvtpd_ph(+src);
 #else
@@ -870,7 +867,7 @@ public:
                         _mm_castsi128_ps(zero), _MM_SHUFFLE(2, 0, 2, 0)),
                     zero)));
 #endif
-        } else if constexpr (same_as<lane_representation_t<E>, float>) {
+        } else if constexpr (same_as<representation_t<E>, float>) {
 #if DPL_SIMD_X86_F16C
             return __DPL bit_cast<__m128h>(
                 _mm_cvtps_ph(+src, _MM_FROUND_TO_NEAREST_INT));
@@ -908,7 +905,7 @@ public:
             return xmm::reinterpret<To>(
                 simd<uint>(_mm_packus_epi32(+result, _mm_setzero_si128())));
 #endif
-        } else if constexpr (bfloat16_like<lane_representation_t<E>>) {
+        } else if constexpr (bfloat16_like<representation_t<E>>) {
             constexpr convert_t<float> to_f32;
             auto const hi =
                 simd<E>(__DPL bit_cast<__m128bh>(_mm_unpackhi_epi64(
@@ -919,8 +916,7 @@ public:
                 _mm_unpacklo_epi64(__DPL bit_cast<__m128i>(+left),
                     __DPL bit_cast<__m128i>(+right)));
         } else {
-            static_assert(
-                same_as<lane_representation_t<E>, lane_representation_t<To>>);
+            static_assert(same_as<representation_t<E>, representation_t<To>>);
             return +src;
         }
     }
@@ -929,7 +925,7 @@ public:
 template <bfloat16_like To>
 struct convert_t<To> {
     template <typename E>
-    requires integral<lane_representation_t<E>>
+    requires integral<representation_t<E>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static inline simd<To>
         DPL_VECTORCALL operator()(simd<E> src) noexcept {
@@ -954,16 +950,15 @@ struct convert_t<To> {
     }
 
     template <typename E>
-    requires floating_point<lane_representation_t<E>> ||
-        float16_like<lane_representation_t<E>> ||
-        bfloat16_like<lane_representation_t<E>>
+    requires floating_point<representation_t<E>> ||
+        float16_like<representation_t<E>> || bfloat16_like<representation_t<E>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static inline simd<To>
         DPL_VECTORCALL operator()(simd<E> src) noexcept {
-        if constexpr (same_as<double, lane_representation_t<E>>) {
+        if constexpr (same_as<double, representation_t<E>>) {
             constexpr convert_t<float> to_fp32;
             return operator()(to_fp32(src));
-        } else if constexpr (same_as<float, lane_representation_t<E>>) {
+        } else if constexpr (same_as<float, representation_t<E>>) {
 #if DPL_SIMD_X86_AVX512BF16 & DPL_SIMD_X86_AVX512VL
             return _mm_cvtneps_pbh(+from);
 #else
@@ -982,7 +977,7 @@ struct convert_t<To> {
                 _mm_srli_epi32(_mm_add_epi32(ival, bias), 16), isnan);
             return __DPL bit_cast<__m128bh>(_mm_packus_epi32(result, zero));
 #endif
-        } else if constexpr (float16_like<lane_representation_t<E>>) {
+        } else if constexpr (float16_like<representation_t<E>>) {
             constexpr convert_t<float> to_f32;
             auto const hi =
                 simd<E>(__DPL bit_cast<__m128h>(_mm_unpackhi_epi64(
@@ -993,7 +988,7 @@ struct convert_t<To> {
                 _mm_unpacklo_epi64(__DPL bit_cast<__m128i>(+left),
                     __DPL bit_cast<__m128i>(+right)));
         } else {
-            static_assert(bfloat16_like<lane_representation_t<E>>);
+            static_assert(bfloat16_like<representation_t<E>>);
             return +src;
         }
     }

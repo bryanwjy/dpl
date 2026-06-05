@@ -5,7 +5,6 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/decayable.h"
-#  include "dpl/core/concepts/operation_category.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/operations/arithmetic/result.h"
 #  include "dpl/core/operations/evaluate.h"
@@ -31,7 +30,7 @@ concept unqualified_canonical_clamp = requires(AT a, BT b, CT c) {
 template <typename AT, typename BT, typename CT,
     typename A = common_abi_t<AT, BT, CT>>
 concept unqualified_extended_clamp = requires(AT a, BT b, CT c) {
-    { clamp(a, b, c) } -> extended_fma_result<AT, BT, CT, A>;
+    { clamp(a, b, c) } -> vector_with_common_abi<A>;
 };
 
 template <typename AT, typename BT, typename CT,
@@ -55,9 +54,7 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto native(A abi, AT a, BT b, CT c) noexcept
     requires requires {
-        {
-            clamp(internal::abi<A>, a, b, c)
-        } -> broadcasting_arithmetic_result<A>;
+        { clamp(internal::abi<A>, a, b, c) } -> vector_with_common_abi<A>;
     }
     {
         return clamp(internal::abi<A>, a, b, c);
@@ -70,7 +67,7 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto native(A abi, AT a, BT b, CT c) noexcept
     requires requires {
-        { clamp(a, b, c) } -> broadcasting_arithmetic_result<A>;
+        { clamp(a, b, c) } -> vector_with_common_abi<A>;
     }
     {
         return clamp(a, b, c);

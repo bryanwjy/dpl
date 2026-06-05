@@ -5,14 +5,15 @@
 
 // IWYU pragma: always_keep
 
+#include "dpl/core/operations/evaluate.h"
 #include "dpl/core/operations/logical/any_of.h"
 
 #if !DPL_MODULES
+#  include "dpl/core/basic/internal/abi.h"
 #  include "dpl/core/basic/to_canonical.h"
 #  include "dpl/core/concepts/decayable.h"
-#  include "dpl/core/concepts/operation_category.h"
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/type_traits/basic_type.h"
+#  include "dpl/core/type_traits/canonical_type.h"
 #  include "dpl/std/concepts/boolean_testable.h"
 #  include "dpl/std/concepts/invocable.h"
 #endif

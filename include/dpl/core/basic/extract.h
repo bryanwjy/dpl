@@ -3,13 +3,12 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/basic/internal/abi.h"
 #include "dpl/core/basic/to_canonical.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/concepts/basic_type.h"
-#  include "dpl/core/concepts/decayable.h"
-#  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/concepts/simd_class.h"
+#  include "dpl/core/concepts/canonical.h"
+#  include "dpl/core/concepts/extended.h"
 #  include "dpl/std/concepts/integral.h"
 #  include "dpl/std/concepts/integral_constant_like.h"
 #endif
@@ -23,13 +22,13 @@ void extract(...) noexcept = delete;
 
 struct extract_t {
     /**
-     * Prevent canonical_class overload from falling back to simd_class
+     * Prevent canonical_simd_type overload from falling back to simd_type
      * overload
      */
-    template <canonical_class T, typename I>
+    template <canonical_simd_type T, typename I>
     static constexpr void operator()(T, I) noexcept = delete;
 
-    template <canonical_class T, extraction_index I>
+    template <canonical_simd_type T, extraction_index I>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr typename T::value_type operator()(T src, I idx) noexcept
     requires requires { extract(internal::abi<T>, src, idx); }
@@ -37,7 +36,7 @@ struct extract_t {
         return extract(internal::abi<T>, src, idx);
     }
 
-    template <extended_class T>
+    template <extended_simd_type T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr same_as<typename T::value_type> auto operator()(
         T src, extraction_index auto idx) noexcept {

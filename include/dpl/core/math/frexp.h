@@ -9,16 +9,15 @@
 #include "dpl/core/math/ldexp.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/concepts/integral_simd.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/constants/exponent_bias.h"
 #  include "dpl/core/constants/mantissa_width.h"
 #  include "dpl/core/constants/min_value.h"
 #  include "dpl/core/operations/arithmetic.h"
-#  include "dpl/core/operations/bitwise.h"
 #  include "dpl/core/operations/cast.h"
 #  include "dpl/core/operations/compare.h"
 #  include "dpl/core/operations/select.h"
+#  include "dpl/std/concepts/integral.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -231,8 +230,8 @@ struct make_frexp<L, R> {
 template <typename T, typename L, typename R>
 concept frexp_result_type = requires {
     typename make_frexp_t<L, R>;
-    requires equivalent_simd_as<decltype(T::fr), decltype(L::fr)>;
-    requires equivalent_simd_as<decltype(T::exp),
+    requires equivalent_simd_type_with<decltype(T::fr), decltype(L::fr)>;
+    requires equivalent_simd_type_with<decltype(T::exp),
         decltype(make_frexp_t<L, R>::exp)>;
 };
 
@@ -436,9 +435,11 @@ public:
 
 namespace datapar {
 
-DPL_EXPORT template <internal::floating_point_simd Fr,
-    common_size_simd_with<Fr> Exp, frexp_options Opt = decltype(frexp_default)>
-requires (Opt::has(frexp_integral) && internal::integral_simd<Exp>) ||
+DPL_EXPORT template <internal::floating_point_simd Fr, simd_vector Exp,
+    frexp_options Opt = decltype(frexp_default)>
+requires (Opt::has(frexp_integral) && integral<simd_element_type_t<Exp>> &&
+             common_size_with<simd_element_type_t<Fr>,
+                 simd_element_type_t<Exp>>) ||
     (Opt::has(frexp_floating_point) && same_as<Exp, Fr>)
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr auto make_frexp_result(Fr fr, Exp exp, Opt = frexp_default) noexcept {

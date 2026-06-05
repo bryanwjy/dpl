@@ -7,11 +7,12 @@
 #include "dpl/core/operations/evaluate.h"
 
 #if !DPL_MODULES
+#  include "dpl/core/basic/internal/abi.h"
 #  include "dpl/core/basic/to_canonical.h"
-#  include "dpl/core/concepts/basic_type.h"
-#  include "dpl/core/concepts/simd_equivalence.h"
+#  include "dpl/core/concepts/equivalence.h"
+#  include "dpl/core/concepts/extended.h"
 #  include "dpl/core/constants/zero.h"
-#  include "dpl/core/type_traits/make_simd_mask_type.h"
+#  include "dpl/core/type_traits/simd_abi_type.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -102,9 +103,12 @@ public:
 
     template <extended_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T src) noexcept
-        -> equivalent_mask_as<make_simd_mask_type_t<T>> auto {
-        if constexpr (requires { to_simd_mask(src); }) {
+    static constexpr auto operator()(T src) noexcept {
+        if constexpr (requires {
+                          {
+                              to_simd_mask(src)
+                          } -> mask_with_common_abi<simd_abi_type_t<T>>;
+                      }) {
             return to_simd_mask(src);
         } else if constexpr (simd_expression<T>) {
             return operator()(dx::evaluate(src));
@@ -130,9 +134,13 @@ public:
 
     template <extended_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(assume_normalized_mask_t tag,
-        T src) noexcept -> equivalent_mask_as<make_simd_mask_type_t<T>> auto {
-        if constexpr (requires { to_simd_mask(tag, src); }) {
+    static constexpr auto operator()(
+        assume_normalized_mask_t tag, T src) noexcept {
+        if constexpr (requires {
+                          {
+                              to_simd_mask(tag, src)
+                          } -> mask_with_common_abi<simd_abi_type_t<T>>;
+                      }) {
             return to_simd_mask(tag, src);
         } else if constexpr (simd_expression<T>) {
             return operator()(tag, dx::evaluate(src));

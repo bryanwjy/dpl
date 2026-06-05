@@ -10,12 +10,15 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/fwd.h"
-
-#  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/concepts/simd_element_for.h"
-#  include "dpl/std/concepts/enumeration.h"
+// IWYU pragma: begin_exports
+#  include "dpl/core/basic/basic_mask.h"
+#  include "dpl/core/basic/basic_vector.h"
+// IWYU pragma: end_exports
+#  include "dpl/core/concepts/simd_element.h"
+#  include "dpl/core/type_traits/enable_simd_abi.h"
+#  include "dpl/core/type_traits/simd_element_representation.h"
 #  include "dpl/std/concepts/same_as.h"
-#  include "dpl/std/type_traits/conditional.h"
+#  include "dpl/std/utility/sequence.h"
 
 #  include <immintrin.h>
 #endif
@@ -35,13 +38,13 @@ namespace datapar::xmm {
 DPL_EXPORT struct abi_tag;
 
 template <typename T>
-using lane_representation_t DPL_NODEBUG =
+using representation_t DPL_NODEBUG =
     dx::simd_element_representation_t<abi_tag, T>;
 
 template <typename T>
 struct native_vector {};
 template <typename T>
-using native_vector_t = typename native_vector<lane_representation_t<T>>::type;
+using native_vector_t = typename native_vector<representation_t<T>>::type;
 template <>
 struct native_vector<float> {
     using type = __m128;
@@ -75,7 +78,7 @@ concept native_vector_type = same_as<T, __m128> //
 template <typename T>
 concept vectorizable = requires { typename native_vector_t<T>; };
 
-DPL_EXPORT struct abi_tag {
+DPL_EXPORT struct abi_tag : simd_abi_base<abi_tag> {
 
     static constexpr size_t size = 16;
     static constexpr size_t alignment = 16;
@@ -105,20 +108,19 @@ concept float16_like =
 template <typename T>
 concept bfloat16_like = floating_point<T> && brain_float<T>;
 
-namespace details {
-// Used to defer template instantiation
-template <typename T0, typename... Ts>
-using front_t DPL_NODEBUG =
-    dpl::conditional_t<(... && !is_same_v<Ts, T0>), T0, T0>;
-} // namespace details
+template <typename E>
+concept simd_element = simd_element_for<E, abi_tag>;
+
+template <typename E>
+concept basic_element = simd_element_for<E, abi_tag> &&
+    (integral<E> || floating_point<E>) && !same_as<bool, E>;
 
 template <typename E, size_t N>
-concept sized_element = sizeof(E) == N && simd_element_for<E, abi_tag>;
-} // namespace datapar::xmm
+concept sized_element = sizeof(E) == N && simd_element<E>;
 
-namespace datapar {
-template <>
-inline constexpr bool enable_simd_abi<xmm::abi_tag> = true;
-}
+template <typename E>
+inline constexpr auto iota = make_index_sequence<abi_tag::size / sizeof(E)>{};
+
+} // namespace datapar::xmm
 
 DPL_DEFAULT_NAMESPACE_END

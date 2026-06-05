@@ -24,7 +24,7 @@ concept unqualified_canonical_inner_product = requires(L lhs, R rhs) {
 
 template <typename L, typename R, typename A = common_abi_t<L, R>>
 concept unqualified_extended_inner_product = requires(L lhs, R rhs) {
-    { inner_product(lhs, rhs) } -> extended_operation_vector<A>;
+    { inner_product(lhs, rhs) } -> vector_with_common_abi<A>;
 };
 
 template <typename S, typename M, typename L, typename R,
@@ -41,7 +41,7 @@ template <typename S, typename M, typename L, typename R,
     typename A = common_abi_t<L, R, M>>
 concept unqualified_extended_minner_product =
     requires(S src, M mask, L lhs, R rhs) {
-        { inner_product(src, mask, lhs, rhs) } -> extended_operation_vector<A>;
+        { inner_product(src, mask, lhs, rhs) } -> vector_with_common_abi<A>;
     };
 
 template <typename S, typename M, typename L, typename R,
@@ -64,7 +64,7 @@ concept unqualified_extended_iminner_product =
             inner_product(src,
                 internal::to_const_mask<A, inner_product_t, S, L, R>(mask), lhs,
                 rhs)
-        } -> extended_operation_vector<A>;
+        } -> vector_with_common_abi<A>;
     };
 
 struct inner_product_t : private binary_operation_base<inner_product_t> {

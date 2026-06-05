@@ -4,7 +4,7 @@
 #include "dpl/config.h"
 
 #include "dpl/core/concepts/simd_abi.h"
-#include "dpl/core/concepts/simd_class.h"
+#include "dpl/core/concepts/simd_type.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/fwd.h"
@@ -21,8 +21,8 @@ struct broadcast_t;
 }
 
 DPL_EXPORT template <typename T, typename U>
-concept broadcastable_to = (simd_class<U> || simd_abi<U>) &&
-    regular_invocable<internal::broadcast_t<U>, T>;
+concept broadcastable_to =
+    (simd_type<U> || simd_abi<U>) && invocable<internal::broadcast_t<U>, T>;
 
 } // namespace datapar
 

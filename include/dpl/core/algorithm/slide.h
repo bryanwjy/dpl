@@ -6,8 +6,8 @@
 #include "dpl/core/algorithm/shift.h"
 
 #if !DPL_MODULES
+#  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/concepts/simd_equivalence.h"
 #  include "dpl/core/operations/bitwise.h"
 #  include "dpl/core/operations/internal/operation_base.h"
 #  include "dpl/core/type_traits/simd_abi_type.h"
@@ -95,7 +95,7 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(
         L lhs, R rhs, size_t num) noexcept {
-        using E = simd_lane_type_t<L>;
+        using E = simd_element_type_t<L>;
         using A = common_abi_t<L, R>;
         auto simd_size = simd_abi_traits<E, A>::size();
         num = num <= simd_size ? num : simd_size;
@@ -106,7 +106,7 @@ private:
 
 public:
     template <canonical_vector L, canonical_vector R>
-    requires same_as<simd_lane_type_t<L>, simd_lane_type_t<R>>
+    requires same_as<simd_element_type_t<L>, simd_element_type_t<R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs, size_t count) noexcept {
         using A = common_abi_t<L, R>;
@@ -129,7 +129,7 @@ public:
 
     template <simd_vector L, simd_vector R>
     requires (extended_vector<L> || extended_vector<R>) &&
-        same_as<simd_lane_type_t<L>, simd_lane_type_t<R>>
+        same_as<simd_element_type_t<L>, simd_element_type_t<R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs, size_t count) noexcept {
         if constexpr (unqualified_extended_slide_left<L, R>) {
@@ -142,7 +142,7 @@ public:
     }
 
     template <canonical_vector L, canonical_vector R, integral_constant_like N>
-    requires same_as<simd_lane_type_t<L>, simd_lane_type_t<R>>
+    requires same_as<simd_element_type_t<L>, simd_element_type_t<R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs, N count) noexcept {
         using A = common_abi_t<L, R>;
@@ -165,7 +165,7 @@ public:
 
     template <simd_vector L, simd_vector R, integral_constant_like N>
     requires (extended_vector<L> || extended_vector<R>) &&
-        same_as<simd_lane_type_t<L>, simd_lane_type_t<R>>
+        same_as<simd_element_type_t<L>, simd_element_type_t<R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs, N count) noexcept {
         if constexpr (unqualified_extended_slide_lefti<L, R, N>) {
@@ -184,7 +184,7 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL fallback(
         L lhs, R rhs, size_t num) noexcept {
-        using E = simd_lane_type_t<L>;
+        using E = simd_element_type_t<L>;
         using A = common_abi_t<L, R>;
         auto const simd_size = simd_abi_traits<E, A>::size();
         num = num <= simd_size ? num : simd_size;
@@ -193,7 +193,7 @@ private:
 
 public:
     template <canonical_vector L, canonical_vector R>
-    requires same_as<simd_lane_type_t<L>, simd_lane_type_t<R>>
+    requires same_as<simd_element_type_t<L>, simd_element_type_t<R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs, size_t count) noexcept {
         using A = common_abi_t<L, R>;
@@ -216,7 +216,7 @@ public:
 
     template <simd_vector L, simd_vector R>
     requires (extended_vector<L> || extended_vector<R>) &&
-        same_as<simd_lane_type_t<L>, simd_lane_type_t<R>>
+        same_as<simd_element_type_t<L>, simd_element_type_t<R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs, size_t count) noexcept {
         if constexpr (unqualified_extended_slide_right<L, R>) {
@@ -229,7 +229,7 @@ public:
     }
 
     template <canonical_vector L, canonical_vector R, integral_constant_like N>
-    requires same_as<simd_lane_type_t<L>, simd_lane_type_t<R>>
+    requires same_as<simd_element_type_t<L>, simd_element_type_t<R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs, N count) noexcept {
         using A = common_abi_t<L, R>;
@@ -252,7 +252,7 @@ public:
 
     template <simd_vector L, simd_vector R, integral_constant_like N>
     requires (extended_vector<L> || extended_vector<R>) &&
-        same_as<simd_lane_type_t<L>, simd_lane_type_t<R>>
+        same_as<simd_element_type_t<L>, simd_element_type_t<R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs, N count) noexcept {
         if constexpr (unqualified_extended_slide_righti<L, R, N>) {
@@ -274,7 +274,9 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto native(A, L lhs, R rhs) noexcept
     requires requires {
-        { slide_left(internal::abi<A>, lhs, rhs, imm<V>) } -> simd_with_abi<A>;
+        {
+            slide_left(internal::abi<A>, lhs, rhs, imm<V>)
+        } -> simd_type_with_abi<A>;
     }
     {
         return slide_left(internal::abi<A>, lhs, rhs, imm<V>);
@@ -300,7 +302,9 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto native(A, L lhs, R rhs) noexcept
     requires requires {
-        { slide_right(internal::abi<A>, lhs, rhs, imm<V>) } -> simd_with_abi<A>;
+        {
+            slide_right(internal::abi<A>, lhs, rhs, imm<V>)
+        } -> simd_type_with_abi<A>;
     }
     {
         return slide_right(internal::abi<A>, lhs, rhs, imm<V>);

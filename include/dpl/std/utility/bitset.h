@@ -11,6 +11,7 @@
 #include "dpl/std/utility/to_unsigned.h"
 
 #if !DPL_MODULES
+#  include "dpl/std/bit/bit_cast.h"
 #  include "dpl/std/bit/bit_type.h"
 #  include "dpl/std/bit/bit_width.h"
 #  include "dpl/std/bit/char_bit.h"
@@ -248,6 +249,13 @@ public:
 private:
     underlying_type value_;
 };
+
+DPL_EXPORT template <size_t W>
+requires integral<typename bitset<W>::underlying_type>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) constexpr auto to_underlying(
+    bitset<W> val) noexcept {
+    return __DPL bit_cast<typename bitset<W>::underlying_type>(val);
+}
 
 template <integral T>
 bitset(T val) -> bitset<sizeof(T) * char_bit_v>;

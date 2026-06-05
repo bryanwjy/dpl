@@ -24,6 +24,8 @@ import :std.utility;
 #include "dpl/core/basic/immediate.h"
 #include "dpl/core/basic/indices.h"
 #include "dpl/core/basic/initialize.h"
+#include "dpl/core/basic/internal/abi.h"
+#include "dpl/core/basic/internal/iota_sequence.h"
 #include "dpl/core/basic/load.h"
 #include "dpl/core/basic/store.h"
 #include "dpl/core/basic/to_canonical.h"

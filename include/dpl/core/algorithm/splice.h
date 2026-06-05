@@ -35,7 +35,7 @@ template <typename M, typename L, typename R,
     typename A =
         common_abi_t<L, canonical_if_zero_t<R, L, common_abi_t<L, M>>, M>>
 concept unqualified_extended_splice = requires(M mask, L lhs, R rhs) {
-    { splice(mask, lhs, rhs) } -> extended_operation_vector<A>;
+    { splice(mask, lhs, rhs) } -> vector_with_common_abi<A>;
 };
 
 template <typename M, typename L, typename R,
@@ -51,7 +51,7 @@ template <typename M, typename L, typename R,
 concept unqualified_extended_splicei = requires(L lhs, R rhs) {
     {
         splice(internal::select_mask<M, L, R>(), lhs, rhs)
-    } -> extended_operation_vector<A>;
+    } -> vector_with_common_abi<A>;
 };
 
 struct splice_t {
@@ -77,7 +77,7 @@ private:
 
     template <typename M, typename T>
     using broadcast_type DPL_NODEBUG =
-        rebind_simd_t<T, simd_lane_type_t<T>, typename M::abi_type>;
+        rebind_simd_t<T, simd_element_type_t<T>, typename M::abi_type>;
 
 public:
     template <canonical_mask M, canonical_vector L, canonical_vector R>

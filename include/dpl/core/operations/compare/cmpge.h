@@ -9,12 +9,11 @@
 #include "dpl/core/operations/compare/result.h"
 #include "dpl/core/operations/internal/masked.h"
 #include "dpl/core/operations/internal/operation_base.h"
-
 #if !DPL_MODULES
+#  include "dpl/core/basic/internal/abi.h"
 #  include "dpl/core/concepts/decayable.h"
-#  include "dpl/core/concepts/operation_category.h"
+#  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/concepts/simd_equivalence.h"
 #  include "dpl/std/concepts/invocable.h"
 #  include "dpl/std/concepts/totally_ordered.h"
 #endif
@@ -32,7 +31,7 @@ concept unqualified_canonical_cmpge = requires(L lhs, R rhs) {
 
 template <typename L, typename R, typename A = common_abi_t<L, R>>
 concept unqualified_extended_cmpge = requires(L lhs, R rhs) {
-    { cmpge(lhs, rhs) } -> extended_operation_mask<A>;
+    { cmpge(lhs, rhs) } -> mask_with_common_abi<A>;
 };
 
 template <typename L, typename R>
@@ -61,7 +60,7 @@ concept unqualified_canonical_mcmpge = requires(M mask, L lhs, R rhs) {
 template <typename M, typename L, typename R,
     typename A = common_abi_t<L, R, M>>
 concept unqualified_extended_mcmpge = requires(M mask, L lhs, R rhs) {
-    { cmpge(mask, lhs, rhs) } -> extended_operation_mask<A>;
+    { cmpge(mask, lhs, rhs) } -> mask_with_common_abi<A>;
 };
 
 template <typename M, typename L, typename R>
@@ -100,7 +99,7 @@ concept unqualified_extended_imcmpge = requires(M mask, L lhs, R rhs) {
         cmpge(dx::to_compatible_const_mask<operation_result_t<cmpge_t, L, R>>(
                   mask),
             lhs, rhs)
-    } -> extended_operation_mask<A>;
+    } -> mask_with_common_abi<A>;
 };
 
 template <typename M, typename L, typename R>
@@ -123,8 +122,8 @@ private:
     friend binary_operation_base<cmpge_t>;
 
     template <simd_abi A, typename L, typename R>
-    requires (!simd_class<L> || canonical_vector<L>) &&
-        (!simd_class<R> || canonical_vector<R>) && requires(L lhs, R rhs) {
+    requires (!simd_type<L> || canonical_vector<L>) &&
+        (!simd_type<R> || canonical_vector<R>) && requires(L lhs, R rhs) {
             { cmpge(internal::abi<A>, lhs, rhs) } -> mask_with_abi<A>;
         }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -133,8 +132,8 @@ private:
     }
 
     template <simd_abi A, typename L, typename R>
-    requires (!simd_class<L> || extended_vector<L>) &&
-        (!simd_class<R> || extended_vector<R>) &&
+    requires (!simd_type<L> || extended_vector<L>) &&
+        (!simd_type<R> || extended_vector<R>) &&
         unqualified_extended_cmpge<L, R, A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto native(A, L lhs, R rhs) noexcept(

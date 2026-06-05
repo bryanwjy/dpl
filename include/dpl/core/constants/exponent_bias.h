@@ -8,7 +8,7 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/broadcastable_base.h"
-#  include "dpl/core/concepts/arithmetic_type.h"
+#  include "dpl/core/concepts/simd_element.h"
 #  include "dpl/std/bit/bit_cast.h"
 #  include "dpl/std/bit/bit_type.h"
 #  include "dpl/std/concepts/floating_point.h"
@@ -18,7 +18,7 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
 DPL_EXPORT template <floating_point T>
-struct exponent_bias_t : broadcastable_base {
+struct exponent_bias_t : broadcastable_base<exponent_bias_t<T>> {
     __DPL_HIDE_FROM_ABI explicit constexpr exponent_bias_t() noexcept = default;
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
@@ -30,10 +30,10 @@ struct exponent_bias_t : broadcastable_base {
     }
 };
 
-DPL_EXPORT template <arithmetic_type T>
+DPL_EXPORT template <basic_element T>
 inline constexpr exponent_bias_t<T> exponent_bias{};
 
-DPL_EXPORT template <arithmetic_type T>
+DPL_EXPORT template <basic_element T>
 inline constexpr int exponent_bias_v = exponent_bias<T>;
 
 } // namespace datapar

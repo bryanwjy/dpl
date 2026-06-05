@@ -5,7 +5,6 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/immediate.h"
-#  include "dpl/core/concepts/immediate_like.h"
 #  include "dpl/std/bit/popcount.h"
 #  include "dpl/std/concepts/floating_point.h"
 #  include "dpl/std/concepts/invocable.h"

@@ -3,13 +3,15 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/concepts/basic_type.h"
-#include "dpl/core/concepts/simd_class.h"
+#include "dpl/core/concepts/equivalence.h"
+#include "dpl/core/concepts/extended.h"
 #include "dpl/core/concepts/simd_mask.h"
+#include "dpl/core/concepts/simd_type.h"
 #include "dpl/core/concepts/simd_vector.h"
 
 #if !DPL_MODULES
-#  include "dpl/std/concepts/different_from.h"
+#  include "dpl/core/type_traits/simd_expression_result.h"
+#  include "dpl/std/type_traits/remove_cvref.h"
 #  include "dpl/std/utility/forward.h"
 #endif
 
@@ -19,50 +21,24 @@ namespace datapar {
 
 namespace internal {
 
-template <typename T>
-concept has_expression_result =
-    simd_class<T> && requires { typename T::result_type; } &&
-    different_from<typename T::result_type, T> &&
-    simd_class<typename T::result_type>;
-
-template <typename T>
-struct expression_result {};
-template <typename T>
-struct expression_result<T&> : expression_result<T> {};
-template <typename T>
-struct expression_result<T&&> : expression_result<T> {};
-template <typename T>
-struct expression_result<T const> : expression_result<T> {};
-template <typename T>
-struct expression_result<T volatile> : expression_result<T> {};
-template <typename T>
-struct expression_result<T const volatile> : expression_result<T> {};
-
-template <has_expression_result T>
-struct expression_result<T> {
-    using type = typename T::result_type;
-};
-
-template <typename T>
-using expression_result_t = typename expression_result<T>::type;
-
 void evaluate(...) noexcept = delete;
 
 template <typename T>
-concept member_evaluatable =
-    has_expression_result<remove_cvref_t<T>> && requires(T&& expr) {
-        {
-            __DPL forward<T>(expr).evaluate()
-        } -> same_as<expression_result_t<T>>;
-    };
+concept has_expression_result_type = requires {
+    typename simd_expression_result_t<T>;
+} && simd_type<simd_expression_result_t<T>>;
 
 template <typename T>
-concept unqualified_evaluatable =
-    has_expression_result<remove_cvref_t<T>> && requires(T&& expr) {
-        {
-            evaluate(__DPL forward<T>(expr))
-        } -> same_as<expression_result_t<T>>;
-    };
+concept member_evaluatable = requires(T&& expr) {
+    {
+        __DPL forward<T>(expr).evaluate()
+    } -> same_as<simd_expression_result_t<T>>;
+};
+
+template <typename T>
+concept unqualified_evaluatable = requires(T&& expr) {
+    { evaluate(__DPL forward<T>(expr)) } -> same_as<expression_result_t<T>>;
+};
 
 } // namespace internal
 
@@ -74,11 +50,17 @@ concept simd_expression = __DPL datapar::internal::has_expression_result<T> &&
 }
 
 DPL_EXPORT template <typename T>
-concept simd_expression = extended_class<T> && atom::simd_expression<T>;
+concept simd_expression = extended_simd_type<remove_cvref_t<T>> &&
+    atom::simd_expression<remove_cvref_t<T>> &&
+    !atom::simd_expression<simd_expression_result_t<T>> &&
+    equivalent_simd_type_with<simd_expression_result_t<T>, remove_cvref_t<T>>;
+
 DPL_EXPORT template <typename T>
-concept mask_expression = simd_mask<T> && simd_expression<T>;
+concept mask_expression = simd_mask<remove_cvref_t<T>> && simd_expression<T>;
+
 DPL_EXPORT template <typename T>
-concept vector_expression = simd_vector<T> && simd_expression<T>;
+concept vector_expression =
+    simd_vector<remove_cvref_t<T>> && simd_expression<T>;
 
 } // namespace datapar
 

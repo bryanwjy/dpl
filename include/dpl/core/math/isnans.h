@@ -7,12 +7,13 @@
 #include "dpl/core/math/internal/masked_op.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/concepts/basic_type.h"
-#  include "dpl/core/concepts/compatible_mask_with.h"
+#  include "dpl/core/concepts/extended.h"
+#  include "dpl/core/concepts/mask_compatibility.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/constants/mantissa_width.h"
 #  include "dpl/core/operations/bitwise.h"
 #  include "dpl/core/operations/compare.h"
+#  include "dpl/core/type_traits/representation.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -29,7 +30,7 @@ concept unqualified_canonical_isnans = requires(T arg) {
 
 template <typename T>
 concept unqualified_extended_isnans = requires(T arg) {
-    { isnans(arg) } -> extended_operation_mask<typename T::abi_type>;
+    { isnans(arg) } -> mask_with_common_abi<simd_abi_type_t<T>>;
 };
 
 template <typename T>

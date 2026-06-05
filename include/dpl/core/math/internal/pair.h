@@ -577,7 +577,7 @@ struct fast<T> {
 template <typename T>
 explicit fast(T) -> fast<T>;
 
-inline constexpr struct ln2_t : dx::ln2_t {
+struct ln2_t : dx::ln2_t {
     __DPL_HIDE_FROM_ABI explicit constexpr ln2_t() noexcept = default;
 
     template <simd_abi A>
@@ -599,7 +599,9 @@ inline constexpr struct ln2_t : dx::ln2_t {
                 0.28235290563031577122588448175013436025525412068e-12),
         };
     }
-} ln2{};
+};
+
+inline constexpr ln2_t ln2{};
 
 template <typename T>
 requires explicitly_convertible_to<ln2_t, T>

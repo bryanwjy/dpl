@@ -3,20 +3,21 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/operations/abi_promotion.h"
 #include "dpl/core/operations/split_result.h"
-
 #if !DPL_MODULES
 #  include "dpl/core/basic/initialize.h"
+#  include "dpl/core/basic/internal/abi.h"
 #  include "dpl/core/basic/load.h"
 #  include "dpl/core/basic/store.h"
 #  include "dpl/core/concepts/decayable.h"
-#  include "dpl/core/concepts/operation_category.h"
+#  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/concepts/simd_class.h"
-#  include "dpl/core/concepts/simd_equivalence.h"
-#  include "dpl/core/type_traits/array_for.h"
-#  include "dpl/core/type_traits/promote_abi.h"
+#  include "dpl/core/concepts/simd_expression.h"
+#  include "dpl/core/concepts/simd_type.h"
+#  include "dpl/core/operations/internal/array_for.h"
 #  include "dpl/core/type_traits/rebind_simd.h"
+#  include "dpl/core/type_traits/simd_expression_result.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -87,9 +88,10 @@ void split(...) noexcept = delete;
 template <typename T, typename U>
 inline constexpr bool equivalent_split_result = false;
 
-template <size_t N, fixed_width_class T, fixed_width_class U>
+template <size_t N, fixed_width_simd_type T, fixed_width_simd_type U>
 inline constexpr bool equivalent_split_result<dx::split_result<T, N>, U> =
-    equivalent_class_as<T, U> && (N * T::abi_type::size == U::abi_type::size);
+    equivalent_simd_type_with<T, U> &&
+    (N * T::abi_type::size == U::abi_type::size);
 
 template <typename T, typename U>
 concept equivalent_split_result_as = equivalent_split_result<T, U>;
@@ -115,7 +117,7 @@ template <typename T, size_t N>
 concept unqualified_split_into = requires(T arg) {
     {
         split<split_target_t<N, typename T::abi_type>>(internal::abi<T>, arg)
-    } -> equivalent_split_result_as<rebind_simd_t<T, simd_lane_type_t<T>,
+    } -> equivalent_split_result_as<rebind_simd_t<T, simd_element_type_t<T>,
         split_target_t<N, typename T::abi_type>>>;
 };
 
@@ -123,7 +125,7 @@ template <typename T, size_t N>
 concept unqualified_split_outof = requires(T arg) {
     {
         split(internal::abi<split_target_t<N, typename T::abi_type>>, arg)
-    } -> equivalent_split_result_as<rebind_simd_t<T, simd_lane_type_t<T>,
+    } -> equivalent_split_result_as<rebind_simd_t<T, simd_element_type_t<T>,
         split_target_t<N, typename T::abi_type>>>;
 };
 
@@ -131,7 +133,7 @@ template <typename T, size_t N>
 concept unqualified_extended_split = requires(T arg) {
     {
         split<split_target_t<N, typename T::abi_type>>(arg)
-    } -> equivalent_split_result_as<rebind_simd_t<T, simd_lane_type_t<T>,
+    } -> equivalent_split_result_as<rebind_simd_t<T, simd_element_type_t<T>,
         split_target_t<N, typename T::abi_type>>>;
 };
 
@@ -150,7 +152,7 @@ concept extended_split = unqualified_extended_split<T, N> ||
 
 template <typename T, size_t N>
 concept splittable =
-    fixed_width_class<T> && ((T::abi_type::size % N) == 0) && requires {
+    fixed_width_simd_type<T> && ((T::abi_type::size % N) == 0) && requires {
         typename demote_abi_t<typename T::abi_type>;
         typename split_target_t<N, typename T::abi_type>;
     };
@@ -256,7 +258,7 @@ public:
         }
     }
 
-    template <extended_class T>
+    template <extended_simd_type T>
     requires splittable<T, N> && extended_split<T, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto operator()(T src) noexcept {

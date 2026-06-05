@@ -3,23 +3,21 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/concepts/simd_abi.h"
-#include "dpl/core/concepts/simd_basics.h"
-#include "dpl/core/concepts/simd_class.h"
+#include "dpl/core/concepts/simd_type.h"
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar {
 
 DPL_EXPORT template <typename T>
-concept simd_vector = simd_class<T> && atom::simd_vector<remove_cv_t<T>>;
+concept simd_vector = simd_type<T> && atom::simd_vector<remove_cv_t<T>>;
 
 DPL_EXPORT template <typename T>
-concept scalable_vector =
-    simd_vector<T> && scalable_abi<typename remove_cv_t<T>::abi_type>;
+concept scalable_vector = simd_vector<T> && scalable_simd_type<T>;
+
 DPL_EXPORT template <typename T>
-concept fixed_width_vector =
-    simd_vector<T> && fixed_width_abi<typename remove_cv_t<T>::abi_type>;
+concept fixed_width_vector = simd_vector<T> && fixed_width_simd_type<T>;
+
 } // namespace datapar
 
 DPL_DEFAULT_NAMESPACE_END

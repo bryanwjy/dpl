@@ -20,7 +20,7 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
-struct nexponent_bits_t : broadcastable_base {
+struct nexponent_bits_t : broadcastable_base<nexponent_bits_t> {
     __DPL_HIDE_FROM_ABI explicit constexpr nexponent_bits_t() noexcept =
         default;
 
@@ -35,7 +35,7 @@ struct nexponent_bits_t : broadcastable_base {
     }
 };
 
-inline constexpr struct exponent_bits_t : broadcastable_base {
+inline constexpr struct exponent_bits_t : broadcastable_base<nexponent_bits_t> {
     __DPL_HIDE_FROM_ABI explicit constexpr exponent_bits_t() noexcept = default;
 
     template <floating_point T>

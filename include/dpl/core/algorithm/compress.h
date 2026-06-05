@@ -4,19 +4,14 @@
 #include "dpl/config.h"
 
 #include "dpl/core/algorithm/internal/scan.h"
-#include "dpl/core/algorithm/shift.h"
-#include "dpl/core/algorithm/slide.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/immediate.h"
 #  include "dpl/core/concepts/common_abi_with.h"
-#  include "dpl/core/concepts/decayable.h"
-#  include "dpl/core/concepts/operation_category.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/operations/bit.h"
 #  include "dpl/core/operations/select.h"
-#  include "dpl/core/type_traits/array_for.h"
-#  include "dpl/core/type_traits/basic_type.h"
+#  include "dpl/core/type_traits/canonical_type.h"
 #  include "dpl/core/type_traits/simd_abi_traits.h"
 #  include "dpl/std/concepts/invocable.h"
 #endif
@@ -31,28 +26,28 @@ template <typename S, typename M, typename T, typename A = common_abi_t<M, T>>
 concept unqualified_canonical_compress = requires(S src, M mask, T val) {
     {
         compress(internal::abi<A>, src, mask, val)
-    } -> equivalent_simd_as<canonical_if_zero_t<S, T, A>>;
+    } -> equivalent_simd_type_with<canonical_if_zero_t<S, T, A>>;
 };
 
 template <typename S, typename M, typename T, typename A = common_abi_t<M, T>>
 concept unqualified_extended_compress = requires(S src, M mask, T val) {
     {
         compress(src, mask, val)
-    } -> equivalent_simd_as<canonical_if_zero_t<S, T, A>>;
+    } -> equivalent_simd_type_with<canonical_if_zero_t<S, T, A>>;
 };
 
 template <typename S, typename M, typename R, typename A = common_abi_t<S, R>>
 concept unqualified_canonical_icompress = requires(S src, R val) {
     {
         compress(internal::abi<A>, src, internal::select_mask<M, S, R>(), val)
-    } -> equivalent_simd_as<S>;
+    } -> equivalent_simd_type_with<S>;
 };
 
 template <typename S, typename M, typename R, typename A = common_abi_t<S, R>>
 concept unqualified_extended_icompress = requires(S src, R val) {
     {
         compress(src, internal::select_mask<M, S, R>(), val)
-    } -> equivalent_simd_as<S>;
+    } -> equivalent_simd_type_with<S>;
 };
 
 struct compress_t {
@@ -64,7 +59,7 @@ private:
     static constexpr auto DPL_VECTORCALL fallback(
         S src, M mask, T val) noexcept {
         using A = common_abi_t<M, T>;
-        using I = signed_representation_t<simd_lane_type_t<M>>;
+        using I = signed_representation_t<simd_element_type_t<M>>;
         auto const simd_size = simd_abi_traits<I, A>::size();
         auto const idx = dx::lane_index<I, A>();
         auto rank = exscan_sum_base::operator()(mask);
@@ -88,7 +83,7 @@ private:
     static constexpr auto DPL_VECTORCALL fallback(
         S src, M mask, T val) noexcept {
         using A = common_abi_t<M, T>;
-        using I = signed_representation_t<simd_lane_type_t<M>>;
+        using I = signed_representation_t<simd_element_type_t<M>>;
         auto const rank = exscan_sum_base::operator()(mask);
         [&val]<size_t J>(this auto self, auto rank, immediate<J>) {
             constexpr auto butterfly = []<size_t... Is>(index_sequence<Is...>) {
@@ -114,7 +109,7 @@ private:
     static constexpr auto DPL_VECTORCALL fallbacki(
         S src, M cmask, T val) noexcept {
         using A = common_abi_t<canonical_if_zero_t<S, T>, T>;
-        using I = signed_representation_t<simd_lane_type_t<T>>;
+        using I = signed_representation_t<simd_element_type_t<T>>;
         constexpr auto rank =
             exscan_sum_base::operator()(basic_mask<I, A>(cmask));
         [&val]<size_t J>(this auto self, auto rank, immediate<J>) {
@@ -140,7 +135,7 @@ private:
 
     template <typename M, typename T>
     using broadcast_type DPL_NODEBUG =
-        rebind_simd_t<T, simd_lane_type_t<T>, typename M::abi_type>;
+        rebind_simd_t<T, simd_element_type_t<T>, typename M::abi_type>;
 
 public:
     template <canonical_vector S, canonical_mask M, canonical_vector T>
@@ -305,51 +300,9 @@ public:
     }
 };
 
-template <auto V>
-struct compressi_t {};
-
-template <integral auto V>
-struct compressi_t<V> {
-private:
-    template <typename T>
-    using mask_type DPL_NODEBUG = const_mask<simd_abi_traits<T>::size, V>;
-
-public:
-    template <simd_vector S, simd_vector R>
-    requires requires {
-        typename mask_type<S>;
-        requires regular_invocable<compress_t, S, mask_type<S>, R>;
-    }
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(S src, R val) noexcept {
-        constexpr mask_type<S> mask{};
-        return compress_t::operator()(src, mask, val);
-    }
-
-    template <simd_class S, typename R>
-    requires (!simd_class<R>) && requires { typename mask_type<S>; } &&
-        regular_invocable<compress_t, S, mask_type<S>, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(S src, R val) noexcept {
-        constexpr mask_type<S> mask{};
-        return compress_t::operator()(src, mask, val);
-    }
-
-    template <typename S, simd_class R>
-    requires (!simd_class<S>) && requires { typename mask_type<R>; } &&
-        regular_invocable<compress_t, S, mask_type<R>, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(S src, R val) noexcept {
-        constexpr mask_type<R> mask{};
-        return compress_t::operator()(src, mask, val);
-    }
-};
-
 } // namespace datapar::internal
 
 namespace datapar {
-DPL_EXPORT template <auto V>
-inline constexpr internal::compressi_t<V> compressi{};
 DPL_EXPORT inline constexpr internal::compress_t compress{};
 } // namespace datapar
 

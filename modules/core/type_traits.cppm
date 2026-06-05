@@ -10,25 +10,23 @@ import :std.concepts;
 import :std.bit;
 import :std.type_traits;
 import :std.utility;
-import :core.concepts;
 
 // IWYU pragma: begin_exports
-#include "dpl/core/type_traits/array_for.h"
-#include "dpl/core/type_traits/basic_type.h"
+#include "dpl/core/type_traits/canonical_type.h"
 #include "dpl/core/type_traits/common_abi.h"
-#include "dpl/core/type_traits/common_arithmetic_type.h"
-#include "dpl/core/type_traits/common_bits_type.h"
-#include "dpl/core/type_traits/common_float_type.h"
-#include "dpl/core/type_traits/common_order_type.h"
 #include "dpl/core/type_traits/common_size_type.h"
-#include "dpl/core/type_traits/iota_sequence.h"
-#include "dpl/core/type_traits/make_simd_mask_type.h"
-#include "dpl/core/type_traits/promote_abi.h"
+#include "dpl/core/type_traits/enable_const_mask.h"
+#include "dpl/core/type_traits/enable_simd_abi.h"
+#include "dpl/core/type_traits/enable_simd_mask.h"
+#include "dpl/core/type_traits/enable_simd_vector.h"
+#include "dpl/core/type_traits/is_canonical_type.h"
 #include "dpl/core/type_traits/rebind_simd.h"
 #include "dpl/core/type_traits/representation.h"
 #include "dpl/core/type_traits/simd_abi_traits.h"
 #include "dpl/core/type_traits/simd_abi_type.h"
+#include "dpl/core/type_traits/simd_element_representation.h"
+#include "dpl/core/type_traits/simd_element_type.h"
 #include "dpl/core/type_traits/simd_expression_result.h"
-#include "dpl/core/type_traits/simd_lane_type.h"
+#include "dpl/core/type_traits/simd_traits.h"
 #include "dpl/core/type_traits/simd_vector_type.h"
 // IWYU pragma: end_exports

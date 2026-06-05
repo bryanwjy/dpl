@@ -13,10 +13,10 @@
 #if !DPL_MODULES
 #  include "dpl/core/fwd.h"
 
+#  include "dpl/core/basic/internal/iota_sequence.h"
 #  include "dpl/core/concepts/common_size_with.h"
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/concepts/simd_element_for.h"
-#  include "dpl/core/type_traits/iota_sequence.h"
+#  include "dpl/core/concepts/simd_element.h"
 #  include "dpl/core/type_traits/simd_abi_traits.h"
 #  include "dpl/std/bit/bit_cast.h"
 #  include "dpl/std/concepts/different_from.h"

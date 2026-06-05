@@ -6,14 +6,10 @@
 #if !DPL_MODULES
 #  include "dpl/core/fwd.h"
 
-#  include "dpl/core/basic/indices.h"
 #  include "dpl/core/basic/initialize.h"
-#  include "dpl/core/concepts/basic_type.h"
-#  include "dpl/core/type_traits/basic_type.h"
-#  include "dpl/core/type_traits/iota_sequence.h"
-#  include "dpl/core/type_traits/rebind_simd.h"
+#  include "dpl/core/basic/internal/abi.h"
+#  include "dpl/core/basic/internal/iota_sequence.h"
 #  include "dpl/core/type_traits/representation.h"
-#  include "dpl/core/type_traits/simd_vector_type.h"
 #  include "dpl/std/concepts/invocable.h"
 #  include "dpl/std/utility/apply.h"
 #  include "dpl/std/utility/ignore.h"
@@ -72,10 +68,10 @@ public:
     }
 };
 
-template <simd_class T>
+template <simd_type T>
 struct lane_index_t<T> {
 private:
-    using E DPL_NODEBUG = simd_lane_type_t<T>;
+    using E DPL_NODEBUG = simd_element_type_t<T>;
     using A DPL_NODEBUG = typename T::abi_type;
 
 public:

@@ -13,7 +13,6 @@
 #if !DPL_MODULES
 #  include "dpl/core/basic/basic_vector.h" // IWYU pragma: keep
 #  include "dpl/core/concepts/decayable.h"
-#  include "dpl/core/concepts/operation_category.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/constants/one.h"
 #  include "dpl/core/operations/arithmetic.h"
@@ -36,7 +35,7 @@ template <typename Op, typename S, typename M, typename... Args>
 concept canonical_operator_args = canonical_vector<S> &&
     (const_mask_for<M, canonical_if_zero_t<S, invoke_result_t<Op, Args...>>> ||
         canonical_mask<M>) &&
-    (... && (!simd_class<Args> || canonical_class<Args>));
+    (... && (!simd_type<Args> || canonical_simd_type<Args>));
 
 template <typename Op, typename S, typename M, typename... Args>
 concept maskable_operator = regular_invocable<Op, Args...> && simd_vector<S> &&
@@ -60,7 +59,7 @@ concept imm_zmasked_overload = dx::internal::imm_zmaskable_args<Args...>;
 template <typename Op, typename M, typename... Args>
 concept canonical_zoperator_args =
     (const_mask_for<M, invoke_result_t<Op, Args...>> || canonical_mask<M>) &&
-    (... && (!simd_class<Args> || canonical_class<Args>));
+    (... && (!simd_type<Args> || canonical_simd_type<Args>));
 
 template <typename Op, typename M, typename... Args>
 concept maskable_zoperator = regular_invocable<Op, Args...> &&
@@ -82,7 +81,7 @@ concept maskable_assignment =
 template <typename Op, typename S, typename M, typename... Args>
 concept canonical_assignment_args = canonical_vector<S> &&
     (const_mask_for<M, invoke_result_t<Op, S, Args...>> || canonical_mask<M>) &&
-    (... && (!simd_class<Args> || canonical_class<Args>));
+    (... && (!simd_type<Args> || canonical_simd_type<Args>));
 
 template <typename Op, typename S, typename M, typename... Args>
 concept extended_masked_math_assignment =
@@ -108,7 +107,7 @@ concept canonical_masked_math_zassignment =
 template <typename Op, typename M, typename... Args>
 concept canonical_predicate_args =
     (const_mask_for<M, invoke_result_t<Op, Args...>> || canonical_mask<M>) &&
-    (... && (!simd_class<Args> || canonical_class<Args>));
+    (... && (!simd_type<Args> || canonical_simd_type<Args>));
 
 template <typename Op, typename M, typename... Args>
 concept maskable_predicate =
@@ -172,7 +171,7 @@ concept decayable_masked_operator =
     (!simd_mask<M> ||
         decayable_mask_for<M, operation_category::lane_agnostic>) &&
     (... &&
-        (!simd_class<Args> ||
+        (!simd_type<Args> ||
             decayable_mask_for<Args, operation_category::lane_agnostic>)) &&
     masked_op_invocable<Op, decay_type_t<S>, decay_type_t<M>,
         decay_type_t<Args>...>;
@@ -187,7 +186,7 @@ concept decayable_masked_zoperator =
     (!simd_mask<M> ||
         decayable_mask_for<M, operation_category::lane_agnostic>) &&
     (... &&
-        (!simd_class<Args> ||
+        (!simd_type<Args> ||
             decayable_mask_for<Args, operation_category::lane_agnostic>)) &&
     masked_op_invocable<Op, decay_type_t<M>, decay_type_t<Args>...>;
 
@@ -201,7 +200,7 @@ concept decayable_masked_predicate =
     (!simd_mask<M> ||
         decayable_mask_for<M, operation_category::lane_agnostic>) &&
     (... &&
-        (!simd_class<Args> ||
+        (!simd_type<Args> ||
             decayable_mask_for<Args, operation_category::lane_agnostic>)) &&
     masked_pred_invocable<Op, decay_type_t<M>, decay_type_t<Args>...>;
 
@@ -212,7 +211,7 @@ constexpr decltype(auto) decay(T&& arg) noexcept {
 }
 
 template <typename T>
-requires simd_class<remove_cvref_t<T>>
+requires simd_type<remove_cvref_t<T>>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr decltype(auto) decay(T&& arg) noexcept {
     return dx::to_canonical(__DPL forward<T>(arg));
@@ -225,7 +224,7 @@ constexpr decltype(auto) eval(T&& arg) noexcept {
 }
 
 template <typename T>
-requires simd_class<remove_cvref_t<T>>
+requires simd_type<remove_cvref_t<T>>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr decltype(auto) eval(T&& arg) noexcept {
     return dx::evaluate(__DPL forward<T>(arg));

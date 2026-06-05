@@ -3,16 +3,18 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/operations/bit/result.h"
 #include "dpl/core/operations/internal/masked.h"
 #include "dpl/core/operations/internal/transform.h"
 
 #if !DPL_MODULES
+#  include "dpl/core/basic/initialize.h"
+#  include "dpl/core/basic/internal/abi.h"
 #  include "dpl/core/concepts/decayable.h"
-#  include "dpl/core/concepts/operation_category.h"
+#  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/concepts/simd_abi.h"
+#  include "dpl/core/type_traits/representation.h"
 #  include "dpl/core/type_traits/simd_abi_type.h"
-#  include "dpl/core/type_traits/simd_lane_type.h"
+#  include "dpl/core/type_traits/simd_element_type.h"
 #  include "dpl/std/bit/bit_cast.h"
 #  include "dpl/std/bit/byteswap.h"
 #  include "dpl/std/utility/bitset.h"
@@ -29,19 +31,19 @@ concept canonical_byteswap_vector =
 
 template <typename T, typename U>
 concept canonical_byteswap_mask =
-    simd_mask<T> && same_as<simd_lane_type_t<T>, simd_lane_type_t<U>> &&
+    simd_mask<T> && same_as<simd_element_type_t<T>, simd_element_type_t<U>> &&
     same_as<simd_abi_type_t<T>, simd_abi_type_t<U>>;
 
 struct byteswap_t;
 
 template <typename T>
 concept unqualified_canonical_byteswap = requires(T val) {
-    { byteswap(internal::abi<T>, val) } -> canonical_byteswap_vector<T>;
+    { byteswap(internal::abi<T>, val) } -> equivalent_vector_with<T>;
 };
 
 template <typename T>
 concept unqualified_extended_byteswap = requires(T val) {
-    { byteswap(val) } -> extended_operation_vector<typename T::abi_type>;
+    { byteswap(val) } -> vector_with_common_abi<typename T::abi_type>;
 };
 
 template <typename T>
@@ -61,12 +63,12 @@ template <typename S, typename M, typename T, typename A = common_abi_t<M, T>>
 concept unqualified_canonical_mbyteswap = requires(S src, M mask, T val) {
     {
         byteswap(internal::abi<A>, src, mask, val)
-    } -> equivalent_simd_as<canonical_if_zero_t<S, T, A>>;
+    } -> equivalent_simd_type_with<canonical_if_zero_t<S, T, A>>;
 };
 
 template <typename S, typename M, typename T, typename A = common_abi_t<M, T>>
 concept unqualified_extended_mbyteswap = requires(S src, M mask, T val) {
-    { byteswap(src, mask, val) } -> extended_operation_vector<A>;
+    { byteswap(src, mask, val) } -> vector_with_common_abi<A>;
 };
 
 template <typename S, typename M, typename T>
@@ -93,7 +95,7 @@ concept unqualified_canonical_imbyteswap = requires(S src, M mask, T val) {
     {
         byteswap(internal::abi<A>, src,
             internal::to_const_mask<A, byteswap_t, S, T>(mask), val)
-    } -> equivalent_simd_as<canonical_if_zero_t<S, T, A>>;
+    } -> equivalent_simd_type_with<canonical_if_zero_t<S, T, A>>;
 };
 
 template <typename S, typename M, typename T,
@@ -101,7 +103,7 @@ template <typename S, typename M, typename T,
 concept unqualified_extended_imbyteswap = requires(S src, M mask, T val) {
     {
         byteswap(src, internal::to_const_mask<A, byteswap_t, S, T>(mask), val)
-    } -> extended_operation_vector<A>;
+    } -> vector_with_common_abi<A>;
 };
 
 template <typename S, typename M, typename T>
@@ -130,7 +132,7 @@ concept unqualified_canonical_mask_byteswap = requires(T val) {
 
 template <typename T>
 concept unqualified_extended_mask_byteswap = requires(T val) {
-    { byteswap(val) } -> extended_operation_vector<typename T::abi_type>;
+    { byteswap(val) } -> vector_with_common_abi<typename T::abi_type>;
 };
 
 template <typename T>

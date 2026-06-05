@@ -10,33 +10,22 @@ import :std.concepts;
 import :std.bit;
 import :std.type_traits;
 import :std.utility;
+import :core.type_traits;
 
 // IWYU pragma: begin_exports
-#include "dpl/core/concepts/arithmetic_type.h"
-#include "dpl/core/concepts/basic_type.h"
 #include "dpl/core/concepts/broadcastable_to.h"
+#include "dpl/core/concepts/canonical.h"
 #include "dpl/core/concepts/common_abi_with.h"
-#include "dpl/core/concepts/common_arithmetic_with.h"
-#include "dpl/core/concepts/common_bits_with.h"
-#include "dpl/core/concepts/common_class_with.h"
-#include "dpl/core/concepts/common_float_with.h"
-#include "dpl/core/concepts/common_integral_with.h"
-#include "dpl/core/concepts/common_order_with.h"
+#include "dpl/core/concepts/common_simd_type_with.h"
 #include "dpl/core/concepts/common_size_with.h"
-#include "dpl/core/concepts/compatible_mask_with.h"
-#include "dpl/core/concepts/const_mask_like.h"
 #include "dpl/core/concepts/decayable.h"
-#include "dpl/core/concepts/immediate_like.h"
-#include "dpl/core/concepts/integral_simd.h"
+#include "dpl/core/concepts/equivalence.h"
+#include "dpl/core/concepts/extended.h"
+#include "dpl/core/concepts/mask_compatibility.h"
 #include "dpl/core/concepts/simd_abi.h"
-#include "dpl/core/concepts/simd_class.h"
 #include "dpl/core/concepts/simd_element.h"
-#include "dpl/core/concepts/simd_element_representation.h"
-#include "dpl/core/concepts/simd_equivalence.h"
 #include "dpl/core/concepts/simd_expression.h"
-#include "dpl/core/concepts/simd_lane_representation.h"
-#include "dpl/core/concepts/simd_lane_type.h"
 #include "dpl/core/concepts/simd_mask.h"
-#include "dpl/core/concepts/simd_traits.h"
+#include "dpl/core/concepts/simd_type.h"
 #include "dpl/core/concepts/simd_vector.h"
 // IWYU pragma: end_exports

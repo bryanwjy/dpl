@@ -16,7 +16,6 @@
 #  include "dpl/core/basic/const_mask.h"
 #  include "dpl/core/concepts/common_size_with.h"
 #  include "dpl/core/type_traits/common_size_type.h"
-#  include "dpl/std/utility/template_barrier.h"
 #  include "dpl/xmm/basic/abi.h"
 
 #  include <immintrin.h>
@@ -25,7 +24,7 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::xmm {
 
-DPL_EXPORT template <simd_element_for<abi_tag> C, simd_element_for<abi_tag> E>
+DPL_EXPORT template <simd_element C, simd_element E>
 requires common_size_with<C, E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<E>
@@ -53,8 +52,7 @@ inline simd<E>
     }
 }
 
-DPL_EXPORT template <simd_element_for<abi_tag> C, simd_element_for<abi_tag> L,
-    simd_element_for<abi_tag> R>
+DPL_EXPORT template <simd_element C, simd_element L, simd_element R>
 requires common_size_with<L, R> && common_size_with<L, C> &&
     common_size_with<R, C>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
@@ -111,7 +109,7 @@ inline simd<E> select(
     const_mask<16, V> condition, simd<E> lhs, simd<E> rhs) noexcept {
     constexpr auto imm = static_cast<int>(condition());
     if constexpr (same_as<int8, E>) {
-        constexpr auto imm = xmm::initialize<int8>(bitset<16>(V));
+        constexpr auto imm = xmm::initialize<E>(bitset<16>(V));
         return _mm_blendv_epi8(+rhs, +lhs, +imm);
     } else {
         return xmm::reinterpret<E>(xmm::select(condition,
@@ -119,7 +117,7 @@ inline simd<E> select(
     }
 }
 
-DPL_EXPORT template <simd_element_for<abi_tag> L, simd_element_for<abi_tag> R,
+DPL_EXPORT template <simd_element L, simd_element R,
     bit_type_t<simd_abi_traits<abi_tag, L>::size> V>
 requires common_size_with<L, R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
@@ -131,8 +129,7 @@ inline mask<common_size_type_t<L, R>> select(
         simd<E>(+xmm::reinterpret<E>(rhs)));
 }
 
-DPL_EXPORT template <integral auto V, simd_element_for<abi_tag> L,
-    simd_element_for<abi_tag> R>
+DPL_EXPORT template <integral auto V, simd_element L, simd_element R>
 requires common_size_with<L, R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline auto select(mask<L> lhs, mask<R> rhs) noexcept {
@@ -140,14 +137,14 @@ inline auto select(mask<L> lhs, mask<R> rhs) noexcept {
     return xmm::select(mask_type(), lhs, rhs);
 }
 
-DPL_EXPORT template <integral auto V, simd_element_for<abi_tag> E>
+DPL_EXPORT template <integral auto V, simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline auto select(simd<E> lhs, simd<E> rhs) noexcept {
     using mask_type = const_mask<simd_abi_traits<abi_tag, E>::size, V>;
     return xmm::select(mask_type(), lhs, rhs);
 }
 
-DPL_EXPORT template <simd_element_for<abi_tag> C, simd_element_for<abi_tag> E>
+DPL_EXPORT template <simd_element C, simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline auto select(
     abi_tag tag, mask<C> condition, simd<E> lhs, simd<E> rhs) noexcept
@@ -156,8 +153,7 @@ requires requires { xmm::select(condition, lhs, rhs); }
     return xmm::select(condition, lhs, rhs);
 }
 
-DPL_EXPORT template <simd_element_for<abi_tag> C, simd_element_for<abi_tag> L,
-    simd_element_for<abi_tag> R>
+DPL_EXPORT template <simd_element C, simd_element L, simd_element R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline auto select(
     abi_tag tag, mask<C> condition, mask<L> lhs, mask<R> rhs) noexcept
@@ -166,7 +162,7 @@ requires requires { xmm::select(condition, lhs, rhs); }
     return xmm::select(condition, lhs, rhs);
 }
 
-DPL_EXPORT template <simd_element_for<abi_tag> L, simd_element_for<abi_tag> R,
+DPL_EXPORT template <simd_element L, simd_element R,
     bit_type_t<simd_abi_traits<abi_tag, L>::size> V>
 requires common_size_with<L, R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
@@ -177,7 +173,7 @@ inline mask<common_size_type_t<L, R>> select(abi_tag tag,
     return xmm::select(condition, lhs, rhs);
 }
 
-DPL_EXPORT template <simd_element_for<abi_tag> E,
+DPL_EXPORT template <simd_element E,
     bit_type_t<simd_abi_traits<abi_tag, E>::size> V>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<E> select(abi_tag tag,

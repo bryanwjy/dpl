@@ -6,7 +6,7 @@
 // IWYU pragma: always_keep
 
 #if !DPL_MODULES
-#  include "dpl/core/concepts/simd_class.h"
+#  include "dpl/core/concepts/simd_type.h"
 #  include "dpl/std/concepts/invocable.h"
 #  include "dpl/std/type_traits/is_invocable.h"
 #endif
@@ -32,7 +32,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     constexpr invoke_result_t<internal::cmpeq_t, D, R> operator==(
         this D lhs, R rhs) noexcept
-    requires simd_class<D>
+    requires simd_type<D>
     {
         return datapar::cmpeq(lhs, rhs);
     }
@@ -42,7 +42,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     constexpr invoke_result_t<internal::cmpneq_t, D, R> operator!=(
         this D lhs, R rhs) noexcept
-    requires simd_class<D>
+    requires simd_type<D>
     {
         return datapar::cmpneq(lhs, rhs);
     }
@@ -52,7 +52,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     constexpr invoke_result_t<internal::cmplt_t, D, R> operator<(
         this D lhs, R rhs) noexcept
-    requires simd_class<D>
+    requires simd_type<D>
     {
         return datapar::cmplt(lhs, rhs);
     }
@@ -62,7 +62,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     constexpr invoke_result_t<internal::cmple_t, D, R> operator<=(
         this D lhs, R rhs) noexcept
-    requires simd_class<D>
+    requires simd_type<D>
     {
         return datapar::cmple(lhs, rhs);
     }
@@ -72,7 +72,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     constexpr invoke_result_t<internal::cmpgt_t, D, R> operator>(
         this D lhs, R rhs) noexcept
-    requires simd_class<D>
+    requires simd_type<D>
     {
         return datapar::cmpgt(lhs, rhs);
     }
@@ -82,7 +82,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     constexpr invoke_result_t<internal::cmpge_t, D, R> operator>=(
         this D lhs, R rhs) noexcept
-    requires simd_class<D>
+    requires simd_type<D>
     {
         return datapar::cmpge(lhs, rhs);
     }
@@ -92,7 +92,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     friend constexpr invoke_result_t<internal::cmpeq_t, L, D> operator==(
         L lhs, D rhs) noexcept
-    requires simd_class<D>
+    requires simd_type<D>
     {
         return datapar::cmpeq(lhs, rhs);
     }
@@ -102,7 +102,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     friend constexpr invoke_result_t<internal::cmpneq_t, L, D> operator!=(
         L lhs, D rhs) noexcept
-    requires simd_class<D>
+    requires simd_type<D>
     {
         return datapar::cmpneq(lhs, rhs);
     }
@@ -112,7 +112,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     friend constexpr invoke_result_t<internal::cmplt_t, L, D> operator<(
         L lhs, D rhs) noexcept
-    requires simd_class<D>
+    requires simd_type<D>
     {
         return datapar::cmplt(lhs, rhs);
     }
@@ -122,7 +122,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     friend constexpr invoke_result_t<internal::cmple_t, L, D> operator<=(
         L lhs, D rhs) noexcept
-    requires simd_class<D>
+    requires simd_type<D>
     {
         return datapar::cmple(lhs, rhs);
     }
@@ -132,7 +132,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     friend constexpr invoke_result_t<internal::cmpgt_t, L, D> operator>(
         L lhs, D rhs) noexcept
-    requires simd_class<D>
+    requires simd_type<D>
     {
         return datapar::cmpgt(lhs, rhs);
     }
@@ -142,7 +142,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     friend constexpr invoke_result_t<internal::cmpge_t, L, D> operator>=(
         L lhs, D rhs) noexcept
-    requires simd_class<D>
+    requires simd_type<D>
     {
         return datapar::cmpge(lhs, rhs);
     }

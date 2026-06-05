@@ -3,18 +3,20 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/basic/internal/abi.h"
+
 #if !DPL_MODULES
 #  include "dpl/core/fwd.h"
 
-#  include "dpl/core/concepts/basic_type.h"
-#  include "dpl/core/concepts/simd_class.h"
-#  include "dpl/core/type_traits/basic_type.h"
+#  include "dpl/core/concepts/canonical.h"
+#  include "dpl/core/concepts/extended.h"
+#  include "dpl/core/concepts/simd_type.h"
+#  include "dpl/core/type_traits/canonical_type.h"
 #  include "dpl/core/type_traits/simd_abi_traits.h"
 #  include "dpl/std/bit/bit_type.h"
 #  include "dpl/std/bit/char_bit.h"
 #  include "dpl/std/bit/has_single_bit.h"
 #  include "dpl/std/concepts/array_initializable.h"
-#  include "dpl/std/concepts/convertible_to.h"
 #  include "dpl/std/concepts/different_from.h"
 #  include "dpl/std/concepts/invocable.h"
 #  include "dpl/std/concepts/same_as.h"
@@ -70,12 +72,12 @@ public:
     }
 };
 
-template <canonical_class T>
-requires fixed_width_class<T>
+template <canonical_simd_type T>
+requires fixed_width_simd_type<T>
 struct initialize_t<T, ignore_t> {
 private:
     using A DPL_NODEBUG = typename T::abi_type;
-    using E DPL_NODEBUG = simd_lane_type_t<T>;
+    using E DPL_NODEBUG = simd_element_type_t<T>;
 
 public:
     template <typename... Args>
@@ -132,11 +134,11 @@ public:
     }
 };
 
-template <extended_class T>
+template <extended_simd_type T>
 struct initialize_t<T, ignore_t> {
 private:
     using base_type DPL_NODEBUG = initialize_t<canonical_type_t<T>>;
-    using E DPL_NODEBUG = simd_lane_type_t<T>;
+    using E DPL_NODEBUG = simd_element_type_t<T>;
 
 public:
     template <typename... Args>

@@ -18,7 +18,7 @@ struct cswap_t {
         invoke_result_t<internal::select_t, M, L, R>;
 
 public:
-    template <typename M, simd_class L, simd_class R>
+    template <typename M, simd_type L, simd_type R>
     requires const_mask_for<M, R> && const_mask_for<M, L> &&
         regular_invocable<internal::select_t, M, L, R> &&
         regular_invocable<internal::select_t, M, R, L> &&
@@ -32,7 +32,7 @@ public:
         rhs = right;
     }
 
-    template <simd_mask M, simd_class L, simd_class R>
+    template <simd_mask M, simd_type L, simd_type R>
     requires regular_invocable<internal::select_t, M, L, R> &&
         regular_invocable<internal::select_t, M, R, L> &&
         assignable_from<L&, selection_t<M, R, L> const&> &&
@@ -56,7 +56,7 @@ private:
         invoke_result_t<internal::selecti_t<V>, L, R>;
 
 public:
-    template <fixed_width_class L, fixed_width_class R>
+    template <fixed_width_simd_type L, fixed_width_simd_type R>
     requires regular_invocable<internal::selecti_t<V>, L, R> &&
         regular_invocable<internal::selecti_t<V>, R, L> &&
         assignable_from<L&, selection_t<R, L> const&> &&

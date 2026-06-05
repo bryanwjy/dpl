@@ -4,23 +4,23 @@
 #include "dpl/config.h"
 
 #include "dpl/core/operations/evaluate.h"
-#include "dpl/core/operations/internal/extended_operations.h"
 #include "dpl/core/operations/internal/transform.h"
-
 #if !DPL_MODULES
 #  include "dpl/core/basic/broadcast.h"
 #  include "dpl/core/basic/const_mask.h"
+#  include "dpl/core/basic/internal/abi.h"
 #  include "dpl/core/basic/to_canonical.h"
 #  include "dpl/core/concepts/common_size_with.h"
 #  include "dpl/core/concepts/decayable.h"
-#  include "dpl/core/concepts/operation_category.h"
-#  include "dpl/core/concepts/simd_class.h"
+#  include "dpl/core/concepts/equivalence.h"
+#  include "dpl/core/concepts/simd_type.h"
 #  include "dpl/core/constants/all_bits.h"
 #  include "dpl/core/constants/zero.h"
 #  include "dpl/core/type_traits/common_size_type.h"
 #  include "dpl/core/type_traits/simd_expression_result.h"
 #  include "dpl/std/concepts/integral.h"
 #  include "dpl/std/concepts/invocable.h"
+#  include "dpl/std/type_traits/type_identity.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -34,8 +34,8 @@ template <typename T, typename M, typename L, typename R,
 concept canonical_select_vector =
     simd_vector<T> && same_as<typename L::value_type, typename T::value_type> &&
     same_as<typename R::value_type, typename T::value_type> &&
-    common_size_with<simd_lane_type_t<M>, typename L::value_type> &&
-    common_size_with<simd_lane_type_t<M>, typename R::value_type> &&
+    common_size_with<simd_element_type_t<M>, typename L::value_type> &&
+    common_size_with<simd_element_type_t<M>, typename R::value_type> &&
     same_abi_as<A, typename T::abi_type>;
 
 template <typename T, typename M, typename L, typename R,
@@ -43,8 +43,8 @@ template <typename T, typename M, typename L, typename R,
 concept extended_select_vector =
     simd_vector<T> && same_as<typename L::value_type, typename T::value_type> &&
     same_as<typename R::value_type, typename T::value_type> &&
-    common_size_with<simd_lane_type_t<M>, typename L::value_type> &&
-    common_size_with<simd_lane_type_t<M>, typename R::value_type> &&
+    common_size_with<simd_element_type_t<M>, typename L::value_type> &&
+    common_size_with<simd_element_type_t<M>, typename R::value_type> &&
     common_abi_with<A, typename T::abi_type>;
 
 template <typename T, typename M, typename L, typename R,
@@ -52,8 +52,8 @@ template <typename T, typename M, typename L, typename R,
 concept canonical_select_mask = simd_mask<T> &&
     common_size_with<typename L::value_type, typename T::value_type> &&
     common_size_with<typename R::value_type, typename T::value_type> &&
-    common_size_with<simd_lane_type_t<M>, typename L::value_type> &&
-    common_size_with<simd_lane_type_t<M>, typename R::value_type> &&
+    common_size_with<simd_element_type_t<M>, typename L::value_type> &&
+    common_size_with<simd_element_type_t<M>, typename R::value_type> &&
     same_abi_as<A, typename T::abi_type>;
 
 template <typename T, typename M, typename L, typename R,
@@ -61,8 +61,8 @@ template <typename T, typename M, typename L, typename R,
 concept extended_select_mask = simd_mask<T> &&
     common_size_with<typename L::value_type, typename T::value_type> &&
     common_size_with<typename R::value_type, typename T::value_type> &&
-    common_size_with<simd_lane_type_t<M>, typename L::value_type> &&
-    common_size_with<simd_lane_type_t<M>, typename R::value_type> &&
+    common_size_with<simd_element_type_t<M>, typename L::value_type> &&
+    common_size_with<simd_element_type_t<M>, typename R::value_type> &&
     common_abi_with<A, typename T::abi_type>;
 
 template <typename M, typename L, typename R,
@@ -134,7 +134,7 @@ concept extended_mask_select = unqualified_extended_mask_select<M, L, R, A> ||
 template <typename T, typename M, typename R, typename A = common_abi_t<R, M>>
 concept canonical_masked_vector =
     simd_vector<T> && same_as<typename R::value_type, typename T::value_type> &&
-    common_size_with<simd_lane_type_t<M>, typename R::value_type> &&
+    common_size_with<simd_element_type_t<M>, typename R::value_type> &&
     same_abi_as<A, typename T::abi_type>;
 
 template <typename M, typename R, typename A = common_abi_t<R, M>>
@@ -146,7 +146,7 @@ concept unqualified_canonical_bitkeep = requires(M mask, R val) {
 
 template <typename M, typename R, typename A = common_abi_t<R, M>>
 concept unqualified_extended_bitkeep = requires(M mask, R val) {
-    { select(mask, val, dx::zero) } -> extended_operation_vector<A>;
+    { select(mask, val, dx::zero) } -> vector_with_common_abi<A>;
 };
 
 template <typename M, typename R>
@@ -174,7 +174,7 @@ concept unqualified_canonical_bitdrop = requires(M mask, R val) {
 
 template <typename M, typename R, typename A = common_abi_t<R, M>>
 concept unqualified_extended_bitdrop = requires(M mask, R val) {
-    { select(mask, dx::zero, val) } -> extended_operation_vector<A>;
+    { select(mask, dx::zero, val) } -> vector_with_common_abi<A>;
 };
 
 template <typename M, typename R>
@@ -202,7 +202,7 @@ concept unqualified_canonical_bitfill = requires(M mask, R val) {
 
 template <typename M, typename R, typename A = common_abi_t<R, M>>
 concept unqualified_extended_bitfill = requires(M mask, R val) {
-    { select(mask, dx::all_bits, val) } -> extended_operation_vector<A>;
+    { select(mask, dx::all_bits, val) } -> vector_with_common_abi<A>;
 };
 
 template <typename M, typename R>
@@ -230,7 +230,7 @@ concept unqualified_canonical_bitspill = requires(M mask, R val) {
 
 template <typename M, typename R, typename A = common_abi_t<R, M>>
 concept unqualified_extended_bitspill = requires(M mask, R val) {
-    { select(mask, val, dx::all_bits) } -> extended_operation_vector<A>;
+    { select(mask, val, dx::all_bits) } -> vector_with_common_abi<A>;
 };
 
 template <typename M, typename R>
@@ -285,7 +285,7 @@ template <typename M, typename L, typename R, typename A = common_abi_t<L, R>>
 concept unqualified_extended_selecti = requires(L lhs, R rhs) {
     {
         select(internal::select_mask<M, L, R>(), lhs, rhs)
-    } -> extended_operation_vector<A>;
+    } -> vector_with_common_abi<A>;
 };
 
 template <typename M, typename L, typename R>
@@ -314,7 +314,7 @@ template <typename M, typename L, typename R, typename A = common_abi_t<L, R>>
 concept unqualified_extended_mask_selecti = requires(L lhs, R rhs) {
     {
         select(internal::select_mask<M, L, R>(), lhs, rhs)
-    } -> extended_operation_mask<A>;
+    } -> mask_with_common_abi<A>;
 };
 
 template <typename M, typename L, typename R>
@@ -344,7 +344,7 @@ template <typename M, typename R>
 concept unqualified_extended_bitkeepi = requires(M mask, R val) {
     {
         select(dx::to_compatible_const_mask<R>(mask), val, dx::zero)
-    } -> extended_operation_vector<typename R::abi_type>;
+    } -> vector_with_common_abi<typename R::abi_type>;
 };
 
 template <typename M, typename R>
@@ -372,7 +372,7 @@ template <typename M, typename R>
 concept unqualified_extended_bitdropi = requires(M mask, R val) {
     {
         select(dx::to_compatible_const_mask<R>(mask), dx::zero, val)
-    } -> extended_operation_vector<typename R::abi_type>;
+    } -> vector_with_common_abi<typename R::abi_type>;
 };
 
 template <typename M, typename R>
@@ -400,7 +400,7 @@ template <typename M, typename R>
 concept unqualified_extended_bitfilli = requires(M mask, R val) {
     {
         select(dx::to_compatible_const_mask<R>(mask), dx::all_bits, val)
-    } -> extended_operation_vector<typename R::abi_type>;
+    } -> vector_with_common_abi<typename R::abi_type>;
 };
 
 template <typename M, typename R>
@@ -428,7 +428,7 @@ template <typename M, typename R>
 concept unqualified_extended_bitspilli = requires(M mask, R val) {
     {
         select(dx::to_compatible_const_mask<R>(mask), val, dx::all_bits)
-    } -> extended_operation_vector<typename R::abi_type>;
+    } -> vector_with_common_abi<typename R::abi_type>;
 };
 
 template <typename M, typename R>
@@ -490,35 +490,35 @@ private:
 
     template <typename L, typename R>
     static consteval auto selective_abi() noexcept {
-        if constexpr (simd_class<L>) {
+        if constexpr (simd_type<L>) {
             return typename L::abi_type{};
         } else {
             return typename R::abi_type{};
         }
     }
 
-    template <simd_class L, typename R>
+    template <simd_type L, typename R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr decltype(auto) selective_cast(
         type_identity_t<L> const& arg) noexcept {
         return (arg);
     }
 
-    template <typename L, simd_class R>
+    template <typename L, simd_type R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr decltype(auto) selective_cast(
         type_identity_t<R> const& arg) noexcept {
         return (arg);
     }
 
-    template <typename L, simd_class R>
+    template <typename L, simd_type R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr decltype(auto) selective_cast(
         type_identity_t<L> arg) noexcept {
         return dx::broadcast<R>(arg);
     }
 
-    template <simd_class L, typename R>
+    template <simd_type L, typename R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr decltype(auto) selective_cast(
         type_identity_t<R> arg) noexcept {
@@ -879,8 +879,9 @@ public:
         return select(internal::abi<A>, cmask, lhs, rhs);
     }
 
-    template <const_mask_like M, fixed_width_vector L, fixed_width_vector R>
-    requires (extended_vector<L> || extended_vector<R>) &&
+    template <typename M, fixed_width_vector L, fixed_width_vector R>
+    requires const_mask_for<M, L> && const_mask_for<M, R> &&
+        (extended_vector<L> || extended_vector<R>) &&
         common_size_with<typename L::value_type, typename R::value_type> &&
         extended_selecti<M, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -985,8 +986,8 @@ public:
         }
     }
 
-    template <typename M, extended_class R>
-    requires fixed_width_class<R> && const_mask_for<M, R> &&
+    template <typename M, extended_simd_type R>
+    requires fixed_width_simd_type<R> && const_mask_for<M, R> &&
         extended_bitdropi<M, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, dx::zero_t tag, R val) noexcept {
@@ -1036,8 +1037,8 @@ public:
         }
     }
 
-    template <typename M, extended_class R>
-    requires fixed_width_class<R> && const_mask_for<M, R> &&
+    template <typename M, extended_simd_type R>
+    requires fixed_width_simd_type<R> && const_mask_for<M, R> &&
         extended_bitkeepi<M, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, R val, dx::zero_t tag) noexcept {
@@ -1087,8 +1088,8 @@ public:
         }
     }
 
-    template <typename M, extended_class R>
-    requires fixed_width_class<R> && const_mask_for<M, R> &&
+    template <typename M, extended_simd_type R>
+    requires fixed_width_simd_type<R> && const_mask_for<M, R> &&
         extended_bitfilli<M, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
@@ -1139,8 +1140,8 @@ public:
         }
     }
 
-    template <typename M, extended_class R>
-    requires fixed_width_class<R> && const_mask_for<M, R> &&
+    template <typename M, extended_simd_type R>
+    requires fixed_width_simd_type<R> && const_mask_for<M, R> &&
         extended_bitspilli<M, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
@@ -1156,8 +1157,8 @@ public:
     }
 
     template <simd_mask M, typename L, typename R>
-    requires (simd_class<L> && !simd_class<R> && broadcastable_to<R, L>) ||
-        (simd_class<R> && !simd_class<L> && broadcastable_to<L, R>)
+    requires (simd_type<L> && !simd_type<R> && broadcastable_to<R, L>) ||
+        (simd_type<R> && !simd_type<L> && broadcastable_to<L, R>)
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
         static constexpr auto operator()(M mask, L lhs, R rhs) noexcept
     requires requires {
@@ -1168,7 +1169,7 @@ public:
         using A =
             common_abi_t<typename M::abi_type, decltype(selective_abi<L, R>())>;
         if constexpr (canonical_mask<M> &&
-            (canonical_class<L> || canonical_class<R>)) {
+            (canonical_simd_type<L> || canonical_simd_type<R>)) {
             if constexpr (requires {
                               select(internal::abi<A>, mask, lhs, rhs);
                           }) {
@@ -1182,10 +1183,10 @@ public:
                 return operator()(mask, select_t::selective_cast<L, R>(lhs),
                     select_t::selective_cast<L, R>(rhs));
             }
-        } else if constexpr (simd_class<L> || simd_class<R>) {
+        } else if constexpr (simd_type<L> || simd_type<R>) {
             if constexpr (requires { select(mask, lhs, rhs); }) {
                 return select(mask, lhs, rhs);
-            } else if constexpr (simd_class<L>) {
+            } else if constexpr (simd_type<L>) {
                 return operator()(mask, dx::to_canonical(lhs), rhs);
             } else {
                 return operator()(mask, lhs, dx::to_canonical(rhs));
@@ -1194,9 +1195,9 @@ public:
     }
 
     template <typename M, typename L, typename R>
-    requires (simd_class<L> && !simd_class<R> && broadcastable_to<R, L> &&
+    requires (simd_type<L> && !simd_type<R> && broadcastable_to<R, L> &&
                  const_mask_for<M, L>) ||
-        (simd_class<R> && !simd_class<L> && broadcastable_to<L, R> &&
+        (simd_type<R> && !simd_type<L> && broadcastable_to<L, R> &&
             const_mask_for<M, R>)
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
         static constexpr auto operator()(M mask, L lhs, R rhs) noexcept
@@ -1206,7 +1207,7 @@ public:
     }
     {
         constexpr auto cmask = [](M mask) {
-            if constexpr (simd_class<L>) {
+            if constexpr (simd_type<L>) {
                 return dx::to_compatible_const_mask<L>(mask);
             } else {
                 return dx::to_compatible_const_mask<R>(mask);
@@ -1214,7 +1215,7 @@ public:
         }(mask);
 
         using A = decltype(selective_abi<L, R>());
-        if constexpr ((canonical_class<L> || canonical_class<R>)) {
+        if constexpr ((canonical_simd_type<L> || canonical_simd_type<R>)) {
             if constexpr (requires {
                               select(internal::abi<A>, cmask, lhs, rhs);
                           }) {
@@ -1230,7 +1231,7 @@ public:
             }
         } else if constexpr (requires { select(cmask, lhs, rhs); }) {
             return select(cmask, lhs, rhs);
-        } else if constexpr (simd_class<L>) {
+        } else if constexpr (simd_type<L>) {
             return operator()(mask, dx::to_canonical(lhs), rhs);
         } else {
             return operator()(mask, lhs, dx::to_canonical(rhs));
@@ -1247,7 +1248,7 @@ private:
     using mask_type DPL_NODEBUG = make_const_mask_t<T, V>;
 
 public:
-    template <simd_class L, simd_class R>
+    template <simd_type L, simd_type R>
     requires requires {
         typename mask_type<L>;
         typename mask_type<R>;
@@ -1265,8 +1266,8 @@ public:
         }
     }
 
-    template <simd_class L, typename R>
-    requires (!simd_class<R>) && requires { typename mask_type<L>; } &&
+    template <simd_type L, typename R>
+    requires (!simd_type<R>) && requires { typename mask_type<L>; } &&
         regular_invocable<select_t, mask_type<L>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs) noexcept {
@@ -1274,8 +1275,8 @@ public:
         return select_t::operator()(mask, lhs, rhs);
     }
 
-    template <typename L, simd_class R>
-    requires (!simd_class<L>) && requires { typename mask_type<R>; } &&
+    template <typename L, simd_type R>
+    requires (!simd_type<L>) && requires { typename mask_type<R>; } &&
         regular_invocable<select_t, mask_type<R>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L lhs, R rhs) noexcept {

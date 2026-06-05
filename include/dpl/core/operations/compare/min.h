@@ -8,12 +8,11 @@
 #include "dpl/core/operations/internal/masked.h"
 #include "dpl/core/operations/internal/operation_base.h"
 #include "dpl/core/operations/internal/transform.h"
-
 #if !DPL_MODULES
+#  include "dpl/core/basic/internal/abi.h"
 #  include "dpl/core/concepts/decayable.h"
-#  include "dpl/core/concepts/operation_category.h"
+#  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/concepts/simd_equivalence.h"
 #  include "dpl/core/constants/zero.h"
 #  include "dpl/std/concepts/totally_ordered.h"
 #endif
@@ -31,7 +30,7 @@ concept unqualified_canonical_min = requires(L lhs, R rhs) {
 
 template <typename L, typename R, typename A = common_abi_t<L, R>>
 concept unqualified_extended_min = requires(L lhs, R rhs) {
-    { min(lhs, rhs) } -> extended_operation_vector<A>;
+    { min(lhs, rhs) } -> vector_with_common_abi<A>;
 };
 
 template <typename L, typename R>
@@ -53,14 +52,14 @@ template <typename S, typename M, typename L, typename R,
 concept unqualified_canonical_mmin = requires(S src, M mask, L lhs, R rhs) {
     {
         min(internal::abi<A>, src, mask, lhs, rhs)
-    } -> equivalent_simd_as<
+    } -> equivalent_simd_type_with<
         canonical_if_zero_t<S, operation_result_t<min_t, L, R>, A>>;
 };
 
 template <typename S, typename M, typename L, typename R,
     typename A = common_abi_t<L, R, M>>
 concept unqualified_extended_mmin = requires(S src, M mask, L lhs, R rhs) {
-    { min(src, mask, lhs, rhs) } -> extended_operation_vector<A>;
+    { min(src, mask, lhs, rhs) } -> vector_with_common_abi<A>;
 };
 
 template <typename S, typename M, typename L, typename R>
@@ -96,7 +95,7 @@ concept unqualified_canonical_immin = requires(S src, M mask, L lhs, R rhs) {
     {
         min(internal::abi<A>, src,
             internal::to_const_mask<A, min_t, S, L, R>(mask), lhs, rhs)
-    } -> equivalent_simd_as<
+    } -> equivalent_simd_type_with<
         canonical_if_zero_t<S, operation_result_t<min_t, L, R>, A>>;
 };
 
@@ -107,7 +106,7 @@ template <typename S, typename M, typename L, typename R,
 concept unqualified_extended_immin = requires(S src, M mask, L lhs, R rhs) {
     {
         min(src, internal::to_const_mask<A, min_t, S, L, R>(mask), lhs, rhs)
-    } -> extended_operation_vector<A>;
+    } -> vector_with_common_abi<A>;
 };
 
 template <typename S, typename M, typename L, typename R>
@@ -142,8 +141,8 @@ private:
     friend binary_operation_base<min_t>;
 
     template <simd_abi A, typename L, typename R>
-    requires (!simd_class<L> || canonical_vector<L>) &&
-        (!simd_class<R> || canonical_vector<R>) && requires(L lhs, R rhs) {
+    requires (!simd_type<L> || canonical_vector<L>) &&
+        (!simd_type<R> || canonical_vector<R>) && requires(L lhs, R rhs) {
             { min(internal::abi<A>, lhs, rhs) } -> vector_with_abi<A>;
         }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -152,8 +151,8 @@ private:
     }
 
     template <simd_abi A, typename L, typename R>
-    requires (!simd_class<L> || extended_vector<L>) &&
-        (!simd_class<R> || extended_vector<R>) &&
+    requires (!simd_type<L> || extended_vector<L>) &&
+        (!simd_type<R> || extended_vector<R>) &&
         unqualified_extended_min<L, R, A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto native(A abi, L lhs, R rhs) noexcept(

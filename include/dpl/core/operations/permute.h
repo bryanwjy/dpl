@@ -4,19 +4,17 @@
 #include "dpl/config.h"
 
 #include "dpl/core/operations/evaluate.h"
-#include "dpl/core/operations/internal/extended_operations.h"
 #include "dpl/core/operations/internal/masked.h"
-
 #if !DPL_MODULES
 #  include "dpl/core/basic/broadcast.h"
 #  include "dpl/core/basic/immediate.h"
 #  include "dpl/core/basic/initialize.h"
+#  include "dpl/core/basic/internal/abi.h"
+#  include "dpl/core/basic/internal/iota_sequence.h"
 #  include "dpl/core/basic/to_canonical.h"
 #  include "dpl/core/concepts/common_size_with.h"
 #  include "dpl/core/concepts/decayable.h"
-#  include "dpl/core/concepts/operation_category.h"
-#  include "dpl/core/concepts/simd_equivalence.h"
-#  include "dpl/core/type_traits/iota_sequence.h"
+#  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/std/utility/sequence.h"
 #endif
 
@@ -72,7 +70,7 @@ concept unqualified_canonical_mpermutei = requires(S src, M mask, T val) {
 template <typename Op, typename S, typename M, typename T,
     typename A = common_abi_t<M, T>>
 concept unqualified_extended_mpermutei = requires(S src, M mask, T val) {
-    { Op::native(src, mask, val) } -> extended_operation_vector<A>;
+    { Op::native(src, mask, val) } -> vector_with_common_abi<A>;
 };
 
 template <typename Op, typename S, typename M, typename T>
@@ -109,7 +107,7 @@ template <typename Op, typename S, typename M, typename T,
 concept unqualified_extended_impermutei = requires(S src, M mask, T val) {
     {
         Op::native(src, internal::to_const_mask<A, Op, S, T>(mask), val)
-    } -> extended_operation_vector<A>;
+    } -> vector_with_common_abi<A>;
 };
 
 template <typename Op, typename S, typename M, typename T>
@@ -491,7 +489,7 @@ concept unqualified_canonical_permute = requires(T val, I idx) {
 
 template <typename T, typename I, typename A = common_abi_t<T, I>>
 concept unqualified_extended_permute = requires(T val, I idx) {
-    { permute(val, idx) } -> extended_operation_vector<A>;
+    { permute(val, idx) } -> vector_with_common_abi<A>;
 };
 
 template <typename T, typename I>
@@ -512,14 +510,14 @@ template <typename S, typename M, typename L, typename R,
 concept unqualified_canonical_mpermute = requires(S src, M mask, L lhs, R rhs) {
     {
         permute(internal::abi<A>, src, mask, lhs, rhs)
-    } -> equivalent_simd_as<
+    } -> equivalent_simd_type_with<
         canonical_if_zero_t<S, operation_result_t<permute_t, L, R>, A>>;
 };
 
 template <typename S, typename M, typename L, typename R,
     typename A = common_abi_t<L, R, M>>
 concept unqualified_extended_mpermute = requires(S src, M mask, L lhs, R rhs) {
-    { permute(src, mask, lhs, rhs) } -> extended_operation_vector<A>;
+    { permute(src, mask, lhs, rhs) } -> vector_with_common_abi<A>;
 };
 
 template <typename S, typename M, typename L, typename R>
@@ -554,7 +552,7 @@ concept unqualified_canonical_impermute =
         {
             permute(internal::abi<A>, src,
                 internal::to_const_mask<A, permute_t, S, L, R>(mask), lhs, rhs)
-        } -> equivalent_simd_as<
+        } -> equivalent_simd_type_with<
             canonical_if_zero_t<S, operation_result_t<permute_t, L, R>, A>>;
     };
 
@@ -566,7 +564,7 @@ concept unqualified_extended_impermute = requires(S src, M mask, L lhs, R rhs) {
     {
         permute(
             src, internal::to_const_mask<A, permute_t, S, L, R>(mask), lhs, rhs)
-    } -> extended_operation_vector<A>;
+    } -> vector_with_common_abi<A>;
 };
 
 template <typename S, typename M, typename L, typename R>
@@ -598,7 +596,7 @@ concept extended_impermute = unqualified_extended_impermute<S, M, L, R, A> ||
 
 struct permute_t {
 private:
-    template <canonical_class T, common_size_with<simd_lane_type_t<T>> E,
+    template <canonical_simd_type T, common_size_with<simd_element_type_t<T>> E,
         same_as<typename T::abi_type> A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr T DPL_VECTORCALL fallback(

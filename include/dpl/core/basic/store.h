@@ -4,15 +4,13 @@
 #include "dpl/config.h"
 
 #include "dpl/core/basic/aligned.h"
+#include "dpl/core/basic/internal/abi.h"
 #include "dpl/core/basic/to_canonical.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/fwd.h"
 
-#  include "dpl/core/concepts/basic_type.h"
-#  include "dpl/core/concepts/simd_equivalence.h"
-#  include "dpl/core/type_traits/array_for.h"
-#  include "dpl/core/type_traits/basic_type.h"
+#  include "dpl/core/concepts/canonical.h"
 #  include "dpl/std/concepts/invocable.h"
 #endif
 
@@ -26,7 +24,7 @@ struct store_t {
     template <canonical_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
     static constexpr void operator()(
-        T src, typename T::value_type* dst) noexcept
+        T src, simd_element_type_t<T>* dst) noexcept
     requires requires { store(internal::abi<T>, src, dst); }
     {
         store(internal::abi<T>, src, dst);
@@ -35,7 +33,7 @@ struct store_t {
     template <canonical_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
     static constexpr void operator()(
-        aligned_t, T src, typename T::value_type* dst) noexcept {
+        aligned_t, T src, simd_element_type_t<T>* dst) noexcept {
         if consteval {
             operator()(src, dst);
         } else {
@@ -52,30 +50,24 @@ struct store_t {
     template <simd_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
     static constexpr void operator()(
-        T src, typename T::value_type* dst) noexcept {
+        T src, simd_element_type_t<T>* dst) noexcept {
         if constexpr (requires { store(src, dst); }) {
             store(src, dst);
-        } else if constexpr (equivalent_simd_as<canonical_type_t<T>, T>) {
-            operator()(dx::to_canonical(src), dst);
         } else {
-            array_for<canonical_type_t<T>> array{};
-            operator()(dx::to_canonical(src), array.data);
-            __DPL_MEMCPY(dst, array.data, sizeof(array));
+            static_assert(is_trivially_copyable_v<simd_element_type_t<T>>);
+            operator()(dx::to_canonical(src), dst);
         }
     }
 
     template <simd_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
     static constexpr void operator()(
-        aligned_t tag, T src, typename T::value_type* dst) noexcept {
+        aligned_t tag, T src, simd_element_type_t<T>* dst) noexcept {
         if constexpr (requires { aligned_store(src, dst); }) {
             aligned_store(src, dst);
-        } else if constexpr (equivalent_simd_as<canonical_type_t<T>, T>) {
-            operator()(tag, dx::to_canonical(src), dst);
         } else {
-            array_for<canonical_type_t<T>> array{};
-            operator()(tag, dx::to_canonical(src), array.data);
-            __DPL_MEMCPY(dst, array.data, sizeof(array));
+            static_assert(is_trivially_copyable_v<simd_element_type_t<T>>);
+            operator()(tag, dx::to_canonical(src), dst);
         }
     }
 };

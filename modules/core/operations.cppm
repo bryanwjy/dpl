@@ -16,6 +16,7 @@ import :core.type_traits;
 import :core.constants;
 
 // IWYU pragma: begin_exports
+#include "dpl/core/operations/abi_promotion.h"
 #include "dpl/core/operations/arithmetic.h"
 #include "dpl/core/operations/bit.h"
 #include "dpl/core/operations/bitwise.h"
@@ -24,6 +25,11 @@ import :core.constants;
 #include "dpl/core/operations/compare.h"
 #include "dpl/core/operations/concat.h"
 #include "dpl/core/operations/evaluate.h"
+#include "dpl/core/operations/gather.h"
+#include "dpl/core/operations/internal/array_for.h"
+#include "dpl/core/operations/internal/masked.h"
+#include "dpl/core/operations/internal/operation_base.h"
+#include "dpl/core/operations/internal/transform.h"
 #include "dpl/core/operations/lane_index.h"
 #include "dpl/core/operations/logical.h"
 #include "dpl/core/operations/minmax.h"
@@ -31,5 +37,6 @@ import :core.constants;
 #include "dpl/core/operations/reinterpret.h"
 #include "dpl/core/operations/select.h"
 #include "dpl/core/operations/split.h"
+#include "dpl/core/operations/split_result.h"
 #include "dpl/core/operations/to_simd_mask.h"
 // IWYU pragma: end_exports

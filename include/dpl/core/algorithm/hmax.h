@@ -21,7 +21,7 @@ concept unqualified_canonical_hmax = requires(T val) {
 
 template <typename T>
 concept unqualified_extended_hmax = requires(T val) {
-    { hmax(val) } -> extended_operation_vector<typename T::abi_type>;
+    { hmax(val) } -> vector_with_common_abi<typename T::abi_type>;
 };
 
 template <typename S, typename M, typename T, typename A = common_abi_t<M, T>>
@@ -33,7 +33,7 @@ concept unqualified_canonical_mhmax = requires(S src, M mask, T val) {
 
 template <typename S, typename M, typename T, typename A = common_abi_t<M, T>>
 concept unqualified_extended_mhmax = requires(S src, M mask, T val) {
-    { hmax(src, mask, val) } -> extended_operation_vector<A>;
+    { hmax(src, mask, val) } -> vector_with_common_abi<A>;
 };
 
 template <typename S, typename M, typename T, typename A = common_abi_t<S, T>>
@@ -47,7 +47,7 @@ template <typename S, typename M, typename T, typename A = common_abi_t<S, T>>
 concept unqualified_extended_imhmax = requires(S src, T val) {
     {
         hmax(src, internal::select_mask<M, S, T>(), val)
-    } -> extended_operation_vector<A>;
+    } -> vector_with_common_abi<A>;
 };
 
 struct hmax_t : private reduction_base {

@@ -3,7 +3,6 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/math/internal/floating_point_simd.h"
 #include "dpl/core/math/internal/ilogb.h"
 #include "dpl/core/math/internal/ldexp.h"
 #include "dpl/core/math/internal/masked_op.h"
@@ -138,7 +137,7 @@ public:
                 (absarg <= 710.0) & dx::isfinite(result), result, dx::infinity);
         }
 
-        if constexpr (simd_mask<M>) {
+        if constexpr (simd_mask<OpMask>) {
             result = dx::sign(result, dx::select(opmask, dx::zero, arg));
         } else if constexpr (dx::none_of(opmask)) {
             result = dx::sign(result, arg);
@@ -163,7 +162,7 @@ concept unqualified_canonical_sinh = requires(T val) {
 
 template <typename T>
 concept unqualified_extended_sinh = requires(T val) {
-    { sinh(val) } -> extended_operation_vector<typename T::abi_type>;
+    { sinh(val) } -> vector_with_common_abi<typename T::abi_type>;
 };
 
 template <typename T>
@@ -276,7 +275,7 @@ concept unqualified_canonical_cosh = requires(T val) {
 
 template <typename T>
 concept unqualified_extended_cosh = requires(T val) {
-    { cosh(val) } -> extended_operation_vector<typename T::abi_type>;
+    { cosh(val) } -> vector_with_common_abi<typename T::abi_type>;
 };
 
 template <typename T>
@@ -379,16 +378,16 @@ void sinhcosh(...) noexcept = delete;
 
 struct sinhcosh_t;
 
-template <typename L, typename OpMask, typename A = common_abi_t<R, M>>
+template <typename L, typename OpMask, typename A = simd_abi_type_t<L>>
 concept unqualified_canonical_sinhcosh = requires(L val, OpMask op) {
     {
         sinhcosh(internal::abi<A>, val, op)
     } -> canonical_arithmetic_result<L, L, A>;
 };
 
-template <typename L, typename OpMask, typename A = common_abi_t<R, M>>
+template <typename L, typename OpMask, typename A = simd_abi_type_t<L>>
 concept unqualified_extended_sinhcosh = requires(L val, OpMask op) {
-    { sinhcosh(val, op) } -> extended_arithmetic_result<L, L, A>;
+    { sinhcosh(val, op) } -> vector_with_common_abi<A>;
 };
 
 template <typename L, typename OpMask>
@@ -418,7 +417,7 @@ template <typename L, typename OpMask>
 concept unqualified_extended_sinhcoshi = requires(L val, OpMask op) {
     {
         sinhcosh(val, dx::to_compatible_const_mask<L>(op))
-    } -> extended_arithmetic_result<L, L, typename L::abi_type>;
+    } -> vector_with_common_abi<simd_abi_type_t<L>>;
 };
 
 template <typename L, typename OpMask>
@@ -462,7 +461,7 @@ private:
         return sinhcosh(src, mask, val, opmask);
     }
 
-    template <typename M, simd_vector, typename OpMask>
+    template <typename M, simd_vector T, typename OpMask>
     requires mx::canonical_masked_math_zoperator<sinhcosh_t, M, T, OpMask> &&
         requires(M mask, T val, OpMask opmask) {
             sinhcosh(internal::abi<T>, dx::zero, mask, val, opmask);
@@ -496,12 +495,12 @@ public:
         if constexpr (unqualified_canonical_sinhcoshi<basic_vector<E, A>,
                           OpMask>) {
             if consteval {
-                return internal::sinhcosh_base::fallback(mask, opmask);
+                return internal::sinhcosh_base::fallback(val, opmask);
             } else {
                 return sinhcosh(internal::abi<A>, val, opmask);
             }
         } else {
-            return internal::sinhcosh_base::fallback(mask, opmask);
+            return internal::sinhcosh_base::fallback(val, opmask);
         }
     }
 
@@ -537,12 +536,12 @@ public:
         if constexpr (unqualified_canonical_sinhcosh<basic_vector<E, A>,
                           basic_mask<O, A>>) {
             if consteval {
-                return internal::sinhcosh_base::fallback(mask, op);
+                return internal::sinhcosh_base::fallback(val, op);
             } else {
                 return sinhcosh(internal::abi<A>, val, op);
             }
         } else {
-            return internal::sinhcosh_base::fallback(mask, op);
+            return internal::sinhcosh_base::fallback(val, op);
         }
     }
 
@@ -557,7 +556,7 @@ public:
     }
 
     template <simd_vector L, simd_mask O>
-    requires common_size_with<simd_lane_type_t<L>, simd_lane_type_t<O>> &&
+    requires common_size_with<simd_element_type_t<L>, simd_element_type_t<O>> &&
         same_as<simd_abi_type_t<L>, simd_abi_type_t<O>> &&
         (extended_vector<L> || extended_mask<O>) && extended_sinhcosh<L, O>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -585,13 +584,15 @@ private:
     requires invocable<sinhcosh_t, S, M, T, make_const_mask_t<T, V>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL masked(S src, M mask, T val) noexcept {
-        return sinhcosh_t::operator()(src, mask, val);
+        constexpr make_const_mask_t<T, V> opmask{};
+        return sinhcosh_t::operator()(src, mask, val, opmask);
     }
 
     template <typename M, simd_vector T>
     requires invocable<sinhcosh_t, M, T, make_const_mask_t<T, V>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
+        constexpr make_const_mask_t<T, V> opmask{};
         return sinhcosh_t::operator()(mask, val, opmask);
     }
 

@@ -8,12 +8,10 @@
 
 #  include "dpl/core/basic/extract.h"
 #  include "dpl/core/basic/to_native_type.h"
-#  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_mask.h"
-#  include "dpl/core/type_traits/basic_type.h"
+#  include "dpl/core/type_traits/canonical_type.h"
 #  include "dpl/core/type_traits/rebind_simd.h"
 #  include "dpl/core/type_traits/simd_traits.h"
-#  include "dpl/std/concepts/same_as.h"
 #  include "dpl/std/utility/forward.h"
 #endif
 
@@ -55,7 +53,7 @@ constexpr auto make_negated_mask(negated_mask<T> const& val) noexcept {
 
 template <canonical_mask T>
 class negated_mask : public simd_mask_base<negated_mask<T>> {
-    using element_type DPL_NODEBUG = simd_lane_type_t<T>;
+    using element_type DPL_NODEBUG = simd_element_type_t<T>;
 
 public:
     using vector_type = typename T::vector_type;
@@ -79,8 +77,9 @@ public:
 
     __DPL_HIDE_FROM_ABI constexpr negated_mask(T mask) noexcept : mask_(mask) {}
 
-    template <common_size_simd_with<T> U>
-    requires (!same_as<T, U>) && same_abi_simd_as<T, U> &&
+    template <different_from<T> U>
+    requires common_size_with<simd_element_type_t<U>, simd_element_type_t<T>> &&
+        same_abi_as<simd_abi_type_t<T>, simd_abi_type_t<U>> &&
         regular_invocable<internal::reinterpret_t<element_type>, U>
     __DPL_HIDE_FROM_ABI constexpr negated_mask(negated_mask<U> other) noexcept
         : negated_mask(

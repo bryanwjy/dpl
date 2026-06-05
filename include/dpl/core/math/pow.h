@@ -13,14 +13,15 @@
 #include "dpl/core/math/sign.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/concepts/basic_type.h"
+#  include "dpl/core/concepts/canonical.h"
+#  include "dpl/core/concepts/extended.h"
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/concepts/simd_traits.h"
 #  include "dpl/core/concepts/simd_vector.h"
 #  include "dpl/core/constants/infinity.h"
 #  include "dpl/core/operations/arithmetic.h" // IWYU pragma: keep
 #  include "dpl/core/operations/bitwise.h"    // IWYU pragma: keep
 #  include "dpl/core/operations/compare.h"    // IWYU pragma: keep
+#  include "dpl/core/type_traits/simd_traits.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -36,7 +37,7 @@ concept unqualified_canonical_pow = requires(L lhs, R rhs) {
 
 template <typename L, typename R, typename A = common_abi_t<L, R>>
 concept unqualified_extended_pow = requires(L lhs, R rhs) {
-    { pow(lhs, rhs) } -> extended_arithmetic_result<L, L, A>;
+    { pow(lhs, rhs) } -> vector_with_common_abi<A>;
 };
 
 template <typename L, typename R>

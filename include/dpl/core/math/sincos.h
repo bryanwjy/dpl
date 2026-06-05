@@ -3,7 +3,6 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/math/internal/floating_point_simd.h"
 #include "dpl/core/math/internal/ilogb.h"
 #include "dpl/core/math/internal/masked_op.h"
 #include "dpl/core/math/internal/pair.h"
@@ -123,10 +122,10 @@ protected:
                     qf, sc, dx::fnmadd(qf, sb, dx::fnmadd(qf, sa, arg))));
 
         } else {
-            constexpr auto sa = dx::selecti<V>(dx::broadcast<A>(a1), a0);
-            constexpr auto sb = dx::selecti<V>(dx::broadcast<A>(b1), b0);
-            constexpr auto sc = dx::selecti<V>(dx::broadcast<A>(c1), c0);
-            constexpr auto sd = dx::selecti<V>(dx::broadcast<A>(d1), d0);
+            constexpr auto sa = dx::select(opmask, dx::broadcast<A>(a1), a0);
+            constexpr auto sb = dx::select(opmask, dx::broadcast<A>(b1), b0);
+            constexpr auto sc = dx::select(opmask, dx::broadcast<A>(c1), c0);
+            constexpr auto sd = dx::select(opmask, dx::broadcast<A>(d1), d0);
 
             return dx::fnmadd(qf, sd,
                 dx::fnmadd(
@@ -193,7 +192,7 @@ protected:
                                     dx::fnmadd(dq.upper, a, arg)))))));
         } else {
             constexpr auto scale =
-                dx::selecti<V>(fmath::half, dx::one_v<simdf>);
+                dx::select(opmask, fmath::half, dx::one_v<simdf>);
             constexpr auto sa = a * scale;
             constexpr auto sb = b * scale;
             constexpr auto sc = c * scale;
@@ -342,7 +341,7 @@ protected:
                 auto a = dx::select(opmask, 2.0f, one);
                 auto c = dx::select(opmask, one, dx::zero);
                 return dx::fmadd(a, qf, c);
-            } else if constexpr (dx::none_of(mask)) {
+            } else if constexpr (dx::none_of(opmask)) {
                 return dx::round(arg * dx::inv_pi,
                     rounding::to_nearest_int | rounding::no_exc);
             } else {
@@ -478,7 +477,7 @@ concept unqualified_canonical_sin = requires(T val) {
 
 template <typename T>
 concept unqualified_extended_sin = requires(T val) {
-    { sin(val) } -> extended_operation_vector<typename T::abi_type>;
+    { sin(val) } -> vector_with_common_abi<typename T::abi_type>;
 };
 
 template <typename T>
@@ -590,7 +589,7 @@ concept unqualified_canonical_cos = requires(T val) {
 
 template <typename T>
 concept unqualified_extended_cos = requires(T val) {
-    { cos(val) } -> extended_operation_vector<typename T::abi_type>;
+    { cos(val) } -> vector_with_common_abi<typename T::abi_type>;
 };
 
 template <typename T>
@@ -693,16 +692,16 @@ void sincos(...) noexcept = delete;
 
 struct sincos_t;
 
-template <typename L, typename OpMask, typename A = common_abi_t<R, M>>
+template <typename L, typename OpMask, typename A = simd_abi_type_t<L>>
 concept unqualified_canonical_sincos = requires(L val, OpMask op) {
     {
         sincos(internal::abi<A>, val, op)
     } -> canonical_arithmetic_result<L, L, A>;
 };
 
-template <typename L, typename OpMask, typename A = common_abi_t<R, M>>
+template <typename L, typename OpMask, typename A = simd_abi_type_t<L>>
 concept unqualified_extended_sincos = requires(L val, OpMask op) {
-    { sincos(val, op) } -> extended_arithmetic_result<L, L, A>;
+    { sincos(val, op) } -> vector_with_common_abi<A>;
 };
 
 template <typename L, typename OpMask>
@@ -731,7 +730,7 @@ template <typename L, typename OpMask>
 concept unqualified_extended_sincosi = requires(L val, OpMask op) {
     {
         sincos(val, dx::to_compatible_const_mask<L>(op))
-    } -> extended_arithmetic_result<L, L, typename L::abi_type>;
+    } -> vector_with_common_abi<simd_abi_type_t<L>>;
 };
 
 template <typename L, typename OpMask>
@@ -775,7 +774,7 @@ private:
         return sincos(src, mask, val, opmask);
     }
 
-    template <typename M, simd_vector, typename OpMask>
+    template <typename M, simd_vector T, typename OpMask>
     requires mx::canonical_masked_math_zoperator<sincos_t, M, T, OpMask> &&
         requires(M mask, T val, OpMask opmask) {
             sincos(internal::abi<T>, dx::zero, mask, val, opmask);
@@ -809,12 +808,12 @@ public:
         if constexpr (unqualified_canonical_sincosi<basic_vector<E, A>,
                           OpMask>) {
             if consteval {
-                return internal::sincos_base::fallback(mask, opmask);
+                return internal::sincos_base::fallback(val, opmask);
             } else {
                 return sincos(internal::abi<A>, val, opmask);
             }
         } else {
-            return internal::sincos_base::fallback(mask, opmask);
+            return internal::sincos_base::fallback(val, opmask);
         }
     }
 
@@ -850,12 +849,12 @@ public:
         if constexpr (unqualified_canonical_sincos<basic_vector<E, A>,
                           basic_mask<O, A>>) {
             if consteval {
-                return internal::sincos_base::fallback(mask, op);
+                return internal::sincos_base::fallback(val, op);
             } else {
                 return sincos(internal::abi<A>, val, op);
             }
         } else {
-            return internal::sincos_base::fallback(mask, op);
+            return internal::sincos_base::fallback(val, op);
         }
     }
 
@@ -870,7 +869,7 @@ public:
     }
 
     template <simd_vector L, simd_mask O>
-    requires common_size_with<simd_lane_type_t<L>, simd_lane_type_t<O>> &&
+    requires common_size_with<simd_element_type_t<L>, simd_element_type_t<O>> &&
         same_as<simd_abi_type_t<L>, simd_abi_type_t<O>> &&
         (extended_vector<L> || extended_mask<O>) && extended_sincos<L, O>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -898,13 +897,15 @@ private:
     requires invocable<sincos_t, S, M, T, make_const_mask_t<T, V>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL masked(S src, M mask, T val) noexcept {
-        return sincos_t::operator()(src, mask, val);
+        constexpr make_const_mask_t<T, V> opmask{};
+        return sincos_t::operator()(src, mask, val, opmask);
     }
 
     template <typename M, simd_vector T>
     requires invocable<sincos_t, M, T, make_const_mask_t<T, V>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
+        constexpr make_const_mask_t<T, V> opmask{};
         return sincos_t::operator()(mask, val, opmask);
     }
 

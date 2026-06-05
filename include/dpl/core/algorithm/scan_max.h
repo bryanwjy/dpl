@@ -31,7 +31,7 @@ concept unqualified_canonical_exscan_max = requires(T val, I init) {
 
 template <typename T, typename I>
 concept unqualified_extended_exscan_max = requires(T val, I init) {
-    { exscan_max(val, init) } -> extended_arithmetic_result<T>;
+    { exscan_max(val, init) } -> vector_with_common_abi<simd_abi_type_t<T>>;
 };
 
 template <typename S, typename M, typename T, typename I,
@@ -40,16 +40,14 @@ concept unqualified_canonical_mexscan_max =
     requires(S src, M mask, T val, I init) {
         {
             exscan_max(internal::abi<A>, src, mask, val, init)
-        } -> equivalent_simd_as<canonical_if_zero_t<S, T, A>>;
+        } -> equivalent_simd_type_with<canonical_if_zero_t<S, T, A>>;
     };
 
 template <typename S, typename M, typename T, typename I,
     typename A = common_abi_t<M, T>>
 concept unqualified_extended_mexscan_max =
     requires(S src, M mask, T val, I init) {
-        {
-            exscan_max(src, mask, val, init)
-        } -> equivalent_simd_as<canonical_if_zero_t<S, T, A>>;
+        { exscan_max(src, mask, val, init) } -> vector_with_common_abi<A>;
     };
 
 template <typename S, typename M, typename T, typename I,
@@ -59,7 +57,7 @@ concept unqualified_canonical_imexscan_max =
         {
             exscan_max(internal::abi<A>, src,
                 internal::to_const_mask<A, exscan_max_t, S, T>(mask), val, init)
-        } -> equivalent_simd_as<canonical_if_zero_t<S, T, A>>;
+        } -> equivalent_simd_type_with<canonical_if_zero_t<S, T, A>>;
     };
 
 template <typename S, typename M, typename T, typename I,
@@ -69,7 +67,7 @@ concept unqualified_extended_imexscan_max =
         {
             exscan_max(src,
                 internal::to_const_mask<A, exscan_max_t, S, T>(mask), val, init)
-        } -> equivalent_simd_as<canonical_if_zero_t<S, T, A>>;
+        } -> vector_with_common_abi<A>;
     };
 
 struct exscan_max_t : private scan_base {
@@ -96,7 +94,7 @@ struct exscan_max_t : private scan_base {
 
     template <typename M, typename T>
     using broadcast_type DPL_NODEBUG =
-        rebind_simd_t<T, simd_lane_type_t<T>, typename M::abi_type>;
+        rebind_simd_t<T, simd_element_type_t<T>, typename M::abi_type>;
 
 public:
     template <canonical_vector T, broadcastable_to<T> I>
@@ -304,35 +302,33 @@ concept unqualified_canonical_scan_max = requires(T val) {
 
 template <typename T>
 concept unqualified_extended_scan_max = requires(T val) {
-    { scan_max(val) } -> extended_arithmetic_result<T>;
+    { scan_max(val) } -> vector_with_common_abi<simd_abi_type_t<T>>;
 };
 
 template <typename S, typename M, typename T, typename A = common_abi_t<M, T>>
 concept unqualified_canonical_mscan_max = requires(S src, M mask, T val) {
     {
         scan_max(internal::abi<A>, src, mask, val)
-    } -> equivalent_simd_as<canonical_if_zero_t<S, T, A>>;
+    } -> equivalent_simd_type_with<canonical_if_zero_t<S, T, A>>;
 };
 
 template <typename S, typename M, typename T, typename A = common_abi_t<M, T>>
 concept unqualified_extended_mscan_max = requires(S src, M mask, T val) {
-    {
-        scan_max(src, mask, val)
-    } -> equivalent_simd_as<canonical_if_zero_t<S, T, A>>;
+    { scan_max(src, mask, val) } -> vector_with_common_abi<A>;
 };
 
 template <typename S, typename M, typename T, typename A = common_abi_t<S, T>>
 concept unqualified_canonical_imscan_max = requires(S src, T val) {
     {
         scan_max(internal::abi<A>, src, internal::select_mask<M, S, T>(), val)
-    } -> equivalent_simd_as<canonical_if_zero_t<S, T, A>>;
+    } -> equivalent_simd_type_with<canonical_if_zero_t<S, T, A>>;
 };
 
 template <typename S, typename M, typename T, typename A = common_abi_t<S, T>>
 concept unqualified_extended_imscan_max = requires(S src, T val) {
     {
         scan_max(src, internal::select_mask<M, S, T>(), val)
-    } -> equivalent_simd_as<canonical_if_zero_t<S, T, A>>;
+    } -> vector_with_common_abi<A>;
 };
 
 struct scan_max_t : private scan_base {

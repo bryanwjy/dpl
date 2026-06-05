@@ -4,8 +4,8 @@
 #include "dpl/config.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/concepts/immediate_like.h"
 #  include "dpl/std/concepts/convertible_to.h"
+#  include "dpl/std/concepts/equality_comparable.h"
 #  include "dpl/std/type_traits/constants.h"
 #  include "dpl/std/type_traits/remove_const.h"
 #endif
@@ -67,6 +67,20 @@ DPL_EXPORT template <auto V>
 consteval immediate<V> to_immediate(immediate<V> imm) noexcept {
     return imm;
 }
+
+namespace internal {
+template <typename T>
+concept immediate_like = convertible_to<T, decltype(T::value)> &&
+    equality_comparable_with<T, decltype(T::value)> &&
+    bool_constant<T() == T::value>::value &&
+    bool_constant<static_cast<decltype(T::value)>(T()) == T::value>::value;
+
+template <typename T, typename E>
+concept immediate_like_of = convertible_to<T, E> && requires {
+    typename integral_constant<E, static_cast<E>(T())>;
+    requires immediate_like<integral_constant<E, static_cast<E>(T())>>;
+};
+} // namespace internal
 
 DPL_EXPORT template <internal::immediate_like T>
 consteval immediate<T::value> to_immediate(T imm) noexcept {

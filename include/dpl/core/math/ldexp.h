@@ -3,19 +3,16 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/math/internal/floating_point_simd.h"
 #include "dpl/core/math/internal/masked_op.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/concepts/integral_simd.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/constants/exponent_bias.h"
 #  include "dpl/core/constants/exponent_mask.h"
 #  include "dpl/core/constants/mantissa_width.h"
 #  include "dpl/core/operations/arithmetic.h"
 #  include "dpl/core/operations/bitwise.h"
-#  include "dpl/core/operations/compare.h"
-#  include "dpl/core/operations/select.h"
+#  include "dpl/core/operations/minmax.h"
 #  include "dpl/core/type_traits/rebind_simd.h"
 #  include "dpl/std/bit/popcount.h"
 #endif
@@ -39,7 +36,7 @@ concept unqualified_canonical_ldexp = requires(T val, I exp) {
 
 template <typename T, typename I, typename A = common_abi_t<T, I>>
 concept unqualified_extended_ldexp = requires(T val, I exp) {
-    { ldexp(val, exp) } -> extended_operation_vector<A>;
+    { ldexp(val, exp) } -> vector_with_common_abi<A>;
 };
 
 template <typename T, typename I>

@@ -6,13 +6,12 @@
 #include "dpl/core/operations/bit/result.h"
 #include "dpl/core/operations/internal/masked.h"
 #include "dpl/core/operations/internal/transform.h"
-
 #if !DPL_MODULES
+#  include "dpl/core/basic/internal/abi.h"
 #  include "dpl/core/concepts/decayable.h"
-#  include "dpl/core/concepts/operation_category.h"
+#  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/std/bit/bit_cast.h"
-#  include "dpl/std/bit/countr.h"
+#  include "dpl/core/type_traits/representation.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -30,7 +29,7 @@ concept unqualified_canonical_popcount = requires(T val) {
 
 template <typename T>
 concept unqualified_extended_popcount = requires(T val) {
-    { popcount(val) } -> extended_operation_vector<typename T::abi_type>;
+    { popcount(val) } -> vector_with_common_abi<typename T::abi_type>;
 };
 
 template <typename T>
@@ -50,12 +49,12 @@ template <typename S, typename M, typename T, typename A = common_abi_t<M, T>>
 concept unqualified_canonical_mpopcount = requires(S src, M mask, T val) {
     {
         popcount(internal::abi<A>, src, mask, val)
-    } -> equivalent_simd_as<canonical_if_zero_t<S, T, A>>;
+    } -> equivalent_simd_type_with<canonical_if_zero_t<S, T, A>>;
 };
 
 template <typename S, typename M, typename T, typename A = common_abi_t<M, T>>
 concept unqualified_extended_mpopcount = requires(S src, M mask, T val) {
-    { popcount(src, mask, val) } -> extended_operation_vector<A>;
+    { popcount(src, mask, val) } -> vector_with_common_abi<A>;
 };
 
 template <typename S, typename M, typename T>
@@ -82,7 +81,7 @@ concept unqualified_canonical_impopcount = requires(S src, M mask, T val) {
     {
         popcount(internal::abi<A>, src,
             internal::to_const_mask<A, popcount_t, S, T>(mask), val)
-    } -> equivalent_simd_as<canonical_if_zero_t<S, T, A>>;
+    } -> equivalent_simd_type_with<canonical_if_zero_t<S, T, A>>;
 };
 
 template <typename S, typename M, typename T,
@@ -90,7 +89,7 @@ template <typename S, typename M, typename T,
 concept unqualified_extended_impopcount = requires(S src, M mask, T val) {
     {
         popcount(src, internal::to_const_mask<A, popcount_t, S, T>(mask), val)
-    } -> extended_operation_vector<A>;
+    } -> vector_with_common_abi<A>;
 };
 
 template <typename S, typename M, typename T>

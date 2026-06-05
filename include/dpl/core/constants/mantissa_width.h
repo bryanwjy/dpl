@@ -16,7 +16,7 @@ namespace datapar {
 DPL_EXPORT template <floating_point T>
 struct mantissa_width_t :
     integral_constant<int, digits_v<T> - 1>,
-    broadcastable_base {
+    broadcastable_base<mantissa_width_t<T>> {
     __DPL_HIDE_FROM_ABI explicit constexpr mantissa_width_t() noexcept =
         default;
 };

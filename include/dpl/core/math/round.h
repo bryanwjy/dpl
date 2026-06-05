@@ -13,7 +13,8 @@
 #include "dpl/core/math/trunc.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/concepts/basic_type.h"
+#  include "dpl/core/concepts/canonical.h"
+#  include "dpl/core/concepts/extended.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/constants/one.h"
 #  include "dpl/core/operations/arithmetic.h"
@@ -38,7 +39,7 @@ concept unqualified_canonical_cmath_round = requires(T val) {
 
 template <typename T>
 concept unqualified_extended_cmath_round = requires(T val) {
-    { round(val) } -> extended_operation_vector<typename T::abi_type>;
+    { round(val) } -> vector_with_common_abi<typename T::abi_type>;
 };
 
 template <typename T>
@@ -65,7 +66,7 @@ template <typename T, rounding_flags R>
 concept unqualified_extended_round = requires(T val) {
     {
         round(val, rounding_v<R>)
-    } -> extended_operation_vector<typename T::abi_type>;
+    } -> vector_with_common_abi<typename T::abi_type>;
 };
 
 template <typename T, rounding_flags R>

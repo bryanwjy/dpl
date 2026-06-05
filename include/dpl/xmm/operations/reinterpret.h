@@ -9,8 +9,6 @@
 #endif
 
 #if !DPL_MODULES
-#  include "dpl/core/concepts/common_float_with.h"
-#  include "dpl/core/concepts/simd_element_for.h"
 #  include "dpl/std/bit/bit_cast.h"
 #  include "dpl/xmm/basic/abi.h"
 #  include "dpl/xmm/basic/load.h"
@@ -23,7 +21,7 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::xmm {
 
-DPL_EXPORT template <simd_element_for<abi_tag> E, simd_element_for<abi_tag> F>
+DPL_EXPORT template <simd_element E, simd_element F>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr simd<E> reinterpret(abi_tag tag, simd<F> src) noexcept {
     if consteval {
@@ -37,7 +35,7 @@ constexpr simd<E> reinterpret(abi_tag tag, simd<F> src) noexcept {
         } dst = __DPL bit_cast<dst_t>(tmp);
         return xmm::load<E>(tag, dst.data);
     } else {
-        if constexpr (same_as<lane_representation_t<E>, float>) {
+        if constexpr (same_as<representation_t<E>, float>) {
             if constexpr (same_as<__m128i, native_vector_t<F>>) {
                 return _mm_castsi128_ps(+src);
             } else if constexpr (same_as<__m128d, native_vector_t<F>>) {
@@ -55,7 +53,7 @@ constexpr simd<E> reinterpret(abi_tag tag, simd<F> src) noexcept {
                 return __DPL bit_cast<native_vector_t<E>>(+src);
 #endif
             }
-        } else if constexpr (same_as<lane_representation_t<E>, double>) {
+        } else if constexpr (same_as<representation_t<E>, double>) {
             if constexpr (same_as<__m128, native_vector_t<F>>) {
                 return _mm_castps_pd(+src);
             } else if constexpr (same_as<__m128i, native_vector_t<F>>) {
@@ -72,7 +70,7 @@ constexpr simd<E> reinterpret(abi_tag tag, simd<F> src) noexcept {
                 return __DPL bit_cast<native_vector_t<E>>(+src);
 #endif
             }
-        } else if constexpr (integral<lane_representation_t<E>>) {
+        } else if constexpr (integral<representation_t<E>>) {
             if constexpr (same_as<__m128d, native_vector_t<F>>) {
                 return _mm_castpd_si128(+src);
             } else if constexpr (same_as<__m128, native_vector_t<F>>) {
@@ -113,19 +111,19 @@ constexpr simd<E> reinterpret(abi_tag tag, simd<F> src) noexcept {
     }
 }
 
-DPL_EXPORT template <simd_element_for<abi_tag> E, simd_element_for<abi_tag> F>
+DPL_EXPORT template <simd_element E, simd_element F>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr mask<E> reinterpret(abi_tag tag, mask<F> src) noexcept {
     return +dx::xmm::reinterpret<E>(tag, simd<F>(+src));
 }
 
-DPL_EXPORT template <simd_element_for<abi_tag> E, simd_element_for<abi_tag> F>
+DPL_EXPORT template <simd_element E, simd_element F>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr simd<E> reinterpret(simd<F> src) noexcept {
     return xmm::reinterpret<E>(xmm::abi, src);
 }
 
-DPL_EXPORT template <simd_element_for<abi_tag> E, simd_element_for<abi_tag> F>
+DPL_EXPORT template <simd_element E, simd_element F>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr mask<E> reinterpret(mask<F> src) noexcept {
     return xmm::reinterpret<E>(xmm::abi, src);

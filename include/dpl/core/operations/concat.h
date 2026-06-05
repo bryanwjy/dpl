@@ -3,20 +3,22 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/operations/abi_promotion.h"
 #include "dpl/core/operations/evaluate.h"
-
 #if !DPL_MODULES
 #  include "dpl/core/basic/immediate.h"
 #  include "dpl/core/basic/initialize.h"
+#  include "dpl/core/basic/internal/abi.h"
+#  include "dpl/core/basic/internal/iota_sequence.h"
 #  include "dpl/core/basic/load.h"
 #  include "dpl/core/basic/store.h"
-#  include "dpl/core/concepts/simd_equivalence.h"
-#  include "dpl/core/type_traits/array_for.h"
+#  include "dpl/core/concepts/decayable.h"
+#  include "dpl/core/concepts/equivalence.h"
+#  include "dpl/core/operations/internal/array_for.h"
 #  include "dpl/core/type_traits/common_abi.h"
-#  include "dpl/core/type_traits/iota_sequence.h"
-#  include "dpl/core/type_traits/promote_abi.h"
 #  include "dpl/core/type_traits/rebind_simd.h"
-#  include "dpl/core/type_traits/simd_lane_type.h"
+#  include "dpl/core/type_traits/simd_element_type.h"
+#  include "dpl/core/type_traits/simd_expression_result.h"
 #endif
 
 #if DPL_HAS_CXX26_EXTENSIONS
@@ -116,47 +118,47 @@ using concat_target_t DPL_NODEBUG =
         promote_abi_t<common_abi_t<As...>>>::type;
 
 template <typename T, typename... Ts>
-concept concatable = (fixed_width_class<T> && ... && fixed_width_class<Ts>) &&
-    (... && same_as<simd_lane_type_t<T>, simd_lane_type_t<Ts>>) &&
+concept concatable =
+    (fixed_width_simd_type<T> && ... && fixed_width_simd_type<Ts>) &&
+    (... && same_as<simd_element_type_t<T>, simd_element_type_t<Ts>>) &&
     requires {
-        typename common_abi_t<typename T::abi_type, typename Ts::abi_type...>;
+        typename common_abi_t<simd_abi_type_t<T>, simd_abi_type_t<Ts>...>;
         typename promote_abi_t<
-            common_abi_t<typename T::abi_type, typename Ts::abi_type...>>;
-        typename concat_target_t<typename T::abi_type,
-            typename Ts::abi_type...>;
+            common_abi_t<simd_abi_type_t<T>, simd_abi_type_t<Ts>...>>;
+        typename concat_target_t<simd_abi_type_t<T>, simd_abi_type_t<Ts>...>;
     } &&
-    concat_target_t<typename T::abi_type>::size ==
+    concat_target_t<simd_abi_type_t<T>>::size ==
         (T::abi_type::size + ... + Ts::abi_type::size);
 
 template <typename T, typename... Ts>
 concept unqualified_concat_to = requires(T arg, Ts... args) {
     {
-        concat<concat_target_t<typename T::abi_type, typename Ts::abi_type...>>(
+        concat<concat_target_t<simd_abi_type_t<T>, simd_abi_type_t<Ts>...>>(
             internal::abi<
-                common_abi_t<typename T::abi_type, typename Ts::abi_type...>>,
+                common_abi_t<simd_abi_type_t<T>, simd_abi_type_t<Ts>...>>,
             arg, args...)
-    } -> equivalent_class_as<rebind_simd_t<T, simd_lane_type_t<T>,
-        concat_target_t<typename T::abi_type, typename Ts::abi_type...>>>;
+    } -> equivalent_simd_type_with<rebind_simd_t<T, simd_element_type_t<T>,
+        concat_target_t<simd_abi_type_t<T>, simd_abi_type_t<Ts>...>>>;
 };
 
 template <typename T, typename... Ts>
 concept unqualified_concat_from = requires(T arg, Ts... args) {
     {
-        concat<common_abi_t<typename T::abi_type, typename Ts::abi_type...>>(
-            internal::abi<concat_target_t<typename T::abi_type,
-                typename Ts::abi_type...>>,
+        concat<common_abi_t<simd_abi_type_t<T>, simd_abi_type_t<Ts>...>>(
+            internal::abi<
+                concat_target_t<simd_abi_type_t<T>, simd_abi_type_t<Ts>...>>,
             arg, args...)
-    } -> equivalent_class_as<rebind_simd_t<T, simd_lane_type_t<T>,
-        concat_target_t<typename T::abi_type, typename Ts::abi_type...>>>;
+    } -> equivalent_simd_type_with<rebind_simd_t<T, simd_element_type_t<T>,
+        concat_target_t<simd_abi_type_t<T>, simd_abi_type_t<Ts>...>>>;
 };
 
 template <typename T, typename... Ts>
 concept unqualified_extended_concat = requires(T arg, Ts... args) {
     {
-        concat<concat_target_t<typename T::abi_type, typename Ts::abi_type...>>(
+        concat<concat_target_t<simd_abi_type_t<T>, simd_abi_type_t<Ts>...>>(
             arg, args...)
-    } -> equivalent_class_as<rebind_simd_t<T, simd_lane_type_t<T>,
-        concat_target_t<typename T::abi_type, typename Ts::abi_type...>>>;
+    } -> equivalent_simd_type_with<rebind_simd_t<T, simd_element_type_t<T>,
+        concat_target_t<simd_abi_type_t<T>, simd_abi_type_t<Ts>...>>>;
 };
 
 template <typename T, typename... Ts>
@@ -279,14 +281,13 @@ public:
         }
     }
 
-    template <fixed_width_class T, fixed_width_class... Ts>
-    requires (extended_class<T> || ... || extended_class<Ts>) &&
+    template <fixed_width_simd_type T, fixed_width_simd_type... Ts>
+    requires (extended_simd_type<T> || ... || extended_simd_type<Ts>) &&
         concatable<T, Ts...> && extended_concat<T, Ts...>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(
         T arg, Ts... args) noexcept {
-        using To =
-            concat_target_t<typename T::abi_type, typename Ts::abi_type...>;
+        using To = concat_target_t<simd_abi_type_t<T>, simd_abi_type_t<Ts>...>;
         if constexpr (unqualified_extended_concat<T, Ts...>) {
             return concat<To>(arg, args...);
         } else if constexpr (expression_concat<T, Ts...>) {

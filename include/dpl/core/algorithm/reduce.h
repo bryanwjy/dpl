@@ -8,11 +8,11 @@
 #if !DPL_MODULES
 #  include "dpl/core/basic/const_mask.h"
 #  include "dpl/core/basic/immediate.h"
+#  include "dpl/core/basic/internal/iota_sequence.h"
 #  include "dpl/core/operations/bit.h"
 #  include "dpl/core/operations/lane_index.h"
 #  include "dpl/core/operations/logical.h"
 #  include "dpl/core/operations/permute.h"
-#  include "dpl/core/type_traits/iota_sequence.h"
 #  include "dpl/std/concepts/invocable.h"
 #endif
 
@@ -32,7 +32,7 @@ concept unqualified_canonical_reduce = requires(T val, BinaryOp && (*op)()) {
 
 template <typename T, typename BinaryOp>
 concept unqualified_extended_reduce = requires(T val, BinaryOp && (*op)()) {
-    { reduce(val, op()) } -> extended_arithmetic_result<T>;
+    { reduce(val, op()) } -> vector_with_common_abi<simd_abi_type_t<T>>;
 };
 
 template <typename S, typename M, typename T, typename BinaryOp,
@@ -48,9 +48,7 @@ template <typename S, typename M, typename T, typename BinaryOp,
     typename A = common_abi_t<M, T>>
 concept unqualified_extended_mreduce =
     requires(S src, M mask, T val, BinaryOp && (*op)()) {
-        {
-            reduce(src, mask, val, op())
-        } -> extended_arithmetic_result<canonical_if_zero_t<S, T, A>>;
+        { reduce(src, mask, val, op()) } -> vector_with_common_abi<A>;
     };
 
 template <typename S, typename M, typename T, typename BinaryOp,
@@ -69,7 +67,7 @@ concept unqualified_extended_imreduce = requires(
     S src, M mask, T val, BinaryOp && (*op)()) {
     {
         reduce(src, internal::to_const_mask<A, reduce_t, S, T>(mask), val, op())
-    } -> canonical_arithmetic_result<canonical_if_zero_t<S, T, A>>;
+    } -> vector_with_common_abi<A>;
 };
 
 struct reduction_base {

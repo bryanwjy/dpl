@@ -5,8 +5,9 @@
 
 #include "dpl/core/math/internal/floating_point_simd.h"
 #if !DPL_MODULES
-#  include "dpl/core/concepts/basic_type.h"
-#  include "dpl/core/concepts/compatible_mask_with.h"
+#  include "dpl/core/concepts/canonical.h"
+#  include "dpl/core/concepts/extended.h"
+#  include "dpl/core/concepts/mask_compatibility.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_vector.h"
 #  include "dpl/core/constants/zero.h"
@@ -28,7 +29,7 @@ concept unqualified_canonical_signbit = requires(T arg) {
 
 template <typename T>
 concept unqualified_extended_signbit = requires(T arg) {
-    { signbit(arg) } -> extended_operation_mask<typename T::abi_type>;
+    { signbit(arg) } -> mask_with_common_abi<simd_abi_type_t<T>>;
 };
 
 template <typename T>

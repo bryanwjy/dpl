@@ -11,7 +11,7 @@ namespace datapar {
 
 DPL_EXPORT struct zero_t;
 
-struct nzero_t : broadcastable_base {
+struct nzero_t : broadcastable_base<nzero_t> {
     __DPL_HIDE_FROM_ABI explicit constexpr nzero_t() noexcept = default;
 
     template <typename T>
@@ -24,7 +24,7 @@ struct nzero_t : broadcastable_base {
     consteval zero_t operator-(this nzero_t) noexcept;
 };
 
-DPL_EXPORT struct zero_t : broadcastable_base {
+DPL_EXPORT struct zero_t : broadcastable_base<zero_t> {
     __DPL_HIDE_FROM_ABI explicit constexpr zero_t() noexcept = default;
 
     template <typename T>

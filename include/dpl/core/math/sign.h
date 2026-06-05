@@ -7,7 +7,8 @@
 #include "dpl/core/math/internal/masked_op.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/concepts/basic_type.h"
+#  include "dpl/core/concepts/canonical.h"
+#  include "dpl/core/concepts/extended.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_vector.h"
 #  include "dpl/core/constants/msb.h"
@@ -35,7 +36,7 @@ concept unqualified_canonical_sign = requires(L lhs, R rhs) {
 
 template <typename L, typename R = L, typename A = common_abi_t<L, R>>
 concept unqualified_extended_sign = requires(L lhs, R rhs) {
-    { sign(lhs, rhs) } -> extended_operation_vector<A>;
+    { sign(lhs, rhs) } -> vector_with_common_abi<A>;
 };
 
 template <typename L, typename R>
@@ -91,7 +92,7 @@ private:
         return sign(lhs, rhs);
     }
 
-    template <arithmetic_type E, simd_abi A>
+    template <basic_element E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A>
         DPL_VECTORCALL fallback(
@@ -145,7 +146,7 @@ private:
 
 public:
     template <simd_abi A, simd_element_for<A> E>
-    requires arithmetic_type<E>
+    requires basic_element<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         basic_vector<E, A> lhs, basic_vector<E, A> rhs) noexcept {
@@ -163,7 +164,7 @@ public:
 
     template <simd_abi LA, simd_element_for<LA> E, common_abi_with<LA> RA>
     requires simd_element_for<E, RA> &&
-        (different_from<LA, RA> || !arithmetic_type<E>) &&
+        (different_from<LA, RA> || !basic_element<E>) &&
         unqualified_canonical_sign<basic_vector<E, LA>, basic_vector<E, RA>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
