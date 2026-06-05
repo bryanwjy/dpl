@@ -6,6 +6,7 @@
 #if !DPL_MODULES
 #  include "dpl/core/concepts/common_abi_with.h"
 #  include "dpl/core/concepts/simd_abi.h"
+#  include "dpl/core/concepts/simd_mask.h"
 #  include "dpl/core/concepts/simd_vector.h"
 #  include "dpl/core/type_traits/simd_abi_type.h"
 #endif

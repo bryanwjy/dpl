@@ -4,8 +4,8 @@
 #include "dpl/config.h"
 
 #include "dpl/core/operations/evaluate.h"
-#include "dpl/core/operations/extended_operations.h"
-#include "dpl/core/operations/masked.h"
+#include "dpl/core/operations/internal/extended_operations.h"
+#include "dpl/core/operations/internal/masked.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/broadcast.h"

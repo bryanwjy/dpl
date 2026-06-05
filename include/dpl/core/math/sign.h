@@ -16,7 +16,7 @@
 #  include "dpl/core/operations/bit.h"
 #  include "dpl/core/operations/bitwise.h"
 #  include "dpl/core/operations/compare.h"
-#  include "dpl/core/operations/operation_base.h"
+#  include "dpl/core/operations/internal/operation_base.h"
 #  include "dpl/core/operations/select.h"
 #endif
 

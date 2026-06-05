@@ -3,7 +3,7 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/operations/masked.h"
+#include "dpl/core/operations/internal/masked.h"
 #include "dpl/core/operations/permute.h"
 
 #if !DPL_MODULES

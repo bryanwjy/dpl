@@ -18,7 +18,7 @@
 #  include "dpl/core/constants/one.h"
 #  include "dpl/core/operations/arithmetic.h"
 #  include "dpl/core/operations/evaluate.h"
-#  include "dpl/core/operations/masked.h"
+#  include "dpl/core/operations/internal/masked.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN

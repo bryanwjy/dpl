@@ -14,7 +14,7 @@
 #  include "dpl/core/operations/bitwise.h"
 #  include "dpl/core/operations/cast.h"
 #  include "dpl/core/operations/evaluate.h"
-#  include "dpl/core/operations/extended_operations.h"
+#  include "dpl/core/operations/internal/extended_operations.h"
 #  include "dpl/core/operations/lane_index.h"
 #  include "dpl/core/operations/permute.h"
 #  include "dpl/core/type_traits/common_abi.h"

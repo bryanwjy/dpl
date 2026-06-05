@@ -9,8 +9,8 @@
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/operations/arithmetic/result.h"
 #  include "dpl/core/operations/evaluate.h"
+#  include "dpl/core/operations/internal/operation_base.h"
 #  include "dpl/core/operations/minmax.h"
-#  include "dpl/core/operations/operation_base.h"
 #  include "dpl/std/concepts/totally_ordered.h"
 #endif
 

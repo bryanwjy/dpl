@@ -12,9 +12,9 @@
 #  include "dpl/core/concepts/simd_equivalence.h"
 #  include "dpl/core/constants/zero.h"
 #  include "dpl/core/operations/arithmetic/result.h"
-#  include "dpl/core/operations/masked.h"
-#  include "dpl/core/operations/operation_base.h"
-#  include "dpl/core/operations/transform.h"
+#  include "dpl/core/operations/internal/masked.h"
+#  include "dpl/core/operations/internal/operation_base.h"
+#  include "dpl/core/operations/internal/transform.h"
 #  include "dpl/std/concepts/floating_point.h"
 #endif
 

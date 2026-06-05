@@ -4,8 +4,8 @@
 #include "dpl/config.h"
 
 #include "dpl/core/operations/bit/result.h"
-#include "dpl/core/operations/masked.h"
-#include "dpl/core/operations/transform.h"
+#include "dpl/core/operations/internal/masked.h"
+#include "dpl/core/operations/internal/transform.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/decayable.h"

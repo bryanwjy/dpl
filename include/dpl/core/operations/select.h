@@ -4,8 +4,8 @@
 #include "dpl/config.h"
 
 #include "dpl/core/operations/evaluate.h"
-#include "dpl/core/operations/extended_operations.h"
-#include "dpl/core/operations/transform.h"
+#include "dpl/core/operations/internal/extended_operations.h"
+#include "dpl/core/operations/internal/transform.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/broadcast.h"

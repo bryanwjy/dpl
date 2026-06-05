@@ -7,8 +7,8 @@
 
 #include "dpl/core/operations/arithmetic/subtract.h"
 #include "dpl/core/operations/evaluate.h"
-#include "dpl/core/operations/extended_operations.h"
-#include "dpl/core/operations/masked.h"
+#include "dpl/core/operations/internal/extended_operations.h"
+#include "dpl/core/operations/internal/masked.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/arithmetic_type.h"

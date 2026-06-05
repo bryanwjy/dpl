@@ -18,6 +18,8 @@
 #  include "dpl/core/concepts/simd_equivalence.h"
 #  include "dpl/core/type_traits/array_for.h"
 #  include "dpl/core/type_traits/iota_sequence.h"
+#  include "dpl/core/type_traits/simd_abi_type.h"
+#  include "dpl/core/type_traits/simd_expression_result.h"
 #  include "dpl/std/bit/bit_cast.h"
 #  include "dpl/std/concepts/invocable.h"
 #endif

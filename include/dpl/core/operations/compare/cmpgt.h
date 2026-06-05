@@ -7,8 +7,8 @@
 
 #include "dpl/core/operations/compare/cmplt.h"
 #include "dpl/core/operations/compare/result.h"
-#include "dpl/core/operations/masked.h"
-#include "dpl/core/operations/operation_base.h"
+#include "dpl/core/operations/internal/masked.h"
+#include "dpl/core/operations/internal/operation_base.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/decayable.h"

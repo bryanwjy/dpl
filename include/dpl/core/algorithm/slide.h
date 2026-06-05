@@ -9,7 +9,7 @@
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_equivalence.h"
 #  include "dpl/core/operations/bitwise.h"
-#  include "dpl/core/operations/operation_base.h"
+#  include "dpl/core/operations/internal/operation_base.h"
 #  include "dpl/core/type_traits/simd_abi_type.h"
 #endif
 
