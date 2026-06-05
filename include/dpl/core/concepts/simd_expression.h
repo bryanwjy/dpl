@@ -3,14 +3,13 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/concepts/basic_type.h"
 #include "dpl/core/concepts/simd_class.h"
 #include "dpl/core/concepts/simd_mask.h"
 #include "dpl/core/concepts/simd_vector.h"
 
 #if !DPL_MODULES
-#  include "dpl/std/concepts/integral.h"
-#  include "dpl/std/concepts/integral_constant_like.h"
-#  include "dpl/std/type_traits/constants.h"
+#  include "dpl/std/concepts/different_from.h"
 #  include "dpl/std/utility/forward.h"
 #endif
 

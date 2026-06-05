@@ -325,12 +325,12 @@ public:
     static constexpr auto operator()(S src, M mask, Args... args) noexcept {
         if constexpr (requires { D::masked(src, mask, args...); }) {
             if consteval {
-                return internal::masked<D>(src, mask, args...);
+                return internal::masked<D>(src, mask, src, args...);
             } else {
                 return D::masked(src, mask, args...);
             }
         } else {
-            return internal::masked<D>(src, mask, args...);
+            return internal::masked<D>(src, mask, src, args...);
         }
     }
 

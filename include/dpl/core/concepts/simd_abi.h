@@ -4,9 +4,11 @@
 #include "dpl/config.h"
 
 #if !DPL_MODULES
+#  include "dpl/std/concepts/derived_from.h"
 #  include "dpl/std/concepts/integral.h"
 #  include "dpl/std/concepts/semiregular.h"
 #  include "dpl/std/type_traits/is_empty.h"
+#  include "dpl/std/type_traits/remove_cv.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN

@@ -4,6 +4,7 @@
 #include "dpl/config.h"
 
 #include "dpl/core/operations/evaluate.h"
+#include "dpl/core/operations/extended_operations.h"
 #include "dpl/core/operations/transform.h"
 
 #if !DPL_MODULES
@@ -14,10 +15,10 @@
 #  include "dpl/core/concepts/decayable.h"
 #  include "dpl/core/concepts/operation_category.h"
 #  include "dpl/core/concepts/simd_class.h"
-#  include "dpl/core/concepts/simd_equivalence.h"
 #  include "dpl/core/constants/all_bits.h"
 #  include "dpl/core/constants/zero.h"
 #  include "dpl/core/type_traits/common_size_type.h"
+#  include "dpl/core/type_traits/simd_expression_result.h"
 #  include "dpl/std/concepts/integral.h"
 #  include "dpl/std/concepts/invocable.h"
 #endif
