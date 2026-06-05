@@ -5,6 +5,7 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/decayable.h"
+#  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/operations/arithmetic/result.h"
 #  include "dpl/core/operations/evaluate.h"

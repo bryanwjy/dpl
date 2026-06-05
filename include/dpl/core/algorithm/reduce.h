@@ -9,6 +9,7 @@
 #  include "dpl/core/basic/const_mask.h"
 #  include "dpl/core/basic/immediate.h"
 #  include "dpl/core/basic/internal/iota_sequence.h"
+#  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/operations/bit.h"
 #  include "dpl/core/operations/lane_index.h"
 #  include "dpl/core/operations/logical.h"
@@ -27,7 +28,7 @@ concept reduction_operator_for = simd_vector<T> && regular_invocable<F, T, T> &&
 
 template <typename T, typename BinaryOp>
 concept unqualified_canonical_reduce = requires(T val, BinaryOp && (*op)()) {
-    { reduce(internal::abi<T>, val, op()) } -> canonical_arithmetic_result<T>;
+    { reduce(internal::abi<T>, val, op()) } -> equivalent_vector_with<T>;
 };
 
 template <typename T, typename BinaryOp>
@@ -41,7 +42,7 @@ concept unqualified_canonical_mreduce =
     requires(S src, M mask, T val, BinaryOp && (*op)()) {
         {
             reduce(internal::abi<A>, src, mask, val, op())
-        } -> canonical_arithmetic_result<canonical_if_zero_t<S, T, A>>;
+        } -> equivalent_vector_with<canonical_if_zero_t<S, T, A>>;
     };
 
 template <typename S, typename M, typename T, typename BinaryOp,
@@ -58,7 +59,7 @@ concept unqualified_canonical_imreduce =
         {
             reduce(internal::abi<A>, src,
                 internal::to_const_mask<A, reduce_t, S, T>(mask), val, op())
-        } -> canonical_arithmetic_result<canonical_if_zero_t<S, T, A>>;
+        } -> equivalent_vector_with<canonical_if_zero_t<S, T, A>>;
     };
 
 template <typename S, typename M, typename T, typename BinaryOp,

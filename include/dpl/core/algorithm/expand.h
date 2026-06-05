@@ -6,8 +6,7 @@
 #include "dpl/core/algorithm/internal/scan.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/concepts/common_abi_with.h"
-#  include "dpl/core/concepts/simd_abi.h"
+#  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/operations/permute.h"
 #  include "dpl/core/operations/select.h"
 #  include "dpl/core/type_traits/simd_abi_traits.h"
@@ -25,28 +24,26 @@ template <typename S, typename M, typename T, typename A = common_abi_t<M, T>>
 concept unqualified_canonical_expand = requires(S src, M mask, T val) {
     {
         expand(internal::abi<A>, src, mask, val)
-    } -> equivalent_simd_type_with<canonical_if_zero_t<S, T, A>>;
+    } -> equivalent_vector_with<canonical_if_zero_t<S, T, A>>;
 };
 
 template <typename S, typename M, typename T, typename A = common_abi_t<M, T>>
 concept unqualified_extended_expand = requires(S src, M mask, T val) {
-    {
-        expand(src, mask, val)
-    } -> equivalent_simd_type_with<canonical_if_zero_t<S, T, A>>;
+    { expand(src, mask, val) } -> vector_with_common_abi<A>;
 };
 
-template <typename S, typename M, typename R, typename A = common_abi_t<S, R>>
-concept unqualified_canonical_iexpand = requires(S src, R val) {
+template <typename S, typename M, typename T, typename A = common_abi_t<S, T>>
+concept unqualified_canonical_iexpand = requires(S src, T val) {
     {
-        expand(internal::abi<A>, src, internal::select_mask<M, S, R>(), val)
-    } -> equivalent_simd_type_with<S>;
+        expand(internal::abi<A>, src, internal::select_mask<M, S, T>(), val)
+    } -> equivalent_vector_with<canonical_if_zero_t<S, T, A>>;
 };
 
-template <typename S, typename M, typename R, typename A = common_abi_t<S, R>>
-concept unqualified_extended_iexpand = requires(S src, R val) {
+template <typename S, typename M, typename T, typename A = common_abi_t<S, T>>
+concept unqualified_extended_iexpand = requires(S src, T val) {
     {
-        expand(src, internal::select_mask<M, S, R>(), val)
-    } -> equivalent_simd_type_with<S>;
+        expand(src, internal::select_mask<M, S, T>(), val)
+    } -> vector_with_common_abi<A>;
 };
 
 struct expand_t {
@@ -74,7 +71,7 @@ private:
 
     template <typename M, typename T>
     using broadcast_type DPL_NODEBUG =
-        rebind_simd_t<T, simd_element_type_t<T>, typename M::abi_type>;
+        rebind_simd_t<T, simd_element_type_t<T>, simd_abi_type_t<M>>;
 
 public:
     template <canonical_vector S, canonical_mask M, canonical_vector T>

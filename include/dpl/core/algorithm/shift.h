@@ -4,8 +4,8 @@
 #include "dpl/config.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/concepts/common_abi_with.h"
 #  include "dpl/core/concepts/decayable.h"
+#  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/constants/zero.h"
 #  include "dpl/core/operations/lane_index.h"
@@ -26,23 +26,14 @@ void shift_right(...) noexcept = delete;
 struct shift_left_t;
 struct shift_right_t;
 
-template <typename T, typename Arg>
-concept shift_result = simd_vector<T> && simd_vector<Arg> &&
-    same_as<typename T::value_type, typename Arg::value_type> &&
-    common_abi_with<typename T::abi_type, typename Arg::abi_type>;
-
-template <typename T, typename Arg>
-concept canonical_shift_result = shift_result<T, Arg> &&
-    same_as<typename T::abi_type, typename Arg::abi_type>;
-
 template <typename T>
 concept unqualified_canonical_shift_left = requires(T val, size_t shift) {
-    { shift_left(internal::abi<T>, val, shift) } -> canonical_shift_result<T>;
+    { shift_left(internal::abi<T>, val, shift) } -> equivalent_vector_with<T>;
 };
 
 template <typename T>
 concept unqualified_extended_shift_left = requires(T val, size_t shift) {
-    { shift_left(val, shift) } -> shift_result<T>;
+    { shift_left(val, shift) } -> vector_with_common_abi<simd_abi_type_t<T>>;
 };
 
 template <typename T>
@@ -54,12 +45,12 @@ template <typename T, typename N>
 concept unqualified_canonical_shift_lefti = requires(T val) {
     {
         shift_left<N::value>(internal::abi<T>, val)
-    } -> canonical_shift_result<T>;
+    } -> equivalent_vector_with<T>;
 };
 
 template <typename T, typename N>
 concept unqualified_extended_shift_lefti = requires(T val) {
-    { shift_left<N::value>(val) } -> shift_result<T>;
+    { shift_left<N::value>(val) } -> vector_with_common_abi<simd_abi_type_t<T>>;
 };
 
 template <typename T, typename N>
@@ -69,22 +60,22 @@ concept unqualified_shift_lefti = unqualified_extended_shift_lefti<T, N> ||
 
 template <typename T>
 concept unqualified_canonical_shift_right = requires(T val, size_t shift) {
-    { shift_right(internal::abi<T>, val, shift) } -> canonical_shift_result<T>;
+    { shift_right(internal::abi<T>, val, shift) } -> equivalent_vector_with<T>;
 };
 
 template <typename T>
 concept unqualified_extended_shift_right = requires(T val, size_t shift) {
-    { shift_right(val, shift) } -> shift_result<T>;
+    { shift_right(val, shift) } -> vector_with_common_abi<simd_abi_type_t<T>>;
 };
 
 template <typename T, typename N>
 concept unqualified_canonical_shift_righti = requires(T val, N shift) {
-    { shift_right(internal::abi<T>, val, shift) } -> canonical_shift_result<T>;
+    { shift_right(internal::abi<T>, val, shift) } -> equivalent_vector_with<T>;
 };
 
 template <typename T, typename N>
 concept unqualified_extended_shift_righti = requires(T val, N shift) {
-    { shift_right(val, shift) } -> shift_result<T>;
+    { shift_right(val, shift) } -> vector_with_common_abi<simd_abi_type_t<T>>;
 };
 
 struct shift_left_t {

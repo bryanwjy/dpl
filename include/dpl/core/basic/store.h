@@ -74,10 +74,10 @@ struct store_t {
 
 struct aligned_store_t : private store_t {
     template <simd_vector T>
-    requires invocable<store_t, aligned_t, T, typename T::value_type*>
+    requires invocable<store_t, aligned_t, T, simd_element_type_t<T>*>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
     static constexpr void operator()(
-        aligned_t tag, T src, typename T::value_type* dst) noexcept {
+        aligned_t tag, T src, simd_element_type_t<T>* dst) noexcept {
         store_t::operator()(tag, src, dst);
     }
 };

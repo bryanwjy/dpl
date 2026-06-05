@@ -6,7 +6,7 @@
 #include "dpl/core/algorithm/slide.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/concepts/simd_abi.h"
+#  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/type_traits/simd_abi_traits.h"
 #endif
 
@@ -17,47 +17,36 @@ void rotate_left(...) noexcept = delete;
 struct rotate_left_t;
 struct rotate_right_t;
 
-template <typename T, typename Arg>
-concept rotate_result = simd_vector<T> && simd_vector<Arg> &&
-    same_as<typename T::value_type, typename Arg::value_type> &&
-    common_abi_with<typename T::abi_type, typename Arg::abi_type>;
-
-template <typename T, typename Arg>
-concept canonical_rotate_result = rotate_result<T, Arg> &&
-    same_as<typename T::abi_type, typename Arg::abi_type>;
-
 template <typename T>
 concept unqualified_canonical_rotate_left = requires(T val, size_t rotate) {
-    {
-        rotate_left(internal::abi<T>, val, rotate)
-    } -> canonical_rotate_result<T>;
+    { rotate_left(internal::abi<T>, val, rotate) } -> equivalent_vector_with<T>;
 };
 
 template <typename T>
 concept unqualified_extended_rotate_left = requires(T val, size_t rotate) {
-    { rotate_left(val, rotate) } -> rotate_result<T>;
+    { rotate_left(val, rotate) } -> vector_with_common_abi<simd_abi_type_t<T>>;
 };
 
 template <typename T, typename N>
 concept unqualified_canonical_rotate_lefti = requires(T val, N count) {
-    { rotate_left(internal::abi<T>, val, count) } -> canonical_rotate_result<T>;
+    { rotate_left(internal::abi<T>, val, count) } -> equivalent_vector_with<T>;
 };
 
 template <typename T, typename N>
 concept unqualified_extended_rotate_lefti = requires(T val, N count) {
-    { rotate_left(val, count) } -> rotate_result<T>;
+    { rotate_left(val, count) } -> vector_with_common_abi<simd_abi_type_t<T>>;
 };
 
 template <typename T>
 concept unqualified_canonical_rotate_right = requires(T val, size_t rotate) {
     {
         rotate_right(internal::abi<T>, val, rotate)
-    } -> canonical_rotate_result<T>;
+    } -> equivalent_vector_with<T>;
 };
 
 template <typename T>
 concept unqualified_extended_rotate_right = requires(T val, size_t rotate) {
-    { rotate_right(val, rotate) } -> rotate_result<T>;
+    { rotate_right(val, rotate) } -> vector_with_common_abi<simd_abi_type_t<T>>;
 };
 
 template <typename T>
@@ -67,14 +56,12 @@ concept unqualified_rotate_right = unqualified_extended_rotate_right<T> ||
 
 template <typename T, typename N>
 concept unqualified_canonical_rotate_righti = requires(T val, N count) {
-    {
-        rotate_right(internal::abi<T>, val, count)
-    } -> canonical_rotate_result<T>;
+    { rotate_right(internal::abi<T>, val, count) } -> equivalent_vector_with<T>;
 };
 
 template <typename T, typename N>
 concept unqualified_extended_rotate_righti = requires(T val, N count) {
-    { rotate_right(val, count) } -> rotate_result<T>;
+    { rotate_right(val, count) } -> vector_with_common_abi<simd_abi_type_t<T>>;
 };
 
 struct rotate_right_t {

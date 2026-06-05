@@ -6,6 +6,7 @@
 #include "dpl/core/algorithm/reduce.h"
 
 #if !DPL_MODULES
+#  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/operations/compare/min.h"
 #endif
 
@@ -16,19 +17,19 @@ void hmin(...) noexcept = delete;
 
 template <typename T>
 concept unqualified_canonical_hmin = requires(T val) {
-    { hmin(internal::abi<T>, val) } -> canonical_arithmetic_result<T>;
+    { hmin(internal::abi<T>, val) } -> equivalent_vector_with<T>;
 };
 
 template <typename T>
 concept unqualified_extended_hmin = requires(T val) {
-    { hmin(val) } -> vector_with_common_abi<typename T::abi_type>;
+    { hmin(val) } -> vector_with_common_abi<simd_abi_type_t<T>>;
 };
 
 template <typename S, typename M, typename T, typename A = common_abi_t<M, T>>
 concept unqualified_canonical_mhmin = requires(S src, M mask, T val) {
     {
         hmin(internal::abi<A>, src, mask, val)
-    } -> canonical_arithmetic_result<canonical_if_zero_t<S, T, A>>;
+    } -> equivalent_vector_with<canonical_if_zero_t<S, T, A>>;
 };
 
 template <typename S, typename M, typename T, typename A = common_abi_t<M, T>>
@@ -40,7 +41,7 @@ template <typename S, typename M, typename T, typename A = common_abi_t<S, T>>
 concept unqualified_canonical_imhmin = requires(S src, T val) {
     {
         hmin(internal::abi<A>, src, internal::select_mask<M, S, T>(), val)
-    } -> canonical_arithmetic_result<canonical_if_zero_t<S, T, A>>;
+    } -> equivalent_vector_with<canonical_if_zero_t<S, T, A>>;
 };
 
 template <typename S, typename M, typename T, typename A = common_abi_t<S, T>>

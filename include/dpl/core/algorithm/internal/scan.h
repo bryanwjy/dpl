@@ -7,6 +7,7 @@
 #if !DPL_MODULES
 #  include "dpl/core/basic/immediate.h"
 #  include "dpl/core/concepts/common_abi_with.h"
+#  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/constants/one.h"
 #  include "dpl/core/operations/arithmetic/add.h"
@@ -131,9 +132,7 @@ struct exscan_sum_base;
 
 template <typename T, typename I>
 concept unqualified_canonical_exscan_sum = requires(T val, I init) {
-    {
-        exscan_sum(internal::abi<T>, val, init)
-    } -> canonical_arithmetic_result<T>;
+    { exscan_sum(internal::abi<T>, val, init) } -> equivalent_vector_with<T>;
 };
 
 template <typename T, typename I>
@@ -142,14 +141,10 @@ concept unqualified_extended_exscan_sum = requires(T val, I init) {
 };
 
 template <typename T, typename M>
-concept extended_mask_scan_result =
-    simd_mask<M> && simd_vector<T> && signed_integral<typename T::value_type> &&
-    common_size_with<typename T::value_type, simd_element_type_t<M>> &&
-    common_abi_with<typename T::abi_type, typename M::abi_type>;
-
-template <typename T, typename M>
-concept canonical_mask_scan_result = extended_mask_scan_result<T, M> &&
-    same_as<typename T::abi_type, typename M::abi_type>;
+concept canonical_mask_scan_result =
+    simd_mask<M> && simd_vector<T> && signed_integral<simd_element_type_t<T>> &&
+    common_size_with<simd_element_type_t<T>, simd_element_type_t<M>> &&
+    same_abi_as<simd_abi_type_t<T>, simd_abi_type_t<M>>;
 
 template <typename T>
 concept unqualified_canonical_mask_scan = requires(T val) {
@@ -185,7 +180,8 @@ struct exscan_sum_base : protected scan_base {
         } else if constexpr (simd_expression<T>) {
             return operator()(dx::evaluate(val), init);
         } else {
-            return scan_base::exclusive(val, dx::broadcast<T>(init), dx::add);
+            return scan_base::exclusive(
+                val, dx::broadcast<canonical_type_t<T>>(init), dx::add);
         }
     }
 

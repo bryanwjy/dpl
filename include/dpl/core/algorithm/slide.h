@@ -25,18 +25,13 @@ struct slide_left_t;
 struct slide_right_t;
 
 template <typename T, typename L, typename R>
-concept slide_result = simd_vector<T> && simd_vector<L> && simd_vector<R> &&
-    same_as<typename L::value_type, typename R::value_type> &&
-    common_abi_with<typename L::abi_type, typename R::abi_type> &&
-    same_as<typename T::value_type, typename R::value_type> &&
-    same_as<typename T::value_type, typename L::value_type> &&
-    common_abi_with<typename T::abi_type,
-        common_abi_t<typename L::abi_type, typename R::abi_type>>;
-
-template <typename T, typename L, typename R>
-concept canonical_slide_result = slide_result<T, L, R> &&
-    same_as<typename T::abi_type,
-        common_abi_t<typename L::abi_type, typename R::abi_type>>;
+concept canonical_slide_result = simd_vector<T> && simd_vector<L> &&
+    simd_vector<R> && same_as<simd_element_type_t<L>, simd_element_type_t<R>> &&
+    common_abi_with<simd_abi_type_t<L>, simd_abi_type_t<R>> &&
+    same_as<simd_element_type_t<T>, simd_element_type_t<R>> &&
+    same_as<simd_element_type_t<T>, simd_element_type_t<L>> &&
+    same_abi_as<simd_abi_type_t<T>,
+        common_abi_t<simd_abi_type_t<L>, simd_abi_type_t<R>>>;
 
 template <typename L, typename R, typename A = common_abi_t<L, R>>
 concept unqualified_canonical_slide_left =
@@ -48,7 +43,7 @@ concept unqualified_canonical_slide_left =
 
 template <typename L, typename R, typename A = common_abi_t<L, R>>
 concept unqualified_extended_slide_left = requires(L lhs, R rhs, size_t count) {
-    { slide_left(lhs, rhs, count) } -> slide_result<L, R>;
+    { slide_left(lhs, rhs, count) } -> vector_with_common_abi<A>;
 };
 
 template <typename L, typename R, typename A = common_abi_t<L, R>>
@@ -62,7 +57,7 @@ concept unqualified_canonical_slide_right =
 template <typename L, typename R, typename A = common_abi_t<L, R>>
 concept unqualified_extended_slide_right =
     requires(L lhs, R rhs, size_t count) {
-        { slide_right(lhs, rhs, count) } -> slide_result<L, R>;
+        { slide_right(lhs, rhs, count) } -> vector_with_common_abi<A>;
     };
 
 template <typename L, typename R, typename N, typename A = common_abi_t<L, R>>
@@ -74,7 +69,7 @@ concept unqualified_canonical_slide_lefti = requires(L lhs, R rhs, N count) {
 
 template <typename L, typename R, typename N, typename A = common_abi_t<L, R>>
 concept unqualified_extended_slide_lefti = requires(L lhs, R rhs, N count) {
-    { slide_left(lhs, rhs, count) } -> slide_result<L, R>;
+    { slide_left(lhs, rhs, count) } -> vector_with_common_abi<A>;
 };
 
 template <typename L, typename R, typename N, typename A = common_abi_t<L, R>>
@@ -86,7 +81,7 @@ concept unqualified_canonical_slide_righti = requires(L lhs, R rhs, N count) {
 
 template <typename L, typename R, typename N, typename A = common_abi_t<L, R>>
 concept unqualified_extended_slide_righti = requires(L lhs, R rhs, N count) {
-    { slide_right(lhs, rhs, count) } -> slide_result<L, R>;
+    { slide_right(lhs, rhs, count) } -> vector_with_common_abi<A>;
 };
 
 struct slide_left_t {

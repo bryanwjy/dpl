@@ -6,6 +6,7 @@
 #include "dpl/core/algorithm/hsum.h"
 
 #if !DPL_MODULES
+#  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/operations/arithmetic/multiply.h"
 #endif
 
@@ -247,7 +248,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, L lhs, R rhs) noexcept {
         using S = operation_result_t<inner_product_t, L, R>;
-        using A = typename S::abi_type;
+        using A = simd_abi_type_t<S>;
         constexpr auto cmask = dx::to_compatible_const_mask<S>(mask);
         if constexpr (unqualified_canonical_iminner_product<zero_t, M, L, R>) {
             if consteval {
@@ -267,7 +268,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, L lhs, R rhs) noexcept {
         using S = operation_result_t<inner_product_t, L, R>;
-        using A = typename S::abi_type;
+        using A = simd_abi_type_t<S>;
         constexpr auto cmask = dx::to_compatible_const_mask<S>(mask);
         if constexpr (unqualified_extended_iminner_product<zero_t, M, L, R>) {
             return inner_product(dx::zero, cmask, lhs, rhs);

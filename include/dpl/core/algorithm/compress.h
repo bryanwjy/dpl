@@ -7,13 +7,12 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/immediate.h"
-#  include "dpl/core/concepts/common_abi_with.h"
+#  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/operations/bit.h"
 #  include "dpl/core/operations/select.h"
 #  include "dpl/core/type_traits/canonical_type.h"
 #  include "dpl/core/type_traits/simd_abi_traits.h"
-#  include "dpl/std/concepts/invocable.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -31,9 +30,7 @@ concept unqualified_canonical_compress = requires(S src, M mask, T val) {
 
 template <typename S, typename M, typename T, typename A = common_abi_t<M, T>>
 concept unqualified_extended_compress = requires(S src, M mask, T val) {
-    {
-        compress(src, mask, val)
-    } -> equivalent_simd_type_with<canonical_if_zero_t<S, T, A>>;
+    { compress(src, mask, val) } -> vector_with_common_abi<A>;
 };
 
 template <typename S, typename M, typename R, typename A = common_abi_t<S, R>>
@@ -47,7 +44,7 @@ template <typename S, typename M, typename R, typename A = common_abi_t<S, R>>
 concept unqualified_extended_icompress = requires(S src, R val) {
     {
         compress(src, internal::select_mask<M, S, R>(), val)
-    } -> equivalent_simd_type_with<S>;
+    } -> vector_with_common_abi<A>;
 };
 
 struct compress_t {
@@ -135,7 +132,7 @@ private:
 
     template <typename M, typename T>
     using broadcast_type DPL_NODEBUG =
-        rebind_simd_t<T, simd_element_type_t<T>, typename M::abi_type>;
+        rebind_simd_t<T, simd_element_type_t<T>, simd_abi_type_t<M>>;
 
 public:
     template <canonical_vector S, canonical_mask M, canonical_vector T>

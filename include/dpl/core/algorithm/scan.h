@@ -8,6 +8,7 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/immediate.h"
+#  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/operations/compare/max.h"
 #  include "dpl/core/type_traits/simd_abi_type.h"
 #  include "dpl/std/concepts/invocable.h"
@@ -29,7 +30,7 @@ concept unqualified_canonical_exscan =
     requires(T val, I init, BinaryOp && (*op)()) {
         {
             exscan(internal::abi<T>, val, init, op())
-        } -> canonical_arithmetic_result<T>;
+        } -> equivalent_vector_with<T>;
     };
 
 template <typename T, typename I, typename BinaryOp>
@@ -46,7 +47,7 @@ concept unqualified_canonical_mexscan =
     requires(S src, M mask, T val, I init, BinaryOp && (*op)()) {
         {
             exscan(internal::abi<A>, src, mask, val, init, op())
-        } -> canonical_arithmetic_result<canonical_if_zero_t<S, T, A>>;
+        } -> equivalent_vector_with<canonical_if_zero_t<S, T, A>>;
     };
 
 template <typename S, typename M, typename T, typename I, typename BinaryOp,
@@ -63,7 +64,7 @@ concept unqualified_canonical_imexscan = requires(
     {
         exscan(internal::abi<A>, src,
             internal::to_const_mask<A, exscan_t, S, T>(mask), val, init, op())
-    } -> canonical_arithmetic_result<canonical_if_zero_t<S, T, A>>;
+    } -> equivalent_vector_with<canonical_if_zero_t<S, T, A>>;
 };
 
 template <typename S, typename M, typename T, typename I, typename BinaryOp,
@@ -103,7 +104,7 @@ struct exscan_t : private scan_base {
 
     template <typename M, typename T>
     using broadcast_type DPL_NODEBUG =
-        rebind_simd_t<T, simd_element_type_t<T>, typename M::abi_type>;
+        rebind_simd_t<T, simd_element_type_t<T>, simd_abi_type_t<M>>;
 
 public:
     template <canonical_vector T, broadcastable_to<T> I,
@@ -349,7 +350,7 @@ public:
 
 template <typename T, typename BinaryOp>
 concept unqualified_canonical_scan = requires(T val, BinaryOp && (*op)()) {
-    { scan(internal::abi<T>, val, op()) } -> canonical_arithmetic_result<T>;
+    { scan(internal::abi<T>, val, op()) } -> equivalent_vector_with<T>;
 };
 
 template <typename T, typename BinaryOp>
@@ -363,7 +364,7 @@ concept unqualified_canonical_mscan =
     requires(S src, M mask, T val, BinaryOp && (*op)()) {
         {
             scan(internal::abi<A>, src, mask, val, op())
-        } -> canonical_arithmetic_result<canonical_if_zero_t<S, T, A>>;
+        } -> equivalent_vector_with<canonical_if_zero_t<S, T, A>>;
     };
 
 template <typename S, typename M, typename T, typename BinaryOp,
@@ -380,7 +381,7 @@ concept unqualified_canonical_imscan =
         {
             scan(internal::abi<A>, src,
                 internal::to_const_mask<A, scan_t, S, T>(mask), val, op())
-        } -> canonical_arithmetic_result<canonical_if_zero_t<S, T, A>>;
+        } -> equivalent_vector_with<canonical_if_zero_t<S, T, A>>;
     };
 
 template <typename S, typename M, typename T, typename BinaryOp,
@@ -417,7 +418,7 @@ struct scan_t : private scan_base {
 
     template <typename M, typename T>
     using broadcast_type DPL_NODEBUG =
-        rebind_simd_t<T, simd_element_type_t<T>, typename M::abi_type>;
+        rebind_simd_t<T, simd_element_type_t<T>, simd_abi_type_t<M>>;
 
 public:
     template <canonical_vector T, scan_operator_for<T> Op>

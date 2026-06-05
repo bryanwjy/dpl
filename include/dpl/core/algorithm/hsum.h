@@ -6,6 +6,7 @@
 #include "dpl/core/algorithm/reduce.h"
 
 #if !DPL_MODULES
+#  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/operations/arithmetic/add.h"
 #endif
 
@@ -16,19 +17,19 @@ void hsum(...) noexcept = delete;
 
 template <typename T>
 concept unqualified_canonical_hsum = requires(T val) {
-    { hsum(internal::abi<T>, val) } -> canonical_arithmetic_result<T>;
+    { hsum(internal::abi<T>, val) } -> equivalent_vector_with<T>;
 };
 
 template <typename T>
 concept unqualified_extended_hsum = requires(T val) {
-    { hsum(val) } -> vector_with_common_abi<typename T::abi_type>;
+    { hsum(val) } -> vector_with_common_abi<simd_abi_type_t<T>>;
 };
 
 template <typename S, typename M, typename T, typename A = common_abi_t<M, T>>
 concept unqualified_canonical_mhsum = requires(S src, M mask, T val) {
     {
         hsum(internal::abi<A>, src, mask, val)
-    } -> canonical_arithmetic_result<canonical_if_zero_t<S, T, A>>;
+    } -> equivalent_vector_with<canonical_if_zero_t<S, T, A>>;
 };
 
 template <typename S, typename M, typename T, typename A = common_abi_t<M, T>>
@@ -40,7 +41,7 @@ template <typename S, typename M, typename T, typename A = common_abi_t<S, T>>
 concept unqualified_canonical_imhsum = requires(S src, T val) {
     {
         hsum(internal::abi<A>, src, internal::select_mask<M, S, T>(), val)
-    } -> canonical_arithmetic_result<canonical_if_zero_t<S, T, A>>;
+    } -> equivalent_vector_with<canonical_if_zero_t<S, T, A>>;
 };
 
 template <typename S, typename M, typename T, typename A = common_abi_t<S, T>>
@@ -75,12 +76,12 @@ public:
         basic_vector<E, A> val) noexcept {
         if constexpr (unqualified_canonical_hsum<basic_vector<E, A>>) {
             if consteval {
-                return reduction_base::execute(val, dx::max);
+                return reduction_base::execute(val, dx::add);
             } else {
                 return hsum(internal::abi<A>, val);
             }
         } else {
-            return reduction_base::execute(val, dx::max);
+            return reduction_base::execute(val, dx::add);
         }
     }
 
@@ -90,7 +91,7 @@ public:
         if constexpr (unqualified_extended_hsum<T>) {
             return hsum(val);
         } else {
-            return reduction_base::execute(val, dx::max);
+            return reduction_base::execute(val, dx::add);
         }
     }
 

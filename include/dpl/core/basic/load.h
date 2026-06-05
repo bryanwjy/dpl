@@ -57,11 +57,11 @@ template <simd_abi A, simd_element_for<A> E>
 struct load_t<E, A> : load_t<A, E> {};
 
 template <canonical_vector T>
-struct load_t<T> : load_t<typename T::value_type, typename T::abi_type> {};
+struct load_t<T> : load_t<simd_abi_type_t<T>, simd_element_type_t<T>> {};
 
 template <simd_vector T>
 struct load_t<T> {
-    using E DPL_NODEBUG = typename T::value_type;
+    using E DPL_NODEBUG = simd_element_type_t<T>;
     using base_type DPL_NODEBUG = load_t<canonical_type_t<T>>;
 
 public:

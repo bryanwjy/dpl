@@ -8,7 +8,7 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/immediate.h"
-#  include "dpl/core/concepts/common_abi_with.h"
+#  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/operations/compare/min.h"
 #  include "dpl/core/type_traits/simd_abi_type.h"
@@ -23,9 +23,7 @@ struct exscan_min_t;
 
 template <typename T, typename I>
 concept unqualified_canonical_exscan_min = requires(T val, I init) {
-    {
-        exscan_min(internal::abi<T>, val, init)
-    } -> canonical_arithmetic_result<T>;
+    { exscan_min(internal::abi<T>, val, init) } -> equivalent_vector_with<T>;
 };
 
 template <typename T, typename I>
@@ -39,7 +37,7 @@ concept unqualified_canonical_mexscan_min =
     requires(S src, M mask, T val, I init) {
         {
             exscan_min(internal::abi<A>, src, mask, val, init)
-        } -> equivalent_simd_type_with<canonical_if_zero_t<S, T, A>>;
+        } -> equivalent_vector_with<canonical_if_zero_t<S, T, A>>;
     };
 
 template <typename S, typename M, typename T, typename I,
@@ -56,7 +54,7 @@ concept unqualified_canonical_imexscan_min =
         {
             exscan_min(internal::abi<A>, src,
                 internal::to_const_mask<A, exscan_min_t, S, T>(mask), val, init)
-        } -> equivalent_simd_type_with<canonical_if_zero_t<S, T, A>>;
+        } -> equivalent_vector_with<canonical_if_zero_t<S, T, A>>;
     };
 
 template <typename S, typename M, typename T, typename I,
@@ -93,7 +91,7 @@ struct exscan_min_t : private scan_base {
 
     template <typename M, typename T>
     using broadcast_type DPL_NODEBUG =
-        rebind_simd_t<T, simd_element_type_t<T>, typename M::abi_type>;
+        rebind_simd_t<T, simd_element_type_t<T>, simd_abi_type_t<M>>;
 
 public:
     template <canonical_vector T, broadcastable_to<T> I>
@@ -296,7 +294,7 @@ public:
 
 template <typename T>
 concept unqualified_canonical_scan_min = requires(T val) {
-    { scan_min(internal::abi<T>, val) } -> canonical_arithmetic_result<T>;
+    { scan_min(internal::abi<T>, val) } -> equivalent_vector_with<T>;
 };
 
 template <typename T>
@@ -308,7 +306,7 @@ template <typename S, typename M, typename T, typename A = common_abi_t<M, T>>
 concept unqualified_canonical_mscan_min = requires(S src, M mask, T val) {
     {
         scan_min(internal::abi<A>, src, mask, val)
-    } -> equivalent_simd_type_with<canonical_if_zero_t<S, T, A>>;
+    } -> equivalent_vector_with<canonical_if_zero_t<S, T, A>>;
 };
 
 template <typename S, typename M, typename T, typename A = common_abi_t<M, T>>
@@ -320,7 +318,7 @@ template <typename S, typename M, typename T, typename A = common_abi_t<S, T>>
 concept unqualified_canonical_imscan_min = requires(S src, T val) {
     {
         scan_min(internal::abi<A>, src, internal::select_mask<M, S, T>(), val)
-    } -> equivalent_simd_type_with<canonical_if_zero_t<S, T, A>>;
+    } -> equivalent_vector_with<canonical_if_zero_t<S, T, A>>;
 };
 
 template <typename S, typename M, typename T, typename A = common_abi_t<S, T>>

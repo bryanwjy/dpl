@@ -8,8 +8,7 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/immediate.h"
-#  include "dpl/core/concepts/common_abi_with.h"
-#  include "dpl/core/concepts/simd_abi.h"
+#  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/type_traits/simd_abi_type.h"
 #endif
 
@@ -26,16 +25,14 @@ concept unqualified_canonical_mexscan_sum =
     requires(S src, M mask, T val, I init) {
         {
             exscan_sum(internal::abi<A>, src, mask, val, init)
-        } -> equivalent_simd_type_with<canonical_if_zero_t<S, T, A>>;
+        } -> equivalent_vector_with<canonical_if_zero_t<S, T, A>>;
     };
 
 template <typename S, typename M, typename T, typename I,
     typename A = common_abi_t<M, T>>
 concept unqualified_extended_mexscan_sum =
     requires(S src, M mask, T val, I init) {
-        {
-            exscan_sum(src, mask, val, init)
-        } -> equivalent_simd_type_with<canonical_if_zero_t<S, T, A>>;
+        { exscan_sum(src, mask, val, init) } -> vector_with_common_abi<A>;
     };
 
 template <typename S, typename M, typename T, typename I,
@@ -45,7 +42,7 @@ concept unqualified_canonical_imexscan_sum =
         {
             exscan_sum(internal::abi<A>, src,
                 internal::to_const_mask<A, exscan_sum_t, S, T>(mask), val, init)
-        } -> equivalent_simd_type_with<canonical_if_zero_t<S, T, A>>;
+        } -> equivalent_vector_with<canonical_if_zero_t<S, T, A>>;
     };
 
 template <typename S, typename M, typename T, typename I,
@@ -55,7 +52,7 @@ concept unqualified_extended_imexscan_sum =
         {
             exscan_sum(src,
                 internal::to_const_mask<A, exscan_sum_t, S, T>(mask), val, init)
-        } -> equivalent_simd_type_with<canonical_if_zero_t<S, T, A>>;
+        } -> vector_with_common_abi<A>;
     };
 
 struct exscan_sum_t : private exscan_sum_base {
@@ -82,7 +79,7 @@ struct exscan_sum_t : private exscan_sum_base {
 
     template <typename M, typename T>
     using broadcast_type DPL_NODEBUG =
-        rebind_simd_t<T, simd_element_type_t<T>, typename M::abi_type>;
+        rebind_simd_t<T, simd_element_type_t<T>, simd_abi_type_t<M>>;
 
 public:
     using exscan_sum_base::operator();
@@ -262,28 +259,26 @@ template <typename S, typename M, typename T, typename A = common_abi_t<M, T>>
 concept unqualified_canonical_mscan_sum = requires(S src, M mask, T val) {
     {
         scan_sum(internal::abi<A>, src, mask, val)
-    } -> equivalent_simd_type_with<canonical_if_zero_t<S, T, A>>;
+    } -> equivalent_vector_with<canonical_if_zero_t<S, T, A>>;
 };
 
 template <typename S, typename M, typename T, typename A = common_abi_t<M, T>>
 concept unqualified_extended_mscan_sum = requires(S src, M mask, T val) {
-    {
-        scan_sum(src, mask, val)
-    } -> equivalent_simd_type_with<canonical_if_zero_t<S, T, A>>;
+    { scan_sum(src, mask, val) } -> vector_with_common_abi<A>;
 };
 
 template <typename S, typename M, typename R, typename A = common_abi_t<S, R>>
 concept unqualified_canonical_imscan_sum = requires(S src, R val) {
     {
         scan_sum(internal::abi<A>, src, internal::select_mask<M, S, R>(), val)
-    } -> equivalent_simd_type_with<S>;
+    } -> equivalent_vector_with<canonical_if_zero_t<S, R, A>>;
 };
 
 template <typename S, typename M, typename R, typename A = common_abi_t<S, R>>
 concept unqualified_extended_imscan_sum = requires(S src, R val) {
     {
         scan_sum(src, internal::select_mask<M, S, R>(), val)
-    } -> equivalent_simd_type_with<S>;
+    } -> vector_with_common_abi<A>;
 };
 
 struct scan_sum_t : private scan_sum_base {
@@ -306,7 +301,7 @@ struct scan_sum_t : private scan_sum_base {
 
     template <typename M, typename T>
     using broadcast_type DPL_NODEBUG =
-        rebind_simd_t<T, simd_element_type_t<T>, typename M::abi_type>;
+        rebind_simd_t<T, simd_element_type_t<T>, simd_abi_type_t<M>>;
 
 public:
     using scan_sum_base::operator();

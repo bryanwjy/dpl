@@ -8,8 +8,7 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/immediate.h"
-#  include "dpl/core/concepts/common_abi_with.h"
-#  include "dpl/core/concepts/simd_abi.h"
+#  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/operations/bit.h"
 #  include "dpl/core/operations/select.h"
 #  include "dpl/core/type_traits/simd_abi_traits.h"
@@ -77,7 +76,7 @@ private:
 
     template <typename M, typename T>
     using broadcast_type DPL_NODEBUG =
-        rebind_simd_t<T, simd_element_type_t<T>, typename M::abi_type>;
+        rebind_simd_t<T, simd_element_type_t<T>, simd_abi_type_t<M>>;
 
 public:
     template <canonical_mask M, canonical_vector L, canonical_vector R>
