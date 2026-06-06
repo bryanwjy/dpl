@@ -3,6 +3,8 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/type_traits/simd_element_representation.h"
+
 #if !DPL_MODULES
 #  include "dpl/core/fwd/basic.h"
 #endif
@@ -21,9 +23,11 @@ inline constexpr bool is_canonical_type_v<T const volatile> =
     is_canonical_type_v<T>;
 
 template <typename E, typename A>
-inline constexpr bool is_canonical_type_v<basic_vector<E, A>> = true;
+inline constexpr bool is_canonical_type_v<basic_vector<E, A>> =
+    is_same_v<simd_element_representation_t<A, E>, E>;
 template <typename E, typename A>
-inline constexpr bool is_canonical_type_v<basic_mask<E, A>> = true;
+inline constexpr bool is_canonical_type_v<basic_mask<E, A>> =
+    is_same_v<simd_element_representation_t<A, E>, E>;
 
 } // namespace datapar
 

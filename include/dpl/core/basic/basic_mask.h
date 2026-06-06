@@ -26,9 +26,11 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
-DPL_EXPORT template <typename E, simd_abi A>
-requires simd_element_for<E, A>
-class basic_mask<E, A> {
+DPL_EXPORT template <typename E, typename A>
+class basic_mask {
+    static_assert(simd_element_for<E, A> &&
+            is_same_v<simd_element_representation_t<A, E>, E>,
+        "Unsupported element type");
     using abi_traits DPL_NODEBUG = simd_abi_traits<E, A>;
     using mask_type DPL_NODEBUG = typename abi_traits::native_mask;
 

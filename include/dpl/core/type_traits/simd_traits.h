@@ -3,13 +3,14 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/type_traits/simd_abi_traits.h"
 #include "dpl/core/type_traits/simd_abi_type.h"
 #include "dpl/core/type_traits/simd_element_representation.h"
 #include "dpl/core/type_traits/simd_element_type.h"
+#include "dpl/core/type_traits/simd_native_type.h"
+#include "dpl/core/type_traits/simd_value_type.h"
 
 #if !DPL_MODULES
-#  include "dpl/std/type_traits/conditional.h"
+#  include "dpl/std/type_traits/remove_cv.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -19,17 +20,15 @@ DPL_EXPORT template <typename>
 struct simd_traits {};
 
 DPL_EXPORT template <typename T>
-requires enable_simd_mask<T> || enable_simd_vector<T>
+requires enable_simd_mask<remove_cv_t<T>> || enable_simd_vector<remove_cv_t<T>>
 struct simd_traits<T> {
-    using type = T;
+    using type = remove_cv_t<T>;
     using abi_type = simd_abi_type_t<T>;
-    using value_type = typename T::value_type;
+    using value_type = simd_value_type_t<T>;
     using element_type = simd_element_type_t<T>;
     using element_representation =
         simd_element_representation_t<abi_type, element_type>;
-    using native_type = conditional_t<enable_simd_mask<T>,
-        typename simd_abi_traits<abi_type, element_type>::native_mask,
-        typename simd_abi_traits<abi_type, element_type>::native_vector>;
+    using native_type = simd_native_type_t<T>;
 };
 
 } // namespace datapar

@@ -54,7 +54,7 @@ template <typename T, typename I, typename A = common_abi_t<T, I>>
 concept extended_ldexp = unqualified_extended_ldexp<T, I, A> ||
     expression_ldexp<T, I> || decayable_ldexp<T, I>;
 
-struct ldexp_t :
+struct DPL_EMPTY_BASES ldexp_t :
     private binary_operation_base<ldexp_t>,
     private mx::masked_operation<ldexp_t> {
     friend binary_operation_base<ldexp_t>;

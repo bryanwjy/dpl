@@ -18,9 +18,11 @@
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
-DPL_EXPORT template <typename E, simd_abi A>
-requires simd_element_for<E, A>
-class basic_vector<E, A> {
+DPL_EXPORT template <typename E, typename A>
+class basic_vector {
+    static_assert(simd_element_for<E, A> &&
+            is_same_v<simd_element_representation_t<A, E>, E>,
+        "Unsupported element type");
     using abi_traits DPL_NODEBUG = simd_abi_traits<E, A>;
     using vector_type DPL_NODEBUG = typename abi_traits::native_vector;
 

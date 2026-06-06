@@ -27,9 +27,7 @@ struct broadcast_lane_t;
 
 template <typename T, typename N>
 concept unqualified_canonical_broadcast_lanei = requires(T val, N idx) {
-    {
-        broadcast_lane(internal::abi<T>, val, idx)
-    } -> canonical_permute_result<T>;
+    { broadcast_lane(internal::abi<T>, val, idx) } -> equivalent_vector_with<T>;
 };
 
 template <typename T, typename N>
@@ -143,9 +141,7 @@ concept extended_imbroadcast_lanei =
 
 template <typename T>
 concept unqualified_canonical_broadcast_lane = requires(T val, size_t idx) {
-    {
-        broadcast_lane(internal::abi<T>, val, idx)
-    } -> canonical_permute_result<T>;
+    { broadcast_lane(internal::abi<T>, val, idx) } -> equivalent_vector_with<T>;
 };
 
 template <typename T>

@@ -10,6 +10,7 @@
 #if !DPL_MODULES
 #  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/concepts/simd_element.h"
+#  include "dpl/core/type_traits/simd_element_type.h"
 #  include "dpl/std/type_traits/enable_if.h"
 #endif
 
@@ -160,7 +161,7 @@ public:
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     constexpr D operator-(this D self) noexcept
-    requires simd_vector<D> && basic_element<typename D::value_type> &&
+    requires simd_vector<D> && basic_element<simd_element_type_t<D>> &&
         regular_invocable<internal::negate_t, D>
     {
         return internal::negate_t::operator()(self);

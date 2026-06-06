@@ -19,6 +19,7 @@ import :std.concepts;
 #include "dpl/std/utility/forward_as.h"
 #include "dpl/std/utility/forward_like.h"
 #include "dpl/std/utility/ignore.h"
+#include "dpl/std/utility/integer_sequence_like.h"
 #include "dpl/std/utility/move.h"
 #include "dpl/std/utility/sequence.h"
 #include "dpl/std/utility/structured_bindings.h"

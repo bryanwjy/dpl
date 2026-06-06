@@ -112,18 +112,4 @@ concept imm_zmaskable_args =
 
 } // namespace datapar::internal
 
-namespace datapar {
-
-DPL_EXPORT struct masked_operation_t {
-    explicit consteval masked_operation_t() noexcept = default;
-
-    template <integral_constant_like T>
-    consteval operator T(this masked_operation_t) noexcept {
-        return T{};
-    }
-};
-
-DPL_EXPORT inline constexpr masked_operation_t masked_operation{};
-
-} // namespace datapar
 DPL_DEFAULT_NAMESPACE_END

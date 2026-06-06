@@ -56,7 +56,7 @@ template <typename AT, typename BT, typename CT,
 concept extended_lerp = unqualified_extended_lerp<AT, BT, CT, A> ||
     expression_lerp<AT, BT, CT> || decayable_lerp<AT, BT, CT>;
 
-struct lerp_t :
+struct DPL_EMPTY_BASES lerp_t :
     private ternary_operation_base<lerp_t>,
     private mx::masked_operation<lerp_t> {
 private:

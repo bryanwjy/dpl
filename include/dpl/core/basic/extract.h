@@ -7,6 +7,8 @@
 #include "dpl/core/basic/to_canonical.h"
 
 #if !DPL_MODULES
+#  include "dpl/core/fwd.h"
+
 #  include "dpl/core/concepts/canonical.h"
 #  include "dpl/core/concepts/extended.h"
 #  include "dpl/std/concepts/integral.h"

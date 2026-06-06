@@ -54,7 +54,7 @@ template <typename L, typename R, typename A = common_abi_t<L, R>>
 concept extended_pow = unqualified_extended_pow<L, R, A> ||
     expression_pow<L, R> || decayable_pow<L, R>;
 
-struct pow_t :
+struct DPL_EMPTY_BASES pow_t :
     private binary_operation_base<pow_t>,
     private mx::masked_operation<pow_t> {
 private:
