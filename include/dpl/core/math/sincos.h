@@ -4,7 +4,6 @@
 #include "dpl/config.h"
 
 #include "dpl/core/math/internal/ilogb.h"
-#include "dpl/core/math/internal/masked_op.h"
 #include "dpl/core/math/internal/pair.h"
 #include "dpl/core/math/internal/polynomial.h"
 #include "dpl/core/math/internal/rempi_table.h"
@@ -13,24 +12,658 @@
 #include "dpl/core/math/trunc.h"
 
 #if !DPL_MODULES
+#  include "dpl/core/basic/gather.h"
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/constants/inv_pi.h"
-#  include "dpl/core/constants/zero.h"
-#  include "dpl/core/operations/bitwise.h"
+#  include "dpl/core/dispatch/interface.h"
+#  include "dpl/core/dispatch/maskable/transform.h"
+#  include "dpl/core/dispatch/operation/math.h"
+#  include "dpl/core/immediate/constants/inv_pi.h"
+#  include "dpl/core/immediate/constants/zero.h"
+#  include "dpl/core/operations/bitwise.h" // IWYU pragma: keep
 #  include "dpl/core/operations/compare.h"
-#  include "dpl/core/operations/gather.h"
 #  include "dpl/core/operations/logical.h"
 #  include "dpl/core/operations/select.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
-class sincos_base {
-protected:
-    __DPL_HIDE_FROM_ABI constexpr ~sincos_base() = default;
 
+void sin(...) noexcept = delete;
+void cos(...) noexcept = delete;
+void sincos(...) noexcept = delete;
+
+struct DPL_EMPTY_BASES sin_t :
+    private math_operation_base<sin_t>,
+    private maskable_transform_base<sin_t> {
+    using math_operation_base<sin_t>::operator();
+    using maskable_transform_base<sin_t>::operator();
+};
+struct DPL_EMPTY_BASES cos_t :
+    private math_operation_base<cos_t>,
+    private maskable_transform_base<cos_t> {
+    using math_operation_base<cos_t>::operator();
+    using maskable_transform_base<cos_t>::operator();
+};
+struct DPL_EMPTY_BASES sincos_t :
+    private math_operation_base<sincos_t>,
+    private maskable_transform_base<sincos_t> {
+    using math_operation_base<sincos_t>::operator();
+    using maskable_transform_base<sincos_t>::operator();
+};
+
+template <>
+struct operation_signature<sin_t> {
+    static consteval void operator()(simd_vector auto&&) noexcept {}
+};
+
+template <>
+struct operation_signature<cos_t> {
+    static consteval void operator()(simd_vector auto&&) noexcept {}
+};
+
+template <>
+struct operation_signature<sincos_t> {
+    template <simd_vector T, typename O>
+    requires exact_mask_for<O, T> || const_mask_for<O, T>
+    static consteval void operator()(T&&, O&&) noexcept {}
+};
+
+template <auto V>
+struct sincosi_t {
+private:
+    template <typename T>
+    using mask_type DPL_NODEBUG = make_const_mask_t<remove_cvref_t<T>, V>;
+
+    template <typename T>
+    static constexpr mask_type<T> opmask{};
+
+public:
+    template <simd_vector T>
+    requires requires { typename mask_type<T>; } &&
+        cpo_invocable<sincos_t, T, mask_type<T>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T&& arg) noexcept(canonical_vector<T>) {
+        return sincos_t::operator()(__DPL forward<T>(arg), opmask<T>);
+    }
+
+    template <simd_vector S, typename M, simd_vector T>
+    requires requires { typename mask_type<T>; } &&
+        cpo_invocable<sincos_t, T, S, M, mask_type<T>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(S&& src, M&& mask, T&& arg) noexcept(
+        canonical_vector<T> && canonical_vector<S> &&
+        (!simd_mask<M> || canonical_mask<M>)) {
+        return sincos_t::operator()(__DPL forward<T>(src),
+            __DPL forward<T>(mask), __DPL forward<T>(arg), opmask<T>);
+    }
+    template <typename M, simd_vector T>
+    requires requires { typename mask_type<T>; } &&
+        cpo_invocable<sincos_t, dx::zero_t, T, M, mask_type<T>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(
+        dx::zero_t zero, M&& mask, T&& arg) noexcept(canonical_vector<T> &&
+        (!simd_mask<M> || canonical_mask<M>)) {
+        return sincos_t::operator()(
+            zero, __DPL forward<T>(mask), __DPL forward<T>(arg), opmask<T>);
+    }
+
+    template <typename M, simd_vector T>
+    requires requires { typename mask_type<T>; } &&
+        cpo_invocable<sincos_t, dx::zero_t, T, M, mask_type<T>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(M&& mask, T&& arg) noexcept(
+        canonical_vector<T> && (!simd_mask<M> || canonical_mask<M>)) {
+        return operator()(
+            dx::zero, __DPL forward<T>(mask), __DPL forward<T>(arg));
+    }
+};
+
+template <typename S, typename M, typename T>
+concept unqualified_canonical_msin =
+    (!simd_type<S> || same_as<S, cpo_result_t<sin_t, T>>) &&
+    requires(S src, M mask, T val) {
+        {
+            sin(internal::abi<T>, src, mask, val)
+        } -> same_as<cpo_result_t<sin_t, T>>;
+    };
+
+template <>
+struct canonical_impl<sin_t> {
+private:
+    template <typename T>
+    using mask_t DPL_NODEBUG =
+        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
+
+    template <typename T>
+    using imask_t DPL_NODEBUG = mask_value_t<simd_abi_traits<T>::size>;
+
+    template <typename T, imask_t<T> M>
+    using cmask_t DPL_NODEBUG = const_mask<simd_abi_traits<T>::size, M>;
+
+public:
+    template <simd_abi A, simd_element_for<A> E>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr basic_vector<E, A> operator()(
+        basic_vector<E, A> val) noexcept
+    requires requires { sin(internal::abi<A>, val); }
+    {
+        return sin(internal::abi<A>, val);
+    }
+
+    template <canonical_vector T>
+    requires unqualified_canonical_msin<type_identity_t<T>, mask_t<T>, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(
+        type_identity_t<T> src, mask_t<T> mask, T val) noexcept {
+        return sin(internal::abi<T>, src, mask, val);
+    }
+
+    template <fixed_width_vector T, imask_t<T> M>
+    requires canonical_vector<T> &&
+        unqualified_canonical_msin<type_identity_t<T>, cmask_t<T, M>, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(
+        type_identity_t<T> src, cmask_t<T, M> cmask, T val) noexcept {
+        return sin(internal::abi<T>, src, cmask, val);
+    }
+
+    template <canonical_vector T>
+    requires unqualified_canonical_msin<dx::zero_t, mask_t<T>, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(
+        dx::zero_t zero, mask_t<T> mask, T val) noexcept {
+        return sin(internal::abi<T>, zero, mask, val);
+    }
+
+    template <fixed_width_vector T, imask_t<T> M>
+    requires canonical_vector<T> &&
+        unqualified_canonical_msin<dx::zero_t, cmask_t<T, M>, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(
+        dx::zero_t zero, cmask_t<T, M> cmask, T val) noexcept {
+        return sin(internal::abi<T>, zero, cmask, val);
+    }
+};
+
+template <typename T, typename A = simd_abi_type_t<T>>
+concept unqualified_extended_sin = requires {
+    { sin(internal::declarg<T>()) } -> vector_with_common_abi<A>;
+};
+
+template <typename S, typename M, typename T>
+concept unqualified_extended_msin =
+    (!simd_type<S> || equivalent_vector_with<S, cpo_result_t<sin_t, T>>) &&
+    requires {
+        {
+            sin(internal::declarg<S>(), internal::declarg<M>(),
+                internal::declarg<T>())
+        } -> equivalent_vector_with<cpo_result_t<sin_t, T>>;
+    };
+
+template <>
+struct extended_impl<sin_t> {
+private:
+    template <typename T>
+    using imask_t DPL_NODEBUG = mask_value_t<simd_abi_traits<T>::size>;
+
+    template <typename T, imask_t<T> M>
+    using cmask_t DPL_NODEBUG = const_mask<simd_abi_traits<T>::size, M>;
+
+    template <typename T>
+    using mask_t DPL_NODEBUG =
+        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
+
+public:
+    template <extended_vector T>
+    requires unqualified_extended_sin<T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T&& val) {
+        return sin(__DPL forward<T>(val));
+    }
+
+    template <simd_vector S, common_vector_with<S> T,
+        equivalent_mask_with<mask_t<S>> M>
+    requires (extended_vector<S> || extended_mask<M> || extended_vector<T>) &&
+        unqualified_extended_msin<S, M, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(S&& src, M&& mask, T&& val) {
+        return sin( __DPL forward<S>(src), __DPL forward<M>(mask),
+            __DPL forward<T>(val));
+    }
+
+    template <fixed_width_vector S, imask_t<S> M, common_vector_with<S> T>
+    requires (extended_vector<S> || extended_vector<T>) &&
+        unqualified_extended_msin<S, cmask_t<S, M>, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(S&& src, cmask_t<S, M> cmask, T&& val) {
+        return sin( __DPL forward<S>(src), cmask, __DPL forward<T>(val));
+    }
+
+    template <simd_vector T, common_mask_with<mask_t<T>> M>
+    requires (extended_mask<M> || extended_vector<T>) &&
+        unqualified_extended_msin<dx::zero_t, M, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(dx::zero_t zero, M&& mask, T&& val) {
+        return sin(zero, __DPL forward<M>(mask), __DPL forward<T>(val));
+    }
+
+    template <fixed_width_vector T, imask_t<T> M>
+    requires extended_vector<T> &&
+        unqualified_extended_msin<dx::zero_t, cmask_t<T, M>, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(
+        dx::zero_t zero, cmask_t<T, M> cmask, T&& val) {
+        return sin(zero, cmask, __DPL forward<T>(val));
+    }
+};
+
+template <typename S, typename M, typename T>
+concept unqualified_canonical_mcos =
+    (!simd_type<S> || same_as<S, cpo_result_t<cos_t, T>>) &&
+    requires(S src, M mask, T val) {
+        {
+            cos(internal::abi<T>, src, mask, val)
+        } -> same_as<cpo_result_t<cos_t, T>>;
+    };
+
+template <>
+struct canonical_impl<cos_t> {
+private:
+    template <typename T>
+    using mask_t DPL_NODEBUG =
+        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
+
+    template <typename T>
+    using imask_t DPL_NODEBUG = mask_value_t<simd_abi_traits<T>::size>;
+
+    template <typename T, imask_t<T> M>
+    using cmask_t DPL_NODEBUG = const_mask<simd_abi_traits<T>::size, M>;
+
+public:
+    template <simd_abi A, simd_element_for<A> E>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr basic_vector<E, A> operator()(
+        basic_vector<E, A> val) noexcept
+    requires requires { cos(internal::abi<A>, val); }
+    {
+        return cos(internal::abi<A>, val);
+    }
+
+    template <canonical_vector T>
+    requires unqualified_canonical_mcos<type_identity_t<T>, mask_t<T>, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(
+        type_identity_t<T> src, mask_t<T> mask, T val) noexcept {
+        return cos(internal::abi<T>, src, mask, val);
+    }
+
+    template <fixed_width_vector T, imask_t<T> M>
+    requires canonical_vector<T> &&
+        unqualified_canonical_mcos<type_identity_t<T>, cmask_t<T, M>, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(
+        type_identity_t<T> src, cmask_t<T, M> cmask, T val) noexcept {
+        return cos(internal::abi<T>, src, cmask, val);
+    }
+
+    template <canonical_vector T>
+    requires unqualified_canonical_mcos<dx::zero_t, mask_t<T>, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(
+        dx::zero_t zero, mask_t<T> mask, T val) noexcept {
+        return cos(internal::abi<T>, zero, mask, val);
+    }
+
+    template <fixed_width_vector T, imask_t<T> M>
+    requires canonical_vector<T> &&
+        unqualified_canonical_mcos<dx::zero_t, cmask_t<T, M>, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(
+        dx::zero_t zero, cmask_t<T, M> cmask, T val) noexcept {
+        return cos(internal::abi<T>, zero, cmask, val);
+    }
+};
+
+template <typename T, typename A = simd_abi_type_t<T>>
+concept unqualified_extended_cos = requires {
+    { cos(internal::declarg<T>()) } -> vector_with_common_abi<A>;
+};
+
+template <typename S, typename M, typename T>
+concept unqualified_extended_mcos =
+    (!simd_type<S> || equivalent_vector_with<S, cpo_result_t<cos_t, T>>) &&
+    requires {
+        {
+            cos(internal::declarg<S>(), internal::declarg<M>(),
+                internal::declarg<T>())
+        } -> equivalent_vector_with<cpo_result_t<cos_t, T>>;
+    };
+
+template <>
+struct extended_impl<cos_t> {
+private:
+    template <typename T>
+    using imask_t DPL_NODEBUG = mask_value_t<simd_abi_traits<T>::size>;
+
+    template <typename T, imask_t<T> M>
+    using cmask_t DPL_NODEBUG = const_mask<simd_abi_traits<T>::size, M>;
+
+    template <typename T>
+    using mask_t DPL_NODEBUG =
+        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
+
+public:
+    template <extended_vector T>
+    requires unqualified_extended_cos<T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T&& val) {
+        return cos(__DPL forward<T>(val));
+    }
+
+    template <simd_vector S, common_vector_with<S> T,
+        equivalent_mask_with<mask_t<S>> M>
+    requires (extended_vector<S> || extended_mask<M> || extended_vector<T>) &&
+        unqualified_extended_mcos<S, M, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(S&& src, M&& mask, T&& val) {
+        return cos( __DPL forward<S>(src), __DPL forward<M>(mask),
+            __DPL forward<T>(val));
+    }
+
+    template <fixed_width_vector S, imask_t<S> M, common_vector_with<S> T>
+    requires (extended_vector<S> || extended_vector<T>) &&
+        unqualified_extended_mcos<S, cmask_t<S, M>, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(S&& src, cmask_t<S, M> cmask, T&& val) {
+        return cos( __DPL forward<S>(src), cmask, __DPL forward<T>(val));
+    }
+
+    template <simd_vector T, common_mask_with<mask_t<T>> M>
+    requires (extended_mask<M> || extended_vector<T>) &&
+        unqualified_extended_mcos<dx::zero_t, M, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(dx::zero_t zero, M&& mask, T&& val) {
+        return cos(zero, __DPL forward<M>(mask), __DPL forward<T>(val));
+    }
+
+    template <fixed_width_vector T, imask_t<T> M>
+    requires extended_vector<T> &&
+        unqualified_extended_mcos<dx::zero_t, cmask_t<T, M>, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(
+        dx::zero_t zero, cmask_t<T, M> cmask, T&& val) {
+        return cos(zero, cmask, __DPL forward<T>(val));
+    }
+};
+
+template <typename T, typename O>
+concept unqualified_canonical_sincos = requires(T val, O opmask) {
+    { sincos(internal::abi<T>, val, opmask) } -> same_as<T>;
+};
+
+template <typename S, typename M, typename T, typename O>
+concept unqualified_canonical_msincos =
+    (!simd_type<S> || same_as<S, cpo_result_t<sincos_t, T, O>>) &&
+    requires(S src, M mask, T val, O opmask) {
+        {
+            sincos(internal::abi<T>, src, mask, val, opmask)
+        } -> same_as<cpo_result_t<sincos_t, T, O>>;
+    };
+
+template <>
+struct canonical_impl<sincos_t> {
+private:
+    template <typename T>
+    using mask_t DPL_NODEBUG =
+        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
+
+    template <typename T>
+    using imask_t DPL_NODEBUG = mask_value_t<simd_abi_traits<T>::size>;
+
+    template <typename T, imask_t<T> M>
+    using cmask_t DPL_NODEBUG = const_mask<simd_abi_traits<T>::size, M>;
+
+public:
+    template <fixed_width_vector T, const_mask_for<T> O>
+    requires unqualified_canonical_sincos<T, O>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(T val, O ops) noexcept {
+        constexpr auto opmask = dx::to_compatible_const_mask<T>(ops);
+        return sincos(internal::abi<T>, val, opmask);
+    }
+
+    template <fixed_width_vector T, const_mask_for<T> O>
+    requires unqualified_canonical_msincos<type_identity_t<T>, mask_t<T>, T,
+        launder_cmask_t<T, O>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(
+        type_identity_t<T> src, mask_t<T> mask, T val, O ops) noexcept {
+
+        constexpr auto opmask = dx::to_compatible_const_mask<T>(ops);
+        return sincos(internal::abi<T>, src, mask, val, opmask);
+    }
+
+    template <fixed_width_vector T, imask_t<T> M, const_mask_for<T> O>
+    requires canonical_vector<T> &&
+        unqualified_canonical_msincos<type_identity_t<T>, cmask_t<T, M>, T,
+            launder_cmask_t<T, O>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(
+        type_identity_t<T> src, cmask_t<T, M> cmask, T val, O ops) noexcept {
+        constexpr auto opmask = dx::to_compatible_const_mask<T>(ops);
+        return sincos(internal::abi<T>, src, cmask, val, opmask);
+    }
+
+    template <fixed_width_vector T, const_mask_for<T> O>
+    requires unqualified_canonical_msincos<dx::zero_t, mask_t<T>, T,
+        launder_cmask_t<T, O>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(
+        dx::zero_t zero, mask_t<T> mask, T val, O ops) noexcept {
+        constexpr auto opmask = dx::to_compatible_const_mask<T>(ops);
+        return sincos(internal::abi<T>, zero, mask, val, opmask);
+    }
+
+    template <fixed_width_vector T, imask_t<T> M, const_mask_for<T> O>
+    requires canonical_vector<T> &&
+        unqualified_canonical_msincos<dx::zero_t, cmask_t<T, M>, T,
+            launder_cmask_t<T, O>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(
+        dx::zero_t zero, cmask_t<T, M> cmask, T val, O ops) noexcept {
+        constexpr auto opmask = dx::to_compatible_const_mask<T>(ops);
+        return sincos(internal::abi<T>, zero, cmask, val, opmask);
+    }
+
+    ///
+    template <fixed_width_vector T, exact_mask_for<T> O>
+    requires unqualified_canonical_sincos<T, O>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(T val, O opmask) noexcept {
+        return sincos(internal::abi<T>, val, opmask);
+    }
+
+    template <canonical_vector T, exact_mask_for<T> O>
+    requires canonical_mask<O> &&
+        unqualified_canonical_msincos<type_identity_t<T>, mask_t<T>, T, O>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(
+        type_identity_t<T> src, mask_t<T> mask, T val, O opmask) noexcept {
+        return sincos(internal::abi<T>, src, mask, val, opmask);
+    }
+
+    template <fixed_width_vector T, imask_t<T> M, exact_mask_for<T> O>
+    requires canonical_vector<T> && canonical_mask<O> &&
+        unqualified_canonical_msincos<type_identity_t<T>, cmask_t<T, M>, T, O>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(
+        type_identity_t<T> src, cmask_t<T, M> cmask, T val, O opmask) noexcept {
+        return sincos(internal::abi<T>, src, cmask, val, opmask);
+    }
+
+    template <canonical_vector T, exact_mask_for<T> O>
+    requires canonical_mask<O> &&
+        unqualified_canonical_msincos<dx::zero_t, mask_t<T>, T, O>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(
+        dx::zero_t zero, mask_t<T> mask, T val, O opmask) noexcept {
+        return sincos(internal::abi<T>, zero, mask, val, opmask);
+    }
+
+    template <fixed_width_vector T, imask_t<T> M, exact_mask_for<T> O>
+    requires canonical_vector<T> && canonical_mask<O> &&
+        unqualified_canonical_msincos<dx::zero_t, cmask_t<T, M>, T, O>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(
+        dx::zero_t zero, cmask_t<T, M> cmask, T val, O opmask) noexcept {
+        return sincos(internal::abi<T>, zero, cmask, val, opmask);
+    }
+};
+
+template <typename T, typename O, typename A = simd_abi_type_t<T>>
+concept unqualified_extended_sincos = requires {
+    {
+        sincos(internal::declarg<T>(), internal::declarg<O>())
+    } -> vector_with_common_abi<A>;
+};
+
+template <typename S, typename M, typename T, typename O>
+concept unqualified_extended_msincos =
+    (!simd_type<S> ||
+        equivalent_vector_with<S, cpo_result_t<sincos_t, T, O>>) &&
+    requires {
+        {
+            sincos(internal::declarg<S>(), internal::declarg<M>(),
+                internal::declarg<T>(), internal::declarg<O>())
+        } -> equivalent_vector_with<cpo_result_t<sincos_t, T, O>>;
+    };
+
+template <>
+struct extended_impl<sincos_t> {
+private:
+    template <typename T>
+    using imask_t DPL_NODEBUG = mask_value_t<simd_abi_traits<T>::size>;
+
+    template <typename T, imask_t<T> M>
+    using cmask_t DPL_NODEBUG = const_mask<simd_abi_traits<T>::size, M>;
+
+    template <typename T>
+    using mask_t DPL_NODEBUG =
+        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
+
+public:
+    template <fixed_width_vector T, const_mask_for<T> O>
+    requires extended_vector<T> && unqualified_extended_sincos<T, O>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T val, O ops) {
+        constexpr auto opmask = dx::to_compatible_const_mask<T>(ops);
+        return sincos(val, opmask);
+    }
+
+    template <fixed_width_vector S, exact_mask_for<S> M, fixed_width_vector T,
+        const_mask_for<T> O>
+    requires (extended_vector<S> || extended_mask<M> || extended_vector<T>) &&
+        unqualified_extended_msincos<S, M, T, launder_cmask_t<T, O>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(S&& src, M&& mask, T&& val, O ops) {
+        constexpr auto opmask = dx::to_compatible_const_mask<T>(ops);
+        return sincos(__DPL forward<S>(src), __DPL forward<M>(mask),
+            __DPL forward<T>(val), opmask);
+    }
+
+    template <fixed_width_vector S, imask_t<S> M, fixed_width_vector T,
+        const_mask_for<T> O>
+    requires (extended_vector<S> || extended_vector<T>) &&
+        unqualified_extended_msincos<S, cmask_t<T, M>, T, launder_cmask_t<T, O>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(
+        S&& src, cmask_t<S, M> cmask, T&& val, O ops) {
+        constexpr auto opmask = dx::to_compatible_const_mask<T>(ops);
+        return sincos(
+            __DPL forward<S>(src), cmask, __DPL forward<T>(val), opmask);
+    }
+
+    template <fixed_width_vector T, const_mask_for<T> O, exact_mask_for<T> M>
+    requires (extended_mask<M> || extended_vector<T>) &&
+        unqualified_extended_msincos<dx::zero_t, M, T, launder_cmask_t<T, O>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(
+        dx::zero_t zero, M&& mask, T&& val, O ops) {
+        constexpr auto opmask = dx::to_compatible_const_mask<T>(ops);
+        return sincos(
+            zero, __DPL forward<M>(mask), __DPL forward<T>(val), opmask);
+    }
+
+    template <fixed_width_vector T, imask_t<T> M, const_mask_for<T> O>
+    requires extended_vector<T> &&
+        unqualified_extended_msincos<dx::zero_t, cmask_t<T, M>, T,
+            launder_cmask_t<T, O>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(
+        dx::zero_t zero, cmask_t<T, M> cmask, T&& val, O ops) {
+        constexpr auto opmask = dx::to_compatible_const_mask<T>(ops);
+        return sincos(zero, cmask, __DPL forward<T>(val), opmask);
+    }
+
+    ///
+    template <fixed_width_vector T, exact_mask_for<T> O>
+    requires extended_vector<T> && unqualified_extended_sincos<T, O>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T val, O ops) {
+        constexpr auto opmask = dx::to_compatible_const_mask<T>(ops);
+        return sincos(val, opmask);
+    }
+
+    template <simd_vector S, exact_mask_for<S> M, simd_vector T,
+        exact_mask_for<T> O>
+    requires (extended_vector<S> || extended_mask<M> || extended_vector<T> ||
+                 extended_mask<O>) &&
+        unqualified_extended_msincos<S, M, T, O>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(S&& src, M&& mask, T&& val, O&& opmask) {
+        return sincos( __DPL forward<S>(src), __DPL forward<M>(mask),
+            __DPL forward<T>(val), __DPL forward<O>(opmask));
+    }
+
+    template <fixed_width_vector S, imask_t<S> M, fixed_width_vector T,
+        exact_mask_for<T> O>
+    requires (extended_vector<S> || extended_vector<T> || extended_mask<O>) &&
+        unqualified_extended_msincos<S, cmask_t<T, M>, T, O>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(
+        S&& src, cmask_t<T, M> cmask, T&& val, O&& opmask) {
+        return sincos( __DPL forward<S>(src), cmask, __DPL forward<T>(val),
+            __DPL forward<O>(opmask));
+    }
+
+    template <simd_vector T, exact_mask_for<T> O, exact_mask_for<T> M>
+    requires (extended_mask<M> || extended_vector<T> || extended_mask<O>) &&
+        unqualified_extended_msincos<dx::zero_t, M, T, O>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(
+        dx::zero_t zero, M&& mask, T&& val, O&& opmask) {
+        return sincos(zero, __DPL forward<M>(mask), __DPL forward<T>(val),
+            __DPL forward<O>(opmask));
+    }
+
+    template <fixed_width_vector T, imask_t<T> M, exact_mask_for<T> O>
+    requires (extended_vector<T> || extended_mask<O>) &&
+        unqualified_canonical_msincos<dx::zero_t, cmask_t<T, M>, T, O>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(
+        dx::zero_t zero, cmask_t<T, M> cmask, T&& val, O&& opmask) {
+        return sincos(
+            zero, cmask, __DPL forward<T>(val), __DPL forward<O>(opmask));
+    }
+};
+
+template <>
+struct fallback_impl<sincos_t> {
+private:
     template <floating_point E, simd_abi A>
-    static constexpr fmath::pair<E, A> pi_pair = []() {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr fmath::pair<E, A>
+        DPL_VECTORCALL pi_pair() noexcept {
         // NOLINTBEGIN
         if constexpr (same_as<float, E>) {
             return fmath::make_pair(                          //
@@ -45,7 +678,7 @@ protected:
             );
         }
         // NOLINTEND
-    }();
+    }
 
     template <floating_point T>
     static constexpr auto polynomial = []() {
@@ -77,25 +710,12 @@ protected:
         constexpr float b = 0.00011315941810607910156f; // NOLINT
         constexpr float c = 1.9841872589410058936e-09f; // NOLINT
         using simdf = basic_vector<float, A>;
-        if constexpr (simd_mask<OpMask>) {
-            auto scale = dx::select(opmask, fmath::half, dx::one_v<simdf>);
-            auto sa = a * scale;
-            auto sb = b * scale;
-            auto sc = c * scale;
+        auto scale = dx::select(opmask, fmath::half, dx::one_v<simdf>);
+        auto sa = a * scale;
+        auto sb = b * scale;
+        auto sc = c * scale;
 
-            return dx::fnmadd(
-                qf, sc, dx::fnmadd(qf, sb, dx::fnmadd(qf, sa, arg)));
-
-        } else {
-            constexpr auto scale =
-                dx::select(opmask, fmath::half, dx::one_v<simdf>);
-            constexpr auto sa = a * scale;
-            constexpr auto sb = b * scale;
-            constexpr auto sc = c * scale;
-
-            return dx::fnmadd(
-                qf, sc, dx::fnmadd(qf, sb, dx::fnmadd(qf, sa, arg)));
-        }
+        return dx::fnmadd(qf, sc, dx::fnmadd(qf, sb, dx::fnmadd(qf, sa, arg)));
     }
 
     template <simd_abi A, typename OpMask>
@@ -111,26 +731,13 @@ protected:
         constexpr float c1 = 5.960464477539063e-08f;  // NOLINT
         constexpr float d1 = 1.5893254712295857e-08f; // NOLINT
         using simdf = basic_vector<float, A>;
-        if constexpr (simd_mask<OpMask>) {
-            auto sa = dx::select(opmask, dx::broadcast<A>(a1), a0);
-            auto sb = dx::select(opmask, dx::broadcast<A>(b1), b0);
-            auto sc = dx::select(opmask, dx::broadcast<A>(c1), c0);
-            auto sd = dx::select(opmask, dx::broadcast<A>(d1), d0);
+        auto sa = dx::select(opmask, dx::broadcast<A>(a1), a0);
+        auto sb = dx::select(opmask, dx::broadcast<A>(b1), b0);
+        auto sc = dx::select(opmask, dx::broadcast<A>(c1), c0);
+        auto sd = dx::select(opmask, dx::broadcast<A>(d1), d0);
 
-            return dx::fnmadd(qf, sd,
-                dx::fnmadd(
-                    qf, sc, dx::fnmadd(qf, sb, dx::fnmadd(qf, sa, arg))));
-
-        } else {
-            constexpr auto sa = dx::select(opmask, dx::broadcast<A>(a1), a0);
-            constexpr auto sb = dx::select(opmask, dx::broadcast<A>(b1), b0);
-            constexpr auto sc = dx::select(opmask, dx::broadcast<A>(c1), c0);
-            constexpr auto sd = dx::select(opmask, dx::broadcast<A>(d1), d0);
-
-            return dx::fnmadd(qf, sd,
-                dx::fnmadd(
-                    qf, sc, dx::fnmadd(qf, sb, dx::fnmadd(qf, sa, arg))));
-        }
+        return dx::fnmadd(qf, sd,
+            dx::fnmadd(qf, sc, dx::fnmadd(qf, sb, dx::fnmadd(qf, sa, arg))));
     }
 
     template <simd_abi A, typename OpMask>
@@ -142,20 +749,11 @@ protected:
         constexpr double b = 1.2246467991473532072e-16; // NOLINT
         using simdf = basic_vector<float, A>;
 
-        if constexpr (simd_mask<OpMask>) {
-            auto scale = dx::select(opmask, fmath::half, dx::one_v<simdf>);
-            auto scaled_pi = fmath::scale(pi_pair<double, A>, scale);
+        auto const scale = dx::select(opmask, fmath::half, dx::one_v<simdf>);
+        auto const scaled_pi = fmath::scale(pi_pair<double, A>(), scale);
 
-            return dx::fnmadd(
-                qf, scaled_pi.lower, dx::fnmadd(qf, scaled_pi.upper, arg));
-        } else {
-            constexpr auto scale =
-                dx::select(opmask, fmath::half, dx::one_v<simdf>);
-            constexpr auto scaled_pi = fmath::scale(pi_pair<double, A>, scale);
-
-            return dx::fnmadd(
-                qf, scaled_pi.lower, dx::fnmadd(qf, scaled_pi.upper, arg));
-        }
+        return dx::fnmadd(
+            qf, scaled_pi.lower, dx::fnmadd(qf, scaled_pi.upper, arg));
     }
 
     template <simd_abi A, typename OpMask>
@@ -176,36 +774,19 @@ protected:
         constexpr double c = 1.2246467864107188502e-16; // NOLINT
         constexpr double d = 1.2736634327021899816e-24; // NOLINT
         using simdf = basic_vector<float, A>;
-        if constexpr (simd_mask<OpMask>) {
-            auto scale = dx::select(opmask, fmath::half, dx::one_v<simdf>);
-            auto sa = a * scale;
-            auto sb = b * scale;
-            auto sc = c * scale;
-            auto sd = d * scale;
+        auto scale = dx::select(opmask, fmath::half, dx::one_v<simdf>);
+        auto sa = a * scale;
+        auto sb = b * scale;
+        auto sc = c * scale;
+        auto sd = d * scale;
 
-            return dx::fnmadd(dq.lower + dq.upper, d,
-                dx::fnmadd(dq.lower, c,
-                    dx::fnmadd(dq.upper, c,
-                        dx::fnmadd(dq.lower, b,
-                            dx::fnmadd(dq.upper, b,
-                                dx::fnmadd(dq.lower, a,
-                                    dx::fnmadd(dq.upper, a, arg)))))));
-        } else {
-            constexpr auto scale =
-                dx::select(opmask, fmath::half, dx::one_v<simdf>);
-            constexpr auto sa = a * scale;
-            constexpr auto sb = b * scale;
-            constexpr auto sc = c * scale;
-            constexpr auto sd = d * scale;
-
-            return dx::fnmadd(dq.lower + dq.upper, d,
-                dx::fnmadd(dq.lower, c,
-                    dx::fnmadd(dq.upper, c,
-                        dx::fnmadd(dq.lower, b,
-                            dx::fnmadd(dq.upper, b,
-                                dx::fnmadd(dq.lower, a,
-                                    dx::fnmadd(dq.upper, a, arg)))))));
-        }
+        return dx::fnmadd(dq.lower + dq.upper, d,
+            dx::fnmadd(dq.lower, c,
+                dx::fnmadd(dq.upper, c,
+                    dx::fnmadd(dq.lower, b,
+                        dx::fnmadd(dq.upper, b,
+                            dx::fnmadd(
+                                dq.lower, a, dx::fnmadd(dq.upper, a, arg)))))));
     }
 
     template <floating_point E>
@@ -269,7 +850,7 @@ protected:
         };
 
         auto const [exp, q] = [](basic_vector<E, A> arg) {
-            constexpr sint n64 = -64;
+            auto const n64 = dx::broadcast<sint, A>(-64);
             if constexpr (same_as<E, double>) {
                 auto exp = fmath::ilogb(fmath::compliance::unsafe, arg) - 55;
                 return expq{
@@ -311,49 +892,42 @@ protected:
             y = y * arg;
             x = x + y;
             x = fmath::normalize(x);
-            constexpr E two = 2.0;
-            constexpr auto twopi = fmath::scale(pi_pair<E, A>, two);
-            x = x * twopi;
-            constexpr E p7 = 0.7;
-            x = fmath::select(dx::abs(arg) < p7, fmath::make_pair(arg), x);
+            x = x * fmath::scale(pi_pair<E, A>(), 2.0);
+            x = fmath::select(dx::abs(arg) < 0.7, fmath::make_pair(arg), x);
             return rempi_pair<E, A>{
                 .df = x,
                 .i = q,
             };
         }(q, fmath::ldexp(fmath::compliance::unsafe, arg, q),
-                   dx::bwandnot(dx::signbit(exp), exp) << imm<2>);
+                   dx::select(exp < dx::zero, dx::zero, exp) << imm<2>);
     }
 
-    template <floating_point E, simd_abi A, typename OpMask>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_vector<E, A> fallback(
-        basic_vector<E, A> const arg, OpMask opmask) noexcept {
-        using simdf = basic_vector<E, A>;
+public:
+    template <canonical_vector T, const_mask_for<T> O>
+    requires floating_point<simd_element_type_t<T>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(T val, O ops) noexcept {
+        using E = simd_element_type_t<T>;
+        using A = simd_abi_type_t<T>;
         using sint = signed_representation_t<E>;
         using simdi = basic_vector<sint, A>;
-        simdf const qf = [&]() {
-            if constexpr (simd_mask<OpMask>) {
-                constexpr auto one = dx::one_v<simdf>;
-                auto shift = dx::select(
-                    opmask, dx::broadcast<simdf>(fmath::half), dx::zero);
-                auto const qf = dx::round(dx::fmsub(arg, dx::inv_pi, shift),
-                    rounding::to_nearest_int | rounding::no_exc);
-                auto a = dx::select(opmask, 2.0f, one);
-                auto c = dx::select(opmask, one, dx::zero);
-                return dx::fmadd(a, qf, c);
-            } else if constexpr (dx::none_of(opmask)) {
-                return dx::round(arg * dx::inv_pi,
+        constexpr auto opmask = dx::to_compatible_const_mask<T>(ops);
+        auto const qf = [&val, &opmask]() {
+            if constexpr (dx::none_of(opmask)) {
+                return dx::round(val * dx::inv_pi,
                     rounding::to_nearest_int | rounding::no_exc);
             } else {
-                constexpr auto one = dx::one_v<simdf>;
-                constexpr auto shift = dx::select(
-                    opmask, dx::broadcast<simdf>(fmath::half), dx::zero);
+                constexpr E half = 0.5;
+                constexpr E two = 2.0;
+                auto const one = dx::broadcast<T>(dx::one);
+                auto const shift =
+                    dx::select(opmask, dx::broadcast<T>(half), dx::zero);
                 // when evaluating cosine, minus half
-                auto const qf = dx::round(dx::fmsub(arg, dx::inv_pi, shift),
+                auto const qf = dx::round(dx::fmsub(val, dx::inv_pi, shift),
                     rounding::to_nearest_int | rounding::no_exc);
 
-                constexpr auto a = dx::select(opmask, 2.0f, one);
-                constexpr auto c = dx::select(opmask, one, dx::zero);
+                auto const a = dx::select(opmask, two, one);
+                auto const c = dx::select(opmask, one, dx::zero);
                 // when evaluating cos, 2q + 1, when sin, q + 0 (== q)
                 // This should be accurate,
                 // since the result is only used when
@@ -363,34 +937,30 @@ protected:
         }();
 
         auto q = dx::element_cast<sint>(qf);
-        auto rem = rempi_low(qf, arg, opmask);
-        // Pray to the branch prediction gods
-        if (auto is_below = dx::abs(arg) < threshold_low<E>;
+        auto rem = rempi_low(qf, val, opmask);
+        if (auto is_below = dx::abs(val) < threshold_low<E>;
             !dx::all_of(is_below)) {
-            rem = dx::select(is_below, rem, rempi_mid(qf, arg, opmask));
-            if (is_below = dx::abs(arg) < threshold_mid<E>;
+            rem = dx::select(is_below, rem, rempi_mid(qf, val, opmask));
+            if (is_below = dx::abs(val) < threshold_mid<E>;
                 !dx::all_of(is_below)) {
-                auto dfi = rempi(arg);
+                auto dfi = rempi(val);
                 auto q2 = dfi.i & 3;
                 q2 = q2 + q2 + [&]() {
-                    if constexpr (simd_mask<OpMask>) {
-                        auto base = dx::select(opmask, dx::broadcast<simdi>(8),
-                            dx::broadcast<simdi>(2));
-                        return base -
-                            dx::select(dfi.df.upper <= dx::zero,
-                                dx::one_v<decltype(q2)>, dx::zero);
+                    auto const condition = dx::cmple(dfi.df.upper, dx::zero);
+                    if constexpr (dx::none_of(opmask)) {
+                        auto const base = dx::broadcast<simdi>(2);
+                        return dx::subtract(base, condition, base, dx::one);
+                    } else if constexpr (dx::all_of(opmask)) {
+                        auto const base = dx::broadcast<simdi>(8);
+                        return dx::subtract(base, condition, base, dx::one);
                     } else {
-                        constexpr auto base = dx::select(opmask,
+                        auto const base = dx::select(opmask,
                             dx::broadcast<simdi>(8), dx::broadcast<simdi>(2));
-                        return base -
-                            dx::select(dfi.df.upper <= dx::zero,
-                                dx::one_v<decltype(q2)>, dx::zero);
+                        return dx::subtract(base, condition, base, dx::one);
                     }
                 }();
                 q2 = [&]() {
-                    if constexpr (simd_mask<OpMask>) {
-                        return dx::select(opmask, q2 >> imm<1>, q2 >> imm<2>);
-                    } else if constexpr (dx::none_of(opmask)) {
+                    if constexpr (dx::none_of(opmask)) {
                         return q2 >> imm<2>;
                     } else if constexpr (dx::all_of(opmask)) {
                         return q2 >> imm<1>;
@@ -398,529 +968,170 @@ protected:
                         return dx::select(opmask, q2 >> imm<1>, q2 >> imm<2>);
                     }
                 }();
-                constexpr auto nhalfpi = fmath::scale(pi_pair<E, A>, -0.5);
+
+                auto const nhalfpi =
+                    fmath::scale(pi_pair<E, A>(), static_cast<E>(-0.5));
                 auto const x = dfi.df +
                     fmath::make_pair(                          //
                         dx::sign(nhalfpi.upper, dfi.df.upper), //
                         dx::sign(nhalfpi.lower, dfi.df.upper)  //
                     );
-                auto const isoddeven = [&](simdi val) {
-                    if constexpr (simd_mask<OpMask>) {
-                        auto rhs =
-                            dx::select(opmask, dx::zero, dx::one_v<simdi>);
-                        return (val & dx::one) == rhs;
-                    } else if constexpr (dx::none_of(opmask)) {
-                        return (val & dx::one) == dx::one;
+                auto const isoddeven = [&]() {
+                    if constexpr (dx::none_of(opmask)) {
+                        return (dfi.i & dx::one) == dx::one;
                     } else if constexpr (dx::all_of(opmask)) {
-                        return (val & dx::one) == dx::zero;
+                        return (dfi.i & dx::one) == dx::zero;
                     } else {
-                        constexpr auto rhs =
+                        auto const rhs =
                             dx::select(opmask, dx::zero, dx::one_v<simdi>);
-                        return (val & dx::one) == rhs;
+                        return (dfi.i & dx::one) == rhs;
                     }
-                }(dfi.i);
+                }();
+
                 dfi.df = fmath::select(isoddeven, x, dfi.df);
                 auto const result = dx::select(
-                    dx::isfinite(arg), dfi.df.upper + dfi.df.lower, dx::nan);
+                    dx::isfinite(val), dfi.df.upper + dfi.df.lower, dx::nan);
                 q = dx::select(is_below, q, q2);
                 rem = dx::select(is_below, rem, result);
             }
         }
 
         auto const sq_rem = dx::multiply(rem, rem);
-        auto const nmask = [&](simdi val) {
-            if constexpr (simd_mask<OpMask>) {
-                auto m = dx::select(opmask, dx::broadcast<simdi>(2), dx::one);
-                auto rhs = dx::select(opmask, dx::zero_v<simdi>, dx::one);
-                return (val & m) == rhs;
-            } else if constexpr (dx::none_of(opmask)) {
-                return (val & dx::one) == dx::one;
+        auto const nmask = [&]() {
+            if constexpr (dx::none_of(opmask)) {
+                return (q & dx::one) == dx::one;
             } else if constexpr (dx::all_of(opmask)) {
-                return (val & dx::broadcast<simdi>(2)) == dx::zero;
+                return (q & dx::broadcast<simdi>(2)) == dx::zero;
             } else {
-                constexpr auto m =
+                auto const m =
                     dx::select(opmask, dx::broadcast<simdi>(2), dx::one);
-                constexpr auto rhs =
-                    dx::select(opmask, dx::zero_v<simdi>, dx::one);
-                return (val & m) == rhs;
+                auto const rhs = dx::select(opmask, dx::zero_v<simdi>, dx::one);
+                return (q & m) == rhs;
             }
-        }(q);
+        }();
 
         rem = dx::negate(rem, nmask, rem);
-
         auto const poly = polynomial<E>(sq_rem);
         auto const result = dx::fmadd(sq_rem, poly * rem, rem);
-        if constexpr (simd_mask<OpMask>) {
-            return dx::select(
-                arg == dx::msb, dx::select(opmask, result, arg), result);
-        } else if constexpr (dx::none_of(opmask)) {
-            return dx::select(arg == dx::msb, arg, result);
+        if constexpr (dx::none_of(opmask)) {
+            return dx::select(val == dx::msb, val, result);
         } else if constexpr (dx::all_of(opmask)) {
             return result;
         } else {
             return dx::select(
-                arg == dx::msb, dx::select(opmask, result, arg), result);
+                val == dx::msb, dx::select(opmask, result, val), result);
         }
     }
-};
 
-void sin(...) noexcept = delete;
-
-struct sin_t;
-
-template <typename T>
-concept unqualified_canonical_sin = requires(T val) {
-    {
-        sin(internal::abi<T>, val)
-    } -> canonical_arithmetic_result<T, T, typename T::abi_type>;
-};
-
-template <typename T>
-concept unqualified_extended_sin = requires(T val) {
-    { sin(val) } -> vector_with_common_abi<typename T::abi_type>;
-};
-
-template <typename T>
-concept expression_sin =
-    simd_expression<T> && invocable<sin_t, simd_expression_result_t<T>>;
-
-template <typename T>
-concept decayable_sin =
-    decayable_vector_for<T, operation_category::lane_agnostic> &&
-    regular_invocable<sin_t, canonical_type_t<T>>;
-
-template <typename T>
-concept extended_sin =
-    unqualified_extended_sin<T> || expression_sin<T> || decayable_sin<T>;
-
-struct sin_t :
-    private internal::sincos_base,
-    private mx::masked_operation<sin_t> {
-private:
-    friend mx::masked_operation<sin_t>;
-
-    template <simd_vector S, typename M, simd_vector T>
-    requires mx::canonical_masked_math_operator<sin_t, S, M, T> &&
-        requires(
-            S src, M mask, T val) { sin(internal::abi<T>, src, mask, val); }
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL masked(S src, M mask, T val) noexcept {
-        return sin(internal::abi<T>, src, mask, val);
-    }
-
-    template <simd_vector S, typename M, simd_vector T>
-    requires mx::extended_masked_math_operator<sin_t, S, M, T> &&
-        requires(S src, M mask, T val) { sin(src, mask, val); }
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL masked(S src, M mask, T val) noexcept {
-        return sin(src, mask, val);
-    }
-
-    template <typename M, simd_vector T>
-    requires mx::canonical_masked_math_zoperator<sin_t, M, T> &&
-        requires(M mask, T val) { sin(internal::abi<T>, dx::zero, mask, val); }
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
-        return sin(internal::abi<T>, dx::zero, mask, val);
-    }
-
-    template <typename M, simd_vector T>
-    requires mx::extended_masked_math_zoperator<sin_t, M, T> &&
-        requires(M mask, T val) { sin(dx::zero, mask, val); }
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
-        return sin(dx::zero, mask, val);
-    }
-
-public:
-    template <fixed_width_abi A, simd_element_for<A> E>
-    requires same_as<E, float> || same_as<E, double>
+    template <canonical_vector T, exact_mask_for<T> O>
+    requires floating_point<simd_element_type_t<T>> && canonical_mask<O>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(T val, O opmask) noexcept {
+        using E = simd_element_type_t<T>;
+        using A = simd_abi_type_t<T>;
+        using sint = signed_representation_t<E>;
+        using simdi = basic_vector<sint, A>;
+        auto const qf = [&val, &opmask]() {
+            constexpr E half = 0.5;
+            constexpr E two = 2.0;
+            auto const one = dx::broadcast<T>(dx::one);
+            auto const shift =
+                dx::select(opmask, dx::broadcast<T>(half), dx::zero);
+            // when evaluating cosine, minus half
+            auto const qf = dx::round(dx::fmsub(val, dx::inv_pi, shift),
+                rounding::to_nearest_int | rounding::no_exc);
+
+            auto const a = dx::select(opmask, two, one);
+            auto const c = dx::select(opmask, one, dx::zero);
+            // when evaluating cos, 2q + 1, when sin, q + 0 (== q)
+            // This should be accurate,
+            // since the result is only used when
+            // magnitude of qf is small < (threshold_mid / pi)
+            return dx::fmadd(a, qf, c);
+        }();
+
+        auto const ione = dx::broadcast<simdi>(dx::one);
+        auto const itwo = dx::broadcast<simdi>(2);
+        auto q = dx::element_cast<sint>(qf);
+        auto rem = rempi_low(qf, val, opmask);
+        if (auto is_below = dx::abs(val) < threshold_low<E>;
+            !dx::all_of(is_below)) {
+            rem = dx::select(is_below, rem, rempi_mid(qf, val, opmask));
+            if (is_below = dx::abs(val) < threshold_mid<E>;
+                !dx::all_of(is_below)) {
+                auto dfi = rempi(val);
+                auto q2 = dfi.i & 3;
+                q2 = q2 + q2 + [&]() {
+                    auto const condition = dx::cmple(dfi.df.upper, dx::zero);
+                    auto const base =
+                        dx::select(opmask, dx::broadcast<simdi>(8), itwo);
+                    return dx::subtract(base, condition, base, ione);
+                }();
+                q2 = dx::select(opmask, q2 >> imm<1>, q2 >> imm<2>);
+
+                auto const nhalfpi =
+                    fmath::scale(pi_pair<E, A>(), static_cast<E>(-0.5));
+                auto const x = dfi.df +
+                    fmath::make_pair(                          //
+                        dx::sign(nhalfpi.upper, dfi.df.upper), //
+                        dx::sign(nhalfpi.lower, dfi.df.upper)  //
+                    );
+                auto const isoddeven =
+                    (dfi.i & ione) == dx::select(opmask, dx::zero, ione);
+
+                dfi.df = fmath::select(isoddeven, x, dfi.df);
+                auto const result = dx::select(dx::isfinite(val),
+                    dfi.df.upper + dfi.df.lower, dx::all_bits);
+                q = dx::select(is_below, q, q2);
+                rem = dx::select(is_below, rem, result);
+            }
+        }
+
+        auto const sq_rem = dx::multiply(rem, rem);
+        auto const nmask = [&]() {
+            auto const m = dx::select(opmask, itwo, ione);
+            auto const rhs = dx::select(opmask, dx::zero, dx::one_v<simdi>);
+            return (q & m) == rhs;
+        }();
+
+        rem = dx::negate(rem, nmask, rem);
+        auto const result = dx::fmadd(sq_rem, polynomial<E>(sq_rem) * rem, rem);
+        return dx::select(
+            val == dx::msb, dx::select(opmask, result, val), result);
+    }
+};
+
+template <>
+struct fallback_impl<sin_t> {
+    template <floating_point E, simd_abi A>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr basic_vector<E, A> operator()(
         basic_vector<E, A> val) noexcept {
-        constexpr auto opmask =
-            dx::to_compatible_const_mask<basic_vector<E, A>>(dx::zero);
-        if constexpr (unqualified_canonical_sin<basic_vector<E, A>>) {
-            if consteval {
-                return internal::sincos_base::fallback(val, opmask);
-            } else {
-                return sin(internal::abi<A>, val);
-            }
+        if constexpr (fixed_width_abi<A>) {
+            return fallback_impl<sincos_t>::operator()(val, imm<0b0>);
         } else {
-            return internal::sincos_base::fallback(val, opmask);
+            return fallback_impl<sincos_t>::operator()(
+                val, dx::broadcast<E, A>(false_type{}));
         }
     }
+};
 
-    template <simd_abi A, simd_element_for<A> E>
-    requires (scalable_abi<A> || (!same_as<E, float> && !same_as<E, double>)) &&
-        unqualified_canonical_sin<basic_vector<E, A>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+template <>
+struct fallback_impl<cos_t> {
+    template <floating_point E, simd_abi A>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr basic_vector<E, A> operator()(
         basic_vector<E, A> val) noexcept {
-        return sin(internal::abi<A>, val);
-    }
-
-    template <extended_vector T>
-    requires extended_sin<T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T val) noexcept {
-        if constexpr (unqualified_extended_sin<T>) {
-            return sin(val);
-        } else if constexpr (expression_sin<T>) {
-            return operator()(dx::evaluate(val));
+        if constexpr (fixed_width_abi<A>) {
+            constexpr auto op =
+                dx::to_compatible_const_mask<basic_vector<E, A>>(dx::all_bits);
+            return fallback_impl<sincos_t>::operator()(val, op);
         } else {
-            return operator()(dx::to_canonical(val));
+            return fallback_impl<sincos_t>::operator()(
+                val, dx::broadcast<E, A>(true_type{}));
         }
     }
-
-    using mx::masked_operation<sin_t>::operator();
 };
-
-void cos(...) noexcept = delete;
-
-struct cos_t;
-
-template <typename T>
-concept unqualified_canonical_cos = requires(T val) {
-    {
-        cos(internal::abi<T>, val)
-    } -> canonical_arithmetic_result<T, T, typename T::abi_type>;
-};
-
-template <typename T>
-concept unqualified_extended_cos = requires(T val) {
-    { cos(val) } -> vector_with_common_abi<typename T::abi_type>;
-};
-
-template <typename T>
-concept expression_cos =
-    simd_expression<T> && invocable<cos_t, simd_expression_result_t<T>>;
-
-template <typename T>
-concept decayable_cos =
-    decayable_vector_for<T, operation_category::lane_agnostic> &&
-    regular_invocable<cos_t, canonical_type_t<T>>;
-
-template <typename T>
-concept extended_cos =
-    unqualified_extended_cos<T> || expression_cos<T> || decayable_cos<T>;
-
-struct cos_t :
-    private internal::sincos_base,
-    private mx::masked_operation<cos_t> {
-private:
-    friend mx::masked_operation<cos_t>;
-
-    template <simd_vector S, typename M, simd_vector T>
-    requires mx::canonical_masked_math_operator<cos_t, S, M, T> &&
-        requires(
-            S src, M mask, T val) { cos(internal::abi<T>, src, mask, val); }
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL masked(S src, M mask, T val) noexcept {
-        return cos(internal::abi<T>, src, mask, val);
-    }
-
-    template <simd_vector S, typename M, simd_vector T>
-    requires mx::extended_masked_math_operator<cos_t, S, M, T> &&
-        requires(S src, M mask, T val) { cos(src, mask, val); }
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL masked(S src, M mask, T val) noexcept {
-        return cos(src, mask, val);
-    }
-
-    template <typename M, simd_vector T>
-    requires mx::canonical_masked_math_zoperator<cos_t, M, T> &&
-        requires(M mask, T val) { cos(internal::abi<T>, dx::zero, mask, val); }
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
-        return cos(internal::abi<T>, dx::zero, mask, val);
-    }
-
-    template <typename M, simd_vector T>
-    requires mx::extended_masked_math_zoperator<cos_t, M, T> &&
-        requires(M mask, T val) { cos(dx::zero, mask, val); }
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
-        return cos(dx::zero, mask, val);
-    }
-
-public:
-    template <fixed_width_abi A, simd_element_for<A> E>
-    requires same_as<E, float> || same_as<E, double>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(
-        basic_vector<E, A> val) noexcept {
-        constexpr auto opmask =
-            dx::to_compatible_const_mask<basic_vector<E, A>>(dx::all_bits);
-        if constexpr (unqualified_canonical_cos<basic_vector<E, A>>) {
-            if consteval {
-                return internal::sincos_base::fallback(val, opmask);
-            } else {
-                return cos(internal::abi<A>, val);
-            }
-        } else {
-            return internal::sincos_base::fallback(val, opmask);
-        }
-    }
-
-    template <simd_abi A, simd_element_for<A> E>
-    requires (!same_as<E, float> && !same_as<E, double>) &&
-        unqualified_canonical_cos<basic_vector<E, A>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(
-        basic_vector<E, A> val) noexcept {
-        return cos(internal::abi<A>, val);
-    }
-
-    template <extended_vector T>
-    requires extended_cos<T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T val) noexcept {
-        if constexpr (unqualified_extended_cos<T>) {
-            return cos(val);
-        } else if constexpr (expression_cos<T>) {
-            return operator()(dx::evaluate(val));
-        } else {
-            return operator()(dx::to_canonical(val));
-        }
-    }
-
-    using mx::masked_operation<cos_t>::operator();
-};
-
-void sincos(...) noexcept = delete;
-
-struct sincos_t;
-
-template <typename L, typename OpMask, typename A = simd_abi_type_t<L>>
-concept unqualified_canonical_sincos = requires(L val, OpMask op) {
-    {
-        sincos(internal::abi<A>, val, op)
-    } -> canonical_arithmetic_result<L, L, A>;
-};
-
-template <typename L, typename OpMask, typename A = simd_abi_type_t<L>>
-concept unqualified_extended_sincos = requires(L val, OpMask op) {
-    { sincos(val, op) } -> vector_with_common_abi<A>;
-};
-
-template <typename L, typename OpMask>
-concept expression_sincos = (simd_expression<L> || simd_expression<OpMask>) &&
-    invocable<sincos_t, simd_expression_result_t<L>,
-        simd_expression_result_t<OpMask>>;
-
-template <typename L, typename OpMask>
-concept decayable_sincos =
-    decayable_vector_for<L, operation_category::lane_agnostic> &&
-    decayable_mask_for<OpMask, operation_category::lane_agnostic> &&
-    regular_invocable<sincos_t, canonical_type_t<L>, canonical_type_t<OpMask>>;
-
-template <typename L, typename OpMask, typename A = common_abi_t<L, OpMask>>
-concept extended_sincos = unqualified_extended_sincos<L, OpMask, A> ||
-    expression_sincos<L, OpMask> || decayable_sincos<L, OpMask>;
-
-template <typename L, typename OpMask>
-concept unqualified_canonical_sincosi = requires(L val, OpMask op) {
-    {
-        sincos(internal::abi<L>, val, dx::to_compatible_const_mask<L>(op))
-    } -> canonical_arithmetic_result<L, L, typename L::abi_type>;
-};
-
-template <typename L, typename OpMask>
-concept unqualified_extended_sincosi = requires(L val, OpMask op) {
-    {
-        sincos(val, dx::to_compatible_const_mask<L>(op))
-    } -> vector_with_common_abi<simd_abi_type_t<L>>;
-};
-
-template <typename L, typename OpMask>
-concept expression_sincosi = simd_expression<L> &&
-    invocable<sincos_t, simd_expression_result_t<L>, OpMask>;
-
-template <typename L, typename OpMask>
-concept decayable_sincosi =
-    decayable_simd_for<L, operation_category::lane_agnostic> &&
-    regular_invocable<sincos_t, canonical_type_t<L>, OpMask>;
-
-template <typename L, typename OpMask>
-concept extended_sincosi = unqualified_extended_sincosi<L, OpMask> ||
-    expression_sincosi<L, OpMask> || decayable_sincosi<L, OpMask>;
-
-struct sincos_t :
-    private internal::sincos_base,
-    private mx::masked_operation<sincos_t> {
-private:
-    friend mx::masked_operation<sincos_t>;
-
-    template <simd_vector S, typename M, simd_vector T, typename OpMask>
-    requires mx::canonical_masked_math_operator<sincos_t, S, M, T, OpMask> &&
-        requires(S src, M mask, T val, OpMask opmask) {
-            sincos(internal::abi<T>, src, mask, val, opmask);
-        }
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL masked(
-        S src, M mask, T val, OpMask opmask) noexcept {
-        return sincos(internal::abi<T>, src, mask, val, opmask);
-    }
-
-    template <simd_vector S, typename M, simd_vector T, typename OpMask>
-    requires mx::extended_masked_math_operator<sincos_t, S, M, T, OpMask> &&
-        requires(S src, M mask, T val, OpMask opmask) {
-            sincos(src, mask, val, opmask);
-        }
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL masked(
-        S src, M mask, T val, OpMask opmask) noexcept {
-        return sincos(src, mask, val, opmask);
-    }
-
-    template <typename M, simd_vector T, typename OpMask>
-    requires mx::canonical_masked_math_zoperator<sincos_t, M, T, OpMask> &&
-        requires(M mask, T val, OpMask opmask) {
-            sincos(internal::abi<T>, dx::zero, mask, val, opmask);
-        }
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL masked(
-        M mask, T val, OpMask opmask) noexcept {
-        return sincos(internal::abi<T>, dx::zero, mask, val, opmask);
-    }
-
-    template <typename M, simd_vector T, typename OpMask>
-    requires mx::extended_masked_math_zoperator<sincos_t, M, T, OpMask> &&
-        requires(M mask, T val, OpMask opmask) {
-            sincos(dx::zero, mask, val, opmask);
-        }
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL masked(
-        M mask, T val, OpMask opmask) noexcept {
-        return sincos(dx::zero, mask, val, opmask);
-    }
-
-public:
-    template <simd_abi A, simd_element_for<A> E,
-        const_mask_for<basic_vector<E, A>> OpMask>
-    requires same_as<E, float> || same_as<E, double>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(
-        basic_vector<E, A> val, OpMask op) noexcept {
-        constexpr auto opmask =
-            dx::to_compatible_const_mask<basic_vector<E, A>>(op);
-        if constexpr (unqualified_canonical_sincosi<basic_vector<E, A>,
-                          OpMask>) {
-            if consteval {
-                return internal::sincos_base::fallback(val, opmask);
-            } else {
-                return sincos(internal::abi<A>, val, opmask);
-            }
-        } else {
-            return internal::sincos_base::fallback(val, opmask);
-        }
-    }
-
-    template <simd_abi A, simd_element_for<A> E,
-        const_mask_for<basic_vector<E, A>> OpMask>
-    requires (!same_as<E, float> && !same_as<E, double>) &&
-        unqualified_canonical_sincosi<basic_vector<E, A>, OpMask>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(
-        basic_vector<E, A> val, OpMask op) noexcept {
-        return sincos(internal::abi<A>, val, op);
-    }
-
-    template <extended_vector L, const_mask_for<L> OpMask>
-    requires extended_sincosi<L, OpMask>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L val, OpMask op) noexcept {
-        if constexpr (unqualified_extended_sincosi<L, OpMask>) {
-            constexpr auto opmask = dx::to_compatible_const_mask<OpMask>(op);
-            return sincos(val, opmask);
-        } else if constexpr (expression_sincosi<L, OpMask>) {
-            return operator()(dx::evaluate(val), op);
-        } else {
-            return operator()(dx::to_canonical(val), op);
-        }
-    }
-
-    template <simd_abi A, simd_element_for<A> E, simd_element_for<A> O>
-    requires (same_as<E, float> || same_as<E, double>) && common_size_with<O, E>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(
-        basic_vector<E, A> val, basic_mask<O, A> op) noexcept {
-        if constexpr (unqualified_canonical_sincos<basic_vector<E, A>,
-                          basic_mask<O, A>>) {
-            if consteval {
-                return internal::sincos_base::fallback(val, op);
-            } else {
-                return sincos(internal::abi<A>, val, op);
-            }
-        } else {
-            return internal::sincos_base::fallback(val, op);
-        }
-    }
-
-    template <simd_abi A, simd_element_for<A> E, simd_element_for<A> O>
-    requires (!same_as<E, float> && !same_as<E, double>) &&
-        common_size_with<O, E> &&
-        unqualified_canonical_sincos<basic_vector<E, A>, basic_mask<O, A>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(
-        basic_vector<E, A> val, basic_mask<O, A> op) noexcept {
-        return sincos(internal::abi<A>, val, op);
-    }
-
-    template <simd_vector L, simd_mask O>
-    requires common_size_with<simd_element_type_t<L>, simd_element_type_t<O>> &&
-        same_as<simd_abi_type_t<L>, simd_abi_type_t<O>> &&
-        (extended_vector<L> || extended_mask<O>) && extended_sincos<L, O>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L val, O op) noexcept {
-        if constexpr (unqualified_extended_sincos<L, O>) {
-            return sincos(val, op);
-        } else if constexpr (expression_sincos<L, O>) {
-            return operator()(dx::evaluate(val), dx::evaluate(op));
-        } else {
-            return operator()(dx::to_canonical(val), dx::to_canonical(op));
-        }
-    }
-
-    using mx::masked_operation<sincos_t>::operator();
-};
-
-template <integral auto V>
-struct sincosi_t :
-    private internal::sincos_base,
-    private mx::masked_operation<sincosi_t<V>> {
-private:
-    friend mx::masked_operation<sincosi_t<V>>;
-
-    template <simd_vector S, typename M, simd_vector T>
-    requires invocable<sincos_t, S, M, T, make_const_mask_t<T, V>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL masked(S src, M mask, T val) noexcept {
-        constexpr make_const_mask_t<T, V> opmask{};
-        return sincos_t::operator()(src, mask, val, opmask);
-    }
-
-    template <typename M, simd_vector T>
-    requires invocable<sincos_t, M, T, make_const_mask_t<T, V>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
-        constexpr make_const_mask_t<T, V> opmask{};
-        return sincos_t::operator()(mask, val, opmask);
-    }
-
-public:
-    template <simd_vector T>
-    requires regular_invocable<sincos_t, T, make_const_mask_t<T, V>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T val) noexcept {
-        constexpr make_const_mask_t<T, V> op{};
-        return sincos_t::operator()(val, op);
-    }
-
-    using mx::masked_operation<sincosi_t<V>>::operator();
-};
-
 } // namespace datapar::internal
 
 namespace datapar {
@@ -928,7 +1139,7 @@ inline namespace cpo {
 DPL_EXPORT inline constexpr internal::sin_t sin{};
 DPL_EXPORT inline constexpr internal::cos_t cos{};
 DPL_EXPORT inline constexpr internal::sincos_t sincos{};
-DPL_EXPORT template <integral auto V>
+DPL_EXPORT template <auto V>
 inline constexpr internal::sincosi_t<V> sincosi{};
 } // namespace cpo
 } // namespace datapar

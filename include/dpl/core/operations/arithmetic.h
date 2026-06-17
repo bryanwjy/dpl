@@ -8,8 +8,8 @@
 #include "dpl/core/operations/reinterpret.h"
 
 #if !DPL_MODULES
+#  include "dpl/core/concepts/cpo_invocable.h"
 #  include "dpl/core/concepts/equivalence.h"
-#  include "dpl/core/concepts/simd_element.h"
 #  include "dpl/core/type_traits/simd_element_type.h"
 #  include "dpl/std/type_traits/enable_if.h"
 #endif
@@ -27,7 +27,6 @@
 #include "dpl/core/operations/arithmetic/fnmsub.h"
 #include "dpl/core/operations/arithmetic/multiply.h"
 #include "dpl/core/operations/arithmetic/negate.h"
-#include "dpl/core/operations/arithmetic/result.h"
 #include "dpl/core/operations/arithmetic/subadd.h"
 #include "dpl/core/operations/arithmetic/subtract.h"
 // IWYU pragma: end_exports
@@ -40,7 +39,7 @@ DPL_EXPORT template <typename D>
 class arithmetic_vector_interface {
 public:
     template <typename R>
-    requires regular_invocable<internal::add_t, D, R>
+    requires internal::cpo_invocable<internal::add_t, D, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     constexpr invoke_result_t<internal::add_t, D, R> operator+(
         this D lhs, R rhs) noexcept
@@ -50,7 +49,7 @@ public:
     }
 
     template <typename R>
-    requires regular_invocable<internal::subtract_t, D, R>
+    requires internal::cpo_invocable<internal::subtract_t, D, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     constexpr invoke_result_t<internal::subtract_t, D, R> operator-(
         this D lhs, R rhs) noexcept
@@ -60,7 +59,7 @@ public:
     }
 
     template <typename R>
-    requires regular_invocable<internal::multiply_t, D, R>
+    requires internal::cpo_invocable<internal::multiply_t, D, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     constexpr invoke_result_t<internal::multiply_t, D, R> operator*(
         this D lhs, R rhs) noexcept
@@ -70,7 +69,7 @@ public:
     }
 
     template <typename R>
-    requires regular_invocable<internal::divide_t, D, R>
+    requires internal::cpo_invocable<internal::divide_t, D, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     constexpr invoke_result_t<internal::divide_t, D, R> operator/(
         this D lhs, R rhs) noexcept
@@ -80,8 +79,8 @@ public:
     }
 
     template <typename R>
-    requires regular_invocable<internal::add_t, D, R> &&
-        regular_invocable<internal::reinterpret_t<D>,
+    requires internal::cpo_invocable<internal::add_t, D, R> &&
+        internal::cpo_invocable<internal::reinterpret_t<D>,
             invoke_result_t<internal::add_t, D, R>>
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
         constexpr D& operator+=(this D& lhs, R rhs) noexcept
@@ -91,8 +90,8 @@ public:
     }
 
     template <typename R>
-    requires regular_invocable<internal::subtract_t, D, R> &&
-        regular_invocable<internal::reinterpret_t<D>,
+    requires internal::cpo_invocable<internal::subtract_t, D, R> &&
+        internal::cpo_invocable<internal::reinterpret_t<D>,
             invoke_result_t<internal::subtract_t, D, R>>
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
         constexpr D& operator-=(this D& lhs, R rhs) noexcept
@@ -102,8 +101,8 @@ public:
     }
 
     template <typename R>
-    requires regular_invocable<internal::multiply_t, D, R> &&
-        regular_invocable<internal::reinterpret_t<D>,
+    requires internal::cpo_invocable<internal::multiply_t, D, R> &&
+        internal::cpo_invocable<internal::reinterpret_t<D>,
             invoke_result_t<internal::multiply_t, D, R>>
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
         constexpr D& operator*=(this D& lhs, R rhs) noexcept
@@ -113,8 +112,8 @@ public:
     }
 
     template <typename R>
-    requires regular_invocable<internal::divide_t, D, R> &&
-        regular_invocable<internal::reinterpret_t<D>,
+    requires internal::cpo_invocable<internal::divide_t, D, R> &&
+        internal::cpo_invocable<internal::reinterpret_t<D>,
             invoke_result_t<internal::divide_t, D, R>>
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
         constexpr D& operator/=(this D& lhs, R rhs) noexcept
@@ -162,7 +161,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     constexpr D operator-(this D self) noexcept
     requires simd_vector<D> && basic_element<simd_element_type_t<D>> &&
-        regular_invocable<internal::negate_t, D>
+        internal::cpo_invocable<internal::negate_t, D>
     {
         return internal::negate_t::operator()(self);
     }

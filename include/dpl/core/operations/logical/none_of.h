@@ -5,90 +5,79 @@
 
 // IWYU pragma: always_keep
 
-#include "dpl/core/operations/evaluate.h"
-#include "dpl/core/operations/logical/any_of.h"
+#include "dpl/core/operations/pack_mask.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/internal/abi.h"
-#  include "dpl/core/basic/to_canonical.h"
-#  include "dpl/core/concepts/decayable.h"
-#  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/type_traits/canonical_type.h"
-#  include "dpl/std/concepts/boolean_testable.h"
-#  include "dpl/std/concepts/invocable.h"
+#  include "dpl/core/concepts/canonical.h"
+#  include "dpl/core/concepts/cpo_invocable.h"
+#  include "dpl/core/concepts/simd_mask.h"
+#  include "dpl/core/dispatch/interface.h"
+#  include "dpl/core/dispatch/operation/primitive.h"
+#  include "dpl/core/immediate/const_mask.h"
+#  include "dpl/std/concepts/convertible_to.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
+
 void none_of(...) noexcept = delete;
 
-struct none_of_t;
-
-template <typename T, typename A = typename T::abi_type>
-concept unqualified_canonical_none_of = requires(T val) {
-    { none_of(internal::abi<A>, val) } -> boolean_testable;
+struct none_of_t : private logical_base<none_of_t> {
+    using operation_base<none_of_t>::operator();
 };
 
-template <typename T, typename A = typename T::abi_type>
-concept unqualified_extended_none_of = requires(T val) {
-    { none_of(val) } -> boolean_testable;
+template <>
+struct operation_signature<none_of_t> {
+    template <simd_mask T>
+    static consteval void operator()(T&&) noexcept {}
+    template <const_mask_like T>
+    static consteval void operator()(T) noexcept {}
 };
 
-template <typename T>
-concept expression_none_of = mask_expression<T> &&
-    regular_invocable<none_of_t, simd_expression_result_t<T>>;
+template <>
+struct fallback_impl<none_of_t> {
 
-template <typename T>
-concept decayable_none_of =
-    decayable_mask_for<T, operation_category::lane_reduction> &&
-    regular_invocable<none_of_t, canonical_type_t<T>>;
-
-template <typename T, typename A = typename T::abi_type>
-concept extended_none_of = unqualified_extended_none_of<T, A> ||
-    expression_none_of<T> || decayable_none_of<T>;
-
-struct none_of_t {
-private:
-    template <typename E, typename A>
+    template <canonical_mask T>
+    requires fixed_width_mask<T> && cpo_invocable<pack_mask_t, T> &&
+        requires(T val) { dx::pack_mask(val); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr bool DPL_VECTORCALL fallback(
-        basic_mask<E, A> mask) noexcept {
-        return !dx::any_of(mask);
+    static constexpr bool DPL_VECTORCALL operator()(T val) noexcept {
+        using bitset_t = invoke_result_t<pack_mask_t, T>;
+        return bitset_t() == dx::pack_mask(val);
     }
 
-public:
-    template <fixed_width_abi A, simd_element_for<A> E>
+    template <const_mask_like T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr bool DPL_VECTORCALL operator()(T) noexcept {
+        constexpr const_mask<T::width, T::value> cmask;
+        return cmask == dx::zero;
+    }
+};
+
+template <>
+struct canonical_impl<none_of_t> {
+    template <canonical_mask T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr bool operator()(basic_mask<E, A> val) noexcept {
-        if constexpr (unqualified_canonical_none_of<basic_mask<E, A>, A>) {
-            if consteval {
-                return fallback(val);
-            } else {
-                return none_of(internal::abi<A>, val);
-            }
-        } else {
-            return fallback(val);
-        }
+    static constexpr bool operator()(T val) noexcept
+    requires requires { none_of(internal::abi<T>, val); }
+    {
+        return none_of(internal::abi<T>, val);
     }
+};
 
-    template <scalable_abi A, simd_element_for<A> E>
-    requires unqualified_canonical_none_of<basic_mask<E, A>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr bool operator()(basic_mask<E, A> val) noexcept {
-        return none_of(internal::abi<A>, val);
-    }
+template <typename T>
+concept unqualified_extended_none_of = requires(T&& val) {
+    { none_of(__DPL forward<T>(val)) } -> explicitly_convertible_to<bool>;
+};
 
+template <>
+struct extended_impl<none_of_t> {
     template <extended_mask T>
-    requires extended_none_of<T>
+    requires unqualified_extended_none_of<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T val) {
-        if constexpr (unqualified_extended_none_of<T>) {
-            return none_of(val);
-        } else if constexpr (expression_none_of<T>) {
-            return operator()(dx::evaluate(val));
-        } else {
-            return operator()(dx::to_canonical(val));
-        }
+    static constexpr auto operator()(T&& val) {
+        return none_of(__DPL forward<T>(val));
     }
 };
 } // namespace datapar::internal

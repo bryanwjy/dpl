@@ -5,92 +5,79 @@
 
 // IWYU pragma: always_keep
 
-#include "dpl/core/operations/evaluate.h"
+#include "dpl/core/operations/pack_mask.h"
+
 #if !DPL_MODULES
 #  include "dpl/core/basic/internal/abi.h"
-#  include "dpl/core/basic/internal/iota_sequence.h"
-#  include "dpl/core/basic/to_canonical.h"
-#  include "dpl/core/concepts/decayable.h"
-#  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/type_traits/canonical_type.h"
-#  include "dpl/core/type_traits/simd_expression_result.h"
-#  include "dpl/std/concepts/boolean_testable.h"
+#  include "dpl/core/concepts/canonical.h"
+#  include "dpl/core/concepts/simd_mask.h"
+#  include "dpl/core/dispatch/interface.h"
+#  include "dpl/core/dispatch/operation/primitive.h"
+#  include "dpl/core/immediate/const_mask.h"
+#  include "dpl/std/concepts/convertible_to.h"
 #  include "dpl/std/concepts/invocable.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
+
 void all_of(...) noexcept = delete;
 
-struct all_of_t;
-
-template <typename T, typename A = typename T::abi_type>
-concept unqualified_canonical_all_of = requires(T val) {
-    { all_of(internal::abi<A>, val) } -> boolean_testable;
+struct all_of_t : private logical_base<all_of_t> {
+    using operation_base<all_of_t>::operator();
 };
 
-template <typename T, typename A = typename T::abi_type>
-concept unqualified_extended_all_of = requires(T val) {
-    { all_of(val) } -> boolean_testable;
+template <>
+struct operation_signature<all_of_t> {
+    template <simd_mask T>
+    static consteval void operator()(T&&) noexcept {}
+    template <const_mask_like T>
+    static consteval void operator()(T) noexcept {}
 };
 
-template <typename T>
-concept expression_all_of = mask_expression<T> &&
-    regular_invocable<all_of_t, simd_expression_result_t<T>>;
+template <>
+struct fallback_impl<all_of_t> {
 
-template <typename T>
-concept decayable_all_of =
-    decayable_mask_for<T, operation_category::lane_reduction> &&
-    regular_invocable<all_of_t, canonical_type_t<T>>;
-
-template <typename T, typename A = typename T::abi_type>
-concept extended_all_of = unqualified_extended_all_of<T, A> ||
-    expression_all_of<T> || decayable_all_of<T>;
-
-struct all_of_t {
-private:
-    template <typename E, typename A>
+    template <canonical_mask T>
+    requires fixed_width_mask<T> && regular_invocable<pack_mask_t, T> &&
+        requires(T val) { dx::pack_mask(val); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr bool DPL_VECTORCALL fallback(
-        basic_mask<E, A> mask) noexcept {
-        return []<size_t... Is>(auto mask, index_sequence<Is...>) {
-            return (... && mask[Is]);
-        }(mask, iota_sequence<E, A>);
+    static constexpr bool DPL_VECTORCALL operator()(T val) noexcept {
+        using bitset_t = invoke_result_t<pack_mask_t, T>;
+        return ~bitset_t() == dx::pack_mask(val);
     }
 
-public:
-    template <fixed_width_abi A, simd_element_for<A> E>
+    template <const_mask_like T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr bool DPL_VECTORCALL operator()(T) noexcept {
+        constexpr const_mask<T::width, T::value> cmask;
+        return cmask == dx::all_bits;
+    }
+};
+
+template <>
+struct canonical_impl<all_of_t> {
+    template <canonical_mask T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr bool operator()(basic_mask<E, A> val) noexcept {
-        if constexpr (unqualified_canonical_all_of<basic_mask<E, A>, A>) {
-            if consteval {
-                return fallback(val);
-            } else {
-                return all_of(internal::abi<A>, val);
-            }
-        } else {
-            return fallback(val);
-        }
+    static constexpr bool operator()(T val) noexcept
+    requires requires { all_of(internal::abi<T>, val); }
+    {
+        return all_of(internal::abi<T>, val);
     }
+};
 
-    template <scalable_abi A, simd_element_for<A> E>
-    requires unqualified_canonical_all_of<basic_mask<E, A>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr bool operator()(basic_mask<E, A> val) noexcept {
-        return all_of(internal::abi<A>, val);
-    }
+template <typename T>
+concept unqualified_extended_all_of = requires(T&& val) {
+    { all_of(__DPL forward<T>(val)) } -> explicitly_convertible_to<bool>;
+};
 
+template <>
+struct extended_impl<all_of_t> {
     template <extended_mask T>
-    requires extended_all_of<T>
+    requires unqualified_extended_all_of<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T val) {
-        if constexpr (unqualified_extended_all_of<T>) {
-            return all_of(val);
-        } else if constexpr (expression_all_of<T>) {
-            return operator()(dx::evaluate(val));
-        } else {
-            return operator()(dx::to_canonical(val));
-        }
+    static constexpr auto operator()(T&& val) {
+        return all_of(__DPL forward<T>(val));
     }
 };
 } // namespace datapar::internal

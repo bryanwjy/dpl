@@ -13,13 +13,15 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
 DPL_EXPORT template <typename T>
-concept extended_simd_type = simd_type<T> && !canonical_simd_type<T>;
+concept extended_simd_type =
+    simd_type<remove_cvref_t<T>> && !canonical_simd_type<remove_cvref_t<T>>;
 
 DPL_EXPORT template <typename T>
-concept extended_vector = simd_vector<T> && extended_simd_type<T>;
+concept extended_vector =
+    simd_vector<remove_cvref_t<T>> && extended_simd_type<T>;
 
 DPL_EXPORT template <typename T>
-concept extended_mask = simd_mask<T> && extended_simd_type<T>;
+concept extended_mask = simd_mask<remove_cvref_t<T>> && extended_simd_type<T>;
 
 } // namespace datapar
 

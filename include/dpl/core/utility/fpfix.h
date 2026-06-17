@@ -4,7 +4,7 @@
 #include "dpl/config.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/basic/immediate.h"
+#  include "dpl/core/immediate/immediate.h"
 #  include "dpl/std/bit/popcount.h"
 #  include "dpl/std/concepts/floating_point.h"
 #  include "dpl/std/concepts/invocable.h"

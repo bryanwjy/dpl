@@ -127,17 +127,21 @@ struct sequence_for<T[N]> {
 template <typename T>
 using sequence_for_t DPL_NODEBUG = typename sequence_for<T>::type;
 
+template <typename T, size_t I>
+concept gettable_from = requires(
+    ranges::details::get_element_t<I> op) { op(__DPL declval<T>()); };
+
 template <typename T, typename S = sequence_for_t<T>>
 inline constexpr bool is_tuple_like = false;
 template <typename T, size_t... Is>
 inline constexpr bool is_tuple_like<T, index_sequence<Is...>> =
-    (... && regular_invocable<ranges::details::get_element_t<Is>, T>);
+    (... && gettable_from<T, Is>);
 
 } // namespace details::tuple_like
 
 DPL_EXPORT template <typename T>
 concept tuple_like = requires {
-    typename details::tuple_like::sequence_for_t<T>;
+    typename details::tuple_like::sequence_for_t<remove_cvref_t<T>>;
 } && details::tuple_like::is_tuple_like<T>;
 
 DPL_DEFAULT_NAMESPACE_END

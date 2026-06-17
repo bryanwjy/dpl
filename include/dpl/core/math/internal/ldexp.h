@@ -9,10 +9,10 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/basic_vector.h" // IWYU pragma: keep
-#  include "dpl/core/basic/immediate.h"
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/constants/exponent_bias.h"
-#  include "dpl/core/constants/mantissa_width.h"
+#  include "dpl/core/immediate/constants/exponent_bias.h"
+#  include "dpl/core/immediate/constants/mantissa_width.h"
+#  include "dpl/core/immediate/immediate.h"
 #  include "dpl/core/operations/reinterpret.h"
 #  include "dpl/core/type_traits/representation.h"
 #  include "dpl/std/concepts/floating_point.h"

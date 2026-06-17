@@ -3,15 +3,15 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/math/internal/floating_point_simd.h"
-#include "dpl/core/math/internal/masked_op.h"
-
 #if !DPL_MODULES
+#  include "dpl/core/basic/broadcast.h"
 #  include "dpl/core/concepts/extended.h"
-#  include "dpl/core/concepts/mask_compatibility.h"
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/constants/infinity.h"
-#  include "dpl/core/constants/value_bits.h"
+#  include "dpl/core/dispatch/interface.h"
+#  include "dpl/core/dispatch/maskable/predicate.h"
+#  include "dpl/core/dispatch/operation/math.h"
+#  include "dpl/core/immediate/constants/infinity.h"
+#  include "dpl/core/immediate/constants/value_bits.h"
 #  include "dpl/core/operations/bitwise.h"
 #  include "dpl/core/operations/compare.h"
 #endif
@@ -20,98 +20,164 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void isinf(...) noexcept = delete;
 
-struct isinf_t;
-
-template <typename T>
-concept unqualified_canonical_isinf = requires(T arg) {
-    { isinf(internal::abi<T>, arg) } -> exact_mask_for<T>;
+struct DPL_EMPTY_BASES isinf_t :
+    private math_operation_base<isinf_t>,
+    private maskable_predicate_base<isinf_t> {
+    using math_operation_base<isinf_t>::operator();
+    using maskable_predicate_base<isinf_t>::operator();
 };
 
-template <typename T>
-concept unqualified_extended_isinf = requires(T arg) {
-    { isinf(arg) } -> mask_with_common_abi<simd_abi_type_t<T>>;
-};
-
-template <typename T>
-concept expression_isinf =
-    simd_expression<T> && invocable<isinf_t, simd_expression_result_t<T>>;
-
-template <typename T>
-concept decayable_isinf =
-    decayable_vector_for<T, operation_category::lane_agnostic> &&
-    regular_invocable<isinf_t, canonical_type_t<T>>;
-
-template <typename T>
-concept extended_isinf =
-    unqualified_extended_isinf<T> || expression_isinf<T> || decayable_isinf<T>;
-
-struct isinf_t : private mx::masked_predicate<isinf_t> {
+template <>
+struct fallback_impl<isinf_t> {
 private:
-    friend mx::masked_predicate<isinf_t>;
+    template <typename T>
+    using imask_t DPL_NODEBUG = mask_value_t<simd_abi_traits<T>::size>;
 
-    template <typename E, typename A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_mask<E, A>
-        DPL_VECTORCALL fallback(basic_vector<E, A> arg) noexcept {
-        return dx::cmpeq(dx::bwand(arg, dx::value_bits), dx::infinity);
-    }
+    template <typename T, imask_t<T> V>
+    using cmask_t DPL_NODEBUG = const_mask<simd_abi_traits<T>::size, V>;
 
-    template <typename M, simd_vector T>
-    requires mx::canonical_masked_math_predicate<isinf_t, M, T> &&
-        requires(M mask, T val) { isinf(internal::abi<T>, mask, val); }
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
-        return isinf(internal::abi<T>, mask, val);
-    }
-
-    template <typename M, simd_vector T>
-    requires mx::extended_masked_math_predicate<isinf_t, M, T> &&
-        requires(M mask, T val) { isinf(mask, val); }
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
-        return isinf(mask, val);
-    }
+    template <typename T>
+    using result_t DPL_NODEBUG =
+        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
 
 public:
-    template <simd_abi A, simd_floating_point_for<A> E>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_mask<E, A> operator()(
-        basic_vector<E, A> arg) noexcept {
-        if constexpr (unqualified_canonical_isinf<basic_vector<E, A>>) {
-            if consteval {
-                return fallback(arg);
-            } else {
-                return isinf(internal::abi<A>, arg);
-            }
-        } else {
-            return fallback(arg);
-        }
+    template <simd_abi A, simd_element_for<A> E>
+    requires floating_point<E>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr basic_mask<E, A>
+        DPL_VECTORCALL operator()(basic_vector<E, A> val) noexcept {
+        return dx::cmpeq(dx::bwand(val, dx::value_bits), dx::infinity);
     }
 
     template <simd_abi A, simd_element_for<A> E>
-    requires (!floating_point<E>) &&
-        unqualified_canonical_isinf<basic_vector<E, A>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_mask<E, A> operator()(
-        basic_vector<E, A> arg) noexcept {
-        return isinf(internal::abi<A>, arg);
+    requires floating_point<E>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr basic_mask<E, A>
+        DPL_VECTORCALL operator()(
+            basic_mask<E, A> mask, basic_vector<E, A> val) noexcept {
+        auto const inf = dx::broadcast<A, E>(dx::infinity);
+        return dx::cmpeq(mask, dx::bwand(val, dx::value_bits), inf);
     }
 
-    template <extended_vector T>
-    requires extended_isinf<T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T arg) noexcept {
-        if constexpr (unqualified_extended_isinf<T>) {
-            return isinf(arg);
-        } else if constexpr (expression_isinf<T>) {
-            return operator()(dx::evaluate(arg));
-        } else {
-            return operator()(dx::to_canonical(arg));
-        }
+    template <fixed_width_vector T, imask_t<T> M>
+    requires canonical_vector<T> && floating_point<simd_element_type_t<T>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr result_t<T>
+        DPL_VECTORCALL operator()(cmask_t<T, M> cmask, T val) noexcept {
+        auto const inf = dx::broadcast<T>(dx::infinity);
+        return dx::cmpeq(cmask, dx::bwand(val, dx::value_bits), inf);
     }
-
-    using mx::masked_predicate<isinf_t>::operator();
 };
+
+template <>
+struct operation_signature<isinf_t> {
+    static consteval void operator()(simd_vector auto&&) noexcept {}
+};
+
+template <typename T, typename A = simd_abi_type_t<T>>
+concept unqualified_canonical_isinf = requires {
+    {
+        isinf(internal::abi<A>, internal::declarg<T>())
+    } -> same_as<basic_mask<simd_element_type_t<T>, A>>;
+};
+
+template <typename S, typename T>
+concept unqualified_canonical_misinf = canonical_mask<S> &&
+    (!simd_mask<S> || same_as<S, cpo_result_t<isinf_t, T>>) && requires {
+        {
+            isinf(internal::abi<T>, internal::declarg<S>(),
+                internal::declarg<T>())
+        } -> same_as<cpo_result_t<isinf_t, T>>;
+    };
+
+template <>
+struct canonical_impl<isinf_t> {
+private:
+    template <typename T>
+    using result_t DPL_NODEBUG =
+        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
+
+    template <typename T>
+    using mask_t DPL_NODEBUG = cpo_result_t<cmpeq_t, T>;
+
+    template <typename T>
+    using imask_t DPL_NODEBUG = mask_value_t<simd_abi_traits<T>::size>;
+
+    template <typename T, imask_t<T> V>
+    using cmask_t DPL_NODEBUG = const_mask<simd_abi_traits<T>::size, V>;
+
+public:
+    template <canonical_vector T>
+    requires unqualified_canonical_isinf<T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr result_t<T> operator()(T arg) noexcept {
+        return isinf(internal::abi<T>, arg);
+    }
+
+    template <canonical_vector T>
+    requires unqualified_canonical_misinf<mask_t<T>, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr mask_t<T> operator()(mask_t<T> src, T val) noexcept {
+        return isinf(internal::abi<T>, src, val);
+    }
+
+    template <canonical_vector T, imask_t<T> M>
+    requires unqualified_canonical_misinf<cmask_t<T, M>, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr mask_t<T> operator()(cmask_t<T, M> cmask, T val) noexcept {
+        return isinf(internal::abi<T>, cmask, val);
+    }
+};
+
+template <typename T>
+concept unqualified_extended_isinf = requires {
+    {
+        isinf(internal::declarg<T>())
+    } -> mask_with_common_abi<simd_abi_type_t<T>>;
+};
+
+template <typename S, typename T>
+concept unqualified_extended_misinf =
+    (!simd_mask<S> || equivalent_mask_with<S, cpo_result_t<isinf_t, T>>) &&
+    requires {
+        {
+            isinf(internal::declarg<S>(), internal::declarg<T>())
+        } -> equivalent_mask_with<cpo_result_t<isinf_t, T>>;
+    };
+
+template <>
+struct extended_impl<isinf_t> {
+private:
+    template <typename T>
+    using imask_t DPL_NODEBUG = mask_value_t<simd_abi_traits<T>::size>;
+
+    template <typename T, imask_t<T> V>
+    using cmask_t DPL_NODEBUG = const_mask<simd_abi_traits<T>::size, V>;
+
+public:
+    template <extended_vector T>
+    requires unqualified_extended_isinf<T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T&& arg) {
+        return isinf(__DPL forward<T>(arg));
+    }
+
+    template <simd_mask S, simd_vector T>
+    requires (extended_mask<S> || extended_vector<T>) &&
+        unqualified_extended_misinf<S, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(S&& src, T&& arg) {
+        return isinf(__DPL forward<S>(src), __DPL forward<T>(arg));
+    }
+
+    template <fixed_width_vector T, imask_t<T> M>
+    requires extended_vector<T> && unqualified_extended_misinf<cmask_t<T, M>, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(cmask_t<T, M> cmask, T&& arg) {
+        return isinf(cmask, __DPL forward<T>(arg));
+    }
+};
+
 } // namespace datapar::internal
 
 namespace datapar {

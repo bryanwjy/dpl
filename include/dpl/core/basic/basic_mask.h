@@ -5,18 +5,18 @@
 
 #include "dpl/core/basic/broadcast.h"
 #include "dpl/core/basic/broadcasting.h"
-#include "dpl/core/basic/const_mask.h"
 #include "dpl/core/basic/extract.h"
-#include "dpl/core/basic/immediate.h"
 #include "dpl/core/basic/initialize.h"
+#include "dpl/core/basic/internal/iota_sequence.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/fwd.h"
 
-#  include "dpl/core/basic/internal/iota_sequence.h"
 #  include "dpl/core/concepts/common_size_with.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_element.h"
+#  include "dpl/core/immediate/const_mask.h"
+#  include "dpl/core/immediate/immediate.h"
 #  include "dpl/core/type_traits/simd_abi_traits.h"
 #  include "dpl/std/bit/bit_cast.h"
 #  include "dpl/std/concepts/different_from.h"
@@ -37,8 +37,6 @@ class basic_mask {
     template <typename E2>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr basic_mask reinterpret(basic_mask<E2, A> other) noexcept {
-        // Implement using bit_cast to avoid making reinterpret a
-        // basic-operation
         using other_mask = typename simd_abi_traits<E2, A>::native_mask;
         if constexpr (same_as<mask_type, other_mask>) {
             return basic_mask(+other);
@@ -82,12 +80,14 @@ public:
     requires fixed_width_abi<A>
         : basic_mask(datapar::initialize<E, A>(data)) {}
 
-    template <different_from<basic_mask> M>
-    requires const_mask_for<M, basic_mask>
-    __DPL_HIDE_FROM_ABI constexpr basic_mask(M mask) noexcept
-    requires fixed_width_abi<A>
-        : basic_mask(static_cast<bitset<abi_traits::size>>(
-              datapar::to_compatible_const_mask<basic_mask>(mask))) {}
+    template <size_t W, internal::mask_value_t<W> V>
+    requires fixed_width_abi<A> &&
+        requires { typename const_mask<abi_traits::size, V>; }
+    __DPL_HIDE_FROM_ABI explicit(convertible_to<const_mask<W, V>,
+        const_mask<abi_traits::size, V>>) constexpr basic_mask(const_mask<W, V>
+            mask) noexcept
+        : basic_mask(
+              datapar::to_bitset(const_mask<abi_traits::size, V>(mask))) {}
 
     template <core_convertible_to<bool>... Bs>
     requires fixed_width_abi<A>

@@ -14,9 +14,9 @@
 #  include "dpl/core/basic/basic_vector.h" // IWYU pragma: export
 #  include "dpl/core/basic/broadcast.h"
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/constants/ln2.h"
-#  include "dpl/core/constants/one.h"
-#  include "dpl/core/constants/zero.h"
+#  include "dpl/core/immediate/constants/ln2.h"
+#  include "dpl/core/immediate/constants/one.h"
+#  include "dpl/core/immediate/constants/zero.h"
 #  include "dpl/core/operations/arithmetic/abs.h"
 #  include "dpl/core/operations/select.h"
 #  include "dpl/std/concepts/convertible_to.h"
@@ -25,13 +25,6 @@
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::fmath {
-
-template <typename T, typename... Args>
-DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr auto cpo(Args... args) noexcept {
-    constexpr T func;
-    return func(args...);
-}
 
 template <floating_point T, simd_abi A>
 requires simd_floating_point_for<T, A>
@@ -338,11 +331,12 @@ struct single<basic_vector<E, A>> {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     constexpr auto DPL_VECTORCALL operator+(
         this single self, element_type right) noexcept {
+        // Knuth's twosum
         auto s = self.value + right;
         auto v = s - self.value;
         return pair<E, A>{
             .upper = s,
-            .lower = self.value - (s - v) + (right - v),
+            .lower = (self.value - (s - v)) + (right - v),
         };
     }
 
@@ -355,17 +349,19 @@ struct single<basic_vector<E, A>> {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     constexpr auto DPL_VECTORCALL operator-(
         this single self, element_type right) noexcept {
+        // Knuth's twodiff
         auto s = self.value - right;
+        auto v = s - self.value;
         return pair<E, A>{
             .upper = s,
-            .lower = (self.value - s) - right,
+            .lower = (self.value - (s - v)) - (right + v),
         };
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     friend constexpr auto DPL_VECTORCALL operator-(
         element_type left, single right) noexcept {
-        return single(left) + right.value;
+        return single(left) - right.value;
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
@@ -484,6 +480,17 @@ struct fast<basic_vector<E, A>> {
     friend constexpr auto DPL_VECTORCALL operator+(
         element_type left, fast right) noexcept {
         return fast(left) + right.value;
+    }
+
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    constexpr auto DPL_VECTORCALL operator-(
+        this fast self, element_type right) noexcept {
+        // |self.value| > |right|
+        auto upper = self.value - right;
+        return pair<E, A>{
+            .upper = upper,
+            .lower = self.value - upper - right,
+        };
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)

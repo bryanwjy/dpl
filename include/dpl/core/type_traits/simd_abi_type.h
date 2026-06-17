@@ -18,6 +18,10 @@ DPL_EXPORT template <typename T>
 struct simd_abi_type<T volatile> : simd_abi_type<T> {};
 DPL_EXPORT template <typename T>
 struct simd_abi_type<T const volatile> : simd_abi_type<T> {};
+DPL_EXPORT template <typename T>
+struct simd_abi_type<T&> : simd_abi_type<T> {};
+DPL_EXPORT template <typename T>
+struct simd_abi_type<T&&> : simd_abi_type<T> {};
 
 DPL_EXPORT template <typename T>
 using simd_abi_type_t = typename simd_abi_type<T>::type;

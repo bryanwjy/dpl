@@ -14,6 +14,7 @@
 #  include "dpl/core/type_traits/simd_vector_type.h"
 #  include "dpl/std/type_traits/is_object.h"
 #  include "dpl/std/type_traits/is_trivially_copyable.h"
+#  include "dpl/std/type_traits/remove_cvref.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -48,8 +49,9 @@ concept simd_mask =
 } // namespace atom
 
 DPL_EXPORT template <typename T>
-concept simd_type = atom::simd_type<remove_cv_t<T>> &&
-    (atom::simd_vector<remove_cv_t<T>> || atom::simd_mask<remove_cv_t<T>>);
+concept simd_type = atom::simd_type<remove_cvref_t<T>> &&
+    (atom::simd_vector<remove_cvref_t<T>> ||
+        atom::simd_mask<remove_cvref_t<T>>);
 
 DPL_EXPORT template <typename T>
 concept fixed_width_simd_type =

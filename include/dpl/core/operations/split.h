@@ -4,20 +4,19 @@
 #include "dpl/config.h"
 
 #include "dpl/core/operations/abi_promotion.h"
+#include "dpl/core/operations/pack_mask.h"
 #include "dpl/core/operations/split_result.h"
+
 #if !DPL_MODULES
 #  include "dpl/core/basic/initialize.h"
 #  include "dpl/core/basic/internal/abi.h"
 #  include "dpl/core/basic/load.h"
 #  include "dpl/core/basic/store.h"
-#  include "dpl/core/concepts/decayable.h"
-#  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/concepts/simd_expression.h"
 #  include "dpl/core/concepts/simd_type.h"
+#  include "dpl/core/dispatch/interface.h"
+#  include "dpl/core/dispatch/operation/primitive.h"
 #  include "dpl/core/operations/internal/array_for.h"
-#  include "dpl/core/type_traits/rebind_simd.h"
-#  include "dpl/core/type_traits/simd_expression_result.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -85,194 +84,129 @@ template <typename>
 void split(...) noexcept = delete;
 void split(...) noexcept = delete;
 
-template <typename T, typename U>
-inline constexpr bool equivalent_split_result = false;
-
-template <size_t N, fixed_width_simd_type T, fixed_width_simd_type U>
-inline constexpr bool equivalent_split_result<dx::split_result<T, N>, U> =
-    equivalent_simd_type_with<T, U> &&
-    (N * T::abi_type::size == U::abi_type::size);
-
-template <typename T, typename U>
-concept equivalent_split_result_as = equivalent_split_result<T, U>;
-
-template <size_t Target, typename C>
-struct split_target {};
-
-template <size_t Target, typename C>
-requires (Target == C::size)
-struct split_target<Target, C> {
-    using type DPL_NODEBUG = C;
-};
-
-template <size_t Target, typename C>
-requires (Target < C::size) && requires { typename demote_abi_t<C>; }
-struct split_target<Target, C> : split_target<Target, demote_abi_t<C>> {};
-
-template <size_t N, typename Source>
-using split_target_t DPL_NODEBUG =
-    typename split_target<Source::size / N, demote_abi_t<Source>>::type;
-
-template <typename T, size_t N>
-concept unqualified_split_into = requires(T arg) {
-    {
-        split<split_target_t<N, typename T::abi_type>>(internal::abi<T>, arg)
-    } -> equivalent_split_result_as<rebind_simd_t<T, simd_element_type_t<T>,
-        split_target_t<N, typename T::abi_type>>>;
+template <size_t N>
+struct split_t : private primitive_operation_base<split_t<N>> {
+    using primitive_operation_base<split_t<N>>::operator();
 };
 
 template <typename T, size_t N>
-concept unqualified_split_outof = requires(T arg) {
-    {
-        split(internal::abi<split_target_t<N, typename T::abi_type>>, arg)
-    } -> equivalent_split_result_as<rebind_simd_t<T, simd_element_type_t<T>,
-        split_target_t<N, typename T::abi_type>>>;
-};
-
-template <typename T, size_t N>
-concept unqualified_extended_split = requires(T arg) {
-    {
-        split<split_target_t<N, typename T::abi_type>>(arg)
-    } -> equivalent_split_result_as<rebind_simd_t<T, simd_element_type_t<T>,
-        split_target_t<N, typename T::abi_type>>>;
-};
-
-template <typename T, size_t N>
-concept expression_split =
-    simd_expression<T> && invocable<split_t<N>, simd_expression_result_t<T>>;
-
-template <typename T, size_t N>
-concept decayable_split =
-    decayable_simd_for<T, operation_category::structural_transformation> &&
-    regular_invocable<split_t<N>, canonical_type_t<T>>;
-
-template <typename T, size_t N>
-concept extended_split = unqualified_extended_split<T, N> ||
-    expression_split<T, N> || decayable_split<T, N>;
-
-template <typename T, size_t N>
-concept splittable =
-    fixed_width_simd_type<T> && ((T::abi_type::size % N) == 0) && requires {
-        typename demote_abi_t<typename T::abi_type>;
-        typename split_target_t<N, typename T::abi_type>;
+concept splittable = fixed_width_simd_type<T> &&
+    ((simd_abi_type_t<T>::size % N) == 0) && requires {
+        typename demote_abi_t<simd_abi_type_t<T>>;
+        typename split_target_t<N, simd_abi_type_t<T>>;
     };
 
 template <size_t N>
-struct split_t {
-private:
-    template <typename E, typename A0>
+struct fallback_impl<split_t<N>> {
+    template <fixed_width_abi A, simd_element_for<A> E>
+    requires splittable<basic_vector<E, A>, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static consteval auto fallback(basic_vector<E, A0> src) noexcept {
-        using A = split_target_t<N, A0>;
-        array_for<E, A0> buffer{};
+    static consteval auto operator()(basic_vector<E, A> src) noexcept {
+        using ToA = split_target_t<N, A>;
+        array_for<E, A> buffer{};
         dx::store(src, buffer.data);
 #if DPL_CXX26
         constexpr auto [... is] = make_index_sequence<N>{};
-        constexpr auto S = simd_abi_traits<A, E>::size;
-        return dx::make_split_result(dx::load<A>(buffer.data + is * S)...);
+        constexpr auto S = simd_abi_traits<ToA, E>::size;
+        return dx::make_split_result(dx::load<ToA>(buffer.data + is * S)...);
 #else
         constexpr make_index_sequence<N> iseq{};
         return [&]<size_t... Is>(index_sequence<Is...>) {
-            constexpr auto S = simd_abi_traits<A, E>::size;
+            constexpr auto S = simd_abi_traits<ToA, E>::size;
             return dx::make_split_result(
-                dx::load<E, A>(buffer.data + Is * S)...);
+                dx::load<E, ToA>(buffer.data + Is * S)...);
         }(iseq);
 #endif
-    }
-
-    template <typename E, typename A0>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static consteval auto fallback(basic_mask<E, A0> src) noexcept {
-        using A = split_target_t<N, A0>;
-#if DPL_CXX26
-        constexpr auto S = simd_abi_traits<A, E>::size;
-        constexpr auto [... is] = make_index_sequence<N>{};
-        constexpr auto [... js] = index_sequence<(is * S)...>{};
-        constexpr auto [... ks] = make_index_sequence<S>{};
-
-        return dx::make_split_result([&](auto j) { //
-            return dx::initialize<A>(src[j + ks]...);
-        }(js)...);
-#else
-        static constexpr auto S = simd_abi_traits<A, E>::size;
-        static constexpr make_index_sequence<S> kseq{};
-        static constexpr make_index_sequence<N> iseq{};
-        constexpr auto jseq = []<size_t... Is>(index_sequence<Is...>) {
-            return index_sequence<(Is * S)...>{};
-        }(iseq);
-
-        return [&]<size_t... Js>(index_sequence<Js...>) {
-            return dx::make_split_result([&](size_t j) {
-                return [&]<size_t... Ks>(index_sequence<Ks...>) {
-                    return dx::initialize<E, A>(bitset(src[j + Ks]...));
-                }(kseq);
-            }(Js)...);
-        }(jseq);
-#endif
-    }
-
-public:
-    template <fixed_width_abi A, simd_element_for<A> E>
-    requires splittable<basic_vector<E, A>, N> &&
-        (unqualified_split_into<basic_vector<E, A>, N> ||
-            unqualified_split_outof<basic_vector<E, A>, N>)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto operator()(basic_vector<E, A> src) noexcept {
-        using SA = split_target_t<N, A>;
-        if constexpr (unqualified_split_into<basic_vector<E, A>, N>) {
-            if consteval {
-                return fallback(src);
-            } else {
-                return split<SA>(internal::abi<A>, src);
-            }
-        } else {
-            static_assert(unqualified_split_outof<basic_vector<E, A>, N>);
-            if consteval {
-                return fallback(src);
-            } else {
-                return split(internal::abi<SA>, src);
-            }
-        }
     }
 
     template <fixed_width_abi A, simd_element_for<A> E>
     requires splittable<basic_mask<E, A>, N> &&
-        (unqualified_split_into<basic_mask<E, A>, N> ||
-            unqualified_split_outof<basic_mask<E, A>, N>)
+        cpo_invocable<pack_mask_t, basic_mask<E, A>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto operator()(basic_mask<E, A> src) noexcept {
-        using SA = split_target_t<N, A>;
-        if constexpr (unqualified_split_into<basic_mask<E, A>, N>) {
-            if consteval {
-                return fallback(src);
-            } else {
-                return split<SA>(internal::abi<A>, src);
-            }
-        } else {
-            static_assert(unqualified_split_outof<basic_mask<E, A>, N>);
-            if consteval {
-                return fallback(src);
-            } else {
-                return split(internal::abi<SA>, src);
-            }
+    static consteval auto operator()(basic_mask<E, A> src) noexcept {
+        using ToA = split_target_t<N, A>;
+        auto const set = dx::pack_mask(src);
+        constexpr auto S = simd_abi_traits<ToA, E>::size;
+        constexpr auto chunk = A::size / N;
+        using bitset_t = bitset<chunk>;
+        bitset<chunk> data[N];
+        for (auto& set : data) {
+            set = __DPL truncate<chunk>(set >>= chunk);
         }
-    }
 
-    template <extended_simd_type T>
-    requires splittable<T, N> && extended_split<T, N>
+        return __DPL apply(
+            [](auto const&... set) {
+                return dx::make_split_result(dx::initialize<E, ToA>(set)...);
+            }(),
+            data);
+    }
+};
+
+template <typename T, size_t N>
+concept unqualified_split_into = requires(T arg) {
+    split<split_target_t<N, simd_abi_type_t<T>>>(internal::abi<T>, arg);
+};
+
+template <typename T, size_t N>
+concept unqualified_split_outof = requires(T arg) {
+    split(internal::abi<split_target_t<N, simd_abi_type_t<T>>>, arg);
+};
+
+template <typename T, size_t N>
+concept unqualified_canonical_split =
+    unqualified_split_into<T, N> || unqualified_split_outof<T, N>;
+
+template <size_t N>
+struct canonical_impl<split_t<N>> {
+private:
+    template <typename T>
+    using result_t DPL_NODEBUG = conditional_t<simd_vector<T>,
+        basic_vector<simd_element_type_t<T>,
+            split_target_t<N, simd_abi_type_t<T>>>,
+        basic_mask<simd_element_type_t<T>,
+            split_target_t<N, simd_abi_type_t<T>>>>;
+
+public:
+    template <canonical_simd_type T>
+    requires splittable<T, N> && unqualified_canonical_split<T, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto operator()(T src) noexcept {
-        if constexpr (unqualified_extended_split<T, N>) {
-            using A = split_target_t<N, T>;
-            return split<A>(src);
-        } else if constexpr (expression_split<T, N>) {
-            return operator()(dx::evaluate(src));
+    static constexpr result_t<T>
+        DPL_VECTORCALL operator()(T src) noexcept {
+        using ToA = split_target_t<N, simd_abi_type_t<T>>;
+        if constexpr (unqualified_split_into<T, N>) {
+            return split<ToA>(internal::abi<T>, src);
         } else {
-            return operator()(dx::to_canonical(src));
+            return split(internal::abi<ToA>, src);
         }
     }
 };
 
+template <typename T, typename U, size_t N>
+inline constexpr bool equivalent_split_result = false;
+
+template <size_t N, fixed_width_simd_type T, fixed_width_simd_type U>
+inline constexpr bool equivalent_split_result<dx::split_result<T, N>, U, N> =
+    common_simd_type_with<T, U> &&
+    (simd_abi_type_t<U>::size == simd_abi_type_t<T>::size * N);
+
+template <typename T, typename From, size_t N>
+concept equivalent_split_result_as = equivalent_split_result<T, From, N>;
+
+template <typename T, size_t N>
+concept unqualified_extended_split = requires {
+    { split<N>(internal::declarg<T>()) } -> equivalent_split_result_as<T, N>;
+};
+
+template <size_t N>
+struct extended_impl<split_t<N>> {
+public:
+    template <canonical_simd_type T>
+    requires unqualified_extended_split<T, N>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(T&& src) noexcept {
+        return split<N>(__DPL forward<T>(src));
+    }
+};
 } // namespace datapar::internal
 
 namespace datapar {

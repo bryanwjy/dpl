@@ -28,7 +28,7 @@ DPL_EXPORT template <typename D>
 class logical_simd_interface {
 public:
     template <simd_mask R>
-    requires regular_invocable<internal::logical_or_t, D, R>
+    requires internal::cpo_invocable<internal::logical_or_t, D, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     constexpr invoke_result_t<internal::logical_or_t, D, R> operator||(
         this D lhs, R rhs) noexcept
@@ -38,7 +38,7 @@ public:
     }
 
     template <simd_mask R>
-    requires regular_invocable<internal::logical_and_t, D, R>
+    requires internal::cpo_invocable<internal::logical_and_t, D, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     constexpr invoke_result_t<internal::logical_and_t, D, R> operator&&(
         this D lhs, R rhs) noexcept
@@ -55,7 +55,7 @@ public:
     }
 
     template <simd_mask L>
-    requires regular_invocable<internal::logical_or_t, L, D>
+    requires internal::cpo_invocable<internal::logical_or_t, L, D>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     friend constexpr invoke_result_t<internal::logical_or_t, L, D> operator||(
         L lhs, D rhs) noexcept
@@ -65,7 +65,7 @@ public:
     }
 
     template <simd_mask L>
-    requires regular_invocable<internal::logical_or_t, L, D>
+    requires internal::cpo_invocable<internal::logical_or_t, L, D>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     friend constexpr invoke_result_t<internal::logical_and_t, L, D> operator&&(
         L lhs, D rhs) noexcept

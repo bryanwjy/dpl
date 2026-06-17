@@ -18,6 +18,10 @@ DPL_EXPORT template <typename T>
 struct simd_native_type<T volatile> : simd_native_type<T> {};
 DPL_EXPORT template <typename T>
 struct simd_native_type<T const volatile> : simd_native_type<T> {};
+DPL_EXPORT template <typename T>
+struct simd_native_type<T&> : simd_native_type<T> {};
+DPL_EXPORT template <typename T>
+struct simd_native_type<T&&> : simd_native_type<T> {};
 
 DPL_EXPORT template <typename T>
 using simd_native_type_t = typename simd_native_type<T>::type;

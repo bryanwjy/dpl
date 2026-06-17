@@ -5,12 +5,16 @@
 
 #include "dpl/core/concepts/simd_type.h"
 
+#if !DPL_MODULES
+#  include "dpl/std/type_traits/remove_cvref.h"
+#endif
+
 DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar {
 
 DPL_EXPORT template <typename T>
-concept simd_mask = simd_type<T> && atom::simd_mask<remove_cv_t<T>>;
+concept simd_mask = simd_type<T> && atom::simd_mask<remove_cvref_t<T>>;
 
 DPL_EXPORT template <typename T>
 concept scalable_mask = simd_mask<T> && scalable_simd_type<T>;

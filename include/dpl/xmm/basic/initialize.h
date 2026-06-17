@@ -16,8 +16,8 @@ DPL_DISABLE_WARNING("-Wc++26-extensions")
 #include "dpl/xmm/basic/abi.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/constants/all_bits.h"
-#  include "dpl/core/constants/zero.h"
+#  include "dpl/core/immediate/constants/all_bits.h"
+#  include "dpl/core/immediate/constants/zero.h"
 #  include "dpl/core/type_traits/representation.h"
 #  include "dpl/core/type_traits/simd_abi_traits.h"
 #  include "dpl/std/bit/bit_cast.h"

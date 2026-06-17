@@ -3,63 +3,188 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/algorithm/internal/scan.h"
+#include "dpl/core/algorithm/scan/common.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/basic/immediate.h"
+#  include "dpl/core/basic/broadcast.h"
+#  include "dpl/core/basic/lane_index.h"
 #  include "dpl/core/concepts/equivalence.h"
-#  include "dpl/core/concepts/simd_abi.h"
+#  include "dpl/core/dispatch/interface.h"
+#  include "dpl/core/dispatch/maskable/transform.h"
+#  include "dpl/core/dispatch/operation/algorithm.h"
+#  include "dpl/core/immediate/immediate.h"
 #  include "dpl/core/operations/bit.h"
+#  include "dpl/core/operations/permute.h"
 #  include "dpl/core/operations/select.h"
-#  include "dpl/core/type_traits/canonical_type.h"
 #  include "dpl/core/type_traits/simd_abi_traits.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
+
 void compress(...) noexcept = delete;
 
-struct compress_t;
-
-template <typename S, typename M, typename T, typename A = common_abi_t<M, T>>
-concept unqualified_canonical_compress = requires(S src, M mask, T val) {
-    {
-        compress(internal::abi<A>, src, mask, val)
-    } -> equivalent_simd_type_with<canonical_if_zero_t<S, T, A>>;
+struct DPL_EMPTY_BASES compress_t :
+    private algorithm_base<compress_t>,
+    private maskable_transform_base<compress_t> {
+    using operation_base<compress_t>::operator();
+    using maskable_transform_base<compress_t>::operator();
 };
 
-template <typename S, typename M, typename T, typename A = common_abi_t<M, T>>
-concept unqualified_extended_compress = requires(S src, M mask, T val) {
-    { compress(src, mask, val) } -> vector_with_common_abi<A>;
+template <>
+struct operation_signature<compress_t> {
+    template <simd_vector T>
+    static consteval void operator()(T&&) noexcept {}
 };
 
-template <typename S, typename M, typename R, typename A = common_abi_t<S, R>>
-concept unqualified_canonical_icompress = requires(S src, R val) {
-    {
-        compress(internal::abi<A>, src, internal::select_mask<M, S, R>(), val)
-    } -> equivalent_simd_type_with<S>;
-};
+template <typename S, typename M, typename T>
+concept unqualified_canonical_mcompress =
+    (!simd_type<S> || same_as<common_abi_t<S, T>, simd_abi_type_t<S>>) &&
+    requires(S src, M mask, T val) {
+        compress(
+            internal::abi<conditional_t<simd_type<S>, S, T>>, src, mask, val);
+    };
 
-template <typename S, typename M, typename R, typename A = common_abi_t<S, R>>
-concept unqualified_extended_icompress = requires(S src, R val) {
-    {
-        compress(src, internal::select_mask<M, S, R>(), val)
-    } -> vector_with_common_abi<A>;
-};
-
-struct compress_t {
+template <>
+struct canonical_impl<compress_t> {
 private:
-    template <typename S, typename M, typename T>
-    requires (scalable_mask<M> || scalable_mask<T> ||
-        scalable_abi<common_abi_t<M, T>>)
+    template <typename T>
+    using mask_t DPL_NODEBUG =
+        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
+
+    template <typename T>
+    using imask_t DPL_NODEBUG = mask_value_t<simd_abi_traits<T>::size>;
+
+    template <typename T, imask_t<T> V>
+    using cmask_t DPL_NODEBUG = const_mask<simd_abi_traits<T>::size, V>;
+
+public:
+    template <simd_vector T>
+    static constexpr T operator()(T&& val) noexcept {
+        static_assert(!simd_vector<T>,
+            "This overload is uninvocable at evaluated contexts");
+        return __DPL forward<T>(val);
+    }
+
+    template <canonical_vector S, common_vector_with<S> T>
+    requires canonical_vector<T> &&
+        unqualified_canonical_mcompress<S, mask_t<S>, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(S src, mask_t<S> mask, T val) noexcept {
+        return compress(internal::abi<S>, src, mask, val);
+    }
+
+    template <fixed_width_vector S, imask_t<S> M, common_vector_with<S> T>
+    requires canonical_vector<T> &&
+        unqualified_canonical_mcompress<S, cmask_t<S, M>, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(
+        S src, cmask_t<S, M> cmask, T val) noexcept {
+        return compress(internal::abi<S>, src, cmask, val);
+    }
+
+    template <canonical_vector T>
+    requires unqualified_canonical_mcompress<dx::zero_t, mask_t<T>, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(
+        dx::zero_t zero, mask_t<T> mask, T val) noexcept {
+        return compress(internal::abi<T>, zero, mask, val);
+    }
+
+    template <fixed_width_vector T, imask_t<T> M>
+    requires unqualified_canonical_mcompress<dx::zero_t, cmask_t<T, M>, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(
+        dx::zero_t zero, cmask_t<T, M> cmask, T val) noexcept {
+        return compress(internal::abi<T>, zero, cmask, val);
+    }
+};
+
+template <typename S, typename M, typename T>
+concept unqualified_extended_mcompress = requires {
+    {
+        compress(internal::declarg<S>(), internal::declarg<M>(),
+            internal::declarg<T>())
+    } -> equivalent_vector_with<conditional_t<simd_type<S>, S, T>>;
+};
+
+template <>
+struct extended_impl<compress_t> {
+private:
+    template <typename T>
+    using imask_t DPL_NODEBUG = mask_value_t<simd_abi_traits<T>::size>;
+
+    template <typename T, imask_t<T> V>
+    using cmask_t DPL_NODEBUG = const_mask<simd_abi_traits<T>::size, V>;
+
+    template <typename T>
+    using mask_t DPL_NODEBUG =
+        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
+
+public:
+    template <simd_vector T>
+    static constexpr T operator()(T&& val) noexcept {
+        static_assert(!simd_vector<T>,
+            "This overload is uninvocable at evaluated contexts");
+        return __DPL forward<T>(val);
+    }
+
+    template <simd_vector S, common_vector_with<S> T,
+        equivalent_mask_with<mask_t<S>> M>
+    requires (extended_vector<S> || extended_mask<M> || extended_vector<T>) &&
+        unqualified_extended_mcompress<S, M, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(S&& src, M&& mask, T&& val) {
+        return compress( __DPL forward<S>(src), __DPL forward<M>(mask),
+            __DPL forward<T>(val));
+    }
+
+    template <fixed_width_vector S, imask_t<S> M, common_vector_with<S> T>
+    requires (extended_vector<S> || extended_vector<T>) &&
+        unqualified_extended_mcompress<S, cmask_t<S, M>, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(S&& src, cmask_t<S, M> cmask, T&& val) {
+        return compress( __DPL forward<S>(src), cmask, __DPL forward<T>(val));
+    }
+
+    template <simd_vector T, common_mask_with<mask_t<T>> M>
+    requires (extended_mask<M> || extended_vector<T>) &&
+        unqualified_extended_mcompress<dx::zero_t, M, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(dx::zero_t zero, M&& mask, T&& val) {
+        return compress(zero, __DPL forward<M>(mask), __DPL forward<T>(val));
+    }
+
+    template <fixed_width_vector T, imask_t<T> M>
+    requires extended_vector<T> &&
+        unqualified_extended_mcompress<dx::zero_t, cmask_t<T, M>, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(
+        dx::zero_t zero, cmask_t<T, M> cmask, T&& val) {
+        return compress(zero, cmask, __DPL forward<T>(val));
+    }
+};
+
+template <>
+struct fallback_impl<compress_t> {
+public:
+    template <simd_vector T>
+    static constexpr T operator()(T&& val) noexcept {
+        static_assert(!simd_vector<T>,
+            "This overload is uninvocable at evaluated contexts");
+        return __DPL forward<T>(val);
+    }
+
+    template <simd_vector S, simd_mask M, simd_vector T>
+    requires cpo_invocable<exscan_sum_t, M>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL fallback(
+    static constexpr S DPL_VECTORCALL operator()(
         S src, M mask, T val) noexcept {
-        using A = common_abi_t<M, T>;
+        using A = simd_abi_type_t<S>;
         using I = signed_representation_t<simd_element_type_t<M>>;
         auto const simd_size = simd_abi_traits<I, A>::size();
-        auto const idx = dx::lane_index<I, A>();
-        auto rank = exscan_sum_base::operator()(mask);
+        auto const idx = dx::lane_index<S>();
+        auto const rank = fwd::exscan_sum(mask);
         for (auto i = 1zu; i < simd_size; i <<= 1) {
             auto const dist = dx::broadcast<I, A>(static_cast<I>(i));
             auto const perm = idx ^ dist;
@@ -75,23 +200,23 @@ private:
         return dx::select(idx < dx::popcount(mask), val, src);
     }
 
-    template <typename S, typename M, typename T>
+    template <fixed_width_vector S, fixed_width_mask M, fixed_width_vector T>
+    requires cpo_invocable<exscan_sum_t, M>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL fallback(
+    static constexpr auto DPL_VECTORCALL operator()(
         S src, M mask, T val) noexcept {
         using A = common_abi_t<M, T>;
         using I = signed_representation_t<simd_element_type_t<M>>;
-        auto const rank = exscan_sum_base::operator()(mask);
+        auto const rank = fwd::exscan_sum(mask);
         [&val]<size_t J>(this auto self, auto rank, immediate<J>) {
-            constexpr auto butterfly = []<size_t... Is>(index_sequence<Is...>) {
-                return index_sequence<(Is ^ J)...>{};
-            }(iota_sequence<I, A>);
-            auto const perm_val = dx::permute(val, butterfly);
-            auto const perm_rank = dx::permute(rank, butterfly);
+            constexpr auto idx =
+                fallback_impl::template butterfly<J>(iota_sequence<S>);
+            auto const perm_rank = dx::permute(rank, idx);
             auto const dist = dx::broadcast<I, A>(J);
             auto const move =
                 (rank & dist) != dx::zero && perm_rank == (rank ^ dist);
-            val = dx::select(move, perm_val, val);
+
+            val = dx::permute(val, move, val, idx);
             if constexpr (J < simd_abi_traits<T>::size) {
                 self(dx::select(move, perm_rank, rank), imm<J * 2>);
             }
@@ -101,202 +226,106 @@ private:
             dx::lane_index<I, A>() < dx::popcount(mask), val, src);
     }
 
-    template <typename S, typename M, typename T>
+    template <simd_vector S, const_mask_for<S> M, simd_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL fallbacki(
+    static constexpr auto DPL_VECTORCALL operator()(
         S src, M cmask, T val) noexcept {
-        using A = common_abi_t<canonical_if_zero_t<S, T>, T>;
+        using A = simd_abi_type_t<S>;
         using I = signed_representation_t<simd_element_type_t<T>>;
-        constexpr auto rank =
-            exscan_sum_base::operator()(basic_mask<I, A>(cmask));
-        [&val]<size_t J>(this auto self, auto rank, immediate<J>) {
-            constexpr auto idx = []<size_t... Is>(index_sequence<Is...>) {
-                return index_sequence<(Is ^ J)...>{};
-            }(iota_sequence<I, A>);
+        constexpr auto rank = []<size_t... Is>(M mask, index_sequence<Is...>) {
+            constexpr auto set = static_cast<bitset<M::width>>(mask);
+            return index_sequence<fallback_impl::prefix_sum(set, Is)...>{};
+        }(cmask, iota_sequence<S>);
 
-            auto const perm_val = dx::permute(val, idx);
-            auto const perm_rank = dx::permute(rank, idx);
-            auto const dist = dx::broadcast<I, A>(J);
-            auto const move =
-                (rank & dist) != dx::zero && perm_rank == (rank ^ dist);
-            val = dx::select(move, perm_val, val);
-            if constexpr (J <
-                simd_abi_traits<canonical_if_zero_t<S, T>>::size) {
-                self(dx::select(move, perm_rank, rank), imm<J * 2>);
+        [&val]<size_t J>(this auto self, auto rank, immediate<J>) {
+            constexpr auto idx =
+                fallback_impl::template butterfly<J>(iota_sequence<S>);
+            constexpr auto perm_rank = fallback_impl::permute(rank, idx);
+            constexpr auto move =
+                fallback_impl::template should_move<J>(perm_rank, rank);
+
+            val = dx::permute(val, move, val, idx);
+            if constexpr (J < simd_abi_traits<S>::size) {
+                constexpr auto new_idx =
+                    fallback_impl::select(move, perm_rank, rank);
+                self(new_idx, imm<J * 2>);
             }
         }(rank, imm<1zu>);
 
         constexpr auto V = (1zu << dx::popcount(cmask)) - 1;
-        return dx::selecti<V>(val, src);
+        constexpr make_const_mask_t<S, V> new_mask{};
+        return dx::select(new_mask, val, src);
     }
 
-    template <typename M, typename T>
-    using broadcast_type DPL_NODEBUG =
-        rebind_simd_t<T, simd_element_type_t<T>, simd_abi_type_t<M>>;
-
-public:
-    template <canonical_vector S, canonical_mask M, canonical_vector T>
-    requires maskable_args<S, M, T>
+    template <simd_mask M, simd_vector R>
+    requires requires {
+        operator()(internal::declarg<canonical_type_t<R>>(),
+            internal::declarg<M>(), internal::declarg<R>());
+    }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(S src, M mask, T val) noexcept {
-        using A = simd_abi_type_t<S>;
-        if constexpr (same_as<simd_abi_type_t<S>, simd_abi_type_t<M>> &&
-            same_as<simd_abi_type_t<T>, simd_abi_type_t<M>>) {
-            if constexpr (unqualified_canonical_compress<S, M, T>) {
-                if consteval {
-                    return compress_t::fallback(src, mask, val);
-                } else {
-                    return compress(internal::abi<A>, src, mask, val);
-                }
-            } else {
-                return compress_t::fallback(src, mask, val);
-            }
-        } else if constexpr (unqualified_canonical_compress<S, M, T>) {
-            return compress(internal::abi<A>, src, mask, val);
+    static constexpr auto operator()(dx::zero_t zero, M&& mask,
+        R&& val) noexcept(canonical_mask<M> && canonical_vector<R>) {
+        return operator()(dx::broadcast<R>(dx::zero), __DPL forward<M>(mask),
+            __DPL forward<R>(val));
+    }
+
+    template <simd_vector R, const_mask_for<R> M>
+    requires requires {
+        operator()(internal::declarg<canonical_type_t<R>>(),
+            internal::declarg<M>(), internal::declarg<R>());
+    }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(
+        dx::zero_t zero, M cmask, R&& val) noexcept {
+        return operator()(
+            dx::broadcast<R>(dx::zero), cmask, __DPL forward<R>(val));
+    }
+
+private:
+    template <size_t W>
+    static consteval size_t prefix_sum(
+        bitset<W> const& set, size_t idx) noexcept {
+        auto result = 0zu;
+        for (auto i = 0zu; i < idx; ++i) {
+            result += set.test(i);
+        }
+        return result;
+    }
+
+    template <size_t... Is, size_t... Js>
+    static consteval auto permute(
+        index_sequence<Is...> src, index_sequence<Js...> idx) noexcept {
+        constexpr size_t array[sizeof...(Is)]{Is...};
+        return index_sequence<array[Js]...>{};
+    }
+
+    template <size_t N, size_t... Is>
+    static consteval auto butterfly(index_sequence<Is...> src) noexcept {
+        return index_sequence<(Is ^ N)...>{};
+    }
+
+    template <size_t N, size_t... Is, size_t... Js>
+    static consteval auto should_move(
+        index_sequence<Is...>, index_sequence<Js...>) noexcept {
+        constexpr auto width = sizeof...(Is);
+        constexpr auto intersection = bitset<width>(((N & Js) != 0)...);
+        constexpr auto equality = bitset<width>(((N ^ Js) == Is)...);
+        constexpr auto result = intersection & equality;
+        if constexpr (integral_bitset_type<bitset<width>>) {
+            return const_mask<width, __DPL to_underlying(result)>{};
         } else {
-            return compress_t::fallback(src, mask, val);
+            return const_mask<width, result>{};
         }
     }
 
-    template <simd_vector S, simd_mask M, simd_vector T>
-    requires (extended_vector<S> || extended_mask<M> || extended_vector<T>) &&
-        maskable_args<S, M, T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(S src, M mask, T val) noexcept {
-        if constexpr (unqualified_extended_compress<S, M, T>) {
-            return compress(src, mask, val);
-        } else if constexpr (simd_expression<M> || simd_expression<T>) {
-            return operator()(
-                dx::evaluate(src), dx::evaluate(mask), dx::evaluate(val));
-        } else {
-            return compress_t::fallback(src, mask, val);
-        }
-    }
-
-    template <canonical_mask M, canonical_vector T>
-    requires zmaskable_args<M, T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(M mask, T val) noexcept {
-        using A = simd_abi_type_t<M>;
-        using S = broadcast_type<M, T>;
-        if constexpr (same_as<simd_abi_type_t<T>, simd_abi_type_t<M>>) {
-            if constexpr (unqualified_canonical_compress<zero_t, M, T>) {
-                if consteval {
-                    return operator()(dx::broadcast<S>(dx::zero), mask, val);
-                } else {
-                    return compress(internal::abi<A>, dx::zero, mask, val);
-                }
-            } else {
-                return operator()(dx::broadcast<S>(dx::zero), mask, val);
-            }
-        } else if constexpr (unqualified_canonical_compress<zero_t, M, T>) {
-            return compress(internal::abi<A>, dx::zero, mask, val);
-        } else {
-
-            return operator()(dx::broadcast<S>(dx::zero), mask, val);
-        }
-    }
-
-    template <simd_mask M, simd_vector T>
-    requires (extended_mask<M> || extended_vector<T>) && zmaskable_args<M, T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(M mask, T val) noexcept {
-        if constexpr (unqualified_extended_compress<zero_t, M, T>) {
-            return compress(dx::zero, mask, val);
-        } else if constexpr (simd_expression<M> || simd_expression<T>) {
-            return operator()(dx::evaluate(mask), dx::evaluate(val));
-        } else {
-            using S = broadcast_type<canonical_type_t<M>, canonical_type_t<T>>;
-            return operator()(dx::broadcast<S>(dx::zero), mask, mask);
-        }
-    }
-
-    template <simd_mask M, simd_vector T>
-    requires invocable<compress_t, M, T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(dx::zero_t, M mask, T val) noexcept {
-        return operator()(mask, val);
-    }
-
-    template <canonical_vector S, const_mask_for<S> M, canonical_vector T>
-    requires imm_maskable_args<S, T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(S src, M mask, T val) noexcept {
-        using A = simd_abi_type_t<S>;
-        constexpr auto cmask = dx::to_compatible_const_mask<S>(mask);
-        if constexpr (same_as<simd_abi_type_t<T>, simd_abi_type_t<S>>) {
-            if constexpr (unqualified_canonical_icompress<S, M, T>) {
-                if consteval {
-                    return compress_t::fallbacki(src, cmask, val);
-                } else {
-                    return compress(internal::abi<A>, src, cmask, val);
-                }
-            } else {
-                return compress_t::fallbacki(src, cmask, val);
-            }
-        } else if constexpr (unqualified_canonical_icompress<S, M, T>) {
-            return compress(internal::abi<A>, src, cmask, val);
-        } else {
-            return compress_t::fallbacki(src, cmask, val);
-        }
-    }
-
-    template <simd_vector S, const_mask_for<S> M, simd_vector T>
-    requires (extended_vector<S> || extended_vector<T>) &&
-        imm_maskable_args<S, T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(S src, M mask, T val) noexcept {
-        constexpr auto cmask = dx::to_compatible_const_mask<S>(mask);
-        if constexpr (unqualified_extended_icompress<S, M, T>) {
-            return compress(src, cmask, val);
-        } else if constexpr (simd_expression<S> || simd_expression<M> ||
-            simd_expression<T>) {
-            return operator()(dx::evaluate(src), mask, dx::evaluate(val));
-        } else {
-            return compress_t::fallbacki(src, cmask, val);
-        }
-    }
-
-    template <typename M, canonical_vector T>
-    requires const_mask_for<M, T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(M mask, T val) noexcept {
-        using A = simd_abi_type_t<T>;
-        if constexpr (unqualified_canonical_icompress<zero_t, M, T>) {
-            if consteval {
-                return operator()(dx::broadcast<T>(dx::zero), mask, val);
-            } else {
-                constexpr auto cmask = dx::to_compatible_const_mask<T>(mask);
-                return compress(internal::abi<A>, dx::zero, cmask, val);
-            }
-        } else {
-            return operator()(dx::broadcast<T>(dx::zero), mask, val);
-        }
-    }
-
-    template <typename M, extended_vector T>
-    requires const_mask_for<M, T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(M mask, T val) noexcept {
-        if constexpr (unqualified_extended_icompress<zero_t, M, T>) {
-            return compress(
-                dx::zero, dx::to_compatible_const_mask<T>(mask), val);
-        } else if constexpr (simd_expression<M> || simd_expression<T>) {
-            return operator()(mask, dx::evaluate(val));
-        } else {
-            return operator()(
-                dx::broadcast<canonical_type_t<T>>(dx::zero), mask, val);
-        }
-    }
-
-    template <typename M, extended_vector T>
-    requires const_mask_for<M, T> && invocable<compress_t, M, T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(dx::zero_t, M mask, T val) noexcept {
-        return operator()(mask, val);
+    template <size_t... Is, size_t... Js>
+    static consteval auto select(
+        auto cmask, index_sequence<Is...>, index_sequence<Js...>) noexcept {
+        return []<size_t... Ks>(auto cmask, index_sequence<Ks...>) {
+            return index_sequence<(cmask[Ks] ? Is : Js)...>{};
+        }(cmask, make_index_sequence<sizeof...(Is)>{});
     }
 };
-
 } // namespace datapar::internal
 
 namespace datapar {

@@ -13,7 +13,8 @@ import :std.utility;
 import :core.basic;
 import :core.concepts;
 import :core.type_traits;
-import :core.constants;
+import :core.immediate;
+import :core.dispatch;
 
 // IWYU pragma: begin_exports
 #include "dpl/core/operations/abi_promotion.h"
@@ -24,15 +25,13 @@ import :core.constants;
 #include "dpl/core/operations/cast.h"
 #include "dpl/core/operations/compare.h"
 #include "dpl/core/operations/concat.h"
-#include "dpl/core/operations/evaluate.h"
-#include "dpl/core/operations/gather.h"
 #include "dpl/core/operations/internal/array_for.h"
 #include "dpl/core/operations/internal/masked.h"
 #include "dpl/core/operations/internal/operation_base.h"
 #include "dpl/core/operations/internal/transform.h"
-#include "dpl/core/operations/lane_index.h"
 #include "dpl/core/operations/logical.h"
 #include "dpl/core/operations/minmax.h"
+#include "dpl/core/operations/pack_mask.h"
 #include "dpl/core/operations/permute.h"
 #include "dpl/core/operations/reinterpret.h"
 #include "dpl/core/operations/select.h"

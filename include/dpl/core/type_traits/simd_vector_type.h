@@ -17,6 +17,10 @@ DPL_EXPORT template <typename T>
 struct simd_vector_type<T volatile> : simd_vector_type<T> {};
 DPL_EXPORT template <typename T>
 struct simd_vector_type<T const volatile> : simd_vector_type<T> {};
+DPL_EXPORT template <typename T>
+struct simd_vector_type<T&> : simd_vector_type<T> {};
+DPL_EXPORT template <typename T>
+struct simd_vector_type<T&&> : simd_vector_type<T> {};
 
 DPL_EXPORT template <typename T>
 using simd_vector_type_t = typename simd_vector_type<T>::type;

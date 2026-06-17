@@ -12,8 +12,8 @@
 #include "dpl/xmm/basic/initialize.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/constants/all_bits.h"
-#  include "dpl/core/constants/zero.h"
+#  include "dpl/core/immediate/constants/all_bits.h"
+#  include "dpl/core/immediate/constants/zero.h"
 #  include "dpl/std/bit/bit_cast.h"
 #  include "dpl/std/type_traits/is_const.h"
 #  include "dpl/std/type_traits/is_volatile.h"
@@ -132,10 +132,10 @@ constexpr simd<E> broadcast(type_identity_t<E> scalar) noexcept {
     return xmm::broadcast<E>(xmm::abi, scalar);
 }
 
-DPL_EXPORT template <simd_element E>
+DPL_EXPORT template <simd_element E, same_as<bool> T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr mask<E> broadcast(same_as<bool> auto scalar) noexcept {
-    return xmm::broadcast<E>(xmm::abi, scalar);
+constexpr mask<E> broadcast(T boolean) noexcept {
+    return xmm::broadcast<E>(xmm::abi, boolean);
 }
 
 DPL_EXPORT template <simd_element E>
@@ -146,7 +146,7 @@ constexpr simd<E> broadcast(dx::zero_t zero) noexcept {
 
 DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr mask<E> broadcast(dx::all_bits_t all) noexcept {
+constexpr simd<E> broadcast(dx::all_bits_t all) noexcept {
     return xmm::broadcast<E>(xmm::abi, all);
 }
 

@@ -1,0 +1,15 @@
+// Copyright 2025-2026 Bryan Wong
+#pragma once
+
+#include "dpl/config.h"
+
+DPL_DEFAULT_NAMESPACE_BEGIN
+
+namespace datapar::internal {
+
+template <typename D>
+class broadcastable_operation_base {};
+
+} // namespace datapar::internal
+
+DPL_DEFAULT_NAMESPACE_END

@@ -105,6 +105,42 @@ using promote_abi_t = typename promote_abi<T>::type;
 
 DPL_EXPORT template <typename T>
 using demote_abi_t = typename demote_abi<T>::type;
+
+template <size_t N, typename C>
+struct concat_target {};
+
+template <size_t N, typename C>
+requires (N == C::size)
+struct concat_target<N, C> {
+    using type DPL_NODEBUG = C;
+};
+
+template <size_t N, typename C>
+requires (N > C::size) && requires { typename promote_abi_t<C>; }
+struct concat_target<N, C> : concat_target<N, promote_abi_t<C>> {};
+
+template <typename... As>
+using concat_target_t DPL_NODEBUG =
+    typename concat_target<(0zu + ... + As::size),
+        promote_abi_t<common_abi_t<As...>>>::type;
+
+template <size_t Target, typename C>
+struct split_target {};
+
+template <size_t Target, typename C>
+requires (Target == C::size)
+struct split_target<Target, C> {
+    using type DPL_NODEBUG = C;
+};
+
+template <size_t Target, typename C>
+requires (Target < C::size) && requires { typename demote_abi_t<C>; }
+struct split_target<Target, C> : split_target<Target, demote_abi_t<C>> {};
+
+template <size_t N, typename Source>
+using split_target_t DPL_NODEBUG =
+    typename split_target<Source::size / N, demote_abi_t<Source>>::type;
+
 } // namespace datapar
 
 DPL_DEFAULT_NAMESPACE_END

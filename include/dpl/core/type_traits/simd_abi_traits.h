@@ -33,10 +33,19 @@ concept has_representation_for = requires {
     typename A::template native_mask<E>;
 };
 
+template <typename T>
+concept has_simd_abi = requires { typename simd_abi_type_t<T>; };
+
+template <typename T>
+concept has_simd_element = requires { typename simd_element_type_t<T>; };
+
+template <typename T>
+concept has_simd_members = has_simd_element<T> && has_simd_abi<T>;
+
 } // namespace internal
 
-DPL_EXPORT template <typename A>
-requires enable_simd_abi<A>
+DPL_EXPORT template <internal::has_simd_abi A>
+requires (!internal::has_simd_element<A>)
 struct simd_abi_traits<A> {
 
     template <typename E>
@@ -71,8 +80,7 @@ struct simd_abi_traits<A> {
     }
 };
 
-DPL_EXPORT template <typename T>
-requires enable_simd_vector<T> || enable_simd_mask<T>
+DPL_EXPORT template <internal::has_simd_members T>
 struct simd_abi_traits<T> :
     simd_abi_traits<simd_element_type_t<T>, simd_abi_type_t<T>> {};
 

@@ -28,7 +28,7 @@ DPL_EXPORT template <typename D>
 class comparison_simd_interface {
 public:
     template <typename R>
-    requires regular_invocable<internal::cmpeq_t, D, R>
+    requires internal::cpo_invocable<internal::cmpeq_t, D, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     constexpr invoke_result_t<internal::cmpeq_t, D, R> operator==(
         this D lhs, R rhs) noexcept
@@ -38,7 +38,7 @@ public:
     }
 
     template <typename R>
-    requires regular_invocable<internal::cmpneq_t, D, R>
+    requires internal::cpo_invocable<internal::cmpneq_t, D, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     constexpr invoke_result_t<internal::cmpneq_t, D, R> operator!=(
         this D lhs, R rhs) noexcept
@@ -48,7 +48,7 @@ public:
     }
 
     template <typename R>
-    requires regular_invocable<internal::cmplt_t, D, R>
+    requires internal::cpo_invocable<internal::cmplt_t, D, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     constexpr invoke_result_t<internal::cmplt_t, D, R> operator<(
         this D lhs, R rhs) noexcept
@@ -58,7 +58,7 @@ public:
     }
 
     template <typename R>
-    requires regular_invocable<internal::cmple_t, D, R>
+    requires internal::cpo_invocable<internal::cmple_t, D, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     constexpr invoke_result_t<internal::cmple_t, D, R> operator<=(
         this D lhs, R rhs) noexcept
@@ -68,7 +68,7 @@ public:
     }
 
     template <typename R>
-    requires regular_invocable<internal::cmpgt_t, D, R>
+    requires internal::cpo_invocable<internal::cmpgt_t, D, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     constexpr invoke_result_t<internal::cmpgt_t, D, R> operator>(
         this D lhs, R rhs) noexcept
@@ -78,7 +78,7 @@ public:
     }
 
     template <typename R>
-    requires regular_invocable<internal::cmpge_t, D, R>
+    requires internal::cpo_invocable<internal::cmpge_t, D, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     constexpr invoke_result_t<internal::cmpge_t, D, R> operator>=(
         this D lhs, R rhs) noexcept
@@ -88,7 +88,7 @@ public:
     }
 
     template <typename L>
-    requires regular_invocable<internal::cmpeq_t, L, D>
+    requires internal::cpo_invocable<internal::cmpeq_t, L, D>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     friend constexpr invoke_result_t<internal::cmpeq_t, L, D> operator==(
         L lhs, D rhs) noexcept
@@ -98,7 +98,7 @@ public:
     }
 
     template <typename L>
-    requires regular_invocable<internal::cmpneq_t, L, D>
+    requires internal::cpo_invocable<internal::cmpneq_t, L, D>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     friend constexpr invoke_result_t<internal::cmpneq_t, L, D> operator!=(
         L lhs, D rhs) noexcept
@@ -108,7 +108,7 @@ public:
     }
 
     template <typename L>
-    requires regular_invocable<internal::cmplt_t, L, D>
+    requires internal::cpo_invocable<internal::cmplt_t, L, D>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     friend constexpr invoke_result_t<internal::cmplt_t, L, D> operator<(
         L lhs, D rhs) noexcept
@@ -118,7 +118,7 @@ public:
     }
 
     template <typename L>
-    requires regular_invocable<internal::cmple_t, L, D>
+    requires internal::cpo_invocable<internal::cmple_t, L, D>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     friend constexpr invoke_result_t<internal::cmple_t, L, D> operator<=(
         L lhs, D rhs) noexcept
@@ -128,7 +128,7 @@ public:
     }
 
     template <typename L>
-    requires regular_invocable<internal::cmpgt_t, L, D>
+    requires internal::cpo_invocable<internal::cmpgt_t, L, D>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     friend constexpr invoke_result_t<internal::cmpgt_t, L, D> operator>(
         L lhs, D rhs) noexcept
@@ -138,7 +138,7 @@ public:
     }
 
     template <typename L>
-    requires regular_invocable<internal::cmpge_t, L, D>
+    requires internal::cpo_invocable<internal::cmpge_t, L, D>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     friend constexpr invoke_result_t<internal::cmpge_t, L, D> operator>=(
         L lhs, D rhs) noexcept

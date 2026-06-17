@@ -9,6 +9,7 @@
 #  include "dpl/core/concepts/canonical.h"
 #  include "dpl/core/concepts/extended.h"
 #  include "dpl/core/type_traits/canonical_type.h"
+#  include "dpl/std/utility/forward.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -20,14 +21,14 @@ constexpr T to_canonical(T src) noexcept {
     return src;
 }
 
-DPL_EXPORT template <extended_vector T>
+DPL_EXPORT template <extended_simd_type T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr canonical_type_t<T>
-    DPL_VECTORCALL to_canonical(T src) noexcept {
+    DPL_VECTORCALL to_canonical(T&& src) {
     if constexpr (explicitly_convertible_to<T, canonical_type_t<T>>) {
-        return static_cast<canonical_type_t<T>>(src);
+        return static_cast<canonical_type_t<T>>(__DPL forward<T>(src));
     } else {
-        return datapar::to_native_type(src);
+        return datapar::to_native_type(__DPL forward<T>(src));
     }
 }
 

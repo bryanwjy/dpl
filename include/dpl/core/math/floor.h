@@ -5,16 +5,13 @@
 
 #include "dpl/core/math/copysign.h"
 #include "dpl/core/math/internal/constants.h"
-#include "dpl/core/math/internal/floating_point_simd.h"
-#include "dpl/core/math/internal/masked_op.h"
 #include "dpl/core/math/isfinite.h"
 #include "dpl/core/math/trunc.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/concepts/canonical.h"
 #  include "dpl/core/concepts/extended.h"
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/constants/one.h"
+#  include "dpl/core/immediate/constants/one.h"
 #  include "dpl/core/operations/arithmetic.h"
 #  include "dpl/core/operations/compare.h"
 #  include "dpl/core/operations/select.h"
@@ -24,198 +21,305 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 
-struct floor_t;
-
-template <typename T>
-concept unqualified_canonical_floor = requires(T val) {
-    {
-        round(internal::abi<T>, val, rounding::to_neg_inf)
-    } -> canonical_arithmetic_result<T, T, typename T::abi_type>;
+struct DPL_EMPTY_BASES floor_t :
+    private math_operation_base<floor_t>,
+    private maskable_transform_base<floor_t> {
+    using math_operation_base<floor_t>::operator();
+    using maskable_transform_base<floor_t>::operator();
 };
 
-template <typename T>
-concept unqualified_extended_floor = requires(T val) {
-    {
-        round(val, rounding::to_neg_inf)
-    } -> vector_with_common_abi<typename T::abi_type>;
+inline constexpr auto floor_noexc_v = rounding::to_neg_inf | rounding::no_exc;
+inline constexpr auto floor_exc_v = rounding::to_neg_inf;
+
+template <>
+struct operation_signature<floor_t> {
+    static consteval void operator()(simd_vector auto&&) noexcept {}
+
+    static consteval void operator()(
+        simd_vector auto&&, rounding::no_exc_t) noexcept {}
 };
 
-template <typename T>
-concept expression_floor = simd_expression<T> &&
-    regular_invocable<floor_t, simd_expression_result_t<T>>;
+template <typename S, typename M, typename T>
+concept unqualified_canonical_mfloor =
+    (!simd_type<S> || same_as<S, cpo_result_t<floor_t, T>>) && requires {
+        {
+            round(internal::abi<cpo_result_t<floor_t, T>>,
+                internal::declarg<S>(), internal::declarg<M>(),
+                internal::declarg<T>(), floor_exc_v)
+        } -> same_as<cpo_result_t<floor_t, T>>;
+    };
 
-template <typename T>
-concept decayable_floor =
-    decayable_vector_for<T, operation_category::lane_agnostic> &&
-    regular_invocable<floor_t, canonical_type_t<T>>;
+template <typename S, typename M, typename T>
+concept unqualified_canonical_mfloorne =
+    (!simd_type<S> ||
+        same_as<S, cpo_result_t<floor_t, T, rounding::no_exc_t>>) &&
+    requires {
+        {
+            round(internal::abi<cpo_result_t<floor_t, T, rounding::no_exc_t>>,
+                internal::declarg<S>(), internal::declarg<M>(),
+                internal::declarg<T>(), floor_noexc_v)
+        } -> same_as<cpo_result_t<floor_t, T, rounding::no_exc_t>>;
+    };
 
-template <typename T>
-concept extended_floor =
-    unqualified_extended_floor<T> || expression_floor<T> || decayable_floor<T>;
-
-template <typename T>
-concept unqualified_canonical_floorne = requires(T val) {
-    {
-        round(internal::abi<T>, val, rounding::to_neg_inf | rounding::no_exc)
-    } -> equivalent_simd_type_with<T>;
-};
-
-template <typename T>
-concept unqualified_extended_floorne = requires(T val) {
-    {
-        round(val, rounding::to_neg_inf | rounding::no_exc)
-    } -> vector_with_common_abi<typename T::abi_type>;
-};
-
-template <typename T>
-concept expression_floorne = simd_expression<T> &&
-    regular_invocable<floor_t, simd_expression_result_t<T>, rounding::no_exc_t>;
-
-template <typename T>
-concept decayable_floorne =
-    decayable_vector_for<T, operation_category::lane_agnostic> &&
-    regular_invocable<floor_t, canonical_type_t<T>, rounding::no_exc_t>;
-
-template <typename T>
-concept extended_floorne = unqualified_extended_floor<T> ||
-    expression_floorne<T> || decayable_floorne<T>;
-
-struct floor_t : mx::masked_operation<floor_t> {
+template <>
+struct canonical_impl<floor_t> {
 private:
-    friend mx::masked_operation<floor_t>;
-    static constexpr auto noexc = rounding::to_neg_inf | rounding::no_exc;
-    static constexpr auto exc = rounding::to_neg_inf;
+    template <typename T>
+    using mask_t DPL_NODEBUG =
+        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
 
-    template <floating_point E, simd_abi A>
+    template <typename T>
+    using imask_t DPL_NODEBUG = mask_value_t<simd_abi_traits<T>::size>;
+
+    template <typename T, imask_t<T> M>
+    using cmask_t DPL_NODEBUG = const_mask<simd_abi_traits<T>::size, M>;
+
+public:
+    template <simd_abi A, simd_element_for<A> E>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr basic_vector<E, A> operator()(
+        basic_vector<E, A> val) noexcept
+    requires requires { round(internal::abi<A>, val, floor_exc_v); }
+    {
+        return round(internal::abi<A>, val, floor_exc_v);
+    }
+
+    template <canonical_vector T>
+    requires unqualified_canonical_mfloor<type_identity_t<T>, mask_t<T>, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(
+        type_identity_t<T> src, mask_t<T> mask, T val) noexcept {
+        return round(internal::abi<T>, src, mask, val, floor_exc_v);
+    }
+
+    template <fixed_width_vector T, imask_t<T> M>
+    requires canonical_vector<T> &&
+        unqualified_canonical_mfloor<type_identity_t<T>, cmask_t<T, M>, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(
+        type_identity_t<T> src, cmask_t<T, M> cmask, T val) noexcept {
+        return round(internal::abi<T>, src, cmask, val, floor_exc_v);
+    }
+
+    template <canonical_vector T>
+    requires unqualified_canonical_mfloor<dx::zero_t, mask_t<T>, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(
+        dx::zero_t zero, mask_t<T> mask, T val) noexcept {
+        return round(internal::abi<T>, zero, mask, val, floor_exc_v);
+    }
+
+    template <fixed_width_vector T, imask_t<T> M>
+    requires canonical_vector<T> &&
+        unqualified_canonical_mfloor<dx::zero_t, cmask_t<T, M>, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(
+        dx::zero_t zero, cmask_t<T, M> cmask, T val) noexcept {
+        return round(internal::abi<T>, zero, cmask, val, floor_exc_v);
+    }
+    ///
+
+    template <simd_abi A, simd_element_for<A> E>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr basic_vector<E, A> operator()(
+        basic_vector<E, A> val, rounding::no_exc_t) noexcept
+    requires requires { round(internal::abi<A>, val, floor_noexc_v); }
+    {
+        return round(internal::abi<A>, val, floor_noexc_v);
+    }
+
+    template <canonical_vector T>
+    requires unqualified_canonical_mfloorne<type_identity_t<T>, mask_t<T>, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(type_identity_t<T> src, mask_t<T> mask, T val,
+        rounding::no_exc_t) noexcept {
+        return round(internal::abi<T>, src, mask, val, floor_noexc_v);
+    }
+
+    template <fixed_width_vector T, imask_t<T> M>
+    requires canonical_vector<T> &&
+        unqualified_canonical_mfloorne<type_identity_t<T>, cmask_t<T, M>, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(type_identity_t<T> src, cmask_t<T, M> cmask,
+        T val, rounding::no_exc_t) noexcept {
+        return round(internal::abi<T>, src, cmask, val, floor_noexc_v);
+    }
+
+    template <canonical_vector T>
+    requires unqualified_canonical_mfloorne<dx::zero_t, mask_t<T>, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(
+        dx::zero_t zero, mask_t<T> mask, T val, rounding::no_exc_t) noexcept {
+        return round(internal::abi<T>, zero, mask, val, floor_noexc_v);
+    }
+
+    template <fixed_width_vector T, imask_t<T> M>
+    requires canonical_vector<T> &&
+        unqualified_canonical_mfloorne<dx::zero_t, cmask_t<T, M>, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(dx::zero_t zero, cmask_t<T, M> cmask, T val,
+        rounding::no_exc_t) noexcept {
+        return round(internal::abi<T>, zero, cmask, val, floor_noexc_v);
+    }
+};
+
+template <typename T>
+concept unqualified_extended_floor = requires {
+    {
+        round(internal::declarg<T>(), floor_exc_v)
+    } -> vector_with_common_abi<simd_abi_type_t<T>>;
+};
+
+template <typename T>
+concept unqualified_extended_floorne = requires {
+    {
+        round(internal::declarg<T>(), floor_noexc_v)
+    } -> vector_with_common_abi<simd_abi_type_t<T>>;
+};
+
+template <typename S, typename M, typename T>
+concept unqualified_extended_mfloor =
+    (!simd_type<S> || equivalent_vector_with<S, cpo_result_t<floor_t, T>>) &&
+    requires {
+        {
+            round(internal::declarg<S>(), internal::declarg<M>(),
+                internal::declarg<T>(), floor_exc_v)
+        } -> equivalent_vector_with<cpo_result_t<floor_t, T>>;
+    };
+
+template <typename S, typename M, typename T>
+concept unqualified_extended_mfloorne =
+    (!simd_type<S> ||
+        equivalent_vector_with<S,
+            cpo_result_t<floor_t, T, rounding::no_exc_t>>) &&
+    requires {
+        {
+            round(internal::declarg<S>(), internal::declarg<M>(),
+                internal::declarg<T>(), floor_noexc_v)
+        }
+        -> equivalent_vector_with<cpo_result_t<floor_t, T, rounding::no_exc_t>>;
+    };
+
+template <>
+struct extended_impl<floor_t> {
+private:
+    template <typename T>
+    using imask_t DPL_NODEBUG = mask_value_t<simd_abi_traits<T>::size>;
+
+    template <typename T, imask_t<T> M>
+    using cmask_t DPL_NODEBUG = const_mask<simd_abi_traits<T>::size, M>;
+
+    template <typename T>
+    using mask_t DPL_NODEBUG =
+        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
+
+public:
+    template <extended_vector T>
+    requires unqualified_extended_floor<T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T&& val) {
+        return round(__DPL forward<T>(val), floor_exc_v);
+    }
+
+    template <simd_vector S, common_vector_with<S> T,
+        equivalent_mask_with<mask_t<S>> M>
+    requires (extended_vector<S> || extended_mask<M> || extended_vector<T>) &&
+        unqualified_extended_mfloor<S, M, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(S&& src, M&& mask, T&& val) {
+        return round( __DPL forward<S>(src), __DPL forward<M>(mask),
+            __DPL forward<T>(val), floor_exc_v);
+    }
+
+    template <fixed_width_vector S, imask_t<S> M, common_vector_with<S> T>
+    requires (extended_vector<S> || extended_vector<T>) &&
+        unqualified_extended_mfloor<S, cmask_t<S, M>, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(S&& src, cmask_t<S, M> cmask, T&& val) {
+        return round( __DPL forward<S>(src), cmask, __DPL forward<T>(val),
+            floor_exc_v);
+    }
+
+    template <simd_vector T, common_mask_with<mask_t<T>> M>
+    requires (extended_mask<M> || extended_vector<T>) &&
+        unqualified_extended_mfloor<dx::zero_t, M, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(dx::zero_t zero, M&& mask, T&& val) {
+        return round(
+            zero, __DPL forward<M>(mask), __DPL forward<T>(val), floor_exc_v);
+    }
+
+    template <fixed_width_vector T, imask_t<T> M>
+    requires extended_vector<T> &&
+        unqualified_extended_mfloor<dx::zero_t, cmask_t<T, M>, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(
+        dx::zero_t zero, cmask_t<T, M> cmask, T&& val) {
+        return round(zero, cmask, __DPL forward<T>(val), floor_exc_v);
+    }
+
+    template <extended_vector T>
+    requires unqualified_extended_floorne<T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T&& val, rounding::no_exc_t) {
+        return round( __DPL forward<T>(val), floor_noexc_v);
+    }
+
+    template <simd_vector S, common_vector_with<S> T,
+        equivalent_mask_with<mask_t<S>> M>
+    requires (extended_vector<S> || extended_mask<M> || extended_vector<T>) &&
+        unqualified_extended_mfloorne<S, M, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(
+        S&& src, M&& mask, T&& val, rounding::no_exc_t) {
+        return round( __DPL forward<S>(src), __DPL forward<M>(mask),
+            __DPL forward<T>(val), floor_noexc_v);
+    }
+
+    template <fixed_width_vector S, imask_t<S> M, common_vector_with<S> T>
+    requires (extended_vector<S> || extended_vector<T>) &&
+        unqualified_extended_mfloorne<S, cmask_t<S, M>, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(
+        S&& src, cmask_t<S, M> cmask, T&& val, rounding::no_exc_t) {
+        return round( __DPL forward<S>(src), cmask, __DPL forward<T>(val),
+            floor_noexc_v);
+    }
+
+    template <simd_vector T, common_mask_with<mask_t<T>> M>
+    requires (extended_mask<M> || extended_vector<T>) &&
+        unqualified_extended_mfloorne<dx::zero_t, M, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(
+        dx::zero_t zero, M&& mask, T&& val, rounding::no_exc_t) {
+        return round(zero, __DPL forward<M>(mask), __DPL forward<T>(val),
+            floor_noexc_v);
+    }
+
+    template <fixed_width_vector T, imask_t<T> M>
+    requires extended_vector<T> &&
+        unqualified_extended_mfloorne<dx::zero_t, cmask_t<T, M>, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(
+        dx::zero_t zero, cmask_t<T, M> cmask, T&& val, rounding::no_exc_t) {
+        return round(zero, cmask, __DPL forward<T>(val), floor_noexc_v);
+    }
+};
+
+template <>
+struct fallback_impl<floor_t> {
+    template <simd_abi A, simd_element_for<A> E>
+    requires floating_point<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL fallback(
+    static constexpr auto DPL_VECTORCALL operator()(
         basic_vector<E, A> val) noexcept {
         auto const isfinite = dx::isfinite(val);
         auto const finite = dx::select(isfinite, val, dx::zero);
         auto fr = finite - dx::trunc(finite);
         fr = dx::add(fr, fr < dx::zero, fr, dx::broadcast<E, A>(dx::one));
-        return dx::select(isfinite && dx::abs(val) < mx::maxint,
-            dx::copysign(finite - fr, finite), val);
-    }
 
-    template <simd_vector S, typename M, simd_vector T>
-    requires mx::canonical_masked_math_operator<floor_t, S, M, T> &&
-        requires(S src, M mask, T val) {
-            round(internal::abi<T>, src, mask, val, floor_t::exc);
-        }
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL masked(S src, M mask, T val) noexcept {
-        return round(internal::abi<T>, src, mask, val, floor_t::exc);
-    }
-
-    template <simd_vector S, typename M, simd_vector T>
-    requires mx::extended_masked_math_operator<floor_t, S, M, T> &&
-        requires(S src, M mask, T val) { round(src, mask, val, floor_t::exc); }
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL masked(S src, M mask, T val) noexcept {
-        return round(src, mask, val, floor_t::exc);
-    }
-
-    template <typename M, simd_vector T>
-    requires mx::canonical_masked_math_zoperator<floor_t, M, T> &&
-        requires(M mask, T val) {
-            round(internal::abi<T>, dx::zero, mask, val, floor_t::exc);
-        }
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
-        return round(internal::abi<T>, dx::zero, mask, val, floor_t::exc);
-    }
-
-    template <typename M, simd_vector T>
-    requires mx::extended_masked_math_zoperator<floor_t, M, T> &&
-        requires(M mask, T val) { round(dx::zero, mask, val, floor_t::exc); }
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
-        return round(dx::zero, mask, val, floor_t::exc);
-    }
-
-    template <simd_vector S, typename M, simd_vector T>
-    requires mx::canonical_masked_math_operator<floor_t, S, M, T,
-                 rounding::no_exc_t> &&
-        requires(S src, M mask, T val) {
-            round(internal::abi<T>, src, mask, val, floor_t::noexc);
-        }
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL masked(
-        S src, M mask, T val, rounding::no_exc_t) noexcept {
-        return round(internal::abi<T>, src, mask, val, floor_t::noexc);
-    }
-
-    template <simd_vector S, typename M, simd_vector T>
-    requires mx::extended_masked_math_operator<floor_t, S, M, T,
-                 rounding::no_exc_t> &&
-        requires(
-            S src, M mask, T val) { round(src, mask, val, floor_t::noexc); }
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL masked(
-        S src, M mask, T val, rounding::no_exc_t) noexcept {
-        return round(src, mask, val, floor_t::noexc);
-    }
-
-    template <typename M, simd_vector T>
-    requires mx::canonical_masked_math_zoperator<floor_t, M, T,
-                 rounding::no_exc_t> &&
-        requires(M mask, T val) {
-            round(internal::abi<T>, dx::zero, mask, val, floor_t::noexc);
-        }
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL masked(
-        M mask, T val, rounding::no_exc_t) noexcept {
-        return round(internal::abi<T>, dx::zero, mask, val, floor_t::noexc);
-    }
-
-    template <typename M, simd_vector T>
-    requires mx::extended_masked_math_zoperator<floor_t, M, T,
-                 rounding::no_exc_t> &&
-        requires(M mask, T val) { round(dx::zero, mask, val, floor_t::noexc); }
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL masked(
-        M mask, T val, rounding::no_exc_t) noexcept {
-        return round(dx::zero, mask, val, floor_t::noexc);
-    }
-
-public:
-    template <simd_abi A, simd_element_for<A> E>
-    requires floating_point<E>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(
-        basic_vector<E, A> val) noexcept {
-        if constexpr (unqualified_canonical_floor<basic_vector<E, A>>) {
-            if consteval {
-                return fallback(val);
-            } else {
-                return round(internal::abi<A>, val, floor_t::exc);
-            }
-        } else {
-            return fallback(val);
-        }
-    }
-
-    template <simd_abi A, simd_element_for<A> E>
-    requires (!floating_point<E>) &&
-        unqualified_canonical_floor<basic_vector<E, A>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(
-        basic_vector<E, A> val) noexcept {
-        return round(internal::abi<A>, val, floor_t::exc);
-    }
-
-    template <extended_vector T>
-    requires extended_floor<T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T val) noexcept {
-        if constexpr (unqualified_extended_floor<T>) {
-            return round(val, floor_t::exc);
-        } else if constexpr (expression_floor<T>) {
-            return operator()(dx::evaluate(val));
-        } else {
-            return operator()(dx::to_canonical(val));
-        }
+        auto const result = dx::copysign(finite - fr, finite);
+        return dx::select(isfinite && dx::abs(val) < mx::maxint, result, val);
     }
 
     template <simd_abi A, simd_element_for<A> E>
@@ -223,40 +327,8 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A> operator()(
         basic_vector<E, A> val, rounding::no_exc_t) noexcept {
-        if constexpr (unqualified_canonical_floorne<basic_vector<E, A>>) {
-            if consteval {
-                return fallback(val);
-            } else {
-                return round(internal::abi<A>, val, floor_t::noexc);
-            }
-        } else {
-            return fallback(val);
-        }
+        return operator()(val);
     }
-
-    template <simd_abi A, simd_element_for<A> E>
-    requires (!floating_point<E>) &&
-        unqualified_canonical_floorne<basic_vector<E, A>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(
-        basic_vector<E, A> val, rounding::no_exc_t) noexcept {
-        return round(internal::abi<A>, val, floor_t::noexc);
-    }
-
-    template <extended_vector T>
-    requires extended_floorne<T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T val, rounding::no_exc_t) noexcept {
-        if constexpr (unqualified_extended_floorne<T>) {
-            return round(val, floor_t::noexc);
-        } else if constexpr (expression_floorne<T>) {
-            return operator()(dx::evaluate(val), rounding::no_exc);
-        } else {
-            return operator()(dx::to_canonical(val), rounding::no_exc);
-        }
-    }
-
-    using mx::masked_operation<floor_t>::operator();
 };
 } // namespace datapar::internal
 

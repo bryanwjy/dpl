@@ -5,7 +5,6 @@
 #include "dpl/config.h"
 
 #include "dpl/std/utility/apply.h"
-#include "dpl/std/utility/ignore.h"
 #include "dpl/std/utility/sequence.h"
 #include "dpl/std/utility/structured_bindings.h"
 #include "dpl/std/utility/to_unsigned.h"
@@ -14,10 +13,15 @@
 #  include "dpl/std/bit/bit_cast.h"
 #  include "dpl/std/bit/bit_type.h"
 #  include "dpl/std/bit/bit_width.h"
+#  include "dpl/std/bit/byteswap.h"
 #  include "dpl/std/bit/char_bit.h"
+#  include "dpl/std/bit/countl.h"
+#  include "dpl/std/bit/countr.h"
 #  include "dpl/std/bit/has_single_bit.h"
+#  include "dpl/std/bit/popcount.h"
 #  include "dpl/std/concepts/integral_constant_like.h"
 #  include "dpl/std/type_traits/extent.h"
+#  include "dpl/std/type_traits/is_base_of.h"
 #  include "dpl/std/type_traits/is_scalar.h"
 #endif
 
@@ -30,11 +34,24 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace details::bitset {
 consteval size_t ceil_pow2(size_t val) noexcept {
-    return 1zu << (__DPL bit_width(val) - 1);
+    return 1zu << (__DPL bit_width(val) - __DPL has_single_bit(val));
 }
 
 struct bypass_t {
     explicit consteval bypass_t() noexcept = default;
+};
+template <size_t W>
+struct storage {
+    using underlying_type = size_t[W / (sizeof(size_t) * char_bit_v) +
+        (W % (sizeof(size_t) * char_bit_v) != 0)];
+    underlying_type storage_;
+};
+
+template <size_t W>
+requires requires { typename bit_type_t<bitset::ceil_pow2(W)>; }
+struct storage<W> {
+    using underlying_type = bit_type_t<details::bitset::ceil_pow2(W)>;
+    underlying_type value_;
 };
 
 } // namespace details::bitset
@@ -44,17 +61,19 @@ class alignas(W / __DPL char_bit_v) bitset;
 
 DPL_EXPORT template <size_t W>
 requires requires { typename bit_type_t<details::bitset::ceil_pow2(W)>; }
-class bitset<W> {
+class bitset<W> : private details::bitset::storage<W> {
     // TODO iterators?
+    using base_type DPL_NODEBUG = details::bitset::storage<W>;
+    using base_type::value_;
+
 public:
     static constexpr auto width = W;
-    using underlying_type = bit_type_t<details::bitset::ceil_pow2(W)>;
+    using typename base_type::underlying_type;
 
 private:
     static constexpr underlying_type one = static_cast<underlying_type>(1);
-    static constexpr underlying_type all = W == details::bitset::ceil_pow2(W)
-        ? static_cast<underlying_type>(-1)
-        : static_cast<underlying_type>((one << W) - one);
+    static constexpr underlying_type all =
+        static_cast<underlying_type>((one << W) - one);
 
     template <size_t>
     friend class bitset;
@@ -63,15 +82,15 @@ private:
 
     __DPL_HIDE_FROM_ABI explicit constexpr bitset(
         bypass_t, underlying_type val) noexcept
-        : value_(val) {}
+        : base_type(val) {}
 
 public:
-    __DPL_HIDE_FROM_ABI constexpr bitset() noexcept : value_{} {}
+    __DPL_HIDE_FROM_ABI constexpr bitset() noexcept : base_type{} {}
 
     template <integral T>
     __DPL_HIDE_FROM_ABI explicit(sizeof(T) * char_bit_v != W) constexpr bitset(
         T val) noexcept
-        : value_([val]() {
+        : base_type([val]() {
             if constexpr (sizeof(T) * char_bit_v != W) {
                 return val & all;
             } else {
@@ -83,7 +102,7 @@ public:
     requires (sizeof...(Bs) > 0) && (sizeof...(Bs) <= W)
     __DPL_HIDE_FROM_ABI explicit(sizeof...(Bs) != W) constexpr bitset(
         Bs... vals) noexcept
-        : value_([&]<size_t... Is>(index_sequence<Is...>) {
+        : base_type([&]<size_t... Is>(index_sequence<Is...>) {
             return (... | (vals << Is));
         }(make_index_sequence<sizeof...(Bs)>{})) {}
 
@@ -95,31 +114,27 @@ public:
     template <size_t... Ws>
     requires (sizeof...(Ws) > 1 && (... + Ws) == W)
     __DPL_HIDE_FROM_ABI constexpr bitset(bitset<Ws>... vals) noexcept {
-#if (DPL_HAS_CXX26_EXTENSIONS || DPL_CXX26) && \
-    __cpp_expansion_statements >= 202506L
-        template for (auto offset = 0zu; auto const val : {vals...}) {
-            value_ |= static_cast<underlying_type>(val.value_) << offset;
-            offset += val.size();
-        }
-#else
-        auto offset = 0zu;
-        auto const append = [&]<size_t N>(
-                                this auto self, bitset<N> v) constexpr {
-            value_ |= static_cast<underlying_type>(v.value_) << offset;
-            offset += v.size();
-        };
+        [&]<size_t H, size_t... Ts>(this auto self, bitset<H> const& head,
+            bitset<Ts> const&... tail) constexpr {
+            constexpr auto args = sizeof...(vals) + 1zu;
+            if constexpr (args > 1) {
+                *this <<= self(tail...);
+            }
 
-        (..., append(vals));
-#endif
+            *this |= head;
+            if constexpr (args < sizeof...(Ws)) {
+                return H;
+            }
+        }(vals...);
     }
 
     template <size_t ToW>
-    requires (ToW > W)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) explicit(
-        !is_scalar_v<typename bitset<ToW>::underlying_type>) constexpr
+    requires (ToW != W)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) explicit(ToW < W) constexpr
     operator bitset<ToW>() noexcept {
-        if constexpr (is_scalar_v<typename bitset<ToW>::underlying_type>) {
-            return bitset<ToW>(bypass, value_);
+        using To = typename bitset<ToW>::underlying_type;
+        if constexpr (is_scalar_v<To>) {
+            return bitset<ToW>(static_cast<To>(value_));
         } else {
             bitset<ToW> output;
             output |= *this;
@@ -154,7 +169,8 @@ public:
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) constexpr bitset operator~(
         this bitset self) noexcept {
-        if constexpr (__DPL has_single_bit(W)) {
+        if constexpr (__DPL has_single_bit(W) &&
+            W == sizeof(underlying_type) * char_bit_v) {
             return bitset(bypass, ~self.value_);
         } else {
             return bitset(bypass, self.value_ ^ all);
@@ -180,8 +196,32 @@ public:
         return self[idx];
     }
 
+    template <size_t W2>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) constexpr bool operator==(
+        bitset<W2> const& other) const {
+        if constexpr (integral<typename bitset<W2>::underlying_type>) {
+            return this->value_ == other.value_;
+        } else {
+            return this->value_ == other.storage_[0] && [&]() {
+                for (auto v : other.storage_) {
+                    if (v != 0) {
+                        return false;
+                    }
+                }
+
+                return true;
+            }();
+        }
+    }
+
+    template <size_t W2>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) constexpr bool operator!=(
+        bitset<W2> const& other) const {
+        return !(*this == other);
+    }
+
     __DPL_HIDE_FROM_ABI constexpr void set(size_t idx) noexcept {
-        value_ |= (one << idx);
+        this->value_ |= (one << idx);
     }
 
     __DPL_HIDE_FROM_ABI constexpr void set(size_t idx, bool val) noexcept {
@@ -193,46 +233,47 @@ public:
     }
 
     __DPL_HIDE_FROM_ABI constexpr void clear(size_t idx) noexcept {
-        value_ &= ~(one << idx);
+        this->value_ &= ~(one << idx);
     }
 
-    __DPL_HIDE_FROM_ABI constexpr void clear() noexcept { value_ = 0; }
+    __DPL_HIDE_FROM_ABI constexpr void clear() noexcept { this->value_ = 0; }
 
     __DPL_HIDE_FROM_ABI constexpr bitset& invert() noexcept {
         if constexpr (all == static_cast<underlying_type>(-1)) {
-            value_ = ~value_;
+            this->value_ = ~this->value_;
         } else {
-            value_ ^= all;
+            this->value_ ^= all;
         }
+        return *this;
     }
 
     __DPL_HIDE_FROM_ABI constexpr bitset& operator&=(bitset other) noexcept {
-        value_ &= other.value_;
+        this->value_ &= other.value_;
         return *this;
     }
 
     __DPL_HIDE_FROM_ABI constexpr bitset& operator|=(bitset other) noexcept {
-        value_ |= other.value_;
+        this->value_ |= other.value_;
         return *this;
     }
 
     __DPL_HIDE_FROM_ABI constexpr bitset& operator^=(bitset other) noexcept {
-        value_ ^= other.value_;
+        this->value_ ^= other.value_;
         return *this;
     }
 
     __DPL_HIDE_FROM_ABI constexpr bitset& operator<<=(size_t shift) noexcept {
         if constexpr (__DPL has_single_bit(W)) {
-            value_ <<= shift;
+            this->value_ <<= shift;
         } else {
-            value_ = (value_ << shift) & all;
+            this->value_ = (this->value_ << shift) & all;
         }
 
         return *this;
     }
 
     __DPL_HIDE_FROM_ABI constexpr bitset& operator>>=(size_t shift) noexcept {
-        value_ >>= shift;
+        this->value_ >>= shift;
         return *this;
     }
 
@@ -241,21 +282,11 @@ public:
         if constexpr (__DPL has_single_bit(W)) {
             return *this;
         } else {
-            value_ &= bitset<W>::all;
+            this->value_ &= bitset<W>::all;
             return *this;
         }
     }
-
-private:
-    underlying_type value_;
 };
-
-DPL_EXPORT template <size_t W>
-requires integral<typename bitset<W>::underlying_type>
-DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) constexpr auto to_underlying(
-    bitset<W> val) noexcept {
-    return __DPL bit_cast<typename bitset<W>::underlying_type>(val);
-}
 
 template <integral T>
 bitset(T val) -> bitset<sizeof(T) * char_bit_v>;
@@ -265,38 +296,27 @@ explicit bitset(T val)
     -> bitset<__DPL bit_width(__DPL to_unsigned(T::value))>;
 
 DPL_EXPORT template <size_t W>
-class bitset {
+class bitset : private details::bitset::storage<W> {
     static_assert(W > 0);
+    using base_type DPL_NODEBUG = details::bitset::storage<W>;
+    using base_type::storage_;
+
     static constexpr auto chunk_size = sizeof(size_t) * char_bit_v;
     template <size_t>
     friend class bitset;
 
 public:
     static constexpr auto width = W;
-    using underlying_type =
-        size_t[width / chunk_size + (width % chunk_size != 0)];
+    using typename base_type::underlying_type;
 
 private:
     template <size_t>
     friend class bitset;
     using bypass_t = details::bitset::bypass_t;
     static constexpr bypass_t bypass{};
-    static constexpr make_index_sequence<chunk_size> chunk_sequence{};
-    static constexpr make_index_sequence<extent_v<underlying_type>>
-        extent_sequence{};
-    static constexpr make_index_sequence<W> full_sequence{};
 
 public:
-    __DPL_HIDE_FROM_ABI explicit constexpr bitset(integral auto val) noexcept
-    requires (sizeof(val) < sizeof(size_t))
-        : storage_(val) {}
-
-    template <size_t InW>
-    requires (InW < W)
-    __DPL_HIDE_FROM_ABI explicit constexpr bitset(
-        bitset<InW> const& vals) noexcept {
-        *this |= vals;
-    }
+    __DPL_HIDE_FROM_ABI constexpr bitset() noexcept : base_type{} {}
 
     template <same_as<bool>... Bs>
     requires (sizeof...(Bs) > 0) && (sizeof...(Bs) <= W)
@@ -309,36 +329,40 @@ public:
 
     template <size_t... Ws>
     requires (sizeof...(Ws) > 1 && (... + Ws) == W)
-    __DPL_HIDE_FROM_ABI constexpr bitset(bitset<Ws>... vals) noexcept {
-#if (DPL_HAS_CXX26_EXTENSIONS || DPL_CXX26) && \
-    __cpp_expansion_statements >= 202506L
-        template for (auto offset = 0zu; auto const& val : {vals...}) {
-            template for (idx = 0zu; auto v : val) {
-                set(offset + idx, v.test(idx));
-                ++idx;
+    __DPL_HIDE_FROM_ABI constexpr bitset(bitset<Ws> const&... vals) noexcept {
+        [&]<size_t H, size_t... Ts>(this auto self, bitset<H> const& head,
+            bitset<Ts> const&... tail) constexpr {
+            constexpr auto args = sizeof...(vals) + 1zu;
+            if constexpr (args > 1) {
+                *this <<= self(tail...);
             }
-            offset += val.size();
-        }
-#else
-        auto offset = 0zu;
-        auto const append = [&]<size_t N>(bitset<N> v) constexpr {
-            for (auto i = 0zu; i < v.size(); ++i) {
-                set(offset + i, v.test(i));
-            }
-            offset += v.size();
-        };
 
-        (..., append(vals));
-#endif
+            *this |= head;
+            if constexpr (args < sizeof...(Ws)) {
+                return H;
+            }
+        }(vals...);
     }
 
     template <size_t ToW>
-    requires (ToW > W)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) explicit constexpr
+    requires (ToW != W)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) explicit(ToW < W) constexpr
     operator bitset<ToW>() noexcept {
-        bitset<ToW> output;
-        output |= *this;
-        return output;
+        using To = typename bitset<ToW>::underlying_type;
+        if constexpr (ToW > W) {
+            bitset<ToW> output;
+            output |= *this;
+            return output;
+        } else if constexpr (integral<To>) {
+            return bitset<ToW>(this->storage_[0]);
+        } else {
+            bitset<ToW> output;
+            for (auto i = 0zu; i < extent_v<To>; ++i) {
+                output.storage_[i] = this->storage_[i];
+            }
+            output.reinitialize();
+            return output;
+        }
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) static constexpr size_t size() noexcept {
@@ -347,21 +371,21 @@ public:
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) constexpr bool operator[](
         size_t idx) const noexcept {
-        return storage_[idx / chunk_size] & (1zu << (idx % chunk_size));
+        return this->storage_[idx / chunk_size] & (1zu << (idx % chunk_size));
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) constexpr bool test(
         size_t idx) const noexcept {
-        return *this[idx];
+        return (*this)[idx];
     }
 
     __DPL_HIDE_FROM_ABI constexpr void set(size_t idx) noexcept {
-        auto ptr = storage_ + idx / chunk_size;
+        auto ptr = this->storage_ + idx / chunk_size;
         *ptr |= (1zu << (idx % chunk_size));
     }
 
     __DPL_HIDE_FROM_ABI constexpr void clear(size_t idx) noexcept {
-        auto ptr = storage_ + idx / chunk_size;
+        auto ptr = this->storage_ + idx / chunk_size;
         *ptr &= ~(1zu << (idx % chunk_size));
     }
 
@@ -373,25 +397,57 @@ public:
         }
     }
 
-    __DPL_HIDE_FROM_ABI constexpr bitset& invert() noexcept {
-        [this]<size_t I = 0>(this auto self, size_constant<I> = {}) {
-            if constexpr (I == chunk_sequence.size() - 1) {
-                constexpr auto remainder = W % chunk_size;
-                constexpr size_t mask = ~(-1zu << remainder);
-                storage_[I] ^= mask;
-            } else {
-                storage_[I] = ~storage_[I];
+    template <size_t W2>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) constexpr bool operator==(
+        bitset<W2> const& other) const {
+        if constexpr (integral<typename bitset<W2>::underlying_type>) {
+            return other == *this;
+        } else {
+            constexpr auto size = extent_v<underlying_type> <
+                    extent_v<typename bitset<W2>::underlying_type>
+                ? extent_v<underlying_type>
+                : extent_v<typename bitset<W2>::underlying_type>;
+            for (auto i = 0zu; i < size; ++i) {
+                if (this->storage_[i] != other.storage_[i]) {
+                    return false;
+                }
             }
-        }(chunk_sequence);
+            if constexpr (size == extent_v<underlying_type>) {
+                for (auto i = size;
+                    i < extent_v<typename bitset<W2>::underlying_type>; ++i) {
+                    if (other.storage_[i] != 0) {
+                        return false;
+                    }
+                }
+            } else {
+                for (auto i = size; i < extent_v<underlying_type>; ++i) {
+                    if (this->storage_[i] != 0) {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+    }
+
+    template <size_t W2>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) constexpr bool operator!=(
+        bitset<W2> const& other) const {
+        return !(*this == other);
+    }
+
+    __DPL_HIDE_FROM_ABI constexpr bitset& invert() noexcept {
+        for (auto& val : this->storage_) {
+            val = ~val;
+        }
+        return this->reinitialize();
     }
 
     __DPL_HIDE_FROM_ABI constexpr void clear() noexcept {
-        [this]<size_t I = 0>(this auto self, size_constant<I> = {}) constexpr {
-            if constexpr (I < extent_v<underlying_type>) {
-                storage_[I] = 0zu;
-                self(size_constant<I + 1>{});
-            }
-        }();
+        for (auto& val : this->storage_) {
+            val = 0zu;
+        }
     }
 
     template <size_t OW>
@@ -459,21 +515,18 @@ public:
     requires (OW <= W)
     __DPL_HIDE_FROM_ABI constexpr bitset& operator&=(
         bitset<OW> const& other) noexcept {
-        using underlying = typename bitset<OW>::underlying_type;
         if constexpr (OW <= chunk_size) {
-            storage_[0] &= other.value_;
-        } else if constexpr (OW < W) {
-            [&]<size_t... Is>(index_sequence<Is...>) {
-                (..., (__DPL ignore = storage_[Is] &= other.storage_[Is]));
-            }(make_index_sequence<extent_v<underlying>>{});
+            this->storage_[0] &= other.value_;
         } else {
-            __DPL apply(
-                [&](auto... idx) constexpr {
-                    (...,
-                        (__DPL ignore = storage_[idx] &=
-                            other.storage_[idx]));
-                },
-                extent_sequence);
+            auto* ptr = this->storage_;
+            for (auto const val : other.storage_) {
+                *ptr++ &= val;
+            }
+
+            for (auto const end = this->storage_ + extent_v<underlying_type>;
+                ptr < end;) {
+                *ptr++ = 0zu;
+            }
         }
 
         return *this;
@@ -485,19 +538,11 @@ public:
         bitset<OW> const& other) noexcept {
         using underlying = typename bitset<OW>::underlying_type;
         if constexpr (OW <= chunk_size) {
-            storage_[0] |= other.value_;
-        } else if constexpr (OW < W) {
-            [&]<size_t... Is>(index_sequence<Is...>) {
-                (..., (__DPL ignore = storage_[Is] |= other.storage_[Is]));
-            }(make_index_sequence<extent_v<underlying>>{});
+            this->storage_[0] |= other.value_;
         } else {
-            __DPL apply(
-                [&](auto... idx) constexpr {
-                    (...,
-                        (__DPL ignore = storage_[idx] |=
-                            other.storage_[idx]));
-                },
-                extent_sequence);
+            for (auto* ptr = this->storage_; auto const val : other.storage_) {
+                *ptr++ |= val;
+            }
         }
 
         return *this;
@@ -509,19 +554,11 @@ public:
         bitset<OW> const& other) noexcept {
         using underlying = typename bitset<OW>::underlying_type;
         if constexpr (OW <= chunk_size) {
-            storage_[0] ^= other.value_;
-        } else if constexpr (OW < W) {
-            [&]<size_t... Is>(index_sequence<Is...>) {
-                (..., (__DPL ignore = storage_[Is] ^= other.storage_[Is]));
-            }(make_index_sequence<extent_v<underlying>>{});
+            this->storage_[0] ^= other.value_;
         } else {
-            __DPL apply(
-                [&](auto... idx) constexpr {
-                    (...,
-                        (__DPL ignore = storage_[idx] ^=
-                            other.storage_[idx]));
-                },
-                extent_sequence);
+            for (auto* ptr = this->storage_; auto const val : other.storage_) {
+                *ptr++ ^= val;
+            }
         }
 
         return *this;
@@ -540,24 +577,24 @@ public:
         constexpr size_t chunks = extent_v<underlying_type>;
         if (word_shift != 0) {
             for (auto i = chunks; i-- > word_shift;) {
-                storage_[i] = storage_[i - word_shift];
+                this->storage_[i] = this->storage_[i - word_shift];
             }
 
             for (auto i = 0zu; i < word_shift; ++i) {
-                storage_[i] = 0;
+                this->storage_[i] = 0;
             }
         }
 
         if (bit_shift != 0) {
             for (auto i = chunks - 1; i > 0; --i) {
-                storage_[i] = (storage_[i] << bit_shift) |
-                    (storage_[i - 1] >> (chunk_size - bit_shift));
+                this->storage_[i] = (this->storage_[i] << bit_shift) |
+                    (this->storage_[i - 1] >> (chunk_size - bit_shift));
             }
 
-            storage_[0] <<= bit_shift;
+            this->storage_[0] <<= bit_shift;
         }
 
-        return reinitialize(*this);
+        return this->reinitialize();
     }
 
     __DPL_HIDE_FROM_ABI constexpr bitset& operator>>=(size_t shift) noexcept {
@@ -573,21 +610,21 @@ public:
         constexpr auto chunks = extent_v<underlying_type>;
         if (word_shift != 0) {
             for (auto i = 0zu; i + word_shift < chunks; ++i) {
-                storage_[i] = storage_[i + word_shift];
+                this->storage_[i] = this->storage_[i + word_shift];
             }
 
             for (auto i = chunks - word_shift; i < chunks; ++i) {
-                storage_[i] = 0;
+                this->storage_[i] = 0;
             }
         }
 
         if (bit_shift != 0) {
             for (auto i = 0zu; i + 1 < chunks; ++i) {
-                storage_[i] = (storage_[i] >> bit_shift) |
-                    (storage_[i + 1] << (chunk_size - bit_shift));
+                this->storage_[i] = (this->storage_[i] >> bit_shift) |
+                    (this->storage_[i + 1] << (chunk_size - bit_shift));
             }
 
-            storage_[chunks - 1] >>= bit_shift;
+            this->storage_[chunks - 1] >>= bit_shift;
         }
 
         return *this;
@@ -595,22 +632,22 @@ public:
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, REINITIALIZES) constexpr bitset&
     reinitialize() noexcept {
-        constexpr auto remainder = W % chunk_size;
-        if constexpr (remainder > 0) {
-            constexpr size_t mask = ~(-1zu << remainder);
-            storage_[extent_v<size_t> - 1] &= mask;
+        constexpr auto tail_size = W % chunk_size;
+        if constexpr (tail_size > 0) {
+            constexpr size_t mask = ~(-1zu << tail_size);
+            this->storage_[extent_v<underlying_type> - 1] &= mask;
         }
 
         return *this;
     }
-
-private:
-    underlying_type storage_;
 };
 
 template <same_as<bool>... Bs>
 requires (sizeof...(Bs) > 0)
 bitset(Bs... vals) -> bitset<sizeof...(Bs)>;
+
+template <size_t... Ws>
+bitset(bitset<Ws> const&... vals) -> bitset<(... + Ws)>;
 
 DPL_EXPORT template <size_t W>
 struct tuple_size<bitset<W>> : size_constant<W> {};
@@ -631,6 +668,256 @@ DPL_EXPORT template <size_t I, size_t W>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) constexpr auto get(
     bitset<W> const& value) noexcept {
     return value[I];
+}
+
+template <typename T>
+inline constexpr bool is_bitset_v = false;
+template <typename T>
+inline constexpr bool is_bitset_v<T const> = is_bitset_v<T>;
+template <typename T>
+inline constexpr bool is_bitset_v<T volatile> = is_bitset_v<T>;
+template <typename T>
+inline constexpr bool is_bitset_v<T const volatile> = is_bitset_v<T>;
+template <size_t W>
+inline constexpr bool is_bitset_v<bitset<W>> = true;
+
+template <typename T>
+concept bitset_type = is_bitset_v<T>;
+
+template <typename T>
+concept integral_bitset_type =
+    bitset_type<T> && integral<typename T::underlying_type>;
+
+DPL_EXPORT template <typename T>
+concept bitset_constant_like = requires { T::value; } &&
+    bitset_type<decltype(T::value)> && convertible_to<T, decltype(T::value)> &&
+    equality_comparable_with<T, decltype(T::value)> &&
+    bool_constant<T() == T::value>::value &&
+    bool_constant<static_cast<decltype(T::value)>(T()) == T::value>::value;
+
+template <bitset_type auto T>
+using bitset_constant = integral_constant<decltype(T), T>;
+
+DPL_EXPORT template <size_t W>
+requires integral_bitset_type<bitset<W>>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) constexpr auto to_underlying(
+    bitset<W> val) noexcept {
+    return __DPL bit_cast<typename bitset<W>::underlying_type>(val);
+}
+
+template <size_t W, size_t W2>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+constexpr bitset<W> truncate(bitset<W2> const& val) noexcept {
+    static_assert(W <= W2);
+    return static_cast<bitset<W>>(val);
+}
+
+template <size_t W>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+constexpr int popcount(bitset<W> const& val) noexcept {
+    if constexpr (integral_bitset_type<bitset<W>>) {
+        return __DPL popcount(__DPL to_underlying(val));
+    } else {
+        static_assert(is_base_of_v<details::bitset::storage<W>, bitset<W>>);
+        auto const& base = (details::bitset::storage<W> const&)val;
+        auto sum = 0zu;
+        for (auto const val : base.storage_) {
+            sum += __DPL popcount(val);
+        }
+
+        return sum;
+    }
+}
+
+template <size_t W>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+constexpr int countl_one(bitset<W> const& val) noexcept {
+    if constexpr (integral_bitset_type<bitset<W>>) {
+        constexpr auto chunk = sizeof(bitset<W>) * __DPL char_bit_v;
+        constexpr auto padding = chunk - W;
+        if constexpr (padding > 0) {
+            return __DPL countl_one(
+                __DPL to_unsigned(__DPL to_underlying(val) << padding));
+        } else {
+            return __DPL countl_one(__DPL to_underlying(val));
+        }
+    } else {
+        static_assert(is_base_of_v<details::bitset::storage<W>, bitset<W>>);
+        using type DPL_NODEBUG = typename bitset<W>::underlying_type;
+        constexpr auto chunk = sizeof(size_t) * __DPL char_bit_v;
+        constexpr auto tail_size = W % chunk;
+        constexpr auto padding = tail_size > 0 ? chunk - tail_size : 0zu;
+
+        auto const& base = (details::bitset::storage<W> const&)val;
+        auto const* ptr = base.storage_ + extent_v<type>;
+
+        auto result = 0zu;
+        if constexpr (tail_size > 0) {
+            auto const count = __DPL countl_one(*--ptr << padding);
+            if (count < tail_size) {
+                return count;
+            }
+        }
+
+        for (; ptr > base.storage_; ++result) {
+            if (auto const val = *--ptr; val != -1zu) {
+                return result * chunk + tail_size + __DPL countl_one(val);
+            }
+        }
+
+        return W;
+    }
+}
+
+template <size_t W>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+constexpr int countl_zero(bitset<W> const& val) noexcept {
+    if constexpr (integral_bitset_type<bitset<W>>) {
+        constexpr auto chunk = sizeof(bitset<W>) * __DPL char_bit_v;
+        constexpr auto padding = chunk - W;
+        if constexpr (padding > 0) {
+            return __DPL countl_zero(
+                __DPL to_unsigned( __DPL to_underlying(val) << padding));
+        } else {
+            return __DPL countl_zero(__DPL to_underlying(val));
+        }
+    } else {
+        static_assert(is_base_of_v<details::bitset::storage<W>, bitset<W>>);
+        using type DPL_NODEBUG = typename bitset<W>::underlying_type;
+        constexpr auto chunk = sizeof(size_t) * __DPL char_bit_v;
+        constexpr auto tail_size = W % chunk;
+        constexpr auto padding = tail_size > 0 ? chunk - tail_size : 0zu;
+
+        auto const& base = (details::bitset::storage<W> const&)val;
+        auto const* ptr = base.storage_ + extent_v<type>;
+
+        auto result = 0zu;
+        if constexpr (tail_size > 0) {
+            auto const count = __DPL countl_zero(*--ptr << padding);
+            if (count < tail_size) {
+                return count;
+            }
+        }
+
+        for (; ptr > base.storage_; ++result) {
+            if (auto const val = *--ptr; val != 0zu) {
+                return result * chunk + tail_size + __DPL countl_zero(val);
+            }
+        }
+
+        return W;
+    }
+}
+
+template <size_t W>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+constexpr int countr_one(bitset<W> const& val) noexcept {
+    if constexpr (integral_bitset_type<bitset<W>>) {
+        return __DPL countr_one(__DPL to_underlying(val));
+    } else {
+        static_assert(is_base_of_v<details::bitset::storage<W>, bitset<W>>);
+        using type DPL_NODEBUG = typename bitset<W>::underlying_type;
+        constexpr auto chunk = sizeof(size_t) * __DPL char_bit_v;
+        constexpr auto tail_size = W % chunk;
+        constexpr auto padding = tail_size > 0 ? chunk - tail_size : 0zu;
+        auto const& base = (details::bitset::storage<W> const&)val;
+        for (auto result = 0zu; auto const val : base.storage_) {
+            if (val != -1zu) {
+                return result * chunk + __DPL countr_one(val);
+            }
+
+            ++result;
+        }
+
+        return W;
+    }
+}
+
+template <size_t W>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+constexpr int countr_zero(bitset<W> const& val) noexcept {
+    if constexpr (integral_bitset_type<bitset<W>>) {
+        return __DPL countr_one(__DPL to_underlying(val));
+    } else {
+        static_assert(is_base_of_v<details::bitset::storage<W>, bitset<W>>);
+        using type DPL_NODEBUG = typename bitset<W>::underlying_type;
+        constexpr auto chunk = sizeof(size_t) * __DPL char_bit_v;
+        constexpr auto tail_size = W % chunk;
+        constexpr auto padding = tail_size > 0 ? chunk - tail_size : 0zu;
+        auto const& base = (details::bitset::storage<W> const&)val;
+        for (auto result = 0zu; auto const val : base.storage_) {
+            if (val != 0zu) {
+                return result * chunk + __DPL countr_zero(val);
+            }
+
+            ++result;
+        }
+
+        return W;
+    }
+}
+
+template <size_t W>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+constexpr bitset<W> byteswap(bitset<W> const& val) noexcept {
+    if constexpr (integral_bitset_type<bitset<W>>) {
+        constexpr auto chunk = sizeof(bitset<W>) * __DPL char_bit_v;
+        constexpr auto padding = chunk - W;
+        if constexpr (padding > 0) {
+            return bitset<W>( __DPL byteswap(
+                __DPL to_unsigned(__DPL to_underlying(val) << padding)));
+        } else {
+            return bitset<W>(__DPL byteswap(__DPL to_underlying(val)));
+        }
+    } else {
+        static_assert(is_base_of_v<details::bitset::storage<W>, bitset<W>>);
+        using type DPL_NODEBUG = typename bitset<W>::underlying_type;
+        constexpr auto chunk = sizeof(size_t) * __DPL char_bit_v;
+        constexpr auto tail_size = W % chunk;
+        constexpr auto padding = tail_size > 0 ? chunk - tail_size : 0zu;
+        auto ret = __DPL bit_cast<bitset<W + padding>>(val);
+        ret <<= padding;
+        auto& base = (details::bitset::storage<W + padding>&)ret;
+        for (auto left = base.storage_,
+                  right = base.storage_ + extent_v<type> - 1;
+            left < right;) {
+            auto const tmp = *left;
+            *left++ = __DPL byteswap(*right);
+            *right-- = __DPL byteswap(tmp);
+        }
+
+        return __DPL bit_cast<bitset<W>>(ret);
+    }
+}
+
+template <size_t W>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+constexpr bitset<W> rotl(bitset<W> const& val, int count) noexcept {
+    // TODO: optimize for large sets
+    count %= W;
+    if (count == 0)
+        return val;
+
+    if (count > 0) {
+        return (val << count) | (val >> (W - count));
+    }
+
+    return (val >> -count) | (val << (W + count));
+}
+
+template <size_t W>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+constexpr bitset<W> rotr(bitset<W> const& val, int count) noexcept {
+    // TODO: optimize for large sets
+    count %= W;
+    if (count == 0)
+        return val;
+
+    if (count > 0) {
+        return (val >> count) | (val << (W - count));
+    }
+
+    return (val << -count) | (val >> (W + count));
 }
 
 namespace internal::bitset {
@@ -659,7 +946,7 @@ DPL_NODISCARD consteval auto operator""_bits() noexcept {
     bitset<S.size()> output;
     static_assert(S.data[0] == '0');
     static_assert([]() {
-        auto const radix = S.radix();
+        constexpr auto radix = S.radix();
         if constexpr (radix == 2) {
             for (auto val : S.data) {
                 if (val != '0' && val != '1') {

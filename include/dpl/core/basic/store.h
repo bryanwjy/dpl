@@ -5,80 +5,77 @@
 
 #include "dpl/core/basic/aligned.h"
 #include "dpl/core/basic/internal/abi.h"
-#include "dpl/core/basic/to_canonical.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/fwd.h"
 
 #  include "dpl/core/concepts/canonical.h"
-#  include "dpl/std/concepts/invocable.h"
+#  include "dpl/core/dispatch/interface.h"
+#  include "dpl/core/dispatch/maskable/base.h"
+#  include "dpl/core/dispatch/operation/basic.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 
 void store(...) noexcept = delete;
-void aligned_store(...) noexcept = delete;
 
-struct store_t {
-    template <canonical_vector T>
+struct store_t :
+    private basic_operation_base<store_t>,
+    private maskable_operation_base<store_t> {
+    using operation_base<store_t>::operator();
+};
+
+template <>
+struct operation_signature<store_t> {
+    template <canonical_simd_type T>
+    static consteval void operator()(T&&, simd_element_type_t<T>*) noexcept {}
+    template <canonical_simd_type T>
+    static consteval void operator()(
+        aligned_t, T&&, simd_element_type_t<T>*) noexcept {}
+    // TODO maskable signatures
+};
+
+template <>
+struct canonical_impl<store_t> {
+    // TODO maskable signatures
+    template <canonical_simd_type T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
     static constexpr void operator()(
-        T src, simd_element_type_t<T>* dst) noexcept
-    requires requires { store(internal::abi<T>, src, dst); }
+        T src, simd_element_type_t<T>* ptr) noexcept
+    requires requires { store(internal::abi<T>, src, ptr); }
     {
-        store(internal::abi<T>, src, dst);
+        return store(internal::abi<T>, src, ptr);
     }
 
-    template <canonical_vector T>
+    template <canonical_simd_type T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
     static constexpr void operator()(
-        aligned_t, T src, simd_element_type_t<T>* dst) noexcept {
-        if consteval {
-            operator()(src, dst);
-        } else {
-            if constexpr (requires {
-                              aligned_store(internal::abi<T>, src, dst);
-                          }) {
-                aligned_store(internal::abi<T>, src, dst);
-            } else {
-                operator()(src, dst);
-            }
-        }
-    }
-
-    template <simd_vector T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
-    static constexpr void operator()(
-        T src, simd_element_type_t<T>* dst) noexcept {
-        if constexpr (requires { store(src, dst); }) {
-            store(src, dst);
-        } else {
-            static_assert(is_trivially_copyable_v<simd_element_type_t<T>>);
-            operator()(dx::to_canonical(src), dst);
-        }
-    }
-
-    template <simd_vector T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
-    static constexpr void operator()(
-        aligned_t tag, T src, simd_element_type_t<T>* dst) noexcept {
-        if constexpr (requires { aligned_store(src, dst); }) {
-            aligned_store(src, dst);
-        } else {
-            static_assert(is_trivially_copyable_v<simd_element_type_t<T>>);
-            operator()(tag, dx::to_canonical(src), dst);
-        }
+        aligned_t aligned, T src, simd_element_type_t<T>* ptr) noexcept
+    requires requires { store(internal::abi<T>, aligned, src, ptr); }
+    {
+        return store(internal::abi<T>, aligned, src, ptr);
     }
 };
 
-struct aligned_store_t : private store_t {
-    template <simd_vector T>
-    requires invocable<store_t, aligned_t, T, simd_element_type_t<T>*>
+template <>
+struct fallback_impl<store_t> {
+    template <canonical_simd_type T>
+    requires cpo_invocable<canonical_impl<store_t>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
     static constexpr void operator()(
-        aligned_t tag, T src, simd_element_type_t<T>* dst) noexcept {
-        store_t::operator()(tag, src, dst);
+        aligned_t aligned, T src, simd_element_type_t<T>* ptr) noexcept {
+        return canonical_impl<store_t>::operator()(src, ptr);
+    }
+};
+
+struct aligned_store_t {
+    template <canonical_simd_type T>
+    requires cpo_invocable<store_t, aligned_t, T, simd_element_type_t<T>*>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
+    static constexpr void operator()(
+        T src, simd_element_type_t<T>* dst) noexcept {
+        store_t::operator()(dx::aligned, __DPL forward<T>(src), dst);
     }
 };
 

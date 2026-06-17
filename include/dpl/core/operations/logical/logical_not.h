@@ -6,79 +6,66 @@
 // IWYU pragma: always_keep
 
 #include "dpl/core/operations/bitwise/bwnot.h"
-#include "dpl/core/operations/logical/result.h"
+
 #if !DPL_MODULES
 #  include "dpl/core/basic/internal/abi.h"
-#  include "dpl/core/basic/to_canonical.h"
-#  include "dpl/core/concepts/decayable.h"
-#  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/type_traits/canonical_type.h"
-#  include "dpl/std/concepts/invocable.h"
+#  include "dpl/core/concepts/canonical.h"
+#  include "dpl/core/concepts/cpo_invocable.h"
+#  include "dpl/core/concepts/simd_mask.h"
+#  include "dpl/core/dispatch/interface.h"
+#  include "dpl/core/dispatch/operation/primitive.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
+
 void logical_not(...) noexcept = delete;
 
-struct logical_not_t;
-
-template <typename T, typename A = typename T::abi_type>
-concept unqualified_canonical_logical_not = requires(T val) {
-    { logical_not(internal::abi<A>, val) } -> canonical_logical_result<T, T, A>;
+struct logical_not_t : private logical_base<logical_not_t> {
+    using operation_base<logical_not_t>::operator();
 };
 
-template <typename T, typename A = typename T::abi_type>
-concept unqualified_extended_logical_not = requires(T val) {
-    { logical_not(val) } -> extended_logical_result<T, T, A>;
+template <>
+struct operation_signature<logical_not_t> {
+    template <simd_mask T>
+    static consteval void operator()(T&&) noexcept {}
 };
 
-template <typename T, typename A = typename T::abi_type>
-concept unqualified_logical_not = unqualified_extended_logical_not<T, A> ||
-    (decayable_mask_for<T, operation_category::lane_agnostic> &&
-        regular_invocable<logical_not_t, canonical_type_t<T>>);
+template <>
+struct fallback_impl<logical_not_t> {
 
-struct logical_not_t {
-private:
-    template <typename E, typename A>
+    template <simd_type T>
+    requires cpo_invocable<bwnot_t, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL fallback(
-        basic_mask<E, A> val) noexcept {
-        return dx::bwnot(val);
+    static constexpr auto DPL_VECTORCALL operator()(T&& val) noexcept(
+        canonical_simd_type<T>) {
+        return dx::bwnot(__DPL forward<T>(val));
     }
+};
 
-public:
-    template <fixed_width_abi A, simd_element_for<A> E>
+template <>
+struct canonical_impl<logical_not_t> {
+    template <canonical_mask T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_mask<E, A> operator()(
-        basic_mask<E, A> val) noexcept {
-        if constexpr (unqualified_canonical_logical_not<basic_mask<E, A>, A>) {
-            if consteval {
-                return fallback(val);
-            } else {
-                return logical_not(internal::abi<A>, val);
-            }
-        } else {
-            return fallback(val);
-        }
+    static constexpr bool operator()(T val) noexcept
+    requires requires { logical_not(internal::abi<T>, val); }
+    {
+        return logical_not(internal::abi<T>, val);
     }
+};
 
-    template <scalable_abi A, simd_element_for<A> E>
-    requires unqualified_canonical_logical_not<basic_mask<E, A>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_mask<E, A> operator()(
-        basic_mask<E, A> val) noexcept {
-        return logical_not(internal::abi<A>, val);
-    }
+template <typename T, typename A = simd_abi_type_t<T>>
+concept unqualified_extended_logical_not = requires(T&& val) {
+    { logical_not(__DPL forward<T>(val)) } -> mask_with_common_abi<A>;
+};
 
+template <>
+struct extended_impl<logical_not_t> {
     template <extended_mask T>
-    requires unqualified_logical_not<T>
+    requires unqualified_extended_logical_not<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T val) {
-        if constexpr (unqualified_extended_logical_not<T>) {
-            return logical_not(val);
-        } else {
-            return operator()(dx::to_canonical(val));
-        }
+    static constexpr auto operator()(T&& val) {
+        return logical_not(__DPL forward<T>(val));
     }
 };
 } // namespace datapar::internal

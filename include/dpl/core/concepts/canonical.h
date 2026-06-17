@@ -12,7 +12,7 @@
 #  include "dpl/core/type_traits/simd_abi_type.h"
 #  include "dpl/core/type_traits/simd_element_representation.h"
 #  include "dpl/core/type_traits/simd_element_type.h"
-#  include "dpl/std/type_traits/remove_cv.h"
+#  include "dpl/std/type_traits/remove_cvref.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -29,7 +29,7 @@ concept canonical_type = is_canonical_type_v<T> &&
 
 DPL_EXPORT template <typename T>
 concept canonical_simd_type =
-    simd_type<T> && atom::canonical_type<remove_cv_t<T>>;
+    simd_type<T> && atom::canonical_type<remove_cvref_t<T>>;
 
 DPL_EXPORT template <typename T>
 concept canonical_vector = simd_vector<T> && canonical_simd_type<T>;

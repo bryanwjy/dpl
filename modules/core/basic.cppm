@@ -8,6 +8,8 @@ export module dpl:core.basic;
 export import :core.fwd;
 import :core.concepts;
 import :core.type_traits;
+import :core.immediate;
+import :core.dispatch;
 import :std.concepts;
 import :std.bit;
 import :std.type_traits;
@@ -18,14 +20,12 @@ import :std.utility;
 #include "dpl/core/basic/basic_mask.h"
 #include "dpl/core/basic/basic_vector.h"
 #include "dpl/core/basic/broadcast.h"
-#include "dpl/core/basic/broadcastable_base.h"
-#include "dpl/core/basic/const_mask.h"
 #include "dpl/core/basic/extract.h"
-#include "dpl/core/basic/immediate.h"
-#include "dpl/core/basic/indices.h"
+#include "dpl/core/basic/gather.h"
 #include "dpl/core/basic/initialize.h"
 #include "dpl/core/basic/internal/abi.h"
 #include "dpl/core/basic/internal/iota_sequence.h"
+#include "dpl/core/basic/lane_index.h"
 #include "dpl/core/basic/load.h"
 #include "dpl/core/basic/store.h"
 #include "dpl/core/basic/to_canonical.h"

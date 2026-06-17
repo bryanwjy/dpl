@@ -7,8 +7,9 @@
 
 #include "dpl/core/math/fma.h"
 #if !DPL_MODULES
-#  include "dpl/core/basic/immediate.h"
-#  include "dpl/core/constants/digits.h"
+#  include "dpl/core/basic/broadcast.h"
+#  include "dpl/core/immediate/constants/digits.h"
+#  include "dpl/core/immediate/immediate.h"
 #  include "dpl/std/bit/bit_width.h"
 #  include "dpl/std/concepts/floating_point.h"
 #  include "dpl/std/type_traits/remove_const.h"
@@ -102,9 +103,13 @@ private:
     static_assert(sizeof...(Vs) >= 1);
     template <floating_point T>
     struct coeffs_t {
-        static consteval T operator[](immediate<0>) noexcept { return V0; }
+        template <integral auto I>
+        requires (I == 0)
+        static consteval T operator[](immediate<I>) noexcept {
+            return V0;
+        }
 
-        template <int I>
+        template <integral auto I>
         static consteval T operator[](immediate<I>) noexcept {
 #if (DPL_HAS_CXX26_EXTENSIONS || DPL_CXX26) && __cpp_pack_indexing >= 202311L
             static_assert(digits_v<T> <=
@@ -119,7 +124,7 @@ private:
         }
 
         consteval T back(this coeffs_t self) noexcept {
-            return self[imm<sizeof...(Vs) - 1>];
+            return self[imm<sizeof...(Vs)>];
         }
 
         consteval T front(this coeffs_t self) noexcept { return V0; }

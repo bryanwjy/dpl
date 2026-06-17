@@ -5,11 +5,9 @@
 
 #include "dpl/core/operations/select.h"
 #if !DPL_MODULES
-#  include "dpl/core/basic/zero.h"
-#  include "dpl/core/constants/zero.h"
+#  include "dpl/core/immediate/constants/zero.h"
 #  include "dpl/core/type_traits/simd_expression_result.h"
 #  include "dpl/std/concepts/invocable.h"
-#  include "dpl/std/type_traits/declval.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -65,7 +63,7 @@ requires regular_invocable<Op, basic_vector<InEs, A>..., InArgs...> &&
 
 template <typename Op, typename... Ts>
 using operation_result_t DPL_NODEBUG =
-    decltype(__DPL declval<Op const>()( __DPL declval<Ts>()...));
+    decltype(internal::declarg<Op const>()(internal::declarg<Ts>()...));
 
 template <typename T, typename U, typename A = typename U::abi_type>
 using canonical_if_zero_t DPL_NODEBUG = conditional_t<is_same_v<T, zero_t>,

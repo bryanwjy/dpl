@@ -4,7 +4,6 @@
 #include "dpl/config.h"
 
 #include "dpl/core/basic/broadcast.h"
-#include "dpl/core/basic/broadcastable_base.h"
 #include "dpl/core/basic/broadcasting.h"
 #include "dpl/core/basic/extract.h"
 #include "dpl/core/basic/initialize.h"
@@ -12,6 +11,7 @@
 #if !DPL_MODULES
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_element.h"
+#  include "dpl/core/immediate/broadcastable_base.h"
 #  include "dpl/core/type_traits/simd_abi_traits.h"
 #  include "dpl/std/concepts/different_from.h"
 #endif

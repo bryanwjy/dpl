@@ -12,7 +12,7 @@
 #include "dpl/xmm/basic/initialize.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/concepts/simd_element.h"
+#  include "dpl/core/basic/aligned.h"
 #  include "dpl/std/bit/bit_cast.h"
 #  include "dpl/std/type_traits/is_const.h"
 #  include "dpl/std/type_traits/is_volatile.h"
@@ -57,7 +57,7 @@ constexpr simd<E> load(abi_tag tag, E const* data) noexcept {
 
 DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
-constexpr simd<E> aligned_load(abi_tag tag, E const* data) noexcept {
+constexpr simd<E> load(abi_tag tag, aligned_t, E const* data) noexcept {
     static_assert(!is_const_v<E> && !is_volatile_v<E>);
     if consteval {
         return xmm::load(tag, data);
@@ -87,7 +87,7 @@ constexpr simd<E> load(E const* data) noexcept {
 DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
 constexpr simd<E> aligned_load(E const* data) noexcept {
-    return xmm::aligned_load(xmm::abi, data);
+    return xmm::load(xmm::abi, dx::aligned, data);
 }
 
 } // namespace datapar::xmm

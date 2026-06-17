@@ -21,7 +21,7 @@ DPL_EXPORT template <typename D>
 class bitwise_simd_interface {
 public:
     template <typename R>
-    requires regular_invocable<internal::bwor_t, D, R>
+    requires internal::cpo_invocable<internal::bwor_t, D, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     constexpr invoke_result_t<internal::bwor_t, D, R> operator|(
         this D lhs, R rhs) noexcept
@@ -31,7 +31,7 @@ public:
     }
 
     template <typename R>
-    requires regular_invocable<internal::bwand_t, D, R>
+    requires internal::cpo_invocable<internal::bwand_t, D, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     constexpr invoke_result_t<internal::bwand_t, D, R> operator&(
         this D lhs, R rhs) noexcept
@@ -41,7 +41,7 @@ public:
     }
 
     template <typename R>
-    requires regular_invocable<internal::bwxor_t, D, R>
+    requires internal::cpo_invocable<internal::bwxor_t, D, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     constexpr invoke_result_t<internal::bwxor_t, D, R> operator^(
         this D lhs, R rhs) noexcept
@@ -51,7 +51,7 @@ public:
     }
 
     template <typename R>
-    requires regular_invocable<internal::bwshift_left_t, D, R>
+    requires internal::cpo_invocable<internal::bwshift_left_t, D, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     constexpr invoke_result_t<internal::bwshift_left_t, D, R> operator<<(
         this D lhs, R rhs) noexcept
@@ -61,7 +61,7 @@ public:
     }
 
     template <typename R>
-    requires regular_invocable<internal::bwshift_right_t, D, R>
+    requires internal::cpo_invocable<internal::bwshift_right_t, D, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     constexpr invoke_result_t<internal::bwshift_right_t, D, R> operator>>(
         this D lhs, R rhs) noexcept
@@ -71,7 +71,7 @@ public:
     }
 
     template <typename R>
-    requires regular_invocable<internal::bwor_t, D, R> &&
+    requires internal::cpo_invocable<internal::bwor_t, D, R> &&
         assignable_from<D&, invoke_result_t<internal::bwor_t, D, R>>
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
         constexpr D& operator|=(this D& lhs, R rhs) noexcept
@@ -81,7 +81,7 @@ public:
     }
 
     template <typename R>
-    requires regular_invocable<internal::bwand_t, D, R> &&
+    requires internal::cpo_invocable<internal::bwand_t, D, R> &&
         assignable_from<D&, invoke_result_t<internal::bwand_t, D, R>>
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
         constexpr D& operator&=(this D& lhs, R rhs) noexcept
@@ -91,7 +91,7 @@ public:
     }
 
     template <typename R>
-    requires regular_invocable<internal::bwxor_t, D, R> &&
+    requires internal::cpo_invocable<internal::bwxor_t, D, R> &&
         assignable_from<D&, invoke_result_t<internal::bwxor_t, D, R>>
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
         constexpr D& operator^=(this D& lhs, R rhs) noexcept
@@ -101,7 +101,7 @@ public:
     }
 
     template <typename R>
-    requires regular_invocable<internal::bwshift_left_t, D, R> &&
+    requires internal::cpo_invocable<internal::bwshift_left_t, D, R> &&
         assignable_from<D&, invoke_result_t<internal::bwshift_left_t, D, R>>
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
         constexpr D& operator<<=(this D& lhs, R rhs) noexcept
@@ -111,7 +111,7 @@ public:
     }
 
     template <typename R>
-    requires regular_invocable<internal::bwshift_right_t, D, R> &&
+    requires internal::cpo_invocable<internal::bwshift_right_t, D, R> &&
         assignable_from<D&, invoke_result_t<internal::bwshift_right_t, D, R>>
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
         constexpr D& operator>>=(this D& lhs, R rhs) noexcept
@@ -149,7 +149,7 @@ public:
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     constexpr D operator~(this D self) noexcept
-    requires simd_vector<D> && regular_invocable<internal::bwnot_t, D>
+    requires simd_vector<D> && internal::cpo_invocable<internal::bwnot_t, D>
     {
         return datapar::bwnot(self);
     }

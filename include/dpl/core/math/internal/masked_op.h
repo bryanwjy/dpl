@@ -14,9 +14,9 @@
 #  include "dpl/core/basic/basic_vector.h" // IWYU pragma: keep
 #  include "dpl/core/concepts/decayable.h"
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/constants/one.h"
+#  include "dpl/core/dispatch/evaluate.h"
+#  include "dpl/core/immediate/constants/one.h"
 #  include "dpl/core/operations/arithmetic.h"
-#  include "dpl/core/operations/evaluate.h"
 #  include "dpl/core/operations/internal/masked.h"
 #endif
 

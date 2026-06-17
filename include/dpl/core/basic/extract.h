@@ -10,7 +10,10 @@
 #  include "dpl/core/fwd.h"
 
 #  include "dpl/core/concepts/canonical.h"
-#  include "dpl/core/concepts/extended.h"
+#  include "dpl/core/dispatch/interface.h"
+#  include "dpl/core/dispatch/operation/basic.h"
+#  include "dpl/core/type_traits/canonical_type.h"
+#  include "dpl/core/type_traits/simd_value_type.h"
 #  include "dpl/std/concepts/integral.h"
 #  include "dpl/std/concepts/integral_constant_like.h"
 #endif
@@ -22,31 +25,35 @@ concept extraction_index = integral_constant_like<T> || integral<T>;
 
 void extract(...) noexcept = delete;
 
-struct extract_t {
-    /**
-     * Prevent canonical_simd_type overload from falling back to simd_type
-     * overload
-     */
-    template <canonical_simd_type T, typename I>
-    static constexpr void operator()(T, I) noexcept = delete;
+struct extract_t : private basic_operation_base<extract_t> {
+    using operation_base<extract_t>::operator();
+};
 
+template <>
+struct operation_signature<extract_t> {
+    static consteval void operator()(
+        simd_type auto&&, extraction_index auto) noexcept {}
+};
+
+template <>
+struct canonical_impl<extract_t> {
     template <canonical_simd_type T, extraction_index I>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr typename T::value_type operator()(T src, I idx) noexcept
+    static constexpr simd_value_type_t<T> operator()(T src, I idx) noexcept
     requires requires { extract(internal::abi<T>, src, idx); }
     {
         return extract(internal::abi<T>, src, idx);
     }
+};
 
-    template <extended_simd_type T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr same_as<typename T::value_type> auto operator()(
-        T src, extraction_index auto idx) noexcept {
-        if constexpr (requires { extract(src, idx); }) {
-            return extract(src, idx);
-        } else {
-            return operator()(dx::to_canonical(src), idx);
-        }
+template <>
+struct fallback_impl<extract_t> {
+    template <extended_simd_type T, extraction_index I>
+    requires cpo_invocable<canonical_impl<extract_t>, canonical_type_t<T>, I>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
+    static constexpr simd_value_type_t<T> operator()(T&& src, I idx) noexcept {
+        return canonical_impl<extract_t>::operator()(
+            dx::to_canonical(__DPL forward<T>(src)), idx);
     }
 };
 

@@ -6,6 +6,7 @@
 #if !DPL_MODULES
 #  include "dpl/std/bit/bit_type.h"
 #  include "dpl/std/bit/char_bit.h"
+#  include "dpl/std/concepts/common_with.h"
 #  include "dpl/std/concepts/enumeration.h"
 #  include "dpl/std/concepts/integral.h"
 #  include "dpl/std/type_traits/common_type.h"
@@ -48,8 +49,12 @@ private:
             return common_size_type<underlying_type_t<A>, B>{};
         } else if constexpr (enumeration<B>) {
             return common_size_type<A, underlying_type_t<B>>{};
-        } else if constexpr (sizeof(common_type_t<A, B>) == sizeof(A)) {
-            return common_type<A, B>{};
+        } else if constexpr (common_with<A, B>) {
+            if constexpr (sizeof(common_type_t<A, B>) == sizeof(A)) {
+                return common_type<A, B>{};
+            } else {
+                return bit_type<sizeof(A) * char_bit_v>{};
+            }
         } else {
             return bit_type<sizeof(A) * char_bit_v>{};
         }

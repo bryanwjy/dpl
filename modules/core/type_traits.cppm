@@ -15,6 +15,8 @@ import :std.utility;
 #include "dpl/core/type_traits/canonical_type.h"
 #include "dpl/core/type_traits/common_abi.h"
 #include "dpl/core/type_traits/common_size_type.h"
+#include "dpl/core/type_traits/cpo_result.h"
+#include "dpl/core/type_traits/declarg.h"
 #include "dpl/core/type_traits/enable_const_mask.h"
 #include "dpl/core/type_traits/enable_simd_abi.h"
 #include "dpl/core/type_traits/enable_simd_mask.h"

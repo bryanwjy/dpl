@@ -13,7 +13,7 @@
 #if !DPL_MODULES
 #  include "dpl/core/basic/basic_vector.h" // IWYU pragma: keep
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/constants/one.h"
+#  include "dpl/core/immediate/constants/one.h"
 #  include "dpl/core/operations/arithmetic.h"
 #endif
 

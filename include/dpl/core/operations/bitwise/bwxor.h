@@ -5,538 +5,303 @@
 
 // IWYU pragma: always_keep
 
-#include "dpl/core/operations/bitwise/result.h"
-#include "dpl/core/operations/internal/masked.h"
-#include "dpl/core/operations/internal/operation_base.h"
 #include "dpl/core/operations/internal/transform.h"
+#include "dpl/core/operations/pack_mask.h"
+
 #if !DPL_MODULES
+#  include "dpl/core/basic/initialize.h"
 #  include "dpl/core/basic/internal/abi.h"
-#  include "dpl/core/concepts/decayable.h"
 #  include "dpl/core/concepts/equivalence.h"
+#  include "dpl/core/concepts/mask_compatibility.h"
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/type_traits/common_size_type.h"
+#  include "dpl/core/dispatch/broadcastable/binary.h"
+#  include "dpl/core/dispatch/interface.h"
+#  include "dpl/core/dispatch/maskable/transform.h"
+#  include "dpl/core/dispatch/operation/primitive.h"
+#  include "dpl/std/bit/char_bit.h"
+#  include "dpl/std/utility/bitset.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void bwxor(...) noexcept = delete;
 
-struct bwxor_t;
-
-template <typename L, typename R, typename A = common_abi_t<L, R>>
-concept unqualified_canonical_bwxor = requires(L lhs, R rhs) {
-    { bwxor(internal::abi<A>, lhs, rhs) } -> canonical_bitwise_result<L, R, A>;
+struct DPL_EMPTY_BASES bwxor_t :
+    private bitwise_base<bwxor_t>,
+    private maskable_transform_base<bwxor_t>,
+    private binary_broadcastable_operation<bwxor_t> {
+    using bitwise_base<bwxor_t>::operator();
+    using maskable_transform_base<bwxor_t>::operator();
 };
 
-template <typename L, typename R, typename A = common_abi_t<L, R>>
-concept unqualified_extended_bwxor = requires(L lhs, R rhs) {
-    { bwxor(lhs, rhs) } -> vector_with_common_abi<A>;
+template <>
+struct operation_signature<bwxor_t> {
+    template <typename L, typename R>
+    requires simd_type<L> || simd_type<R>
+    static consteval void operator()(L&&, R&&) noexcept {}
 };
 
-template <typename L, typename R>
-concept expression_bwxor = (simd_expression<L> || simd_expression<R>) &&
-    invocable<bwxor_t, simd_expression_result_t<L>,
-        simd_expression_result_t<R>>;
+template <>
+struct fallback_impl<bwxor_t> : binary_broadcasting_fallback<bwxor_t> {
 
-template <typename L, typename R, typename A = common_abi_t<L, R>>
-concept decayable_bwxor =
-    (decayable_vector_for<L, operation_category::lane_agnostic> &&
-        decayable_vector_for<R, operation_category::lane_agnostic> &&
-        regular_invocable<bwxor_t, canonical_type_t<L>, canonical_type_t<R>>);
+    template <typename E>
+    using bitset_t DPL_NODEBUG = bitset<sizeof(E) * char_bit_v>;
 
-template <typename L, typename R, typename A = common_abi_t<L, R>>
-concept extended_bwxor = unqualified_extended_bwxor<L, R, A> ||
-    expression_bwxor<L, R> || decayable_bwxor<L, R, A>;
-
-template <typename S, typename M, typename L, typename R,
-    typename A = common_abi_t<L, R, M>>
-concept unqualified_canonical_mbwxor = requires(S src, M mask, L lhs, R rhs) {
-    {
-        bwxor(internal::abi<A>, src, mask, lhs, rhs)
-    } -> equivalent_simd_type_with<
-        canonical_if_zero_t<S, operation_result_t<bwxor_t, L, R>, A>>;
-};
-
-template <typename S, typename M, typename L, typename R,
-    typename A = common_abi_t<L, R, M>>
-concept unqualified_extended_mbwxor = requires(S src, M mask, L lhs, R rhs) {
-    { bwxor(src, mask, lhs, rhs) } -> vector_with_common_abi<A>;
-};
-
-template <typename S, typename M, typename L, typename R>
-concept expression_mbwxor = (simd_expression<S> || simd_expression<M> ||
-                                simd_expression<L> || simd_expression<R>) &&
-    invocable<bwxor_t, expression_result_or_zero_t<S>,
-        simd_expression_result_t<M>, simd_expression_result_t<L>,
-        simd_expression_result_t<R>>;
-
-template <typename S, typename M, typename L, typename R,
-    typename A = common_abi_t<L, R, M>>
-concept decayable_mbwxor =
-    decayable_vector_for<
-        canonical_if_zero_t<S, operation_result_t<bwxor_t, L, R>, A>,
-        operation_category::lane_agnostic> &&
-    decayable_mask_for<M, operation_category::lane_agnostic> &&
-    decayable_vector_for<L, operation_category::lane_agnostic> &&
-    decayable_vector_for<R, operation_category::lane_agnostic> &&
-    regular_invocable<bwxor_t,
-        canonical_if_zero_t<S, operation_result_t<bwxor_t, L, R>, A>,
-        canonical_type_t<M>, canonical_type_t<L>, canonical_type_t<R>>;
-
-template <typename S, typename M, typename L, typename R,
-    typename A = common_abi_t<L, R, M>>
-concept extended_mbwxor = unqualified_extended_mbwxor<S, M, L, R, A> ||
-    expression_mbwxor<S, M, L, R> || decayable_mbwxor<S, M, L, R, A>;
-
-template <typename S, typename M, typename L, typename R,
-    typename A =
-        common_abi_t<canonical_if_zero_t<S, operation_result_t<bwxor_t, L, R>>,
-            operation_result_t<bwxor_t, L, R>>>
-concept unqualified_canonical_imbwxor = requires(S src, M mask, L lhs, R rhs) {
-    {
-        bwxor(internal::abi<A>, src,
-            internal::to_const_mask<A, bwxor_t, S, L, R>(mask), lhs, rhs)
-    } -> equivalent_simd_type_with<
-        canonical_if_zero_t<S, operation_result_t<bwxor_t, L, R>, A>>;
-};
-
-template <typename S, typename M, typename L, typename R,
-    typename A =
-        common_abi_t<canonical_if_zero_t<S, operation_result_t<bwxor_t, L, R>>,
-            operation_result_t<bwxor_t, L, R>>>
-concept unqualified_extended_imbwxor = requires(S src, M mask, L lhs, R rhs) {
-    {
-        bwxor(src, internal::to_const_mask<A, bwxor_t, S, L, R>(mask), lhs, rhs)
-    } -> vector_with_common_abi<A>;
-};
-
-template <typename S, typename M, typename L, typename R>
-concept expression_imbwxor =
-    (simd_expression<S> || simd_expression<L> || simd_expression<R>) &&
-    invocable<bwxor_t, expression_result_or_zero_t<S>, M,
-        simd_expression_result_t<L>, simd_expression_result_t<R>>;
-
-template <typename S, typename M, typename L, typename R,
-    typename A =
-        common_abi_t<canonical_if_zero_t<S, operation_result_t<bwxor_t, L, R>>,
-            operation_result_t<bwxor_t, L, R>>>
-concept decayable_imbwxor =
-    decayable_vector_for<
-        canonical_if_zero_t<S, operation_result_t<bwxor_t, L, R>, A>,
-        operation_category::lane_agnostic> &&
-    decayable_vector_for<L, operation_category::lane_agnostic> &&
-    decayable_vector_for<R, operation_category::lane_agnostic> &&
-    requires(bwxor_t op,
-        canonical_if_zero_t<S, operation_result_t<bwxor_t, L, R>, A> s, M mask,
-        canonical_type_t<L> l, canonical_type_t<R> r) { op(s, mask, l, r); };
-
-template <typename S, typename M, typename L, typename R,
-    typename A =
-        common_abi_t<canonical_if_zero_t<S, operation_result_t<bwxor_t, L, R>>,
-            operation_result_t<bwxor_t, L, R>>>
-concept extended_imbwxor = unqualified_extended_imbwxor<S, M, L, R, A> ||
-    expression_imbwxor<S, M, L, R> || decayable_imbwxor<S, M, L, R, A>;
-
-template <typename L, typename R, typename A = common_abi_t<L, R>>
-concept unqualified_canonical_mask_bwxor = requires(L lhs, R rhs) {
-    { bwxor(internal::abi<A>, lhs, rhs) } -> canonical_bitwise_mask<L, R, A>;
-};
-
-template <typename L, typename R, typename A = common_abi_t<L, R>>
-concept unqualified_extended_mask_bwxor = requires(L lhs, R rhs) {
-    { bwxor(lhs, rhs) } -> mask_with_common_abi<A>;
-};
-
-template <typename L, typename R>
-concept expression_mask_bwxor = (mask_expression<L> || mask_expression<R>) &&
-    invocable<bwxor_t, simd_expression_result_t<L>,
-        simd_expression_result_t<R>>;
-
-template <typename L, typename R, typename A = common_abi_t<L, R>>
-concept decayable_mask_bwxor =
-    decayable_mask_for<L, operation_category::lane_agnostic> &&
-    decayable_mask_for<R, operation_category::lane_agnostic> &&
-    regular_invocable<bwxor_t, canonical_type_t<L>, canonical_type_t<R>>;
-
-template <typename L, typename R, typename A = common_abi_t<L, R>>
-concept extended_mask_bwxor = unqualified_extended_mask_bwxor<L, R, A> ||
-    decayable_mask_bwxor<L, R> || decayable_mask_bwxor<L, R, A>;
-
-struct bwxor_t : private binary_operation_base<bwxor_t> {
-private:
-    friend binary_operation_base<bwxor_t>;
-
-    template <simd_abi A, typename L, typename R>
-    requires (!simd_type<L> || canonical_vector<L>) &&
-        (!simd_type<R> || canonical_vector<R>) && requires(L lhs, R rhs) {
-            { bwxor(internal::abi<A>, lhs, rhs) } -> vector_with_abi<A>;
-        }
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto native(A abi, L lhs, R rhs) noexcept {
-        return bwxor(internal::abi<A>, lhs, rhs);
-    }
-
-    template <simd_abi A, typename L, typename R>
-    requires (!simd_type<L> || extended_vector<L>) &&
-        (!simd_type<R> || extended_vector<R>) &&
-        unqualified_extended_bwxor<L, R, A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto native(A, L lhs, R rhs) noexcept(
-        noexcept(bwxor(lhs, rhs))) {
-        return bwxor(lhs, rhs);
-    }
-
-    template <simd_abi A, typename L, typename R>
-    requires (!simd_type<L> || canonical_mask<L>) &&
-        (!simd_type<R> || canonical_mask<R>) && requires(L lhs, R rhs) {
-            { bwxor(internal::abi<A>, lhs, rhs) } -> mask_with_abi<A>;
-        }
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto native(A abi, L lhs, R rhs) noexcept {
-        return bwxor(internal::abi<A>, lhs, rhs);
-    }
-
-    template <simd_abi A, typename L, typename R>
-    requires (!simd_type<L> || extended_mask<L>) &&
-        (!simd_type<R> || extended_mask<R>) &&
-        unqualified_extended_mask_bwxor<L, R, A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto native(A, L lhs, R rhs) noexcept(
-        noexcept(bwxor(lhs, rhs))) {
-        return bwxor(lhs, rhs);
-    }
-
-    template <typename L, typename R, typename A>
+    template <fixed_width_abi A, simd_element_for<A> E>
+    requires (sizeof(bitset_t<E>) == sizeof(E))
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL fallback(
-        basic_vector<L, A> lhs, basic_vector<R, A> rhs) noexcept {
-        using T = common_size_type_t<L, R>;
-        return internal::transform<basic_vector<T, A>>(
+    static constexpr basic_vector<E, A>
+        DPL_VECTORCALL operator()(
+            basic_vector<E, A> lhs, basic_vector<E, A> rhs) noexcept {
+        return internal::transform<basic_vector<E, A>>(
             [](auto lhs, auto rhs) {
-                using bit_type = bitset<sizeof(T) * char_bit_v>;
-                auto promoted = __DPL bit_cast<bit_type>(lhs) ^
-                    __DPL bit_cast<bit_type>(rhs);
-                return __DPL bit_cast<T>(promoted.reinitialize());
+                auto promoted = __DPL bit_cast<bitset_t<E>>(lhs) ^
+                    __DPL bit_cast<bitset_t<E>>(rhs);
+                return __DPL bit_cast<E>(promoted.reinitialize());
             },
             lhs, rhs);
     }
 
-    template <typename LE, typename RE, typename A>
+    template <fixed_width_abi A, simd_element_for<A> LE, simd_element_for<A> RE>
+    requires common_size_with<LE, RE> &&
+        invocable<pack_mask_t, basic_mask<LE, A>> &&
+        invocable<pack_mask_t, basic_mask<RE, A>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL fallback(
+    static constexpr auto DPL_VECTORCALL operator()(
         basic_mask<LE, A> lhs, basic_mask<RE, A> rhs) noexcept {
-        return internal::transform<basic_mask<common_size_type_t<LE, RE>, A>>(
-            [](auto lhs, auto rhs) { return lhs != rhs; }, lhs, rhs);
+        using T = common_size_type_t<LE, RE>;
+        return dx::initialize<T, A>(dx::pack_mask(lhs) ^ dx::pack_mask(rhs));
     }
+
+    using binary_broadcasting_fallback<bwxor_t>::operator();
+};
+
+template <typename L, typename R, typename A = common_abi_t<L, R>>
+concept unqualified_canonical_bwxor = requires {
+    {
+        bwxor(internal::abi<A>, internal::declarg<L>(), internal::declarg<R>())
+    } -> canonical_vector;
+};
+
+template <typename S, typename M, typename L, typename R,
+    typename A = common_abi_t<L, R>>
+concept unqualified_canonical_mbwxor =
+    (!simd_type<S> || equivalent_vector_with<S, cpo_result_t<bwxor_t, L, R>>) &&
+    requires {
+        {
+            bwxor(internal::abi<A>, internal::declarg<S>(),
+                internal::declarg<M>(), internal::declarg<L>(),
+                internal::declarg<R>())
+        } -> equivalent_vector_with<cpo_result_t<bwxor_t, L, R>>;
+    };
+
+template <>
+struct canonical_impl<bwxor_t> {
+private:
+    template <typename L, typename R>
+    using source_t DPL_NODEBUG =
+        basic_vector<simd_element_type_t<L>, common_abi_t<L, R>>;
+
+    template <typename L, typename R>
+    using mask_t DPL_NODEBUG =
+        basic_mask<simd_element_type_t<L>, common_abi_t<L, R>>;
+
+    template <typename L, typename R>
+    using imask_t DPL_NODEBUG = mask_value_t<
+        simd_abi_traits<simd_element_type_t<L>, common_abi_t<L, R>>::size>;
+
+    template <typename L, typename R, imask_t<L, R> M>
+    using cmask_t DPL_NODEBUG = const_mask<
+        simd_abi_traits<simd_element_type_t<L>, common_abi_t<L, R>>::size, M>;
 
 public:
-    template <fixed_width_abi A, simd_element_for<A> E>
+    template <simd_abi LA, common_abi_with<LA> RA, simd_element_for<LA> E,
+        simd_abi A = common_abi_t<LA, RA>>
+    requires simd_element_for<E, RA>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A> operator()(
-        basic_vector<E, A> lhs, basic_vector<E, A> rhs) noexcept {
-        if constexpr (unqualified_canonical_bwxor<basic_vector<E, A>,
-                          basic_vector<E, A>>) {
-            if consteval {
-                return fallback(lhs, rhs);
-            } else {
-                return bwxor(internal::abi<A>, lhs, rhs);
-            }
-        } else {
-            return fallback(lhs, rhs);
-        }
+        basic_vector<E, LA> lhs, basic_vector<E, RA> rhs) noexcept
+    requires requires { bwxor(internal::abi<A>, lhs, rhs); }
+    {
+        return bwxor(internal::abi<A>, lhs, rhs);
     }
 
-    template <simd_abi LA, common_abi_with<LA> RA, typename E>
-    requires simd_element_for<E, LA> && simd_element_for<E, RA> &&
-        (scalable_abi<LA> || scalable_abi<RA> || different_from<LA, RA>) &&
-        unqualified_canonical_bwxor<basic_vector<E, LA>, basic_vector<E, RA>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, common_abi_t<LA, RA>> operator()(
-        basic_vector<E, LA> lhs, basic_vector<E, RA> rhs) noexcept {
-        return bwxor(internal::abi<common_abi_t<LA, RA>>, lhs, rhs);
-    }
-
-    template <simd_vector L, simd_vector R>
-    requires (extended_vector<L> || extended_vector<R>) && extended_bwxor<L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L lhs, R rhs) noexcept {
-        if constexpr (unqualified_extended_bwxor<L, R>) {
-            return bwxor(lhs, rhs);
-        } else if constexpr (expression_bwxor<L, R>) {
-            return operator()(dx::evaluate(lhs), dx::evaluate(rhs));
-        } else {
-            return operator()(dx::to_canonical(lhs), dx::to_canonical(rhs));
-        }
-    }
-
-    using binary_operation_base<bwxor_t>::operator();
-
-    template <fixed_width_abi A, simd_element_for<A> E, common_size_with<E> ME>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(basic_vector<E, A> src,
-        basic_mask<ME, A> mask, basic_vector<E, A> lhs,
-        basic_vector<E, A> rhs) noexcept {
-        if constexpr (unqualified_canonical_mbwxor<basic_vector<E, A>,
-                          basic_mask<ME, A>, basic_vector<E, A>,
-                          basic_vector<E, A>>) {
-            if consteval {
-                return internal::masked<bwxor_t>(src, mask, lhs, rhs);
-            } else {
-                return bwxor(internal::abi<A>, src, mask, lhs, rhs);
-            }
-        } else {
-            return internal::masked<bwxor_t>(src, mask, lhs, rhs);
-        }
-    }
-
-    template <simd_abi SA, simd_element_for<SA> E, common_size_with<E> ME,
-        simd_abi LA, common_abi_with<LA> RA>
-    requires (different_from<LA, RA> || scalable_abi<SA> || scalable_abi<LA> ||
-                 scalable_abi<RA>) &&
-        simd_element_for<E, LA> && simd_element_for<E, RA> &&
-        maskable_args<basic_vector<E, SA>, basic_mask<ME, SA>,
-            basic_vector<E, LA>, basic_vector<E, RA>> &&
-        unqualified_canonical_mbwxor<basic_vector<E, SA>, basic_mask<ME, SA>,
-            basic_vector<E, LA>, basic_vector<E, RA>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, SA> operator()(basic_vector<E, SA> src,
-        basic_mask<ME, SA> mask, basic_vector<E, LA> lhs,
-        basic_vector<E, RA> rhs) noexcept {
-        return bwxor(internal::abi<SA>, src, mask, lhs, rhs);
-    }
-
-    template <simd_vector S, simd_mask M, simd_vector L, simd_vector R>
-    requires (extended_vector<S> || extended_mask<M> || extended_vector<L> ||
-                 extended_vector<R>) &&
-        maskable_args<S, M, L, R> && extended_mbwxor<S, M, L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(S src, M mask, L lhs, R rhs) noexcept {
-        if constexpr (unqualified_extended_mbwxor<S, M, L, R>) {
-            return bwxor(src, mask, lhs, rhs);
-        } else if constexpr (expression_mbwxor<S, M, L, R>) {
-            return operator()(dx::evaluate(src), dx::evaluate(mask),
-                dx::evaluate(lhs), dx::evaluate(rhs));
-        } else {
-            return operator()(dx::to_canonical(src), dx::to_canonical(mask),
-                dx::to_canonical(lhs), dx::to_canonical(rhs));
-        }
-    }
-
-    template <fixed_width_abi A, simd_element_for<A> E, common_size_with<E> ME>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(basic_mask<ME, A> mask,
-        basic_vector<E, A> lhs, basic_vector<E, A> rhs) noexcept {
-        if constexpr (unqualified_canonical_mbwxor<zero_t, basic_mask<ME, A>,
-                          basic_vector<E, A>, basic_vector<E, A>>) {
-            if consteval {
-                return internal::masked<bwxor_t>(mask, lhs, rhs);
-            } else {
-                return bwxor(internal::abi<A>, dx::zero, mask, lhs, rhs);
-            }
-        } else {
-            return operator()(dx::zero_v<basic_vector<E, A>>, mask, lhs, rhs);
-        }
-    }
-
-    template <simd_abi SA, simd_element_for<SA> E, common_size_with<E> ME,
-        simd_abi LA, common_abi_with<LA> RA>
-    requires (different_from<SA, common_abi_t<LA, RA>> ||
-                 different_from<LA, RA> || scalable_abi<SA> ||
-                 scalable_abi<LA> || scalable_abi<RA>) &&
-        simd_element_for<E, LA> && simd_element_for<E, RA> &&
-        zmaskable_args<basic_mask<ME, SA>, basic_vector<E, LA>,
-            basic_vector<E, RA>> &&
-        unqualified_canonical_mbwxor<zero_t, basic_mask<ME, SA>,
-            basic_vector<E, LA>, basic_vector<E, RA>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(basic_mask<ME, SA> mask,
-        basic_vector<E, LA> lhs, basic_vector<E, RA> rhs) noexcept {
-        return bwxor(
-            internal::abi<common_abi_t<LA, RA>>, dx::zero, mask, lhs, rhs);
-    }
-
-    template <simd_mask M, simd_vector L, simd_vector R>
-    requires (extended_mask<M> || extended_vector<L> || extended_vector<R>) &&
-        zmaskable_args<M, L, R> && extended_mbwxor<zero_t, M, L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(M mask, L lhs, R rhs) noexcept {
-        if constexpr (unqualified_extended_mbwxor<zero_t, M, L, R>) {
-            return bwxor(dx::zero, mask, lhs, rhs);
-        } else if constexpr (expression_mbwxor<zero_t, M, L, R>) {
-            return operator()(
-                dx::evaluate(mask), dx::evaluate(lhs), dx::evaluate(rhs));
-        } else {
-            return operator()(dx::to_canonical(mask), dx::to_canonical(lhs),
-                dx::to_canonical(rhs));
-        }
-    }
-
-    template <simd_mask M, simd_vector L, simd_vector R>
-    requires invocable<bwxor_t, M, L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        dx::zero_t, M mask, L lhs, R rhs) noexcept {
-        return operator()(mask, lhs, rhs);
-    }
-
-    template <fixed_width_abi A, simd_element_for<A> E,
-        const_mask_for<basic_vector<E, A>> M>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(basic_vector<E, A> src,
-        M mask, basic_vector<E, A> lhs, basic_vector<E, A> rhs) noexcept {
-        if constexpr (unqualified_canonical_imbwxor<basic_vector<E, A>, M,
-                          basic_vector<E, A>, basic_vector<E, A>>) {
-            if consteval {
-                return internal::masked<bwxor_t>(src, mask, lhs, rhs);
-            } else {
-                return bwxor(internal::abi<A>, src,
-                    dx::to_compatible_const_mask<basic_vector<E, A>>(mask), lhs,
-                    rhs);
-            }
-        } else {
-            return internal::masked<bwxor_t>(src, mask, lhs, rhs);
-        }
-    }
-
-    template <simd_abi SA, simd_element_for<SA> E,
-        const_mask_for<basic_vector<E, SA>> M, simd_abi LA,
-        common_abi_with<LA> RA>
-    requires (different_from<SA, common_abi_t<LA, RA>> ||
-                 different_from<LA, RA> || scalable_abi<SA> ||
-                 scalable_abi<LA> || scalable_abi<RA>) &&
-        simd_element_for<E, LA> && simd_element_for<E, RA> &&
-        imm_maskable_args<basic_vector<E, SA>, basic_vector<E, LA>,
-            basic_vector<E, RA>> &&
-        unqualified_canonical_imbwxor<basic_vector<E, SA>, M,
-            basic_vector<E, LA>, basic_vector<E, RA>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, SA> operator()(basic_vector<E, SA> src,
-        M mask, basic_vector<E, LA> lhs, basic_vector<E, RA> rhs) noexcept {
-        return bwxor(internal::abi<SA>, src,
-            dx::to_compatible_const_mask<basic_vector<E, SA>>(mask), lhs, rhs);
-    }
-
-    template <simd_vector S, const_mask_for<S> M, simd_vector L, simd_vector R>
-    requires (extended_vector<S> || extended_vector<L> || extended_vector<R>) &&
-        imm_maskable_args<S, L, R> && extended_imbwxor<S, M, L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(S src, M mask, L lhs, R rhs) noexcept {
-        if constexpr (unqualified_extended_imbwxor<S, M, L, R>) {
-            return bwxor(src, dx::to_compatible_const_mask<S>(mask), lhs, rhs);
-        } else if constexpr (expression_imbwxor<S, M, L, R>) {
-            return operator()(
-                dx::evaluate(src), mask, dx::evaluate(lhs), dx::evaluate(rhs));
-        } else {
-            return operator()(dx::to_canonical(src), mask,
-                dx::to_canonical(lhs), dx::to_canonical(rhs));
-        }
-    }
-
-    template <fixed_width_abi A, simd_element_for<A> E,
-        const_mask_for<basic_vector<E, A>> M>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(
-        M mask, basic_vector<E, A> lhs, basic_vector<E, A> rhs) noexcept {
-        if constexpr (unqualified_canonical_imbwxor<zero_t, M,
-                          basic_vector<E, A>, basic_vector<E, A>>) {
-            if consteval {
-                return internal::masked<bwxor_t>(mask, lhs, rhs);
-            } else {
-                return bwxor(internal::abi<A>, dx::zero,
-                    dx::to_compatible_const_mask<basic_vector<E, A>>(mask), lhs,
-                    rhs);
-            }
-        } else {
-            return operator()(dx::zero_v<basic_vector<E, A>>, mask, lhs, rhs);
-        }
-    }
-
-    template <simd_abi LA, common_abi_with<LA> RA,
-        simd_element_for<common_abi_t<LA, RA>> E,
-        const_mask_for<basic_vector<E, common_abi_t<LA, RA>>> M>
-    requires (different_from<LA, RA> || scalable_abi<LA> || scalable_abi<RA>) &&
-        simd_element_for<E, LA> && simd_element_for<E, RA> &&
-        imm_zmaskable_args<basic_vector<E, LA>, basic_vector<E, RA>> &&
-        unqualified_canonical_imbwxor<zero_t, M, basic_vector<E, LA>,
-            basic_vector<E, RA>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, common_abi_t<LA, RA>> operator()(
-        M mask, basic_vector<E, LA> lhs, basic_vector<E, RA> rhs) noexcept {
-        using A = common_abi_t<LA, RA>;
-        return bwxor(internal::abi<A>, dx::zero,
-            dx::to_compatible_const_mask<basic_vector<E, A>>(mask), lhs, rhs);
-    }
-
-    template <simd_vector L, simd_vector R,
-        const_mask_for<operation_result_t<bwxor_t, L, R>> M>
-    requires (extended_vector<L> || extended_vector<R>) &&
-        imm_zmaskable_args<L, R> && extended_imbwxor<zero_t, M, L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(M mask, L lhs, R rhs) noexcept {
-        using S = operation_result_t<bwxor_t, L, R>;
-        constexpr auto cmask = dx::to_compatible_const_mask<S>(mask);
-        if constexpr (unqualified_extended_imbwxor<zero_t, M, L, R>) {
-            return bwxor(dx::zero, cmask, lhs, rhs);
-        } else if constexpr (expression_imbwxor<zero_t, M, L, R>) {
-            return operator()(cmask, dx::evaluate(lhs), dx::evaluate(rhs));
-        } else {
-            return operator()(
-                cmask, dx::to_canonical(lhs), dx::to_canonical(rhs));
-        }
-    }
-
-    template <simd_vector L, simd_vector R,
-        const_mask_for<operation_result_t<bwxor_t, L, R>> M>
-    requires invocable<bwxor_t, M, L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        dx::zero_t, M mask, L lhs, R rhs) noexcept {
-        return operator()(mask, lhs, rhs);
-    }
-
-    template <fixed_width_abi A, simd_element_for<A> LE, simd_element_for<A> RE>
+    template <simd_abi LA, common_abi_with<LA> RA, simd_element_for<LA> LE,
+        simd_element_for<RA> RE, simd_abi A = common_abi_t<LA, RA>>
     requires common_size_with<LE, RE>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_mask<common_size_type_t<LE, RE>, A> operator()(
-        basic_mask<LE, A> lhs, basic_mask<RE, A> rhs) noexcept {
-        if constexpr (unqualified_canonical_mask_bwxor<basic_mask<LE, A>,
-                          basic_mask<RE, A>>) {
-            if consteval {
-                return fallback(lhs, rhs);
-            } else {
-                return bwxor(internal::abi<A>, lhs, rhs);
-            }
-        } else {
-            return fallback(lhs, rhs);
-        }
+        basic_mask<LE, LA> lhs, basic_mask<RE, RA> rhs) noexcept
+    requires requires { bwxor(internal::abi<A>, lhs, rhs); }
+    {
+        return bwxor(internal::abi<A>, lhs, rhs);
     }
 
-    template <simd_abi LA, common_abi_with<LA> RA, typename LE,
-        common_size_with<LE> RE>
-    requires simd_element_for<LE, LA> && simd_element_for<RE, RA> &&
-        (scalable_abi<LA> || scalable_abi<RA> || different_from<LA, RA>) &&
-        unqualified_canonical_mask_bwxor<basic_mask<LE, LA>, basic_mask<RE, RA>>
+    template <canonical_vector L, broadcastable_to<L> R>
+    requires unqualified_canonical_bwxor<L, R, simd_abi_type_t<L>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_mask<common_size_type_t<LE, RE>,
-        common_abi_t<LA, RA>> operator()(basic_mask<LE, LA> lhs,
-        basic_mask<RE, RA> rhs) noexcept {
-        return bwxor(internal::abi<common_abi_t<LA, RA>>, lhs, rhs);
+    static constexpr auto operator()(L lhs, R&& rhs) noexcept {
+        return bwxor(internal::abi<L>, lhs, __DPL forward<R>(rhs));
     }
 
-    template <simd_mask L, simd_mask R>
-    requires (extended_mask<L> || extended_mask<R>) && extended_mask_bwxor<L, R>
+    template <canonical_vector R, broadcastable_to<R> L>
+    requires unqualified_canonical_bwxor<L, R, simd_abi_type_t<R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L lhs, R rhs) noexcept {
-        if constexpr (unqualified_extended_mask_bwxor<L, R>) {
-            return bwxor(lhs, rhs);
-        } else if constexpr (expression_mask_bwxor<L, R>) {
-            return operator()(dx::evaluate(lhs), dx::evaluate(rhs));
-        } else {
-            return operator()(dx::to_canonical(lhs), dx::to_canonical(rhs));
-        }
+    static constexpr auto operator()(L&& lhs, R rhs) noexcept {
+        return bwxor(internal::abi<R>, __DPL forward<L>(lhs), rhs);
+    }
+
+    template <canonical_vector L, common_vector_with<L> R>
+    requires canonical_vector<R> &&
+        unqualified_canonical_mbwxor<source_t<L, R>, mask_t<L, R>, L, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(
+        source_t<L, R> src, mask_t<L, R> mask, L lhs, R rhs) noexcept {
+        return bwxor(internal::abi<common_abi_t<L, R>>, src, mask, lhs, rhs);
+    }
+
+    template <canonical_vector L, common_vector_with<L> R, imask_t<L, R> M>
+    requires canonical_vector<R> &&
+        unqualified_canonical_mbwxor<source_t<L, R>, cmask_t<L, R, M>, L, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(
+        source_t<L, R> src, cmask_t<L, R, M> cmask, L lhs, R rhs) noexcept {
+        return bwxor(internal::abi<common_abi_t<L, R>>, src, cmask, lhs, rhs);
+    }
+
+    template <canonical_vector L, common_vector_with<L> R>
+    requires canonical_vector<R> &&
+        unqualified_canonical_mbwxor<dx::zero_t, mask_t<L, R>, L, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(
+        dx::zero_t zero, mask_t<L, R> mask, L lhs, R rhs) noexcept {
+        return bwxor(internal::abi<common_abi_t<L, R>>, zero, mask, lhs, rhs);
+    }
+
+    template <canonical_vector L, common_vector_with<L> R, imask_t<L, R> M>
+    requires canonical_vector<R> &&
+        unqualified_canonical_mbwxor<dx::zero_t, cmask_t<L, R, M>, L, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(
+        dx::zero_t zero, cmask_t<L, R, M> cmask, L lhs, R rhs) noexcept {
+        return bwxor(internal::abi<common_abi_t<L, R>>, zero, cmask, lhs, rhs);
     }
 };
 
+template <typename L, typename R, typename A = common_abi_t<L, R>>
+concept unqualified_extended_mask_bwxor = requires {
+    {
+        bwxor(internal::declarg<L>(), internal::declarg<R>())
+    } -> mask_with_common_abi<A>;
+};
+
+template <typename L, typename R, typename A = common_abi_t<L, R>>
+concept unqualified_extended_bwxor = requires {
+    {
+        bwxor(internal::declarg<L>(), internal::declarg<R>())
+    } -> vector_with_common_abi<A>;
+};
+
+template <typename S, typename M, typename L, typename R>
+concept unqualified_extended_mbwxor =
+    (!simd_type<S> || equivalent_vector_with<S, cpo_result_t<bwxor_t, L, R>>) &&
+    requires {
+        {
+            bwxor(internal::declarg<S>(), internal::declarg<M>(),
+                internal::declarg<L>(), internal::declarg<R>())
+        } -> equivalent_vector_with<cpo_result_t<bwxor_t, L, R>>;
+    };
+
+template <>
+struct extended_impl<bwxor_t> {
+private:
+    template <typename S>
+    using simask_t DPL_NODEBUG = mask_value_t<simd_abi_traits<S>::size>;
+
+    template <typename S, simask_t<S> V>
+    using scmask_t DPL_NODEBUG = const_mask<simd_abi_traits<S>::size, V>;
+
+    template <typename L, typename R>
+    using imask_t DPL_NODEBUG = simask_t<cpo_result_t<bwxor_t, L, R>>;
+
+    template <typename L, typename R, imask_t<L, R> M>
+    using cmask_t DPL_NODEBUG = scmask_t<cpo_result_t<bwxor_t, L, R>, M>;
+
+    template <typename L, typename R>
+    using mask_t DPL_NODEBUG =
+        basic_mask<simd_element_type_t<L>, common_abi_t<L, R>>;
+
+public:
+    template <simd_mask L, simd_mask R>
+    requires (extended_mask<L> || extended_mask<R>) &&
+        unqualified_extended_mask_bwxor<L, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(L&& lhs, R&& rhs) {
+        return bwxor(__DPL forward<L>(lhs), __DPL forward<L>(rhs));
+    }
+
+    template <simd_vector L, simd_vector R>
+    requires (extended_vector<L> || extended_vector<R>) &&
+        unqualified_extended_bwxor<L, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(L&& lhs, R&& rhs) {
+        return bwxor(__DPL forward<L>(lhs), __DPL forward<L>(rhs));
+    }
+
+    template <typename L, typename R>
+    requires (extended_vector<L> &&
+                 broadcastable_to<R, result_or_decayed_t<L>> &&
+                 unqualified_extended_bwxor<L, R, simd_abi_type_t<L>>) ||
+        (extended_vector<R> && broadcastable_to<L, result_or_decayed_t<R>> &&
+            unqualified_extended_bwxor<L, R, simd_abi_type_t<R>>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(L&& lhs, R&& rhs) {
+        return bwxor(__DPL forward<L>(lhs), __DPL forward<R>(rhs));
+    }
+
+    template <simd_vector S, exact_mask_for<S> M, common_vector_with<S> L,
+        common_vector_with<L> R>
+    requires (extended_vector<S> || extended_mask<M> || extended_vector<L> ||
+                 extended_vector<R>) &&
+        unqualified_extended_mbwxor<S, M, L, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(S&& src, M&& mask, L&& lhs, R&& rhs) {
+        return bwxor(__DPL forward<S>(src), __DPL forward<M>(mask),
+            __DPL forward<L>(lhs), __DPL forward<R>(rhs));
+    }
+
+    template <fixed_width_vector S, simask_t<S> M, common_vector_with<S> L,
+        common_vector_with<L> R>
+    requires (extended_vector<S> || extended_vector<L> || extended_vector<R>) &&
+        unqualified_extended_mbwxor<S, scmask_t<S, M>, L, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(
+        S&& src, scmask_t<S, M> cmask, L&& lhs, R&& rhs) {
+        return bwxor(
+            src, cmask, __DPL forward<L>(lhs), __DPL forward<R>(rhs));
+    }
+
+    template <simd_vector L, common_vector_with<L> R,
+        common_mask_with<mask_t<L, R>> M>
+    requires (extended_mask<M> || extended_vector<L> || extended_vector<R>) &&
+        unqualified_extended_mbwxor<dx::zero_t, M, L, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(
+        dx::zero_t zero, M&& mask, L&& lhs, R&& rhs) {
+        return bwxor(zero, __DPL forward<M>(mask), __DPL forward<L>(lhs),
+            __DPL forward<R>(rhs));
+    }
+
+    template <simd_vector L, common_vector_with<L> R, imask_t<L, R> M>
+    requires (extended_vector<L> || extended_vector<R>) &&
+        unqualified_extended_mbwxor<dx::zero_t, cmask_t<L, R, M>, L, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(
+        dx::zero_t zero, cmask_t<L, R, M> cmask, L&& lhs, R&& rhs) {
+        return bwxor(
+            zero, cmask, __DPL forward<L>(lhs), __DPL forward<R>(rhs));
+    }
+};
 } // namespace datapar::internal
 
 namespace datapar {

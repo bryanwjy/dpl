@@ -3,7 +3,6 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/operations/evaluate.h"
 #include "dpl/core/operations/internal/array_for.h"
 
 #if !DPL_MODULES
@@ -12,114 +11,63 @@
 #  include "dpl/core/basic/internal/iota_sequence.h"
 #  include "dpl/core/basic/load.h"
 #  include "dpl/core/basic/store.h"
-#  include "dpl/core/basic/to_canonical.h"
 #  include "dpl/core/concepts/common_size_with.h"
-#  include "dpl/core/concepts/decayable.h"
-#  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/concepts/extended.h"
+#  include "dpl/core/dispatch/operation/primitive.h"
+#  include "dpl/core/immediate/immediate.h"
 #  include "dpl/core/type_traits/simd_abi_traits.h"
 #  include "dpl/core/type_traits/simd_abi_type.h"
-#  include "dpl/core/type_traits/simd_expression_result.h"
 #  include "dpl/std/bit/bit_cast.h"
-#  include "dpl/std/concepts/invocable.h"
+#  include "dpl/std/type_traits/is_const.h"
+#  include "dpl/std/type_traits/is_nothrow_constructible.h"
+#  include "dpl/std/type_traits/is_object.h"
+#  include "dpl/std/type_traits/is_volatile.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
-
 template <typename>
 void reinterpret(...) noexcept = delete;
 
-template <typename>
-struct reinterpret_t;
-
-template <typename T, typename ToE, typename A>
-concept extended_reinterpreted_vector =
-    simd_vector<T> && same_as<simd_element_type_t<T>, ToE> &&
-    common_abi_with<A, typename T::abi_type>;
-
-template <typename T, typename ToE, typename A>
-concept extended_reinterpreted_mask =
-    simd_mask<T> && same_as<simd_element_type_t<T>, ToE> &&
-    common_abi_with<A, typename T::abi_type>;
-
-template <typename T, typename ToE, typename A>
-concept canonical_reinterpreted_vector =
-    extended_reinterpreted_vector<T, ToE, A> &&
-    same_as<A, typename T::abi_type>;
-
-template <typename T, typename ToE, typename A>
-concept canonical_reinterpreted_mask =
-    extended_reinterpreted_mask<T, ToE, A> && same_as<A, typename T::abi_type>;
-
-template <typename From, typename To>
-concept unqualified_canonical_vector_reinterpret = requires(From from) {
-    {
-        reinterpret<To>(internal::abi<From>, from)
-    } -> canonical_reinterpreted_vector<To, simd_abi_type_t<From>>;
+template <typename E>
+struct reinterpret_t : private primitive_operation_base<reinterpret_t<E>> {
+    using operation_base<reinterpret_t<E>>::operator();
 };
 
-template <typename From, typename To>
-concept unqualified_canonical_mask_reinterpret = requires(From from) {
-    {
-        reinterpret<To>(internal::abi<From>, from)
-    } -> canonical_reinterpreted_mask<To, simd_abi_type_t<From>>;
+// TODO: remove this specialization
+template <simd_type T>
+struct reinterpret_t<T> : private reinterpret_t<simd_element_type_t<T>> {
+    static_assert(is_object_v<T> && !is_const_v<T> && !is_volatile_v<T>);
+    template <simd_type U>
+    requires cpo_invocable<reinterpret_t<simd_element_type_t<T>>, U>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(U&& val) noexcept(canonical_simd_type<U>) {
+        static_assert(same_as<simd_abi_type_t<T>, simd_abi_type_t<U>>);
+        using base DPL_NODEBUG = reinterpret_t<simd_element_type_t<T>>;
+        return base::operator()(__DPL forward<U>(val));
+    }
 };
 
-template <typename From, typename To>
-concept unqualified_extended_vector_reinterpret = requires(From from) {
-    {
-        reinterpret<To>(from)
-    } -> extended_reinterpreted_vector<To, simd_abi_type_t<From>>;
+template <typename E>
+struct operation_signature<reinterpret_t<E>> {
+    static consteval void operator()(simd_type auto&&) noexcept {}
 };
-
-template <typename From, typename To>
-concept unqualified_extended_mask_reinterpret = requires(From from) {
-    {
-        reinterpret<To>(from)
-    } -> extended_reinterpreted_mask<To, simd_abi_type_t<From>>;
-};
-template <typename From, typename To>
-concept unqualified_extended_reinterpret =
-    unqualified_extended_vector_reinterpret<From, To> ||
-    unqualified_extended_mask_reinterpret<From, To>;
-
-template <typename From, typename To>
-concept expression_reinterpret = simd_expression<From> &&
-    invocable<reinterpret_t<To>, simd_expression_result_t<From>>;
-
-template <typename From, typename To>
-inline constexpr auto reinterpret_lane_policy =
-    sizeof(simd_element_type_t<From>) == sizeof(To)
-    ? operation_category::lane_agnostic
-    : (operation_category::structural_transformation |
-          operation_category::lane_agnostic);
-
-template <typename From, typename To>
-concept decayable_reinterpret =
-    decayable_simd_for<From, reinterpret_lane_policy<From, To>> &&
-    regular_invocable<reinterpret_t<To>, canonical_type_t<From>>;
-
-template <typename From, typename To>
-concept extended_reinterpret = unqualified_extended_reinterpret<From, To> ||
-    expression_reinterpret<From, To> || decayable_reinterpret<From, To>;
 
 template <typename ToE>
-struct reinterpret_t {
-private:
-    template <typename From>
-    static constexpr auto policy = []() {
-        if constexpr (sizeof(simd_element_type_t<From>) == sizeof(ToE)) {
-            return operation_category::lane_agnostic;
-        } else {
-            return operation_category::structural_transformation |
-                operation_category::lane_agnostic;
-        }
-    }();
+struct fallback_impl<reinterpret_t<ToE>> {
+    template <simd_type T>
+    requires same_as<simd_element_type_t<T>, ToE>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T&& val) noexcept(
+        is_nothrow_constructible_v<remove_cvref_t<T>, T>) {
+        return __DPL forward<T>(val);
+    }
 
     template <fixed_width_abi A, simd_element_for<A> FromE>
+    requires simd_element_for<ToE, A> &&
+        (sizeof(basic_vector<FromE, A>) == sizeof(basic_vector<ToE, A>))
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_vector<ToE, A> fallback(
+    static constexpr basic_vector<ToE, A> operator()(
         basic_vector<FromE, A> from) noexcept {
         using to_vector = typename simd_abi_traits<ToE, A>::native_vector;
         using from_vector = typename simd_abi_traits<FromE, A>::native_vector;
@@ -136,141 +84,70 @@ private:
     }
 
     template <fixed_width_abi A, simd_element_for<A> FromE>
+    requires simd_element_for<ToE, A> && common_size_with<FromE, ToE>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_mask<ToE, A> fallback(
+    static constexpr basic_mask<ToE, A> operator()(
         basic_mask<FromE, A> from) noexcept {
         using to_mask = typename simd_abi_traits<ToE, A>::native_mask;
         using from_mask = typename simd_abi_traits<FromE, A>::native_mask;
+        constexpr auto width = typename simd_abi_traits<FromE, A>::size();
         if constexpr (same_as<to_mask, from_mask>) {
             return +from;
         } else if consteval {
+            // Workaround MSVC's unions
             return [&]<size_t... Is>(index_sequence<Is...>) {
-                return dx::initialize<ToE, A>(from[Is]...);
+                return dx::initialize<ToE, A>(bitset<width>(from[imm<Is>]...));
             }(iota_sequence<FromE, A>);
         } else {
             return __DPL bit_cast<basic_mask<ToE, A>>(from);
         }
     }
+};
 
-public:
+template <typename ToE>
+struct canonical_impl<reinterpret_t<ToE>> {
     template <simd_abi A, simd_element_for<A> FromE>
+    requires (simd_element_for<ToE, A> &&
+        (sizeof(basic_vector<FromE, A>) == sizeof(basic_vector<ToE, A>)))
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<ToE, A> operator()(
-        basic_vector<FromE, A> val) noexcept {
-        if constexpr (same_as<FromE, ToE>) {
-            return val;
-        } else if constexpr (unqualified_canonical_vector_reinterpret<
-                                 basic_vector<FromE, A>, ToE>) {
-            if consteval {
-                return fallback(val);
-            } else {
-                return reinterpret<ToE>(internal::abi<A>, val);
-            }
-        } else {
-            return fallback(val);
-        }
-    }
-
-    template <simd_abi A, simd_element_for<A> FromE>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_mask<ToE, A> operator()(
-        basic_mask<FromE, A> val) noexcept {
-        if constexpr (same_as<FromE, ToE>) {
-            return val;
-        } else if constexpr (unqualified_canonical_mask_reinterpret<
-                                 basic_mask<FromE, A>, ToE>) {
-            if consteval {
-                return fallback(val);
-            } else {
-                return reinterpret<ToE>(internal::abi<A>, val);
-            }
-        } else {
-            return fallback(val);
-        }
-    }
-
-    template <extended_simd_type From>
-    requires (simd_vector<From> ||
-                 common_size_with<simd_element_type_t<From>, ToE>) &&
-        extended_reinterpret<From, ToE>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(From val) noexcept {
-        if constexpr (unqualified_extended_reinterpret<From, ToE>) {
-            return reinterpret<ToE>(val);
-        } else if constexpr (expression_reinterpret<From, ToE>) {
-            return operator()(dx::evaluate(val));
-        } else {
-            return operator()(dx::to_canonical(val));
-        }
-    }
-};
-
-template <simd_abi A, simd_element_for<A> ToE>
-struct reinterpret_t<basic_vector<ToE, A>> {
-public:
-    template <simd_element_for<A> FromE>
-    requires regular_invocable<reinterpret_t<ToE>, basic_vector<FromE, A>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<ToE, A> operator()(
-        basic_vector<FromE, A> val) noexcept {
-        return reinterpret_t<ToE>::operator()(val);
-    }
-
-    template <extended_vector From>
-    requires regular_invocable<reinterpret_t<ToE>, From> &&
-        same_as<invoke_result_t<reinterpret_t<ToE>, From>, basic_vector<ToE, A>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(From val) noexcept {
-        return reinterpret_t<ToE>::operator()(val);
-    }
-};
-
-template <simd_abi A, simd_element_for<A> ToE>
-struct reinterpret_t<basic_mask<ToE, A>> {
-public:
-    template <simd_element_for<A> FromE>
-    requires regular_invocable<reinterpret_t<ToE>, basic_mask<FromE, A>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_mask<ToE, A> operator()(
-        basic_mask<FromE, A> val) noexcept {
-        return reinterpret_t<ToE>::operator()(val);
-    }
-
-    template <extended_mask From>
-    requires regular_invocable<reinterpret_t<ToE>, From> &&
-        same_as<invoke_result_t<reinterpret_t<ToE>, From>, basic_mask<ToE, A>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(From val) noexcept {
-        return reinterpret_t<ToE>::operator()(val);
-    }
-};
-
-template <extended_simd_type To>
-struct reinterpret_t<To> {
-    using ToA DPL_NODEBUG = typename To::abi_type;
-    using ToE DPL_NODEBUG = simd_element_type_t<To>;
-
-public:
-    template <simd_type_with_abi<ToA> From>
-    requires regular_invocable<reinterpret_t<ToE>, From> &&
-        same_as<invoke_result_t<reinterpret_t<ToE>, From>, To>
-        DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-        static constexpr To operator()(From val) noexcept
-    requires simd_vector<To>
+        basic_vector<FromE, A> val) noexcept
+    requires requires { reinterpret<ToE>(internal::abi<A>, val); }
     {
-        return reinterpret_t<ToE>::operator()(val);
+        return reinterpret<ToE>(internal::abi<A>, val);
     }
 
-    template <extended_mask From>
-    requires regular_invocable<reinterpret_t<ToE>, From> &&
-        same_as<invoke_result_t<reinterpret_t<ToE>, From>, To>
-        DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-        static constexpr auto operator()(From val) noexcept
-    requires simd_mask<To>
+    template <fixed_width_abi A, simd_element_for<A> FromE>
+    requires (simd_element_for<ToE, A> && common_size_with<FromE, ToE>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr basic_mask<ToE, A> operator()(
+        basic_mask<FromE, A> val) noexcept
+    requires requires { reinterpret<ToE>(internal::abi<A>, val); }
     {
-        return reinterpret_t<ToE>::operator()(val);
+        return reinterpret<ToE>(internal::abi<A>, val);
     }
 };
+
+template <typename T, typename From, typename E>
+concept extended_reinterpreted_result =
+    common_simd_type_with<T, From> && same_as<simd_element_type_t<T>, E>;
+
+template <typename From, typename To>
+concept unqualified_extended_reinterpret = requires(From from) {
+    { reinterpret<To>(from) } -> extended_reinterpreted_result<From, To>;
+};
+
+template <typename ToE>
+struct extended_impl<reinterpret_t<ToE>> {
+    template <extended_simd_type T>
+    requires simd_element_for<simd_abi_type_t<T>, ToE> &&
+        unqualified_extended_reinterpret<T, ToE>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T&& val) {
+        return reinterpret<ToE>(__DPL forward<T>(val));
+    }
+};
+
 } // namespace datapar::internal
 
 namespace datapar {

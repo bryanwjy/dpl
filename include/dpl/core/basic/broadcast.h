@@ -3,56 +3,78 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/basic/broadcastable_base.h"
-#include "dpl/core/basic/broadcasting.h"
 #include "dpl/core/basic/internal/abi.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/fwd.h"
 
 #  include "dpl/core/concepts/broadcastable_to.h"
-#  include "dpl/core/concepts/canonical.h"
-#  include "dpl/core/concepts/extended.h"
-#  include "dpl/core/type_traits/canonical_type.h"
+#  include "dpl/core/dispatch/interface.h"
+#  include "dpl/core/dispatch/operation/basic.h"
+#  include "dpl/core/immediate/broadcastable_base.h"
 #  include "dpl/core/type_traits/simd_abi_type.h"
 #  include "dpl/core/type_traits/simd_element_type.h"
 #  include "dpl/std/concepts/integral_constant_like.h"
-#  include "dpl/std/concepts/invocable.h"
-#  include "dpl/std/utility/forward.h"
 #  include "dpl/std/utility/ignore.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::internal {
-template <typename, typename>
-struct broadcast_t {};
-
 template <typename>
 void broadcast(...) noexcept = delete;
 
-template <simd_abi A>
-struct broadcast_t<A> {
-    template <typename E>
-    using simd DPL_NODEBUG = basic_vector<E, A>;
+template <typename T, typename U>
+struct broadcast_t : private basic_operation_base<broadcast_t<T, U>> {
+    using operation_base<broadcast_t<T, U>>::operator();
+};
 
-public:
+template <simd_abi A>
+struct operation_signature<broadcast_t<A>> {
+    static consteval void operator()(simd_element_for<A> auto) noexcept {}
+    static consteval void operator()(bool) noexcept {}
+    template <bool V>
+    static consteval void operator()(bool_constant<V>) noexcept {}
+};
+
+template <simd_abi A>
+struct canonical_impl<broadcast_t<A>> {
     template <simd_element_for<A> E>
-    requires regular_invocable<broadcast_t<simd<E>>, E>
+    requires cpo_invocable<broadcast_t<A, E>, E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr simd<E> operator()(E scalar) noexcept {
-        return broadcast_t<simd<E>>::operator()(scalar);
+    static constexpr basic_vector<E, A> operator()(E scalar) noexcept {
+        return broadcast_t<A, E>::operator()(scalar);
     }
+};
+
+template <simd_type T>
+struct operation_signature<broadcast_t<T>> :
+    operation_signature<
+        broadcast_t<simd_abi_type_t<T>, simd_element_type_t<T>>> {};
+
+template <simd_type T>
+struct canonical_impl<broadcast_t<T>> :
+    canonical_impl<broadcast_t<simd_abi_type_t<T>, simd_element_type_t<T>>> {};
+
+template <typename T, different_from<ignore_t> U>
+requires (simd_abi<T> && simd_element_for<U, T>) ||
+    (simd_abi<U> && simd_element_for<T, U>)
+struct operation_signature<broadcast_t<T, U>> {
+    using A DPL_NODEBUG = conditional_t<simd_abi<T>, T, U>;
+    using E DPL_NODEBUG = conditional_t<simd_abi<T>, U, T>;
+    static consteval void operator()(E) noexcept {}
+    static consteval void operator()(same_as<bool> auto) noexcept {}
+    static consteval void operator()(broadcastable_constant<E> auto) noexcept {}
+    static consteval void operator()(integral_constant_like auto) noexcept {}
 };
 
 template <typename T, different_from<ignore_t> U>
 requires (simd_abi<T> && simd_element_for<U, T>) ||
     (simd_abi<U> && simd_element_for<T, U>)
-struct broadcast_t<T, U> {
+struct canonical_impl<broadcast_t<T, U>> {
     using A DPL_NODEBUG = conditional_t<simd_abi<T>, T, U>;
     using E DPL_NODEBUG = conditional_t<simd_abi<T>, U, T>;
 
-public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr basic_vector<E, A> operator()(E scalar) noexcept
     requires requires { broadcast<E>(internal::abi<A>, scalar); }
@@ -83,53 +105,6 @@ public:
         } else {
             return broadcast<E>(internal::abi<A>, V::value);
         }
-    }
-};
-
-template <canonical_simd_type T>
-struct broadcast_t<T> {
-private:
-    using E DPL_NODEBUG = simd_element_type_t<T>;
-    using A DPL_NODEBUG = simd_abi_type_t<T>;
-
-public:
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(E scalar) noexcept
-    requires simd_vector<T> && regular_invocable<broadcast_t<A, E>, E>
-    {
-        return broadcast_t<A, E>::operator()(scalar);
-    }
-
-    template <broadcastable_constant<E> V>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(V scalar) noexcept
-    requires simd_vector<T> && regular_invocable<broadcast_t<A, E>, V>
-    {
-        return broadcast_t<A, E>::operator()(scalar);
-    }
-
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr T operator()(same_as<bool> auto scalar) noexcept
-    requires simd_mask<T> && regular_invocable<broadcast_t<A, E>, bool>
-    {
-        return broadcast_t<A, E>::operator()(scalar);
-    }
-};
-
-template <extended_simd_type T>
-struct broadcast_t<T> {
-private:
-    using E DPL_NODEBUG = simd_element_type_t<T>;
-    using base_type DPL_NODEBUG = broadcast_t<canonical_type_t<T>>;
-
-public:
-    template <typename Arg>
-    requires regular_invocable<base_type, Arg>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr T operator()(Arg&& arg) noexcept
-    requires constructible_from<T, broadcasting_t, Arg>
-    {
-        return T(dx::broadcasting, __DPL forward<Arg>(arg));
     }
 };
 

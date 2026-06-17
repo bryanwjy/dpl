@@ -12,8 +12,7 @@
 #include "dpl/xmm/basic/extract.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/basic/immediate.h"
-#  include "dpl/core/concepts/simd_element.h"
+#  include "dpl/core/immediate/immediate.h"
 #  include "dpl/std/bit/bit_cast.h"
 
 #  include <immintrin.h>

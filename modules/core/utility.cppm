@@ -12,7 +12,7 @@ import :std.type_traits;
 import :std.utility;
 import :core.basic;
 import :core.concepts;
-import :core.constants;
+import :core.immediate;
 import :core.operations;
 import :core.type_traits;
 

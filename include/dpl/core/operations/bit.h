@@ -10,4 +10,6 @@
 #include "dpl/core/operations/bit/countr_one.h"
 #include "dpl/core/operations/bit/countr_zero.h"
 #include "dpl/core/operations/bit/popcount.h"
+#include "dpl/core/operations/bit/rotl.h"
+#include "dpl/core/operations/bit/rotr.h"
 // IWYU pragma: end_exports

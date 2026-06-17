@@ -13,7 +13,7 @@ import :std.type_traits;
 import :std.utility;
 import :core.basic;
 import :core.concepts;
-import :core.constants;
+import :core.immediate;
 import :core.operations;
 import :core.type_traits;
 import :core.utility;
@@ -40,6 +40,8 @@ import :core.utility;
 #include "dpl/core/math/rsqrt.h"
 #include "dpl/core/math/sign.h"
 #include "dpl/core/math/signbit.h"
+#include "dpl/core/math/sincos.h"
+#include "dpl/core/math/sinhcosh.h"
 #include "dpl/core/math/sqrt.h"
 #include "dpl/core/math/trunc.h"
 // IWYU pragma: end_exports

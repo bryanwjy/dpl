@@ -94,3 +94,23 @@ DPL_DISABLE_WARNING_POP()
     (((DPL_COMPILER_CLANG_AT_LEAST(18, 0, 0)) |    \
          (DPL_COMPILER_GCC_AT_LEAST(14, 0, 0))) && \
         !DPL_CXX26)
+
+#if !DPL_IS_STD && DPL_CXX
+// TODO deal with std module
+DPL_STD_NAMESPACE_BEGIN
+
+template <typename>
+struct tuple_size;
+
+template <decltype(sizeof(0)), typename>
+struct tuple_element;
+
+template <typename T>
+inline constexpr decltype(sizeof(0)) tuple_size_v = tuple_size<T>::value;
+
+template <decltype(sizeof(0)) N, typename T>
+using tuple_element_t = typename tuple_element<N, T>::type;
+
+DPL_STD_NAMESPACE_END
+
+#endif

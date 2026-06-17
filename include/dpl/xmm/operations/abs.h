@@ -14,7 +14,7 @@
 #  include "dpl/core/fwd.h"
 
 #  include "dpl/core/concepts/common_size_with.h"
-#  include "dpl/core/constants/value_bits.h"
+#  include "dpl/core/immediate/constants/value_bits.h"
 #  include "dpl/std/concepts/enumeration.h"
 #  include "dpl/xmm/basic/abi.h"
 

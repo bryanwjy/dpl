@@ -3,13 +3,12 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/concepts/simd_abi.h"
+#include "dpl/core/concepts/cpo_invocable.h"
 #include "dpl/core/concepts/simd_type.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/fwd.h"
 
-#  include "dpl/std/concepts/invocable.h"
 #  include "dpl/std/utility/ignore.h"
 #endif
 
@@ -21,8 +20,8 @@ struct broadcast_t;
 }
 
 DPL_EXPORT template <typename T, typename U>
-concept broadcastable_to =
-    (simd_type<U> || simd_abi<U>) && invocable<internal::broadcast_t<U>, T>;
+concept broadcastable_to = !simd_type<T> && (simd_type<U> || simd_abi<U>) &&
+    internal::cpo_invocable<internal::broadcast_t<U>, T>;
 
 } // namespace datapar
 

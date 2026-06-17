@@ -5,29 +5,158 @@
 
 // IWYU pragma: always_keep
 
-#include "dpl/core/operations/compare/result.h"
-#include "dpl/core/operations/internal/masked.h"
-#include "dpl/core/operations/internal/operation_base.h"
 #include "dpl/core/operations/internal/transform.h"
+#include "dpl/core/operations/pack_mask.h"
+
 #if !DPL_MODULES
+#  include "dpl/core/basic/initialize.h"
 #  include "dpl/core/basic/internal/abi.h"
-#  include "dpl/core/concepts/decayable.h"
 #  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/concepts/simd_abi.h"
+#  include "dpl/core/dispatch/broadcastable/binary.h"
+#  include "dpl/core/dispatch/interface.h"
+#  include "dpl/core/dispatch/maskable/predicate.h"
+#  include "dpl/core/dispatch/operation/primitive.h"
 #  include "dpl/core/type_traits/common_size_type.h"
 #  include "dpl/std/concepts/equality_comparable.h"
-#  include "dpl/std/concepts/invocable.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void cmpneq(...) noexcept = delete;
 
-struct cmpneq_t;
+struct DPL_EMPTY_BASES cmpneq_t :
+    private comparison_base<cmpneq_t>,
+    private maskable_predicate_base<cmpneq_t>,
+    private binary_broadcastable_operation<cmpneq_t> {
+    using operation_base<cmpneq_t>::operator();
+    using maskable_predicate_base<cmpneq_t>::operator();
+    using binary_broadcastable_operation<cmpneq_t>::operator();
+};
 
-template <typename L, typename R, typename A = common_abi_t<L, R>>
-concept unqualified_canonical_cmpneq = requires(L lhs, R rhs) {
-    { cmpneq(internal::abi<A>, lhs, rhs) } -> canonical_compare_result<L, R, A>;
+template <>
+struct operation_signature<cmpneq_t> {
+    template <typename L, typename R>
+    requires simd_type<L> || simd_type<R>
+    static consteval void operator()(L&&, R&&) noexcept {}
+};
+
+template <>
+struct fallback_impl<cmpneq_t> : binary_broadcasting_fallback<cmpneq_t> {
+
+    template <fixed_width_abi A, simd_element_for<A> E>
+    requires equality_comparable<E>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr basic_mask<E, A>
+        DPL_VECTORCALL operator()(
+            basic_vector<E, A> lhs, basic_vector<E, A> rhs) noexcept {
+        return internal::transform<basic_mask<E, A>>(
+            [](auto lhs, auto rhs) -> bool { return lhs != rhs; }, lhs, rhs);
+    }
+
+    template <fixed_width_abi A, simd_element_for<A> LE, simd_element_for<A> RE>
+    requires common_size_with<LE, RE> &&
+        cpo_invocable<pack_mask_t, basic_mask<LE, A>> &&
+        cpo_invocable<pack_mask_t, basic_mask<RE, A>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(
+        basic_mask<LE, A> lhs, basic_mask<RE, A> rhs) noexcept {
+        using T = common_size_type_t<LE, RE>;
+        return dx::initialize<T, A>(dx::pack_mask(lhs) ^ dx::pack_mask(rhs));
+    }
+
+    using binary_broadcasting_fallback<cmpneq_t>::operator();
+};
+
+template <typename L, typename R, typename A = common_abi_t<L, R>,
+    typename E = simd_element_type_t<L>>
+concept unqualified_canonical_cmpneq = requires {
+    {
+        cmpneq(internal::abi<A>, internal::declarg<L>(), internal::declarg<R>())
+    } -> equivalent_mask_with<basic_mask<simd_element_type_t<L>, A>>;
+};
+
+template <typename S, typename L, typename R>
+concept unqualified_canonical_mcmpneq = canonical_vector<S> &&
+    (!simd_mask<S> || same_as<S, cpo_result_t<cmpneq_t, L, R>>) && requires {
+        {
+            cmpneq(internal::abi<S>, internal::declarg<S>(),
+                internal::declarg<L>(), internal::declarg<R>())
+        } -> same_as<cpo_result_t<cmpneq_t, L, R>>;
+    };
+
+template <>
+struct canonical_impl<cmpneq_t> {
+private:
+    template <typename L, typename R>
+    using result_t DPL_NODEBUG =
+        basic_mask<simd_element_type_t<L>, common_abi_t<L, R>>;
+
+    template <typename L, typename R>
+    using mresult_t DPL_NODEBUG = basic_mask<
+        common_size_type_t<simd_element_type_t<L>, simd_element_type_t<R>>,
+        common_abi_t<L, R>>;
+
+    template <typename L, typename R>
+    using mask_t DPL_NODEBUG = cpo_result_t<cmpneq_t, L, R>;
+
+    template <typename L, typename R>
+    using imask_t DPL_NODEBUG = mask_value_t<
+        simd_abi_traits<simd_element_type_t<L>, common_abi_t<L, R>>::size>;
+
+    template <typename L, typename R, imask_t<L, R> V>
+    using cmask_t DPL_NODEBUG = const_mask<
+        simd_abi_traits<simd_element_type_t<L>, common_abi_t<L, R>>::size, V>;
+
+public:
+    template <canonical_vector L, common_vector_with<L> R>
+    requires unqualified_canonical_cmpneq<L, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr result_t<L, R> operator()(L lhs, R rhs) noexcept {
+        return cmpneq(internal::abi<common_abi_t<L, R>>, lhs, rhs);
+    }
+
+    template <canonical_mask L, common_mask_with<L> R>
+    requires unqualified_canonical_cmpneq<L, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr mresult_t<L, R> operator()(L lhs, R rhs) noexcept {
+        return cmpneq(internal::abi<common_abi_t<L, R>>, lhs, rhs);
+    }
+
+    template <canonical_vector L, broadcastable_to<L> R>
+    requires unqualified_canonical_cmpneq<L, R, simd_abi_type_t<L>,
+        simd_element_type_t<L>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr basic_mask<simd_element_type_t<L>, simd_abi_type_t<L>>
+    operator()(L lhs, R&& rhs) noexcept {
+        return cmpneq(internal::abi<L>, lhs, __DPL forward<R>(rhs));
+    }
+
+    template <canonical_vector R, broadcastable_to<R> L>
+    requires unqualified_canonical_cmpneq<L, R, simd_abi_type_t<R>,
+        simd_element_type_t<R>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr basic_mask<simd_element_type_t<R>, simd_abi_type_t<R>>
+    operator()(L&& lhs, R rhs) noexcept {
+        return cmpneq(internal::abi<R>, __DPL forward<L>(lhs), rhs);
+    }
+
+    template <canonical_vector L, common_vector_with<L> R>
+    requires canonical_vector<R> &&
+        unqualified_canonical_mcmpneq<mask_t<L, R>, L, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(mask_t<L, R> src, L lhs, R rhs) noexcept {
+        return cmpneq(internal::abi<common_abi_t<L, R>>, src, lhs, rhs);
+    }
+
+    template <canonical_vector L, common_vector_with<L> R, imask_t<L, R> M>
+    requires canonical_vector<R> &&
+        unqualified_canonical_mcmpneq<cmask_t<L, R, M>, L, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(
+        cmask_t<L, R, M> cmask, L lhs, R rhs) noexcept {
+        return cmpneq(internal::abi<common_abi_t<L, R>>, cmask, lhs, rhs);
+    }
 };
 
 template <typename L, typename R, typename A = common_abi_t<L, R>>
@@ -35,363 +164,70 @@ concept unqualified_extended_cmpneq = requires(L lhs, R rhs) {
     { cmpneq(lhs, rhs) } -> mask_with_common_abi<A>;
 };
 
-template <typename L, typename R>
-concept expression_cmpneq = (simd_expression<L> || simd_expression<R>) &&
-    invocable<cmpneq_t, simd_expression_result_t<L>,
-        simd_expression_result_t<R>>;
+template <typename S, typename L, typename R>
+concept unqualified_extended_mcmpneq =
+    (!simd_mask<S> || equivalent_mask_with<S, cpo_result_t<cmpneq_t, L, R>>) &&
+    requires {
+        {
+            cmpneq(internal::declarg<S>(), internal::declarg<L>(),
+                internal::declarg<R>())
+        } -> equivalent_mask_with<cpo_result_t<cmpneq_t, L, R>>;
+    };
 
-template <typename L, typename R>
-concept decayable_cmpneq =
-    decayable_vector_for<L, operation_category::lane_agnostic> &&
-    decayable_vector_for<R, operation_category::lane_agnostic> &&
-    regular_invocable<cmpneq_t, canonical_type_t<L>, canonical_type_t<R>>;
-
-template <typename L, typename R, typename A = common_abi_t<L, R>>
-concept extended_cmpneq = unqualified_extended_cmpneq<L, R> ||
-    expression_cmpneq<L, R> || decayable_cmpneq<L, R>;
-
-template <typename M, typename L, typename R,
-    typename A = common_abi_t<L, R, M>>
-concept unqualified_canonical_mcmpneq = requires(M mask, L lhs, R rhs) {
-    {
-        cmpneq(internal::abi<A>, mask, lhs, rhs)
-    } -> canonical_compare_result<L, R>;
-};
-
-template <typename M, typename L, typename R,
-    typename A = common_abi_t<L, R, M>>
-concept unqualified_extended_mcmpneq = requires(M mask, L lhs, R rhs) {
-    { cmpneq(mask, lhs, rhs) } -> mask_with_common_abi<A>;
-};
-
-template <typename M, typename L, typename R>
-concept expression_mcmpneq =
-    (simd_expression<M> || simd_expression<L> || simd_expression<R>) &&
-    invocable<cmpneq_t, simd_expression_result_t<M>,
-        simd_expression_result_t<L>, simd_expression_result_t<R>>;
-
-template <typename M, typename L, typename R,
-    typename A = common_abi_t<L, R, M>>
-concept decayable_mcmpneq =
-    decayable_mask_for<M, operation_category::lane_agnostic> &&
-    decayable_vector_for<L, operation_category::lane_agnostic> &&
-    decayable_vector_for<R, operation_category::lane_agnostic> &&
-    regular_invocable<cmpneq_t, canonical_type_t<M>, canonical_type_t<L>,
-        canonical_type_t<R>>;
-
-template <typename M, typename L, typename R,
-    typename A = common_abi_t<L, R, M>>
-concept extended_mcmpneq = unqualified_extended_mcmpneq<M, L, R, A> ||
-    expression_mcmpneq<M, L, R> || decayable_mcmpneq<M, L, R>;
-
-template <typename M, typename L, typename R, typename A = common_abi_t<L, R>>
-concept unqualified_canonical_imcmpneq = requires(M mask, L lhs, R rhs) {
-    {
-        cmpneq(internal::abi<A>,
-            dx::to_compatible_const_mask<operation_result_t<cmpneq_t, L, R>>(
-                mask),
-            lhs, rhs)
-    } -> canonical_compare_result<L, R>;
-};
-
-template <typename M, typename L, typename R, typename A = common_abi_t<L, R>>
-concept unqualified_extended_imcmpneq = requires(M mask, L lhs, R rhs) {
-    {
-        cmpneq(dx::to_compatible_const_mask<operation_result_t<cmpneq_t, L, R>>(
-                   mask),
-            lhs, rhs)
-    } -> mask_with_common_abi<A>;
-};
-
-template <typename M, typename L, typename R>
-concept expression_imcmpneq = (simd_expression<L> || simd_expression<R>) &&
-    invocable<cmpneq_t, M, simd_expression_result_t<L>,
-        simd_expression_result_t<R>>;
-
-template <typename M, typename L, typename R>
-concept decayable_imcmpneq =
-    decayable_vector_for<L, operation_category::lane_agnostic> &&
-    decayable_vector_for<R, operation_category::lane_agnostic> &&
-    regular_invocable<cmpneq_t, M, canonical_type_t<L>, canonical_type_t<R>>;
-
-template <typename M, typename L, typename R, typename A = common_abi_t<L, R>>
-concept extended_imcmpneq = unqualified_extended_imcmpneq<M, L, R, A> ||
-    expression_imcmpneq<M, L, R> || decayable_imcmpneq<M, L, R>;
-
-template <typename L, typename R, typename A = common_abi_t<L, R>>
-concept unqualified_canonical_mask_cmpneq = requires(L lhs, R rhs) {
-    { cmpneq(internal::abi<A>, lhs, rhs) } -> canonical_compare_mask<L, R, A>;
-};
-
-template <typename L, typename R, typename A = common_abi_t<L, R>>
-concept unqualified_extended_mask_cmpneq = requires(L lhs, R rhs) {
-    { cmpneq(lhs, rhs) } -> mask_with_common_abi<A>;
-};
-
-template <typename L, typename R>
-concept expression_mask_cmpneq = (simd_expression<L> || simd_expression<R>) &&
-    invocable<cmpneq_t, simd_expression_result_t<L>,
-        simd_expression_result_t<R>>;
-
-template <typename L, typename R>
-concept decayable_mask_cmpneq =
-    decayable_mask_for<L, operation_category::lane_agnostic> &&
-    decayable_mask_for<R, operation_category::lane_agnostic> &&
-    regular_invocable<cmpneq_t, canonical_type_t<L>, canonical_type_t<R>>;
-
-template <typename L, typename R, typename A = common_abi_t<L, R>>
-concept extended_mask_cmpneq = unqualified_extended_mask_cmpneq<L, R> ||
-    expression_mask_cmpneq<L, R> || decayable_mask_cmpneq<L, R>;
-
-struct cmpneq_t : private binary_operation_base<cmpneq_t> {
+template <>
+struct extended_impl<cmpneq_t> {
 private:
-    friend binary_operation_base<cmpneq_t>;
+    template <typename L, typename R>
+    using imask_t DPL_NODEBUG = mask_value_t<
+        simd_abi_traits<simd_element_type_t<L>, common_abi_t<L, R>>::size>;
 
-    template <simd_abi A, typename L, typename R>
-    requires (!simd_type<L> || canonical_vector<L>) &&
-        (!simd_type<R> || canonical_vector<R>) && requires(L lhs, R rhs) {
-            { cmpneq(internal::abi<A>, lhs, rhs) } -> mask_with_abi<A>;
-        }
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto native(A abi, L lhs, R rhs) noexcept {
-        return cmpneq(internal::abi<A>, lhs, rhs);
-    }
-
-    template <simd_abi A, typename L, typename R>
-    requires (!simd_type<L> || extended_vector<L>) &&
-        (!simd_type<R> || extended_vector<R>) &&
-        unqualified_extended_cmpneq<L, R, A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto native(A, L lhs, R rhs) noexcept(
-        noexcept(cmpneq(lhs, rhs))) {
-        return cmpneq(lhs, rhs);
-    }
-
-    template <simd_abi A, typename L, typename R>
-    requires (!simd_type<L> || canonical_mask<L>) &&
-        (!simd_type<R> || canonical_mask<R>) && requires(L lhs, R rhs) {
-            { cmpneq(internal::abi<A>, lhs, rhs) } -> mask_with_abi<A>;
-        }
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto native(A abi, L lhs, R rhs) noexcept {
-        return cmpneq(internal::abi<A>, lhs, rhs);
-    }
-
-    template <simd_abi A, typename L, typename R>
-    requires (!simd_type<L> || extended_mask<L>) &&
-        (!simd_type<R> || extended_mask<R>) &&
-        unqualified_extended_mask_cmpneq<L, R, A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto native(A, L lhs, R rhs) noexcept(
-        noexcept(cmpneq(lhs, rhs))) {
-        return cmpneq(lhs, rhs);
-    }
-
-    template <typename E, typename A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL fallback(
-        basic_vector<E, A> lhs, basic_vector<E, A> rhs) noexcept {
-        return internal::transform<basic_mask<E, A>>(
-            [](auto lhs, auto rhs) -> bool { return lhs != rhs; }, lhs, rhs);
-    }
-
-    template <typename L, typename R, typename A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL fallback(
-        basic_mask<L, A> lhs, basic_mask<R, A> rhs) noexcept {
-        using T = common_size_type_t<L, R>;
-        return internal::transform<basic_mask<T, A>>(
-            [](auto lhs, auto rhs) -> bool { return lhs != rhs; }, lhs, rhs);
-    }
+    template <typename L, typename R, imask_t<L, R> V>
+    using cmask_t DPL_NODEBUG = const_mask<
+        simd_abi_traits<simd_element_type_t<L>, common_abi_t<L, R>>::size, V>;
 
 public:
-    template <fixed_width_abi A, simd_element_for<A> E>
-    requires equality_comparable<E>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_mask<E, A> operator()(
-        basic_vector<E, A> lhs, basic_vector<E, A> rhs) noexcept {
-        if constexpr (unqualified_canonical_cmpneq<basic_vector<E, A>,
-                          basic_vector<E, A>>) {
-            if consteval {
-                return fallback(lhs, rhs);
-            } else {
-                return cmpneq(internal::abi<A>, lhs, rhs);
-            }
-        } else {
-            return fallback(lhs, rhs);
-        }
-    }
-
-    template <simd_abi LA, common_abi_with<LA> RA, typename E>
-    requires simd_element_for<E, LA> && simd_element_for<E, RA> &&
-        (scalable_abi<LA> || scalable_abi<RA> || different_from<LA, RA> ||
-            !equality_comparable<E>) &&
-        unqualified_canonical_cmpneq<basic_vector<E, LA>, basic_vector<E, RA>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_mask<E, common_abi_t<LA, RA>> operator()(
-        basic_vector<E, LA> lhs, basic_vector<E, RA> rhs) noexcept {
-        return cmpneq(internal::abi<common_abi_t<LA, RA>>, lhs, rhs);
-    }
-
-    template <simd_vector L, simd_vector R>
-    requires (extended_vector<L> || extended_vector<R>) && extended_cmpneq<L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L lhs, R rhs) noexcept {
-        if constexpr (unqualified_extended_cmpneq<L, R>) {
-            return cmpneq(lhs, rhs);
-        } else if constexpr (expression_cmpneq<L, R>) {
-            return operator()(dx::evaluate(lhs), dx::evaluate(rhs));
-        } else {
-            return operator()(dx::to_canonical(lhs), dx::to_canonical(rhs));
-        }
-    }
-
-    using binary_operation_base<cmpneq_t>::operator();
-
-    template <fixed_width_abi A, simd_element_for<A> E, common_size_with<E> ME>
-    requires equality_comparable<E>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_mask<E, A> operator()(basic_mask<ME, A> mask,
-        basic_vector<E, A> lhs, basic_vector<E, A> rhs) noexcept {
-        if constexpr (unqualified_canonical_mcmpneq<basic_mask<ME, A>,
-                          basic_vector<E, A>, basic_vector<E, A>>) {
-            if consteval {
-                return internal::masked<cmpneq_t>(mask, lhs, rhs);
-            } else {
-                return cmpneq(internal::abi<A>, mask, lhs, rhs);
-            }
-        } else {
-            return internal::masked<cmpneq_t>(mask, lhs, rhs);
-        }
-    }
-
-    template <simd_abi SA, simd_element_for<SA> E, common_size_with<E> ME,
-        simd_abi LA, common_abi_with<LA> RA>
-    requires (different_from<SA, common_abi_t<LA, RA>> ||
-                 different_from<LA, RA> || scalable_abi<SA> ||
-                 scalable_abi<LA> || scalable_abi<RA> ||
-                 !equality_comparable<E>) &&
-        simd_element_for<E, LA> && simd_element_for<E, RA> &&
-        zmaskable_args<basic_mask<ME, SA>, basic_vector<E, LA>,
-            basic_vector<E, RA>> &&
-        unqualified_canonical_mcmpneq<basic_mask<ME, SA>, basic_vector<E, LA>,
-            basic_vector<E, RA>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(basic_mask<ME, SA> mask,
-        basic_vector<E, LA> lhs, basic_vector<E, RA> rhs) noexcept {
-        return cmpneq(internal::abi<common_abi_t<LA, RA>>, mask, lhs, rhs);
-    }
-
-    template <simd_mask M, simd_vector L, simd_vector R>
-    requires (extended_mask<M> || extended_vector<L> || extended_vector<R>) &&
-        zmaskable_args<M, L, R> && extended_mcmpneq<M, L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(M mask, L lhs, R rhs) noexcept {
-        if constexpr (unqualified_extended_mcmpneq<M, L, R>) {
-            return cmpneq(mask, lhs, rhs);
-        } else if constexpr (expression_mcmpneq<M, L, R>) {
-            return operator()(
-                dx::evaluate(mask), dx::evaluate(lhs), dx::evaluate(rhs));
-        } else {
-            return operator()(dx::to_canonical(mask), dx::to_canonical(lhs),
-                dx::to_canonical(rhs));
-        }
-    }
-
-    template <fixed_width_abi A, simd_element_for<A> E,
-        const_mask_for<basic_vector<E, A>> M>
-    requires equality_comparable<E>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_mask<E, A> operator()(
-        M mask, basic_vector<E, A> lhs, basic_vector<E, A> rhs) noexcept {
-        if constexpr (unqualified_canonical_imcmpneq<M, basic_vector<E, A>,
-                          basic_vector<E, A>>) {
-            if consteval {
-                return internal::masked<cmpneq_t>(mask, lhs, rhs);
-            } else {
-                return cmpneq(internal::abi<A>,
-                    dx::to_compatible_const_mask<basic_mask<E, A>>(mask), lhs,
-                    rhs);
-            }
-        } else {
-            return internal::masked<cmpneq_t>(mask, lhs, rhs);
-        }
-    }
-
-    template <simd_abi LA, common_abi_with<LA> RA,
-        simd_element_for<common_abi_t<LA, RA>> E,
-        const_mask_for<basic_vector<E, common_abi_t<LA, RA>>> M>
-    requires (different_from<LA, RA> || scalable_abi<LA> || scalable_abi<RA> ||
-                 !equality_comparable<E>) &&
-        simd_element_for<E, LA> && simd_element_for<E, RA> &&
-        imm_zmaskable_args<basic_vector<E, LA>, basic_vector<E, RA>> &&
-        unqualified_canonical_imcmpneq<M, basic_vector<E, LA>,
-            basic_vector<E, RA>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_mask<E, common_abi_t<LA, RA>> operator()(
-        M mask, basic_vector<E, LA> lhs, basic_vector<E, RA> rhs) noexcept {
-        using A = common_abi_t<LA, RA>;
-
-        return cmpneq(internal::abi<A>,
-            dx::to_compatible_const_mask<basic_mask<E, A>>(mask), lhs, rhs);
-    }
-
-    template <simd_vector L, simd_vector R,
-        const_mask_for<operation_result_t<cmpneq_t, L, R>> M>
+    template <simd_vector L, common_vector_with<L> R>
     requires (extended_vector<L> || extended_vector<R>) &&
-        imm_zmaskable_args<L, R> && extended_imcmpneq<M, L, R>
+        unqualified_extended_cmpneq<L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(M mask, L lhs, R rhs) noexcept {
-        using S = operation_result_t<cmpneq_t, L, R>;
-        if constexpr (unqualified_extended_imcmpneq<M, L, R>) {
-            return cmpneq(dx::to_compatible_const_mask<S>(mask), lhs, rhs);
-        } else if constexpr (expression_imcmpneq<M, L, R>) {
-            return operator()(mask, dx::evaluate(lhs), dx::evaluate(rhs));
-        } else {
-            return operator()(
-                mask, dx::to_canonical(lhs), dx::to_canonical(rhs));
-        }
-    }
-    ///
-
-    template <fixed_width_abi A, simd_element_for<A> E>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_mask<E, A> operator()(
-        basic_mask<E, A> lhs, basic_mask<E, A> rhs) noexcept {
-        if constexpr (unqualified_canonical_mask_cmpneq<basic_mask<E, A>,
-                          basic_mask<E, A>>) {
-            if consteval {
-                return fallback(lhs, rhs);
-            } else {
-                return cmpneq(internal::abi<A>, lhs, rhs);
-            }
-        } else {
-            return fallback(lhs, rhs);
-        }
+    static constexpr auto operator()(L&& lhs, R&& rhs) {
+        return cmpneq(__DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 
-    template <simd_abi LA, common_abi_with<LA> RA, typename E>
-    requires simd_element_for<E, LA> && simd_element_for<E, RA> &&
-        (scalable_abi<LA> || scalable_abi<RA> || different_from<LA, RA>) &&
-        unqualified_canonical_mask_cmpneq<basic_mask<E, LA>, basic_mask<E, RA>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_mask<E, common_abi_t<LA, RA>> operator()(
-        basic_mask<E, LA> lhs, basic_mask<E, RA> rhs) noexcept {
-        return cmpneq(internal::abi<common_abi_t<LA, RA>>, lhs, rhs);
-    }
-
-    template <simd_mask L, simd_mask R>
+    template <simd_mask L, common_mask_with<L> R>
     requires (extended_mask<L> || extended_mask<R>) &&
-        extended_mask_cmpneq<L, R>
+        unqualified_extended_cmpneq<L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L lhs, R rhs) noexcept {
-        if constexpr (unqualified_extended_mask_cmpneq<L, R>) {
-            return cmpneq(lhs, rhs);
-        } else if constexpr (expression_mask_cmpneq<L, R>) {
-            return operator()(dx::evaluate(lhs), dx::evaluate(rhs));
-        } else {
-            return operator()(dx::to_canonical(lhs), dx::to_canonical(rhs));
-        }
+    static constexpr auto operator()(L&& lhs, R&& rhs) {
+        return cmpneq(__DPL forward<L>(lhs), __DPL forward<R>(rhs));
+    }
+
+    template <typename L, typename R>
+    requires (extended_vector<L> &&
+                 broadcastable_to<R, result_or_decayed_t<L>> &&
+                 unqualified_extended_cmpneq<L, R, simd_abi_type_t<L>>) ||
+        (extended_vector<R> && broadcastable_to<L, result_or_decayed_t<R>> &&
+            unqualified_extended_cmpneq<L, R, simd_abi_type_t<R>>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(L&& lhs, R&& rhs) {
+        return cmpneq(__DPL forward<L>(lhs), __DPL forward<R>(rhs));
+    }
+
+    template <simd_mask S, simd_vector L, common_vector_with<L> R>
+    requires (extended_mask<S> || extended_vector<L> || extended_vector<R>) &&
+        unqualified_extended_mcmpneq<S, L, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(S&& src, L&& lhs, R&& rhs) {
+        return cmpneq(__DPL forward<S>(src), __DPL forward<L>(lhs),
+            __DPL forward<R>(rhs));
+    }
+
+    template <simd_vector L, common_vector_with<L> R, imask_t<L, R> M>
+    requires (extended_vector<L> || extended_vector<R>) &&
+        unqualified_extended_mcmpneq<cmask_t<L, R, M>, L, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(cmask_t<L, R, M> cmask, L&& lhs, R&& rhs) {
+        return cmpneq(cmask, __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 };
 } // namespace datapar::internal

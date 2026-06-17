@@ -20,9 +20,9 @@
 #if !DPL_MODULES
 #  include "dpl/core/fwd.h"
 
-#  include "dpl/core/constants/infinity.h"
-#  include "dpl/core/constants/max_value.h"
-#  include "dpl/core/constants/msb.h"
+#  include "dpl/core/immediate/constants/infinity.h"
+#  include "dpl/core/immediate/constants/max_value.h"
+#  include "dpl/core/immediate/constants/msb.h"
 #  include "dpl/std/bit/bit_cast.h"
 #  include "dpl/std/utility/to_unsigned.h"
 #  include "dpl/xmm/basic/abi.h"

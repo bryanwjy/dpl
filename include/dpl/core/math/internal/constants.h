@@ -6,9 +6,9 @@
 #include "dpl/core/math/internal/fwd.h" // IWYU pragma: export
 
 #if !DPL_MODULES
-#  include "dpl/core/basic/broadcastable_base.h"
-#  include "dpl/core/constants/epsilon.h"
-#  include "dpl/core/constants/mantissa_bits.h"
+#  include "dpl/core/immediate/broadcastable_base.h"
+#  include "dpl/core/immediate/constants/epsilon.h"
+#  include "dpl/core/immediate/constants/mantissa_bits.h"
 #  include "dpl/core/type_traits/representation.h"
 #  include "dpl/std/bit/bit_cast.h"
 #  include "dpl/std/concepts/floating_point.h"
@@ -30,6 +30,10 @@ struct toint_t : broadcastable_base<toint_t> {
 
 inline constexpr toint_t toint{};
 
+/**
+ * For all integers in [0, maxint], the value is exactly representable by
+ * the floating point type.
+ */
 struct maxint_t : broadcastable_base<maxint_t> {
     __DPL_HIDE_FROM_ABI explicit constexpr maxint_t() noexcept = default;
 

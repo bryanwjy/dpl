@@ -5,103 +5,197 @@
 
 #include "dpl/core/math/fma.h"
 #include "dpl/core/math/internal/constants.h"
-#include "dpl/core/math/internal/floating_point_simd.h"
 #include "dpl/core/math/internal/ldexp.h"
-#include "dpl/core/math/internal/masked_op.h"
 #include "dpl/core/math/internal/pair.h"
 #include "dpl/core/math/internal/polynomial.h"
 #include "dpl/core/math/round.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/concepts/canonical.h"
 #  include "dpl/core/concepts/extended.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_vector.h"
+#  include "dpl/core/dispatch/interface.h"
+#  include "dpl/core/dispatch/maskable/transform.h"
+#  include "dpl/core/dispatch/operation/math.h"
 #  include "dpl/core/operations/arithmetic.h" // IWYU pragma: keep
 #  include "dpl/core/operations/bitwise.h"    // IWYU pragma: keep
 #  include "dpl/core/operations/cast.h"
 #  include "dpl/core/operations/compare.h" // IWYU pragma: keep
+#  include "dpl/core/operations/logical.h"
 #  include "dpl/core/operations/select.h"
-#  include "dpl/core/type_traits/simd_traits.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void exp(...) noexcept = delete;
 
-struct exp_t;
-
-template <typename T>
-concept unqualified_canonical_exp = requires(T val) {
-    {
-        exp(internal::abi<T>, val)
-    } -> canonical_arithmetic_result<T, T, typename T::abi_type>;
+struct DPL_EMPTY_BASES exp_t :
+    private math_operation_base<exp_t>,
+    private maskable_transform_base<exp_t> {
+    using math_operation_base<exp_t>::operator();
+    using maskable_transform_base<exp_t>::operator();
 };
 
-template <typename T>
-concept unqualified_extended_exp = requires(T val) {
-    { exp(val) } -> vector_with_common_abi<typename T::abi_type>;
+template <>
+struct operation_signature<exp_t> {
+    static consteval void operator()(simd_vector auto&&) noexcept {}
 };
 
-template <typename T>
-concept expression_exp =
-    simd_expression<T> && regular_invocable<exp_t, simd_expression_result_t<T>>;
+template <typename S, typename M, typename T>
+concept unqualified_canonical_mexp =
+    (!simd_type<S> || same_as<S, cpo_result_t<exp_t, T>>) &&
+    requires(S src, M mask, T val) {
+        {
+            exp(internal::abi<T>, src, mask, val)
+        } -> same_as<cpo_result_t<exp_t, T>>;
+    };
 
-template <typename T>
-concept decayable_exp =
-    decayable_vector_for<T, operation_category::lane_agnostic> &&
-    regular_invocable<exp_t, canonical_type_t<T>>;
-
-template <typename T>
-concept extended_exp =
-    unqualified_extended_exp<T> || expression_exp<T> || decayable_exp<T>;
-
-struct exp_t : private mx::masked_operation<exp_t> {
+template <>
+struct canonical_impl<exp_t> {
 private:
-    friend mx::masked_operation<exp_t>;
+    template <typename T>
+    using mask_t DPL_NODEBUG =
+        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
 
-    template <floating_point E, simd_abi A>
-    requires (dx::digits_v<E> < dx::digits_v<float>)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL fallback(
-        basic_vector<E, A> val) noexcept {
-        using sint = signed_representation_t<float>;
-        auto const qf = dx::round(
-            val * fmath::inv_ln2, rounding::no_exc | rounding::to_nearest_int);
-        auto const q = dx::element_cast<sint>(qf);
-        using fpair = fmath::pair<float, A>;
-        constexpr auto ln2 = fmath::ln2_v<fpair>;
-        auto const s =
-            dx::fnmadd(qf, ln2.lower, dx::fnmadd(qf, ln2.upper, val));
-        constexpr fmath::polynomial<0.5f,
-            0.166666671633720397949219f,   //
-            0.0416664853692054748535156f,  //
-            0.00833336077630519866943359f, //
-            0.00139304355252534151077271f>
-            polynomial;
-        auto u = dx::fmadd(dx::multiply(s, s), polynomial(s), s) + dx::one;
-        u = fmath::ldexp(fmath::compliance::speed, u, q);
-        if constexpr (brain_float<E>) {
-            u = dx::select(val > 100.0, dx::infinity, u);
-            // underflow
-            return dx::select(val < -92.186785, dx::zero, u);
-        } else {
-            static_assert(digits_v<E> == 12 && sizeof(E) == 2);
-            constexpr E max_ln = 11.089866;
-            constexpr E min_ln = -16.63553;
-            u = dx::select(val > max_ln, dx::infinity, u);
-            // underflow
-            return dx::select(val < min_ln, dx::zero, u);
-        }
+    template <typename T>
+    using imask_t DPL_NODEBUG = mask_value_t<simd_abi_traits<T>::size>;
+
+    template <typename T, imask_t<T> M>
+    using cmask_t DPL_NODEBUG = const_mask<simd_abi_traits<T>::size, M>;
+
+public:
+    template <simd_abi A, simd_element_for<A> E>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr basic_vector<E, A> operator()(
+        basic_vector<E, A> val) noexcept
+    requires requires { exp(internal::abi<A>, val); }
+    {
+        return exp(internal::abi<A>, val);
     }
 
+    template <canonical_vector T>
+    requires unqualified_canonical_mexp<type_identity_t<T>, mask_t<T>, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(
+        type_identity_t<T> src, mask_t<T> mask, T val) noexcept {
+        return exp(internal::abi<T>, src, mask, val);
+    }
+
+    template <fixed_width_vector T, imask_t<T> M>
+    requires canonical_vector<T> &&
+        unqualified_canonical_mexp<type_identity_t<T>, cmask_t<T, M>, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(
+        type_identity_t<T> src, cmask_t<T, M> cmask, T val) noexcept {
+        return exp(internal::abi<T>, src, cmask, val);
+    }
+
+    template <canonical_vector T>
+    requires unqualified_canonical_mexp<dx::zero_t, mask_t<T>, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(
+        dx::zero_t zero, mask_t<T> mask, T val) noexcept {
+        return exp(internal::abi<T>, zero, mask, val);
+    }
+
+    template <fixed_width_vector T, imask_t<T> M>
+    requires canonical_vector<T> &&
+        unqualified_canonical_mexp<dx::zero_t, cmask_t<T, M>, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(
+        dx::zero_t zero, cmask_t<T, M> cmask, T val) noexcept {
+        return exp(internal::abi<T>, zero, cmask, val);
+    }
+};
+
+template <typename T, typename A = simd_abi_type_t<T>>
+concept unqualified_extended_exp = requires {
+    { exp(internal::declarg<T>()) } -> vector_with_common_abi<A>;
+};
+
+template <typename S, typename M, typename T>
+concept unqualified_extended_mexp =
+    (!simd_type<S> || equivalent_vector_with<S, cpo_result_t<exp_t, T>>) &&
+    requires {
+        {
+            exp(internal::declarg<S>(), internal::declarg<M>(),
+                internal::declarg<T>())
+        } -> equivalent_vector_with<cpo_result_t<exp_t, T>>;
+    };
+
+template <>
+struct extended_impl<exp_t> {
+private:
+    template <typename T>
+    using imask_t DPL_NODEBUG = mask_value_t<simd_abi_traits<T>::size>;
+
+    template <typename T, imask_t<T> M>
+    using cmask_t DPL_NODEBUG = const_mask<simd_abi_traits<T>::size, M>;
+
+    template <typename T>
+    using mask_t DPL_NODEBUG =
+        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
+
+public:
+    template <extended_vector T>
+    requires unqualified_extended_exp<T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T&& val) {
+        return exp(__DPL forward<T>(val));
+    }
+
+    template <simd_vector S, common_vector_with<S> T,
+        equivalent_mask_with<mask_t<S>> M>
+    requires (extended_vector<S> || extended_mask<M> || extended_vector<T>) &&
+        unqualified_extended_mexp<S, M, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(S&& src, M&& mask, T&& val) {
+        return exp( __DPL forward<S>(src), __DPL forward<M>(mask),
+            __DPL forward<T>(val));
+    }
+
+    template <fixed_width_vector S, imask_t<S> M, common_vector_with<S> T>
+    requires (extended_vector<S> || extended_vector<T>) &&
+        unqualified_extended_mexp<S, cmask_t<S, M>, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(S&& src, cmask_t<S, M> cmask, T&& val) {
+        return exp( __DPL forward<S>(src), cmask, __DPL forward<T>(val));
+    }
+
+    template <simd_vector T, common_mask_with<mask_t<T>> M>
+    requires (extended_mask<M> || extended_vector<T>) &&
+        unqualified_extended_mexp<dx::zero_t, M, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(dx::zero_t zero, M&& mask, T&& val) {
+        return exp(zero, __DPL forward<M>(mask), __DPL forward<T>(val));
+    }
+
+    template <fixed_width_vector T, imask_t<T> M>
+    requires extended_vector<T> &&
+        unqualified_extended_mexp<dx::zero_t, cmask_t<T, M>, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(
+        dx::zero_t zero, cmask_t<T, M> cmask, T&& val) {
+        return exp(zero, cmask, __DPL forward<T>(val));
+    }
+};
+
+template <>
+struct fallback_impl<exp_t> {
+private:
+    static constexpr auto rounding_opt =
+        rounding::no_exc | rounding::to_nearest_int;
+    template <typename E>
+    static constexpr auto float16_like =
+        brain_float<E> || (digits_v<E> == 12 && sizeof(E) == 2);
+
+public:
     template <simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL fallback(
+    static constexpr auto DPL_VECTORCALL operator()(
         basic_vector<float, A> val) noexcept {
         using sint = signed_representation_t<float>;
-        auto const qf = dx::round(
-            val * fmath::inv_ln2, rounding::no_exc | rounding::to_nearest_int);
+        auto const qf = dx::round(val * fmath::inv_ln2, rounding_opt);
         auto const q = dx::element_cast<sint>(qf);
         using fpair = fmath::pair<float, A>;
         constexpr auto ln2 = fmath::ln2_v<fpair>;
@@ -124,7 +218,7 @@ private:
 
     template <simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL fallback(
+    static constexpr auto DPL_VECTORCALL operator()(
         basic_vector<double, A> val) noexcept {
         using sint = signed_representation_t<double>;
         auto const q = dx::element_cast<sint>(val * fmath::inv_ln2);
@@ -148,79 +242,43 @@ private:
         return dx::select(val < -745.133, dx::zero, u);
     }
 
-    template <simd_vector S, typename M, simd_vector T>
-    requires mx::canonical_masked_math_operator<exp_t, S, M, T> &&
-        requires(
-            S src, M mask, T val) { exp(internal::abi<T>, src, mask, val); }
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL masked(S src, M mask, T val) noexcept {
-        return exp(internal::abi<T>, src, mask, val);
-    }
-
-    template <simd_vector S, typename M, simd_vector T>
-    requires mx::extended_masked_math_operator<exp_t, S, M, T> &&
-        requires(S src, M mask, T val) { exp(src, mask, val); }
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL masked(S src, M mask, T val) noexcept {
-        return exp(src, mask, val);
-    }
-
-    template <typename M, simd_vector T>
-    requires mx::canonical_masked_math_zoperator<exp_t, M, T> &&
-        requires(M mask, T val) { exp(internal::abi<T>, dx::zero, mask, val); }
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
-        return exp(internal::abi<T>, dx::zero, mask, val);
-    }
-
-    template <typename M, simd_vector T>
-    requires mx::extended_masked_math_zoperator<exp_t, M, T> &&
-        requires(M mask, T val) { exp(dx::zero, mask, val); }
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL masked(M mask, T val) noexcept {
-        return exp(dx::zero, mask, val);
-    }
-
-public:
-    template <simd_abi A, simd_element_for<A> E>
-    requires floating_point<E>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(
-        basic_vector<E, A> val) noexcept {
-        if constexpr (unqualified_canonical_exp<basic_vector<E, A>>) {
-            if consteval {
-                return fallback(val);
-            } else {
-                return exp(internal::abi<A>, val);
-            }
+    /*
+    template <canonical_vector T>
+    requires float16_like<simd_element_type_t<T>> &&
+        convertible_to<float, simd_element_type_t<T>> &&
+        cpo_invocable<round_t, T, decltype(rounding_opt)>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(T val) noexcept {
+        using E = simd_element_type_t<T>;
+        using sint = signed_representation_t<E>;
+        auto const qf = dx::round(val * fmath::inv_ln2, rounding_opt);
+        auto const q = dx::element_cast<sint>(qf);
+        using fpair = fmath::pair<E, A>;
+        constexpr auto ln2 = fmath::ln2_v<fpair>;
+        auto const s =
+            dx::fnmadd(qf, ln2.lower, dx::fnmadd(qf, ln2.upper, val));
+        constexpr fmath::polynomial<0.5f,
+            0.166666671633720397949219f,   //
+            0.0416664853692054748535156f,  //
+            0.00833336077630519866943359f, //
+            0.00139304355252534151077271f>
+            polynomial;
+        auto u = dx::fmadd(dx::multiply(s, s), polynomial(s), s) + dx::one;
+        u = fmath::ldexp(fmath::compliance::speed, u, q);
+        if constexpr (brain_float<E>) {
+            u = dx::select(val > 100.0f, dx::infinity, u);
+            // underflow
+            return dx::select(val < -92.186785f, dx::zero, u);
         } else {
-            return fallback(val);
+            static_assert(digits_v<E> == 12 && sizeof(E) == 2);
+            constexpr E max_ln = 11.089866f;
+            constexpr E min_ln = -16.63553f;
+            u = dx::select(val > max_ln, dx::infinity, u);
+            // underflow
+            return dx::select(val < min_ln, dx::zero, u);
         }
     }
-
-    template <simd_abi A, simd_element_for<A> E>
-    requires (!floating_point<E>) &&
-        unqualified_canonical_exp<basic_vector<E, A>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(
-        basic_vector<E, A> val) noexcept {
-        return exp(internal::abi<A>, val);
-    }
-
-    template <extended_vector T>
-    requires extended_exp<T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T val) noexcept {
-        if constexpr (unqualified_extended_exp<T>) {
-            return exp(val);
-        } else if constexpr (expression_exp<T>) {
-            return operator()(dx::evaluate(val));
-        } else {
-            return operator()(dx::to_canonical(val));
-        }
-    }
-
-    using mx::masked_operation<exp_t>::operator();
+    */
 };
 } // namespace datapar::internal
 

@@ -34,10 +34,11 @@ concept common_abi_with =
 
 DPL_EXPORT template <typename A, typename B>
 concept common_abi_with = simd_abi<A> && simd_abi<B> &&
-    atom::common_abi_with<remove_cv_t<A>, remove_cv_t<B>>;
+    atom::common_abi_with<remove_cvref_t<A>, remove_cvref_t<B>>;
 
-DPL_EXPORT template <typename A, typename B>
-concept same_abi_as = common_abi_with<A, B> && same_as<A, B>;
+template <typename A, typename B>
+concept same_abi_as =
+    common_abi_with<A, B> && same_as<remove_cvref_t<A>, remove_cvref_t<B>>;
 
 namespace internal {
 
@@ -57,7 +58,7 @@ inline constexpr bool is_common_abi_with<A, B, Cs...> =
 
 } // namespace internal
 
-DPL_EXPORT template <typename... Ts>
+template <typename... Ts>
 concept all_common_abi = internal::is_common_abi_with<Ts...>;
 
 } // namespace datapar
