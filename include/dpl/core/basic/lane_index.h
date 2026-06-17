@@ -39,26 +39,11 @@ struct operation_signature<lane_index_t<T, U>> {
     {}
 };
 
-template <typename T, different_from<ignore_t> U>
-requires (simd_abi<T> && simd_element_for<U, T>) ||
-    (simd_abi<U> && simd_element_for<T, U>)
-struct fallback_impl<lane_index_t<T, U>> {
-private:
-    using A DPL_NODEBUG = conditional_t<simd_abi<T>, T, U>;
-    using E DPL_NODEBUG = conditional_t<simd_abi<T>, U, T>;
-    using I DPL_NODEBUG = signed_representation_t<E>;
-
-public:
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr basic_vector<I, A> operator()() noexcept
-    requires fixed_width_abi<A>
+template <typename E, typename A>
+concept unqualified_canonical_lane_index = requires {
     {
-        return __DPL apply(
-            [](auto... idx) {
-                return dx::initialize<I, A>(static_cast<I>(idx())...);
-            },
-            iota_sequence<E, A>);
-    }
+        lane_index<E>(internal::abi<A>)
+    } -> same_as<basic_vector<signed_representation_t<E>, A>>;
 };
 
 template <typename T, different_from<ignore_t> U>
@@ -72,9 +57,20 @@ private:
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr basic_vector<I, A> operator()() noexcept
-    requires requires { lane_index<E>(internal::abi<A>); }
+    requires unqualified_canonical_lane_index<E, A>
     {
         return lane_index<E>(internal::abi<A>);
+    }
+
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr basic_vector<I, A> operator()() noexcept
+    requires fixed_width_abi<A> && (!unqualified_canonical_lane_index<E, A>)
+    {
+        return __DPL apply(
+            [](auto... idx) {
+                return dx::initialize<I, A>(static_cast<I>(idx())...);
+            },
+            iota_sequence<E, A>);
     }
 };
 

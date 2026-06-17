@@ -714,6 +714,32 @@ constexpr bitset<W> truncate(bitset<W2> const& val) noexcept {
 
 template <size_t W>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+constexpr int bit_width(bitset<W> const& val) noexcept {
+    return static_cast<int>(W);
+}
+
+template <size_t W>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+constexpr bool has_single_bit(bitset<W> const& val) noexcept {
+    if constexpr (integral_bitset_type<bitset<W>>) {
+        return __DPL has_single_bit(__DPL to_underlying(val));
+    } else {
+        static_assert(is_base_of_v<details::bitset::storage<W>, bitset<W>>);
+        auto const& base = (details::bitset::storage<W> const&)val;
+        for (auto found = false; auto const val : base.storage_) {
+            auto const current = __DPL has_single_bit(val);
+            if (found && current) {
+                return false;
+            }
+            found = current;
+        }
+
+        return true;
+    }
+}
+
+template <size_t W>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr int popcount(bitset<W> const& val) noexcept {
     if constexpr (integral_bitset_type<bitset<W>>) {
         return __DPL popcount(__DPL to_underlying(val));

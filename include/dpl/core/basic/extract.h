@@ -46,17 +46,6 @@ struct canonical_impl<extract_t> {
     }
 };
 
-template <>
-struct fallback_impl<extract_t> {
-    template <extended_simd_type T, extraction_index I>
-    requires cpo_invocable<canonical_impl<extract_t>, canonical_type_t<T>, I>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
-    static constexpr simd_value_type_t<T> operator()(T&& src, I idx) noexcept {
-        return canonical_impl<extract_t>::operator()(
-            dx::to_canonical(__DPL forward<T>(src)), idx);
-    }
-};
-
 } // namespace datapar::internal
 
 namespace datapar {

@@ -53,6 +53,13 @@ struct mask_value<W> {
 DPL_EXPORT template <size_t W, internal::mask_value_t<W> V>
 struct const_mask;
 
+namespace internal {
+template <typename>
+inline constexpr bool const_mask_specialization = false;
+template <size_t W, internal::mask_value_t<W> V>
+inline constexpr bool const_mask_specialization<const_mask<W, V>> = true;
+} // namespace internal
+
 DPL_EXPORT template <size_t W, internal::mask_value_t<W> V>
 struct const_mask : const_mask_base<const_mask<W, V>> {
 
@@ -97,11 +104,13 @@ public:
     __DPL_HIDE_FROM_ABI consteval const_mask() noexcept = default;
 
     template <different_from<const_mask> T>
-    requires integral_constant_like<T> && (T::value == V)
+    requires (!internal::const_mask_specialization<T>) &&
+        integral_constant_like<T> && (T::value == V)
     __DPL_HIDE_FROM_ABI constexpr const_mask(T) noexcept {}
 
     template <different_from<const_mask> T>
-    requires bitset_constant_like<T> && (T::value == bitset<T::value.size()>(V))
+    requires (!internal::const_mask_specialization<T>) &&
+        bitset_constant_like<T> && (T::value == bitset<T::value.size()>(V))
     __DPL_HIDE_FROM_ABI constexpr const_mask(T) noexcept {}
 
     __DPL_HIDE_FROM_ABI constexpr const_mask(zero_t) noexcept
@@ -113,6 +122,7 @@ public:
     {}
 
     template <size_t W2, internal::mask_value_t<W2> V2>
+    requires different_from<const_mask<W2, V2>, const_mask> && (V2 == V)
     __DPL_HIDE_FROM_ABI explicit(explicit_convertible_from_v<W2,
         V2>) constexpr const_mask(const_mask<W2, V2>) noexcept {}
 
@@ -309,9 +319,10 @@ constexpr auto to_compatible_const_mask(datapar::all_bits_t) noexcept {
 
 template <typename T>
 concept const_mask_like = enable_const_mask<T> && integral_constant_like<T> &&
-    unsigned_integral<typename T::value_type> &&
-    requires { typename integral_constant<size_t, T::width>; } &&
-    (T::width < sizeof(typename T::value_type) * char_bit_v);
+    unsigned_integral<typename T::value_type> && requires {
+        T::width;
+        typename integral_constant<size_t, T::width>;
+    } && (T::width < sizeof(typename T::value_type) * char_bit_v);
 
 template <typename T>
 concept const_mask_convertible =
@@ -333,6 +344,34 @@ struct launder_cmask<S, M> {
 };
 template <typename S, typename M>
 using launder_cmask_t DPL_NODEBUG = typename launder_cmask<S, M>::type;
+
+consteval auto auto_width(integral auto val) noexcept {
+    auto const uval = __DPL to_unsigned(val);
+    return 1zu << (__DPL bit_width(val) - __DPL has_single_bit(val));
+}
+template <size_t W>
+consteval auto auto_width(bitset<W> const& val) noexcept {
+    return W;
+}
+consteval auto launder_auto(integral auto val) noexcept {
+    return __DPL to_unsigned(val);
+}
+template <size_t W>
+consteval auto launder_auto(bitset<W> const& val) noexcept {
+    if constexpr (integral_bitset_type<bitset<W>>) {
+        return __DPL to_underlying(val);
+    } else {
+        return val;
+    }
+}
 } // namespace internal
+
+DPL_EXPORT template <auto V>
+requires requires {
+    internal::auto_width(V);
+    internal::launder_auto(V);
+}
+inline constexpr const_mask<internal::auto_width(V), internal::launder_auto(V)>
+    cmask_v{};
 } // namespace datapar
 DPL_DEFAULT_NAMESPACE_END

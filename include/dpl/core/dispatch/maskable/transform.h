@@ -25,6 +25,11 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::internal {
 
+template <typename D, typename R, typename S, typename M, typename... Ts>
+concept masked_transformable = (!inherits_from<D, basic_operation_base<D>> &&
+                                   cpo_invocable<select_t, M, R, S>) ||
+    canonical_cpo_invocable_r<D, R, S, M, Ts...>;
+
 /**
  * @brief A maskable operation that computes a new value from its arguments.
  *
@@ -56,15 +61,16 @@ protected:
     template <canonical_ornot_simd... Ts>
     requires signature_compatible<D, Ts...> && cpo_invocable<D, Ts...> &&
         simd_vector<result_t<Ts...>> &&
-        cpo_invocable<select_t, basic_mask_t<Ts...>, result_t<Ts...>,
-            result_t<Ts...>>
+        masked_transformable<D, result_t<Ts...>, result_t<Ts...>,
+            basic_mask_t<Ts...>, Ts...>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr result_t<Ts...> operator()(
         result_t<Ts...> src, basic_mask_t<Ts...> mask, Ts... args) noexcept {
         using R = result_t<Ts...>;
         using M = basic_mask_t<Ts...>;
         if constexpr (canonical_cpo_invocable_r<D, R, R, M, Ts...>) {
-            if constexpr (all_same_abi<R, M, Ts...>) {
+            if constexpr (all_same_abi<R, M, Ts...> &&
+                !inherits_from<D, basic_operation_base<D>>) {
                 if consteval {
                     if constexpr (fallback_cpo_invocable_r<D, R, R, M, Ts...>) {
                         return impl::fallback<D>(src, mask, args...);
@@ -87,8 +93,8 @@ protected:
     template <canonical_ornot_simd... Ts>
     requires signature_compatible<D, Ts...> && cpo_invocable<D, Ts...> &&
         simd_vector<result_t<Ts...>> &&
-        cpo_invocable<select_t, basic_mask_t<Ts...>, result_t<Ts...>,
-            dx::zero_t>
+        masked_transformable<D, result_t<Ts...>, dx::zero_t,
+            basic_mask_t<Ts...>, Ts...>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr result_t<Ts...> operator()(
         dx::zero_t zero, basic_mask_t<Ts...> mask, Ts... args) noexcept {
@@ -98,7 +104,8 @@ protected:
             if constexpr (all_same_abi<R, M, Ts...>) {
                 if consteval {
                     if constexpr (fallback_cpo_invocable_r<D, R, dx::zero_t, M,
-                                      Ts...>) {
+                                      Ts...> &&
+                        !inherits_from<D, basic_operation_base<D>>) {
                         return impl::fallback<D>(zero, mask, args...);
                     } else {
                         return fwd::select(mask, D::operator()(args...), zero);
@@ -120,14 +127,16 @@ protected:
     template <typename M, canonical_ornot_simd... Ts>
     requires signature_compatible<D, Ts...> && cpo_invocable<D, Ts...> &&
         const_mask_for<M, result_t<Ts...>> && simd_vector<result_t<Ts...>> &&
-        cpo_invocable<select_t, M, result_t<Ts...>, result_t<Ts...>>
+        masked_transformable<D, result_t<Ts...>, result_t<Ts...>,
+            launder_cmask_t<result_t<Ts...>, M>, Ts...>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr result_t<Ts...> operator()(
         result_t<Ts...> src, M mask, Ts... args) noexcept {
         using R = result_t<Ts...>;
         using CM = launder_cmask_t<R, M>;
         if constexpr (canonical_cpo_invocable_r<D, R, R, CM, Ts...>) {
-            if constexpr (all_same_abi<R, Ts...>) {
+            if constexpr (all_same_abi<R, Ts...> &&
+                !inherits_from<D, basic_operation_base<D>>) {
                 if consteval {
                     if constexpr (fallback_cpo_invocable_r<D, R, R, CM,
                                       Ts...>) {
@@ -154,14 +163,16 @@ protected:
     template <typename M, canonical_ornot_simd... Ts>
     requires signature_compatible<D, Ts...> && cpo_invocable<D, Ts...> &&
         const_mask_for<M, result_t<Ts...>> && simd_vector<result_t<Ts...>> &&
-        cpo_invocable<select_t, M, result_t<Ts...>, dx::zero_t>
+        masked_transformable<D, result_t<Ts...>, dx::zero_t,
+            launder_cmask_t<result_t<Ts...>, M>, Ts...>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr result_t<Ts...> operator()(
         dx::zero_t zero, M mask, Ts... args) noexcept {
         using R = result_t<Ts...>;
         using CM = launder_cmask_t<R, M>;
         if constexpr (canonical_cpo_invocable_r<D, R, dx::zero_t, CM, Ts...>) {
-            if constexpr (all_same_abi<result_t<Ts...>, Ts...>) {
+            if constexpr (all_same_abi<result_t<Ts...>, Ts...> &&
+                !inherits_from<D, basic_operation_base<D>>) {
                 if consteval {
                     if constexpr (fallback_cpo_invocable_r<D, R, dx::zero_t, CM,
                                       Ts...>) {

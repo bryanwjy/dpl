@@ -20,6 +20,7 @@ import :std.utility;
 #include "dpl/core/basic/basic_mask.h"
 #include "dpl/core/basic/basic_vector.h"
 #include "dpl/core/basic/broadcast.h"
+#include "dpl/core/basic/expand_load.h"
 #include "dpl/core/basic/extract.h"
 #include "dpl/core/basic/gather.h"
 #include "dpl/core/basic/initialize.h"

@@ -82,7 +82,7 @@ concept common_abi_result = requires { typename arguments_abi_t<Ts...>; } &&
 
 template <typename D, typename... Ts>
 concept extended_nttp_invocable =
-    !inherits_from<basic_operation_base<D>, D> && requires {
+    !inherits_from<D, basic_operation_base<D>> && requires {
         typename integral_constant<D, D{}>;
         {
             extended<D{}>(internal::declarg<Ts>()...)
