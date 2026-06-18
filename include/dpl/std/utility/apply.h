@@ -11,7 +11,6 @@
 #include "dpl/std/utility/tuple_like.h"
 
 #if !DPL_MODULES
-#  include "dpl/std/type_traits/copy_cvref.h"
 #  include "dpl/std/type_traits/declval.h"
 #  include "dpl/std/type_traits/is_invocable.h"
 #  include "dpl/std/type_traits/remove_cvref.h"

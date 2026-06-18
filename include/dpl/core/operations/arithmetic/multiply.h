@@ -63,95 +63,89 @@ concept unqualified_canonical_multiply = requires {
 
 template <typename S, typename M, typename L, typename R,
     typename A = common_abi_t<L, R>>
-concept unqualified_canonical_mmultiply =
-    (!simd_type<S> ||
-        equivalent_vector_with<S, cpo_result_t<multiply_t, L, R>>) &&
-    requires {
+concept unqualified_canonical_mmultiply = cpo_invocable<multiply_t, L, R> &&
+    (!simd_type<S> || same_as<S, cpo_result_t<multiply_t, L, R>>) && requires {
         {
             multiply(internal::abi<A>, internal::declarg<S>(),
                 internal::declarg<M>(), internal::declarg<L>(),
                 internal::declarg<R>())
-        } -> equivalent_vector_with<cpo_result_t<multiply_t, L, R>>;
+        } -> same_as<cpo_result_t<multiply_t, L, R>>;
     };
 
 template <>
 struct canonical_impl<multiply_t> {
 private:
     template <typename L, typename R>
-    using source_t DPL_NODEBUG =
+    using result_t DPL_NODEBUG =
         basic_vector<simd_element_type_t<L>, common_abi_t<L, R>>;
 
     template <typename L, typename R>
     using mask_t DPL_NODEBUG =
         basic_mask<simd_element_type_t<L>, common_abi_t<L, R>>;
 
-    template <typename L, typename R>
-    using imask_t DPL_NODEBUG = mask_value_t<
-        simd_abi_traits<simd_element_type_t<L>, common_abi_t<L, R>>::size>;
-
-    template <typename L, typename R, imask_t<L, R> V>
-    using cmask_t DPL_NODEBUG = const_mask<
-        simd_abi_traits<simd_element_type_t<L>, common_abi_t<L, R>>::size, V>;
-
 public:
     template <canonical_vector L, common_vector_with<L> R>
     requires canonical_vector<R> && unqualified_canonical_multiply<L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L lhs, R rhs) noexcept {
+    static constexpr result_t<L, R> operator()(L lhs, R rhs) noexcept {
         return multiply(internal::abi<common_abi_t<L, R>>, lhs, rhs);
     }
 
     template <canonical_vector L, broadcastable_to<L> R>
     requires unqualified_canonical_multiply<L, R, simd_abi_type_t<L>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L lhs, R&& rhs) noexcept {
+    static constexpr L operator()(L lhs, R&& rhs) noexcept {
         return multiply(internal::abi<L>, lhs, __DPL forward<R>(rhs));
     }
 
     template <canonical_vector R, broadcastable_to<R> L>
     requires unqualified_canonical_multiply<L, R, simd_abi_type_t<R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L&& lhs, R rhs) noexcept {
+    static constexpr R operator()(L&& lhs, R rhs) noexcept {
         return multiply(internal::abi<R>, __DPL forward<L>(lhs), rhs);
     }
 
     template <canonical_vector L, common_vector_with<L> R>
     requires canonical_vector<R> &&
-        unqualified_canonical_mmultiply<source_t<L, R>, mask_t<L, R>, L, R>
+        unqualified_canonical_mmultiply<result_t<L, R>, mask_t<L, R>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        source_t<L, R> src, mask_t<L, R> mask, L lhs, R rhs) noexcept {
+    static constexpr result_t<L, R> operator()(
+        result_t<L, R> src, mask_t<L, R> mask, L lhs, R rhs) noexcept {
         return multiply(internal::abi<common_abi_t<L, R>>, src, mask, lhs, rhs);
     }
 
-    template <canonical_vector L, common_vector_with<L> R, imask_t<L, R> M>
+    template <canonical_vector L, common_vector_with<L> R,
+        const_mask_for<result_t<L, R>> M>
     requires canonical_vector<R> &&
-        unqualified_canonical_mmultiply<source_t<L, R>, cmask_t<L, R, M>, L, R>
+        unqualified_canonical_mmultiply<result_t<L, R>,
+            launder_cmask_t<result_t<L, R>, M>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        source_t<L, R> src, cmask_t<L, R, M> cmask, L lhs, R rhs) noexcept {
-        return multiply(
-            internal::abi<common_abi_t<L, R>>, src, cmask, lhs, rhs);
+    static constexpr result_t<L, R> operator()(
+        result_t<L, R> src, M cmask, L lhs, R rhs) noexcept {
+        return multiply(internal::abi<common_abi_t<L, R>>, src,
+            dx::to_const_mask<result_t<L, R>>(cmask), lhs, rhs);
     }
 
     template <canonical_vector L, common_vector_with<L> R>
     requires canonical_vector<R> &&
         unqualified_canonical_mmultiply<dx::zero_t, mask_t<L, R>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
+    static constexpr result_t<L, R> operator()(
         dx::zero_t zero, mask_t<L, R> mask, L lhs, R rhs) noexcept {
         return multiply(
             internal::abi<common_abi_t<L, R>>, zero, mask, lhs, rhs);
     }
 
-    template <canonical_vector L, common_vector_with<L> R, imask_t<L, R> M>
+    template <canonical_vector L, common_vector_with<L> R,
+        const_mask_for<result_t<L, R>> M>
     requires canonical_vector<R> &&
-        unqualified_canonical_mmultiply<dx::zero_t, cmask_t<L, R, M>, L, R>
+        unqualified_canonical_mmultiply<dx::zero_t,
+            launder_cmask_t<result_t<L, R>, M>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        dx::zero_t zero, cmask_t<L, R, M> cmask, L lhs, R rhs) noexcept {
-        return multiply(
-            internal::abi<common_abi_t<L, R>>, zero, cmask, lhs, rhs);
+    static constexpr result_t<L, R> operator()(
+        dx::zero_t zero, M cmask, L lhs, R rhs) noexcept {
+        return multiply(internal::abi<common_abi_t<L, R>>, zero,
+            dx::to_const_mask<result_t<L, R>>(cmask), lhs, rhs);
     }
 };
 
@@ -163,7 +157,7 @@ concept unqualified_extended_multiply = requires {
 };
 
 template <typename S, typename M, typename L, typename R>
-concept unqualified_extended_mmultiply =
+concept unqualified_extended_mmultiply = cpo_invocable<multiply_t, L, R> &&
     (!simd_type<S> ||
         equivalent_vector_with<S, cpo_result_t<multiply_t, L, R>>) &&
     requires {
@@ -175,23 +169,6 @@ concept unqualified_extended_mmultiply =
 
 template <>
 struct extended_impl<multiply_t> {
-private:
-    template <typename S>
-    using simask_t DPL_NODEBUG = mask_value_t<simd_abi_type_t<S>::size>;
-
-    template <typename S, simask_t<S> M>
-    using scmask_t DPL_NODEBUG = const_mask<simd_abi_type_t<S>::size, M>;
-
-    template <typename L, typename R>
-    using imask_t DPL_NODEBUG = simask_t<cpo_result_t<multiply_t, L, R>>;
-
-    template <typename L, typename R, imask_t<L, R> M>
-    using cmask_t DPL_NODEBUG = scmask_t<cpo_result_t<multiply_t, L, R>, M>;
-
-    template <typename L, typename R>
-    using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<L>, common_abi_t<L, R>>;
-
 public:
     template <simd_vector L, common_vector_with<L> R>
     requires (extended_vector<L> || extended_vector<R>) &&
@@ -223,19 +200,18 @@ public:
             __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 
-    template <fixed_width_vector S, simask_t<S> M, common_vector_with<S> L,
-        common_vector_with<L> R>
+    template <fixed_width_vector S, const_mask_for<S> M,
+        common_vector_with<S> L, common_vector_with<L> R>
     requires (extended_vector<S> || extended_vector<L> || extended_vector<R>) &&
-        unqualified_extended_mmultiply<S, scmask_t<S, M>, L, R>
+        unqualified_extended_mmultiply<S, launder_cmask_t<S, M>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        S&& src, scmask_t<S, M> cmask, L&& lhs, R&& rhs) {
-        return multiply(
-            src, cmask, __DPL forward<L>(lhs), __DPL forward<R>(rhs));
+    static constexpr auto operator()(S&& src, M cmask, L&& lhs, R&& rhs) {
+        return multiply(src, dx::to_const_mask<S>(cmask), __DPL forward<L>(lhs),
+            __DPL forward<R>(rhs));
     }
 
     template <simd_vector L, common_vector_with<L> R,
-        common_mask_with<mask_t<L, R>> M>
+        result_mask_for<multiply_t, L, R> M>
     requires (extended_mask<M> || extended_vector<L> || extended_vector<R>) &&
         unqualified_extended_mmultiply<dx::zero_t, M, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -245,14 +221,17 @@ public:
             __DPL forward<R>(rhs));
     }
 
-    template <simd_vector L, common_vector_with<L> R, imask_t<L, R> M>
+    template <simd_vector L, common_vector_with<L> R,
+        result_cmask_for<multiply_t, L, R> M>
     requires (extended_vector<L> || extended_vector<R>) &&
-        unqualified_extended_mmultiply<dx::zero_t, cmask_t<L, R, M>, L, R>
+        unqualified_extended_mmultiply<dx::zero_t,
+            launder_cmask_t<cpo_result_t<multiply_t, L, R>, M>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
-        dx::zero_t zero, cmask_t<L, R, M> cmask, L&& lhs, R&& rhs) {
-        return multiply(
-            zero, cmask, __DPL forward<L>(lhs), __DPL forward<R>(rhs));
+        dx::zero_t zero, M cmask, L&& lhs, R&& rhs) {
+        return multiply(zero,
+            dx::to_const_mask<cpo_result_t<multiply_t, L, R>>(cmask),
+            __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 };
 

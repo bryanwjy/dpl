@@ -10,6 +10,7 @@
 #  include "dpl/core/basic/internal/abi.h"
 #  include "dpl/core/basic/internal/iota_sequence.h"
 #  include "dpl/core/concepts/equivalence.h"
+#  include "dpl/core/concepts/mask_compatibility.h"
 #  include "dpl/core/dispatch/maskable/transform.h"
 #  include "dpl/core/dispatch/operation/primitive.h"
 #  include "dpl/core/type_traits/representation.h"
@@ -78,46 +79,245 @@ public:
     }
 };
 
+template <typename S, typename M, typename T, typename N = size_t>
+concept unqualified_canonical_mbroadcast_lane =
+    (!simd_type<S> || same_as<S, cpo_result_t<broadcast_lane_t, T, N>>) &&
+    requires {
+        {
+            broadcast_lane(internal::abi<cpo_result_t<broadcast_lane_t, T, N>>,
+                internal::declarg<S>(), internal::declarg<M>(),
+                internal::declarg<T>(), internal::declarg<N>())
+        } -> same_as<cpo_result_t<broadcast_lane_t, T, N>>;
+    };
+
 template <>
 struct canonical_impl<broadcast_lane_t> {
-    template <canonical_vector L, integral_constant_like R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD) static constexpr L operator()(
-        L val, R idx) noexcept
+private:
+    template <typename T, typename A = simd_abi_type_t<T>>
+    using result_t DPL_NODEBUG = basic_vector<simd_element_type_t<T>, A>;
+
+    template <typename T>
+    using mask_t DPL_NODEBUG =
+        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
+
+public:
+    template <canonical_vector L>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr L operator()(L val, size_t idx) noexcept
     requires requires { broadcast_lane(internal::abi<L>, val, idx); }
     {
         return broadcast_lane(internal::abi<L>, val, idx);
     }
 
-    template <canonical_vector L>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD) static constexpr L operator()(
-        L val, size_t idx) noexcept
+    template <canonical_vector T>
+    requires unqualified_canonical_mbroadcast_lane<result_t<T>, mask_t<T>, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr result_t<T> operator()(
+        result_t<T> src, mask_t<T> mask, T val, size_t idx) noexcept {
+        return broadcast_lane(internal::abi<result_t<T>>, src, mask, val, idx);
+    }
+
+    template <canonical_vector T, const_mask_for<T> M>
+    requires canonical_vector<T> &&
+        unqualified_canonical_mbroadcast_lane<result_t<T>,
+            launder_cmask_t<T, M>, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr result_t<T> operator()(
+        result_t<T> src, M cmask, T val, size_t idx) noexcept {
+        return broadcast_lane(internal::abi<result_t<T>>, src,
+            dx::to_const_mask<T>(cmask), val, idx);
+    }
+
+    template <canonical_vector T>
+    requires unqualified_canonical_mbroadcast_lane<dx::zero_t, mask_t<T>, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr result_t<T> operator()(
+        dx::zero_t zero, mask_t<T> mask, T val, size_t idx) noexcept {
+        return broadcast_lane(internal::abi<result_t<T>>, zero, mask, val, idx);
+    }
+
+    template <canonical_vector T, const_mask_for<T> M>
+    requires canonical_vector<T> &&
+        unqualified_canonical_mbroadcast_lane<dx::zero_t, launder_cmask_t<T, M>,
+            T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr result_t<T> operator()(
+        dx::zero_t zero, M cmask, T val, size_t idx) noexcept {
+        return broadcast_lane(
+            internal::abi<T>, zero, dx::to_const_mask<T>(cmask), val, idx);
+    }
+
+    ///
+    template <canonical_vector L, integral_constant_like R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr L operator()(L val, R idx) noexcept
     requires requires { broadcast_lane(internal::abi<L>, val, idx); }
     {
         return broadcast_lane(internal::abi<L>, val, idx);
+    }
+
+    template <canonical_vector T, integral_constant_like N>
+    requires canonical_vector<T> &&
+        unqualified_canonical_mbroadcast_lane<result_t<T>, mask_t<T>, T, N>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr result_t<T> operator()(
+        result_t<T> src, mask_t<T> mask, T val, N idx) noexcept {
+        return broadcast_lane(internal::abi<result_t<T>>, src, mask, val, idx);
+    }
+
+    template <canonical_vector T, const_mask_for<T> M, integral_constant_like N>
+    requires canonical_vector<T> &&
+        unqualified_canonical_mbroadcast_lane<result_t<T>,
+            launder_cmask_t<T, M>, T, N>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr result_t<T> operator()(
+        result_t<T> src, M cmask, T val, N idx) noexcept {
+        return broadcast_lane(internal::abi<result_t<T>>, src,
+            dx::to_const_mask<result_t<T>>(cmask), val, idx);
+    }
+
+    template <canonical_vector T, integral_constant_like N>
+    requires unqualified_canonical_mbroadcast_lane<dx::zero_t, mask_t<T>, T, N>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr result_t<T> operator()(
+        dx::zero_t zero, mask_t<T> mask, T val, N idx) noexcept {
+        return broadcast_lane(internal::abi<T>, zero, mask, val, idx);
+    }
+
+    template <canonical_vector T, const_mask_for<T> M, integral_constant_like N>
+    requires canonical_vector<T> &&
+        unqualified_canonical_mbroadcast_lane<dx::zero_t, launder_cmask_t<T, M>,
+            T, N>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr result_t<T> operator()(
+        dx::zero_t zero, M cmask, T val, N idx) noexcept {
+        return broadcast_lane(
+            internal::abi<T>, zero, dx::to_const_mask<T>(cmask), val, idx);
     }
 };
 
-template <typename T, typename N, typename A = typename T::abi_type>
-concept unqualified_extended_broadcast_lane = requires(N idx) {
+template <typename T, typename N = size_t, typename A = simd_abi_type_t<T>>
+concept unqualified_extended_broadcast_lane = requires {
     {
-        broadcast_lane(internal::declarg<T>(), idx)
+        broadcast_lane(internal::declarg<T>(), internal::declarg<N>())
     } -> vector_with_common_abi<A>;
 };
 
+template <typename S, typename M, typename T, typename N = size_t>
+concept unqualified_extended_mbroadcast_lane =
+    cpo_invocable<cpo_result_t<broadcast_lane_t, T, N>> &&
+    (!simd_type<S> ||
+        equivalent_vector_with<S, cpo_result_t<broadcast_lane_t, T, N>>) &&
+    requires {
+        {
+            broadcast_lane(internal::abi<cpo_result_t<broadcast_lane_t, T, N>>,
+                internal::declarg<S>(), internal::declarg<M>(),
+                internal::declarg<T>(), internal::declarg<N>())
+        } -> equivalent_vector_with<cpo_result_t<broadcast_lane_t, T, N>>;
+    };
+
 template <>
 struct extended_impl<broadcast_lane_t> {
-    template <simd_vector L, integral_constant_like R>
-    requires unqualified_extended_broadcast_lane<L, R>
+private:
+    template <typename T>
+    using mask_t DPL_NODEBUG =
+        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
+
+public:
+    template <extended_vector T>
+    requires unqualified_extended_broadcast_lane<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L&& val, R idx) {
-        return broadcast_lane(__DPL forward<L>(val), idx);
+    static constexpr auto operator()(T&& val, size_t idx) {
+        return broadcast_lane(__DPL forward<T>(val), idx);
     }
 
-    template <simd_vector L>
-    requires unqualified_extended_broadcast_lane<L, size_t>
+    template <simd_vector S, exact_mask_for<S> M, common_vector_with<S> T>
+    requires (extended_vector<S> || extended_mask<M> || extended_vector<T>) &&
+        unqualified_extended_mbroadcast_lane<S, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr L operator()(L&& val, size_t idx) {
-        return broadcast_lane(__DPL forward<L>(val), idx);
+    static constexpr auto operator()(S&& src, M&& mask, T&& val, size_t idx) {
+        return broadcast_lane( __DPL forward<S>(src), __DPL forward<M>(mask),
+            __DPL forward<T>(val), idx);
+    }
+
+    template <simd_vector S, const_mask_for<S> M, common_vector_with<S> T>
+    requires (extended_vector<S> || extended_vector<T>) &&
+        unqualified_extended_mbroadcast_lane<S, launder_cmask_t<S, M>, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(S&& src, M cmask, T&& val, size_t idx) {
+        return broadcast_lane( __DPL forward<S>(src),
+            dx::to_const_mask<S>(cmask), __DPL forward<T>(val), idx);
+    }
+
+    template <simd_vector T, result_mask_for<broadcast_lane_t, T, size_t> M>
+    requires (extended_mask<M> || extended_vector<T>) &&
+        unqualified_extended_mbroadcast_lane<dx::zero_t, M, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(
+        dx::zero_t zero, M&& mask, T&& val, size_t idx) {
+        return broadcast_lane(zero, mask, __DPL forward<T>(val), idx);
+    }
+
+    template <extended_vector T,
+        result_cmask_for<broadcast_lane_t, T, size_t> M>
+    requires unqualified_extended_mbroadcast_lane<dx::zero_t,
+        launder_cmask_t<cpo_result_t<broadcast_lane_t, T, size_t>, M>, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(
+        dx::zero_t zero, M cmask, T&& val, size_t idx) {
+        return broadcast_lane(zero,
+            dx::to_const_mask<cpo_result_t<broadcast_lane_t, T, size_t>>(cmask),
+            __DPL forward<T>(val), idx);
+    }
+
+    ///
+    template <extended_vector T, integral_constant_like N>
+    requires unqualified_extended_broadcast_lane<T, N>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T&& val, N idx) {
+        return broadcast_lane(__DPL forward<T>(val), idx);
+    }
+
+    template <simd_vector S, exact_mask_for<S> M, common_vector_with<S> T,
+        integral_constant_like N>
+    requires (extended_vector<S> || extended_mask<M> || extended_vector<T>) &&
+        unqualified_extended_mbroadcast_lane<S, M, T, N>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(S&& src, M mask, T&& val, N idx) {
+        return broadcast_lane( __DPL forward<S>(src), __DPL forward<M>(mask),
+            __DPL forward<T>(val), idx);
+    }
+
+    template <simd_vector S, const_mask_for<S> M, common_vector_with<S> T,
+        integral_constant_like N>
+    requires (extended_vector<S> || extended_vector<T>) &&
+        unqualified_extended_mbroadcast_lane<S, launder_cmask_t<S, M>, T, N>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(S&& src, M cmask, T&& val, N idx) {
+        return broadcast_lane( __DPL forward<S>(src),
+            dx::to_const_mask<S>(cmask), __DPL forward<T>(val), idx);
+    }
+
+    template <simd_vector T, integral_constant_like N,
+        result_mask_for<broadcast_lane_t, T, N> M>
+    requires (extended_mask<M> || extended_vector<T>) &&
+        unqualified_extended_mbroadcast_lane<dx::zero_t, M, T, N>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(
+        dx::zero_t zero, M&& mask, T&& val, N idx) {
+        return broadcast_lane(
+            zero, __DPL forward<M>(mask), __DPL forward<T>(val), idx);
+    }
+
+    template <extended_vector T, integral_constant_like N,
+        result_cmask_for<broadcast_lane_t, T, N> M>
+    requires unqualified_extended_mbroadcast_lane<dx::zero_t,
+        launder_cmask_t<cpo_result_t<broadcast_lane_t, T, N>, M>, T, N>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(dx::zero_t zero, M cmask, T&& val, N idx) {
+        return broadcast_lane(zero,
+            dx::to_const_mask<cpo_result_t<broadcast_lane_t, T, N>>(cmask),
+            __DPL forward<T>(val), idx);
     }
 };
 

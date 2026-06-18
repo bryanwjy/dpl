@@ -41,12 +41,6 @@ template <>
 struct fallback_impl<isnans_t> {
 private:
     template <typename T>
-    using imask_t DPL_NODEBUG = mask_value_t<simd_abi_traits<T>::size>;
-
-    template <typename T, imask_t<T> V>
-    using cmask_t DPL_NODEBUG = const_mask<simd_abi_traits<T>::size, V>;
-
-    template <typename T>
     using result_t DPL_NODEBUG =
         basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
 
@@ -86,11 +80,11 @@ public:
         return dx::cmple(abs_val, max_snan) && dx::cmpgt(mask, abs_val, vinf);
     }
 
-    template <canonical_vector T, imask_t<T> M>
+    template <canonical_vector T, const_mask_for<T> M>
     requires floating_point<simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr result_t<T>
-        DPL_VECTORCALL operator()(cmask_t<T, M> cmask, T val) noexcept {
+        DPL_VECTORCALL operator()(M cmask, T val) noexcept {
         using E = simd_element_type_t<T>;
         using uint = unsigned_representation_t<E>;
         using sint = signed_representation_t<E>;
@@ -113,7 +107,7 @@ concept unqualified_canonical_isnans = requires {
 };
 
 template <typename S, typename T>
-concept unqualified_canonical_misnans = canonical_mask<S> &&
+concept unqualified_canonical_misnans = cpo_invocable<isnans_t, T> &&
     (!simd_mask<S> || same_as<S, cpo_result_t<isnans_t, T>>) && requires {
         {
             isnans(internal::abi<T>, internal::declarg<S>(),
@@ -131,12 +125,6 @@ private:
     template <typename T>
     using mask_t DPL_NODEBUG = cpo_result_t<cmpeq_t, T>;
 
-    template <typename T>
-    using imask_t DPL_NODEBUG = mask_value_t<simd_abi_traits<T>::size>;
-
-    template <typename T, imask_t<T> V>
-    using cmask_t DPL_NODEBUG = const_mask<simd_abi_traits<T>::size, V>;
-
 public:
     template <canonical_vector T>
     requires unqualified_canonical_isnans<T>
@@ -152,12 +140,11 @@ public:
         return isnans(internal::abi<T>, src, val);
     }
 
-    template <fixed_width_vector T, imask_t<T> M>
-    requires canonical_vector<T> &&
-        unqualified_canonical_misnans<cmask_t<T, M>, T>
+    template <canonical_vector T, const_mask_for<T> M>
+    requires unqualified_canonical_misnans<launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr mask_t<T> operator()(cmask_t<T, M> cmask, T val) noexcept {
-        return isnans(internal::abi<T>, cmask, val);
+    static constexpr mask_t<T> operator()(M cmask, T val) noexcept {
+        return isnans(internal::abi<T>, dx::to_const_mask<T>(cmask), val);
     }
 };
 
@@ -169,7 +156,7 @@ concept unqualified_extended_isnans = requires {
 };
 
 template <typename S, typename T>
-concept unqualified_extended_misnans =
+concept unqualified_extended_misnans = cpo_invocable<isnans_t, T> &&
     (!simd_mask<S> || equivalent_mask_with<S, cpo_result_t<isnans_t, T>>) &&
     requires {
         {
@@ -202,12 +189,13 @@ public:
         return isnans(__DPL forward<S>(src), __DPL forward<T>(arg));
     }
 
-    template <fixed_width_vector T, imask_t<T> M>
-    requires extended_vector<T> &&
-        unqualified_extended_misnans<cmask_t<T, M>, T>
+    template <extended_vector T, result_cmask_for<isnans_t, T> M>
+    requires unqualified_extended_misnans<
+        launder_cmask_t<cpo_result_t<isnans_t, T>, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(cmask_t<T, M> cmask, T&& arg) {
-        return isnans(cmask, __DPL forward<T>(arg));
+    static constexpr auto operator()(M cmask, T&& arg) {
+        return isnans(dx::to_const_mask<cpo_result_t<isnans_t, T>>(cmask),
+            __DPL forward<T>(arg));
     }
 };
 

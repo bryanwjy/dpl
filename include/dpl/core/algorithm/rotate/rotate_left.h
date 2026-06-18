@@ -78,6 +78,7 @@ concept unqualified_canonical_rotate_left = requires {
 
 template <typename S, typename M, typename T, typename N = size_t>
 concept unqualified_canonical_mrotate_left =
+    cpo_invocable<rotate_left_t, T, N> &&
     (!simd_type<S> || same_as<S, cpo_result_t<rotate_left_t, T, N>>) &&
     requires {
         {
@@ -91,18 +92,8 @@ template <>
 struct canonical_impl<rotate_left_t> {
 private:
     template <typename T>
-    using result_t DPL_NODEBUG =
-        basic_vector<simd_element_type_t<T>, simd_abi_type_t<T>>;
-
-    template <typename T>
     using mask_t DPL_NODEBUG =
         basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
-
-    template <typename S>
-    using imask_t DPL_NODEBUG = mask_value_t<simd_abi_traits<S>::size>;
-
-    template <typename S, imask_t<S> M>
-    using cmask_t DPL_NODEBUG = const_mask<simd_abi_traits<S>::size, M>;
 
 public:
     template <canonical_vector T>
@@ -113,20 +104,22 @@ public:
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mrotate_left<result_t<T>, mask_t<T>, T>
+    requires unqualified_canonical_mrotate_left<type_identity_t<T>, mask_t<T>,
+        T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
-        result_t<T> src, mask_t<T> mask, T val, size_t count) noexcept {
+        type_identity_t<T> src, mask_t<T> mask, T val, size_t count) noexcept {
         return rotate_left(internal::abi<T>, src, mask, val, count);
     }
 
-    template <fixed_width_vector T, imask_t<T> M>
-    requires canonical_vector<T> &&
-        unqualified_canonical_mrotate_left<result_t<T>, cmask_t<T, M>, T>
+    template <canonical_vector T, const_mask_for<T> M>
+    requires unqualified_canonical_mrotate_left<type_identity_t<T>,
+        launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
-        result_t<T> src, cmask_t<T, M> cmask, T val, size_t count) noexcept {
-        return rotate_left(internal::abi<T>, src, cmask, val, count);
+        type_identity_t<T> src, M cmask, T val, size_t count) noexcept {
+        return rotate_left(
+            internal::abi<T>, src, dx::to_const_mask<T>(cmask), val, count);
     }
 
     template <canonical_vector T>
@@ -137,38 +130,42 @@ public:
         return rotate_left(internal::abi<T>, zero, mask, val, count);
     }
 
-    template <fixed_width_vector T, imask_t<T> M>
-    requires unqualified_canonical_mrotate_left<dx::zero_t, cmask_t<T, M>, T>
+    template <canonical_vector T, const_mask_for<T> M>
+    requires unqualified_canonical_mrotate_left<dx::zero_t,
+        launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
-        dx::zero_t zero, cmask_t<T, M> cmask, T val, size_t count) noexcept {
-        return rotate_left(internal::abi<T>, zero, cmask, val, count);
+        dx::zero_t zero, M cmask, T val, size_t count) noexcept {
+        return rotate_left(
+            internal::abi<T>, zero, dx::to_const_mask<T>(cmask), val, count);
     }
 
     ///
     template <canonical_vector T, integral_constant_like N>
     requires unqualified_canonical_rotate_left<T, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(T val, N count) noexcept {
+    static constexpr auto operator()(T val, N count) noexcept {
         return rotate_left(internal::abi<T>, val, count);
     }
 
     template <canonical_vector T, integral_constant_like N>
     requires canonical_vector<T> &&
-        unqualified_canonical_mrotate_left<result_t<T>, mask_t<T>, T, N>
+        unqualified_canonical_mrotate_left<type_identity_t<T>, mask_t<T>, T, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
-        result_t<T> src, mask_t<T> mask, T val, N count) noexcept {
+        type_identity_t<T> src, mask_t<T> mask, T val, N count) noexcept {
         return rotate_left(internal::abi<T>, src, mask, val, count);
     }
 
-    template <fixed_width_vector T, imask_t<T> M, integral_constant_like N>
+    template <canonical_vector T, const_mask_for<T> M, integral_constant_like N>
     requires canonical_vector<T> &&
-        unqualified_canonical_mrotate_left<result_t<T>, cmask_t<T, M>, T, N>
+        unqualified_canonical_mrotate_left<type_identity_t<T>,
+            launder_cmask_t<T, M>, T, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
-        result_t<T> src, cmask_t<T, M> cmask, T val, N count) noexcept {
-        return rotate_left(internal::abi<T>, src, cmask, val, count);
+        type_identity_t<T> src, M cmask, T val, N count) noexcept {
+        return rotate_left(
+            internal::abi<T>, src, dx::to_const_mask<T>(cmask), val, count);
     }
 
     template <canonical_vector T, integral_constant_like N>
@@ -179,13 +176,14 @@ public:
         return rotate_left(internal::abi<T>, zero, mask, val, count);
     }
 
-    template <fixed_width_vector T, imask_t<T> M, integral_constant_like N>
-    requires canonical_vector<T> &&
-        unqualified_canonical_mrotate_left<dx::zero_t, cmask_t<T, M>, T, N>
+    template <canonical_vector T, const_mask_for<T> M, integral_constant_like N>
+    requires unqualified_canonical_mrotate_left<dx::zero_t,
+        launder_cmask_t<T, M>, T, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
-        dx::zero_t zero, cmask_t<T, M> cmask, T val, N count) noexcept {
-        return rotate_left(internal::abi<T>, zero, cmask, val, count);
+        dx::zero_t zero, M cmask, T val, N count) noexcept {
+        return rotate_left(
+            internal::abi<T>, zero, dx::to_const_mask<T>(cmask), val, count);
     }
 };
 
@@ -198,6 +196,7 @@ concept unqualified_extended_rotate_left = requires {
 
 template <typename S, typename M, typename T, typename N = size_t>
 concept unqualified_extended_mrotate_left =
+    cpo_invocable<rotate_left_t, T, N> &&
     (!simd_type<S> ||
         equivalent_vector_with<S, cpo_result_t<rotate_left_t, T, N>>) &&
     requires {
@@ -209,17 +208,6 @@ concept unqualified_extended_mrotate_left =
 
 template <>
 struct extended_impl<rotate_left_t> {
-private:
-    template <typename S>
-    using imask_t DPL_NODEBUG = mask_value_t<simd_abi_traits<S>::size>;
-
-    template <typename S, imask_t<S> M>
-    using cmask_t DPL_NODEBUG = const_mask<simd_abi_traits<S>::size, M>;
-
-    template <typename T>
-    using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
-
 public:
     template <extended_vector T>
     requires unqualified_extended_rotate_left<T>
@@ -237,17 +225,16 @@ public:
             __DPL forward<T>(val), count);
     }
 
-    template <fixed_width_vector S, imask_t<S> M, common_vector_with<S> T>
+    template <simd_vector S, const_mask_for<S> M, common_vector_with<S> T>
     requires (extended_vector<S> || extended_vector<T>) &&
-        unqualified_extended_mrotate_left<S, cmask_t<S, M>, T>
+        unqualified_extended_mrotate_left<S, launder_cmask_t<S, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        S&& src, cmask_t<S, M> cmask, T&& val, size_t count) {
-        return rotate_left(
-            __DPL forward<S>(src), cmask, __DPL forward<T>(val), count);
+    static constexpr auto operator()(S&& src, M cmask, T&& val, size_t count) {
+        return rotate_left( __DPL forward<S>(src), dx::to_const_mask<S>(cmask),
+            __DPL forward<T>(val), count);
     }
 
-    template <simd_vector T, common_mask_with<mask_t<T>> M>
+    template <simd_vector T, result_mask_for<rotate_left_t, T, size_t> M>
     requires (extended_mask<M> || extended_vector<T>) &&
         unqualified_extended_mrotate_left<dx::zero_t, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -256,13 +243,15 @@ public:
         return rotate_left(zero, mask, __DPL forward<T>(val), count);
     }
 
-    template <fixed_width_vector T, imask_t<T> M>
-    requires extended_vector<T> &&
-        unqualified_extended_mrotate_left<dx::zero_t, cmask_t<T, M>, T>
+    template <extended_vector T, result_cmask_for<rotate_left_t, T, size_t> M>
+    requires unqualified_extended_mrotate_left<dx::zero_t,
+        launder_cmask_t<cpo_result_t<rotate_left_t, T, size_t>, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
-        dx::zero_t zero, cmask_t<T, M> cmask, T&& val, size_t count) {
-        return rotate_left(zero, cmask, __DPL forward<T>(val), count);
+        dx::zero_t zero, M cmask, T&& val, size_t count) {
+        return rotate_left(zero,
+            dx::to_const_mask<cpo_result_t<rotate_left_t, T, size_t>>(cmask),
+            __DPL forward<T>(val), count);
     }
 
     ///
@@ -283,19 +272,18 @@ public:
             __DPL forward<T>(val), count);
     }
 
-    template <fixed_width_vector S, imask_t<S> M, common_vector_with<S> T,
+    template <simd_vector S, const_mask_for<S> M, common_vector_with<S> T,
         integral_constant_like N>
     requires (extended_vector<S> || extended_vector<T>) &&
-        unqualified_extended_mrotate_left<S, cmask_t<S, M>, T, N>
+        unqualified_extended_mrotate_left<S, launder_cmask_t<S, M>, T, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        S&& src, cmask_t<S, M> cmask, T&& val, N count) {
-        return rotate_left(
-            __DPL forward<S>(src), cmask, __DPL forward<T>(val), count);
+    static constexpr auto operator()(S&& src, M cmask, T&& val, N count) {
+        return rotate_left( __DPL forward<S>(src), dx::to_const_mask<S>(cmask),
+            __DPL forward<T>(val), count);
     }
 
-    template <simd_vector T, common_mask_with<mask_t<T>> M,
-        integral_constant_like N>
+    template <simd_vector T, integral_constant_like N,
+        result_mask_for<rotate_left_t, T, N> M>
     requires (extended_mask<M> || extended_vector<T>) &&
         unqualified_extended_mrotate_left<dx::zero_t, M, T, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -305,12 +293,16 @@ public:
             zero, __DPL forward<M>(mask), __DPL forward<T>(val), count);
     }
 
-    template <extended_vector T, imask_t<T> M, integral_constant_like N>
-    requires unqualified_extended_mrotate_left<dx::zero_t, cmask_t<T, M>, T, N>
+    template <extended_vector T, integral_constant_like N,
+        result_cmask_for<rotate_left_t, T, N> M>
+    requires unqualified_extended_mrotate_left<dx::zero_t,
+        launder_cmask_t<cpo_result_t<rotate_left_t, T, N>, M>, T, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
-        dx::zero_t zero, cmask_t<T, M> cmask, T&& val, N count) {
-        return rotate_left(zero, cmask, __DPL forward<T>(val), count);
+        dx::zero_t zero, M cmask, T&& val, N count) {
+        return rotate_left(zero,
+            dx::to_const_mask<cpo_result_t<rotate_left_t, T, N>>(cmask),
+            __DPL forward<T>(val), count);
     }
 };
 

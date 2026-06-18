@@ -7,7 +7,6 @@
 #  include "dpl/core/fwd.h"
 
 #  include "dpl/core/concepts/common_abi_with.h"
-#  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_type.h"
 #  include "dpl/std/type_traits/type_identity.h"

@@ -17,6 +17,7 @@
 #  include "dpl/core/immediate/const_mask.h"
 #  include "dpl/core/immediate/constants/all_bits.h"
 #  include "dpl/core/immediate/constants/zero.h"
+#  include "dpl/core/type_traits/canonical_type.h"
 #  include "dpl/core/type_traits/common_size_type.h"
 #  include "dpl/std/concepts/integral.h"
 #endif
@@ -104,7 +105,7 @@ public:
     static constexpr auto DPL_VECTORCALL operator()(
         M mask, basic_vector<E, A> lhs, basic_vector<E, A> rhs) noexcept {
         using T = basic_vector<E, A>;
-        constexpr auto cmask = dx::to_compatible_const_mask<T>(mask);
+        constexpr auto cmask = dx::to_const_mask<T>(mask);
         return internal::itransform<T>(
             [cmask](auto idx, E lhs, E rhs) {
                 return static_cast<E>(cmask[idx] ? lhs : rhs);
@@ -119,7 +120,7 @@ public:
     static constexpr auto DPL_VECTORCALL operator()(
         M mask, basic_mask<LE, A> lhs, basic_mask<RE, A> rhs) noexcept {
         using T = basic_vector<E, A>;
-        constexpr auto cmask = dx::to_compatible_const_mask<T>(mask);
+        constexpr auto cmask = dx::to_const_mask<T>(mask);
         return internal::itransform<basic_mask<E, A>>(
             [cmask](auto idx, bool lhs, bool rhs) {
                 return cmask[idx] ? lhs : rhs;
@@ -169,7 +170,7 @@ public:
     static constexpr auto operator()(M mask, L&& lhs, dx::zero_t) noexcept(
         canonical_mask<L>) {
         constexpr sbwand bwand;
-        constexpr auto cmask = dx::to_compatible_const_mask<L>(mask);
+        constexpr auto cmask = dx::to_const_mask<L>(mask);
         return bwand(
             static_cast<canonical_type_t<L>>(cmask), __DPL forward<L>(lhs));
     }
@@ -180,7 +181,7 @@ public:
     static constexpr auto operator()(M mask, dx::zero_t, R&& rhs) noexcept(
         canonical_mask<R>) {
         constexpr sbwandnot bwandnot;
-        constexpr auto cmask = dx::to_compatible_const_mask<R>(mask);
+        constexpr auto cmask = dx::to_const_mask<R>(mask);
         return bwandnot(
             __DPL forward<R>(rhs), static_cast<canonical_type_t<R>>(cmask));
     }
@@ -191,7 +192,7 @@ public:
     static constexpr auto operator()(M mask, L&& lhs, dx::all_bits_t) noexcept(
         canonical_mask<L>) {
         constexpr sbwornot bwornot;
-        constexpr auto cmask = dx::to_compatible_const_mask<L>(mask);
+        constexpr auto cmask = dx::to_const_mask<L>(mask);
         return bwornot(
             __DPL forward<L>(lhs), static_cast<canonical_type_t<L>>(cmask));
     }
@@ -202,7 +203,7 @@ public:
     static constexpr auto operator()(M mask, dx::all_bits_t, R rhs) noexcept(
         canonical_mask<R>) {
         constexpr sbwor bwor;
-        constexpr auto cmask = dx::to_compatible_const_mask<R>(mask);
+        constexpr auto cmask = dx::to_const_mask<R>(mask);
         return bwor(
             static_cast<canonical_type_t<R>>(cmask), __DPL forward<R>(rhs));
     }
@@ -331,8 +332,7 @@ public:
         select(internal::abi<common_abi_t<L, R>>, cmask, lhs, rhs);
     }
     {
-        constexpr auto cmask =
-            dx::to_compatible_const_mask<vresult_t<L, R>>(mask);
+        constexpr auto cmask = dx::to_const_mask<vresult_t<L, R>>(mask);
         return select(internal::abi<common_abi_t<L, R>>, cmask, lhs, rhs);
     }
 
@@ -345,7 +345,7 @@ public:
         select(internal::abi<common_abi_t<L, R>>, cmask, lhs, rhs);
     }
     {
-        constexpr auto cmask = dx::to_compatible_const_mask<mask_t<L, R>>(mask);
+        constexpr auto cmask = dx::to_const_mask<mask_t<L, R>>(mask);
         return select(internal::abi<common_abi_t<L, R>>, cmask, lhs, rhs);
     }
 
@@ -356,7 +356,7 @@ public:
         select(internal::abi<L>, cmask, lhs, internal::declarg<R>());
     }
     {
-        constexpr auto cmask = dx::to_compatible_const_mask<L>(mask);
+        constexpr auto cmask = dx::to_const_mask<L>(mask);
         return select(internal::abi<L>, cmask, lhs, __DPL forward<R>(rhs));
     }
 
@@ -367,7 +367,7 @@ public:
         select(internal::abi<R>, cmask, internal::declarg<L>(), rhs);
     }
     {
-        constexpr auto cmask = dx::to_compatible_const_mask<R>(mask);
+        constexpr auto cmask = dx::to_const_mask<R>(mask);
         return select(internal::abi<R>, cmask, __DPL forward<L>(lhs), rhs);
     }
 
@@ -378,7 +378,7 @@ public:
         select(internal::abi<L>, cmask, lhs, zero);
     }
     {
-        constexpr auto cmask = dx::to_compatible_const_mask<L>(mask);
+        constexpr auto cmask = dx::to_const_mask<L>(mask);
         return select(internal::abi<L>, cmask, lhs, zero);
     }
 
@@ -389,7 +389,7 @@ public:
         select(internal::abi<R>, cmask, zero, rhs);
     }
     {
-        constexpr auto cmask = dx::to_compatible_const_mask<R>(mask);
+        constexpr auto cmask = dx::to_const_mask<R>(mask);
         return select(internal::abi<R>, cmask, zero, rhs);
     }
 
@@ -401,7 +401,7 @@ public:
         select(internal::abi<L>, cmask, lhs, all_bits);
     }
     {
-        constexpr auto cmask = dx::to_compatible_const_mask<L>(mask);
+        constexpr auto cmask = dx::to_const_mask<L>(mask);
         return select(internal::abi<L>, cmask, lhs, all_bits);
     }
 
@@ -413,7 +413,7 @@ public:
         select(internal::abi<R>, cmask, all_bits, rhs);
     }
     {
-        constexpr auto cmask = dx::to_compatible_const_mask<R>(mask);
+        constexpr auto cmask = dx::to_const_mask<R>(mask);
         return select(internal::abi<R>, cmask, all_bits, rhs);
     }
 };
@@ -567,7 +567,7 @@ public:
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, L&& lhs, R&& rhs)
         -> common_vector_with<vresult_t<L, R>> auto {
-        constexpr auto cmask = dx::to_compatible_const_mask<mask_t<L, R>>(mask);
+        constexpr auto cmask = dx::to_const_mask<mask_t<L, R>>(mask);
         return select(cmask, __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 
@@ -577,7 +577,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, L&& lhs, dx::zero_t zero)
         -> common_vector_with<L> auto {
-        constexpr auto cmask = dx::to_compatible_const_mask<L>(mask);
+        constexpr auto cmask = dx::to_const_mask<L>(mask);
         return select(cmask, __DPL forward<L>(lhs), zero);
     }
 
@@ -587,7 +587,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, dx::zero_t zero, R&& rhs)
         -> common_vector_with<R> auto {
-        constexpr auto cmask = dx::to_compatible_const_mask<R>(mask);
+        constexpr auto cmask = dx::to_const_mask<R>(mask);
         return select(cmask, zero, __DPL forward<R>(rhs));
     }
 
@@ -597,7 +597,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, L&& lhs, dx::all_bits_t all_bits)
         -> common_vector_with<L> auto {
-        constexpr auto cmask = dx::to_compatible_const_mask<L>(mask);
+        constexpr auto cmask = dx::to_const_mask<L>(mask);
         return select(cmask, __DPL forward<L>(lhs), all_bits);
     }
 
@@ -607,7 +607,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, dx::all_bits_t all_bits, R&& rhs)
         -> common_vector_with<R> auto {
-        constexpr auto cmask = dx::to_compatible_const_mask<R>(mask);
+        constexpr auto cmask = dx::to_const_mask<R>(mask);
         return select(cmask, all_bits, __DPL forward<R>(rhs));
     }
 
@@ -617,7 +617,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, L&& lhs, dx::zero_t zero)
         -> common_mask_with<L> auto {
-        constexpr auto cmask = dx::to_compatible_const_mask<L>(mask);
+        constexpr auto cmask = dx::to_const_mask<L>(mask);
         return select(cmask, __DPL forward<L>(lhs), zero);
     }
 
@@ -627,7 +627,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, dx::zero_t zero, R&& rhs)
         -> common_mask_with<R> auto {
-        constexpr auto cmask = dx::to_compatible_const_mask<R>(mask);
+        constexpr auto cmask = dx::to_const_mask<R>(mask);
         return select(cmask, zero, __DPL forward<R>(rhs));
     }
 
@@ -637,7 +637,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, L&& lhs, dx::all_bits_t all_bits)
         -> common_mask_with<L> auto {
-        constexpr auto cmask = dx::to_compatible_const_mask<L>(mask);
+        constexpr auto cmask = dx::to_const_mask<L>(mask);
         return select(cmask, __DPL forward<L>(lhs), all_bits);
     }
 
@@ -647,7 +647,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, dx::all_bits_t all_bits, R&& rhs)
         -> common_mask_with<R> auto {
-        constexpr auto cmask = dx::to_compatible_const_mask<R>(mask);
+        constexpr auto cmask = dx::to_const_mask<R>(mask);
         return select(cmask, all_bits, __DPL forward<R>(rhs));
     }
 
@@ -658,7 +658,7 @@ public:
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, L&& lhs, R&& rhs)
         -> common_mask_with<mask_t<L, R>> auto {
-        constexpr auto cmask = dx::to_compatible_const_mask<mask_t<L, R>>(mask);
+        constexpr auto cmask = dx::to_const_mask<mask_t<L, R>>(mask);
         return select(cmask, __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 
@@ -668,7 +668,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, L&& lhs, R&& rhs)
         -> common_vector_with<L> auto {
-        constexpr auto cmask = dx::to_compatible_const_mask<L>(mask);
+        constexpr auto cmask = dx::to_const_mask<L>(mask);
         return select(internal::abi<L>, cmask, __DPL forward<L>(lhs),
             __DPL forward<R>(rhs));
     }
@@ -679,7 +679,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, L&& lhs, R&& rhs)
         -> common_vector_with<R> auto {
-        constexpr auto cmask = dx::to_compatible_const_mask<R>(mask);
+        constexpr auto cmask = dx::to_const_mask<R>(mask);
         return select(internal::abi<R>, cmask, __DPL forward<L>(lhs),
             __DPL forward<R>(rhs));
     }
@@ -688,11 +688,12 @@ public:
 template <auto V>
 struct selecti_t {
     template <typename L, typename R>
-    requires cpo_invocable<select_t, immediate<V>, L, R>
+    requires requires { typename cmask_t<V>; } &&
+        cpo_invocable<select_t, cmask_t<V>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L&& lhs, R&& rhs) noexcept {
         return select_t::operator()(
-            imm<V>, __DPL forward<L>(lhs), __DPL forward<R>(rhs));
+            cmask_v<V>, __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 };
 } // namespace datapar::internal

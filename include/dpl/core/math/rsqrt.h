@@ -7,7 +7,6 @@
 #include "dpl/core/math/frexp.h"
 #include "dpl/core/math/internal/accuracy.h"
 #include "dpl/core/math/internal/ldexp.h"
-#include "dpl/core/math/internal/masked_op.h"
 #include "dpl/core/math/internal/rsqrt2.h"
 
 #if !DPL_MODULES
@@ -39,7 +38,7 @@ struct operation_signature<rsqrt_t> {
 };
 
 template <typename S, typename M, typename T>
-concept unqualified_canonical_mrsqrt =
+concept unqualified_canonical_mrsqrt = cpo_invocable<rsqrt_t, T> &&
     (!simd_type<S> || same_as<S, cpo_result_t<rsqrt_t, T>>) &&
     requires(S src, M mask, T val) {
         {
@@ -53,12 +52,6 @@ private:
     template <typename T>
     using mask_t DPL_NODEBUG =
         basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
-
-    template <typename T>
-    using imask_t DPL_NODEBUG = mask_value_t<simd_abi_traits<T>::size>;
-
-    template <typename T, imask_t<T> M>
-    using cmask_t DPL_NODEBUG = const_mask<simd_abi_traits<T>::size, M>;
 
 public:
     template <simd_abi A, simd_element_for<A> E>
@@ -78,13 +71,13 @@ public:
         return rsqrt(internal::abi<T>, src, mask, val);
     }
 
-    template <fixed_width_vector T, imask_t<T> M>
-    requires canonical_vector<T> &&
-        unqualified_canonical_mrsqrt<type_identity_t<T>, cmask_t<T, M>, T>
+    template <canonical_vector T, const_mask_for<T> M>
+    requires unqualified_canonical_mrsqrt<type_identity_t<T>,
+        launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
-        type_identity_t<T> src, cmask_t<T, M> cmask, T val) noexcept {
-        return rsqrt(internal::abi<T>, src, cmask, val);
+        type_identity_t<T> src, M cmask, T val) noexcept {
+        return rsqrt(internal::abi<T>, src, dx::to_const_mask<T>(cmask), val);
     }
 
     template <canonical_vector T>
@@ -95,13 +88,11 @@ public:
         return rsqrt(internal::abi<T>, zero, mask, val);
     }
 
-    template <fixed_width_vector T, imask_t<T> M>
-    requires canonical_vector<T> &&
-        unqualified_canonical_mrsqrt<dx::zero_t, cmask_t<T, M>, T>
+    template <canonical_vector T, const_mask_for<T> M>
+    requires unqualified_canonical_mrsqrt<dx::zero_t, launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(
-        dx::zero_t zero, cmask_t<T, M> cmask, T val) noexcept {
-        return rsqrt(internal::abi<T>, zero, cmask, val);
+    static constexpr T operator()(dx::zero_t zero, M cmask, T val) noexcept {
+        return rsqrt(internal::abi<T>, zero, dx::to_const_mask<T>(cmask), val);
     }
 };
 
@@ -111,7 +102,7 @@ concept unqualified_extended_rsqrt = requires {
 };
 
 template <typename S, typename M, typename T>
-concept unqualified_extended_mrsqrt =
+concept unqualified_extended_mrsqrt = cpo_invocable<rsqrt_t, T> &&
     (!simd_type<S> || equivalent_vector_with<S, cpo_result_t<rsqrt_t, T>>) &&
     requires {
         {
@@ -122,17 +113,6 @@ concept unqualified_extended_mrsqrt =
 
 template <>
 struct extended_impl<rsqrt_t> {
-private:
-    template <typename T>
-    using imask_t DPL_NODEBUG = mask_value_t<simd_abi_traits<T>::size>;
-
-    template <typename T, imask_t<T> M>
-    using cmask_t DPL_NODEBUG = const_mask<simd_abi_traits<T>::size, M>;
-
-    template <typename T>
-    using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
-
 public:
     template <extended_vector T>
     requires unqualified_extended_rsqrt<T>
@@ -141,8 +121,7 @@ public:
         return rsqrt(__DPL forward<T>(val));
     }
 
-    template <simd_vector S, common_vector_with<S> T,
-        equivalent_mask_with<mask_t<S>> M>
+    template <simd_vector S, exact_mask_for<S> M, common_vector_with<S> T>
     requires (extended_vector<S> || extended_mask<M> || extended_vector<T>) &&
         unqualified_extended_mrsqrt<S, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -151,15 +130,16 @@ public:
             __DPL forward<T>(val));
     }
 
-    template <fixed_width_vector S, imask_t<S> M, common_vector_with<S> T>
+    template <simd_vector S, const_mask_for<S> M, common_vector_with<S> T>
     requires (extended_vector<S> || extended_vector<T>) &&
-        unqualified_extended_mrsqrt<S, cmask_t<S, M>, T>
+        unqualified_extended_mrsqrt<S, launder_cmask_t<S, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(S&& src, cmask_t<S, M> cmask, T&& val) {
-        return rsqrt( __DPL forward<S>(src), cmask, __DPL forward<T>(val));
+    static constexpr auto operator()(S&& src, M cmask, T&& val) {
+        return rsqrt( __DPL forward<S>(src), dx::to_const_mask<S>(cmask),
+            __DPL forward<T>(val));
     }
 
-    template <simd_vector T, common_mask_with<mask_t<T>> M>
+    template <simd_vector T, result_mask_for<rsqrt_t, T> M>
     requires (extended_mask<M> || extended_vector<T>) &&
         unqualified_extended_mrsqrt<dx::zero_t, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -167,13 +147,14 @@ public:
         return rsqrt(zero, __DPL forward<M>(mask), __DPL forward<T>(val));
     }
 
-    template <fixed_width_vector T, imask_t<T> M>
+    template <simd_vector T, result_cmask_for<rsqrt_t, T> M>
     requires extended_vector<T> &&
-        unqualified_extended_mrsqrt<dx::zero_t, cmask_t<T, M>, T>
+        unqualified_extended_mrsqrt<dx::zero_t,
+            launder_cmask_t<cpo_result_t<rsqrt_t, T>, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        dx::zero_t zero, cmask_t<T, M> cmask, T&& val) {
-        return rsqrt(zero, cmask, __DPL forward<T>(val));
+    static constexpr auto operator()(dx::zero_t zero, M cmask, T&& val) {
+        return rsqrt(zero, dx::to_const_mask<cpo_result_t<rsqrt_t, T>>(cmask),
+            __DPL forward<T>(val));
     }
 };
 

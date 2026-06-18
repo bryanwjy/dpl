@@ -49,7 +49,7 @@ concept unqualified_canonical_pow = requires {
 };
 
 template <typename S, typename M, typename L, typename R>
-concept unqualified_canonical_mpow =
+concept unqualified_canonical_mpow = cpo_invocable<pow_t, L, R> &&
     (!simd_type<S> || same_as<S, cpo_result_t<pow_t, L, R>>) && requires {
         {
             pow(internal::abi<cpo_result_t<pow_t, L, R>>,
@@ -61,12 +61,6 @@ concept unqualified_canonical_mpow =
 template <>
 struct canonical_impl<pow_t> {
 private:
-    template <typename T>
-    using imask_t DPL_NODEBUG = mask_value_t<simd_abi_traits<T>::size>;
-
-    template <typename T, imask_t<T> V>
-    using cmask_t DPL_NODEBUG = const_mask<simd_abi_traits<T>::size, V>;
-
     template <typename L, typename R>
     using vresult_t DPL_NODEBUG =
         basic_vector<simd_element_type_t<L>, common_abi_t<L, R>>;
@@ -75,21 +69,18 @@ private:
     using vmask_t DPL_NODEBUG =
         basic_mask<simd_element_type_t<L>, common_abi_t<L, R>>;
 
-    template <typename L, typename R>
-    using vimask_t DPL_NODEBUG = imask_t<cpo_result_t<pow_t, L, R>>;
-
-    template <typename L, typename R, vimask_t<L, R> M>
-    using vcmask_t DPL_NODEBUG = cmask_t<cpo_result_t<pow_t, L, R>, M>;
+    template <typename L, typename R, typename M>
+    using vcmask_t DPL_NODEBUG = launder_cmask_t<cpo_result_t<pow_t, L, R>, M>;
 
 public:
-    template <canonical_vector L, common_vector_with<L> R = L>
+    template <canonical_vector L, canonical_vector R>
     requires canonical_vector<R> && unqualified_canonical_pow<L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr vresult_t<L, R> operator()(L lhs, R rhs) noexcept {
         return pow(internal::abi<common_abi_t<L, R>>, lhs, rhs);
     }
 
-    template <canonical_vector L, common_vector_with<L> R>
+    template <canonical_vector L, canonical_vector R>
     requires canonical_vector<R> &&
         unqualified_canonical_mpow<vresult_t<L, R>, vmask_t<L, R>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -98,16 +89,18 @@ public:
         return pow(internal::abi<common_abi_t<L, R>>, src, mask, lhs, rhs);
     }
 
-    template <fixed_width_vector L, common_vector_with<L> R, vimask_t<L, R> M>
-    requires canonical_vector<L> && canonical_vector<R> &&
+    template <canonical_vector L, canonical_vector R,
+        const_mask_for<vresult_t<L, R>> M>
+    requires canonical_vector<R> &&
         unqualified_canonical_mpow<vresult_t<L, R>, vcmask_t<L, R, M>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr vresult_t<L, R> operator()(
-        vresult_t<L, R> src, vcmask_t<L, R, M> cmask, L lhs, R rhs) noexcept {
-        return pow(internal::abi<common_abi_t<L, R>>, src, cmask, lhs, rhs);
+        vresult_t<L, R> src, M cmask, L lhs, R rhs) noexcept {
+        return pow(internal::abi<common_abi_t<L, R>>, src,
+            dx::to_const_mask<vresult_t<L, R>>(cmask), lhs, rhs);
     }
 
-    template <canonical_vector L, common_vector_with<L> R>
+    template <canonical_vector L, canonical_vector R>
     requires canonical_vector<R> &&
         unqualified_canonical_mpow<dx::zero_t, vmask_t<L, R>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -116,13 +109,15 @@ public:
         return pow(internal::abi<common_abi_t<L, R>>, zero, mask, lhs, rhs);
     }
 
-    template <fixed_width_vector L, common_vector_with<L> R, vimask_t<L, R> M>
-    requires canonical_vector<L> && canonical_vector<R> &&
+    template <canonical_vector L, canonical_vector R,
+        const_mask_for<vresult_t<L, R>> M>
+    requires canonical_vector<R> &&
         unqualified_canonical_mpow<dx::zero_t, vcmask_t<L, R, M>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr vresult_t<L, R> operator()(
-        dx::zero_t zero, vcmask_t<L, R, M> cmask, L lhs, R rhs) noexcept {
-        return pow(internal::abi<common_abi_t<L, R>>, zero, cmask, lhs, rhs);
+        dx::zero_t zero, M cmask, L lhs, R rhs) noexcept {
+        return pow(internal::abi<common_abi_t<L, R>>, zero,
+            dx::to_const_mask<vresult_t<L, R>>(cmask), lhs, rhs);
     }
 };
 
@@ -134,7 +129,7 @@ concept unqualified_extended_pow = requires {
 };
 
 template <typename S, typename M, typename L, typename R>
-concept unqualified_extended_mpow =
+concept unqualified_extended_mpow = cpo_invocable<pow_t, L, R> &&
     (!simd_type<S> || equivalent_vector_with<S, cpo_result_t<pow_t, L, R>>) &&
     requires {
         {
@@ -146,28 +141,11 @@ concept unqualified_extended_mpow =
 template <>
 struct extended_impl<pow_t> {
 private:
-    template <typename S>
-    using imask_t DPL_NODEBUG = mask_value_t<simd_abi_traits<S>::size>;
-
-    template <typename S, imask_t<S> V>
-    using cmask_t DPL_NODEBUG = const_mask<simd_abi_traits<S>::size, V>;
-
-    template <typename T>
-    using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
-
-    template <typename L, typename R>
-    using vimask_t DPL_NODEBUG = imask_t<cpo_result_t<pow_t, L, R>>;
-
-    template <typename L, typename R, vimask_t<L, R> M>
-    using vcmask_t DPL_NODEBUG = cmask_t<cpo_result_t<pow_t, L, R>, M>;
-
-    template <typename L, typename R>
-    using vmask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<L>, common_abi_t<L, R>>;
+    template <typename L, typename R, typename M>
+    using vcmask_t DPL_NODEBUG = launder_cmask_t<cpo_result_t<pow_t, L, R>, M>;
 
 public:
-    template <simd_vector L, common_vector_with<L> R>
+    template <simd_vector L, simd_vector R>
     requires (extended_vector<L> || extended_vector<R>) &&
         unqualified_extended_pow<L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -175,8 +153,7 @@ public:
         return pow(__DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 
-    template <simd_vector S, exact_mask_for<S> M, common_vector_with<S> L,
-        common_vector_with<L> R>
+    template <simd_vector S, exact_mask_for<S> M, simd_vector L, simd_vector R>
     requires (extended_vector<S> || extended_mask<M> || extended_vector<L> ||
                  extended_vector<R>) &&
         unqualified_extended_mpow<S, M, L, R>
@@ -186,18 +163,16 @@ public:
             __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 
-    template <fixed_width_vector S, imask_t<S> M, common_vector_with<S> L,
-        common_vector_with<L> R>
+    template <simd_vector S, const_mask_for<S> M, simd_vector L, simd_vector R>
     requires (extended_vector<S> || extended_vector<L> || extended_vector<R>) &&
-        unqualified_extended_mpow<S, cmask_t<S, M>, L, R>
+        unqualified_extended_mpow<S, launder_cmask_t<S, M>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        S&& src, cmask_t<S, M> cmask, L&& lhs, R&& rhs) {
-        return pow(src, cmask, __DPL forward<L>(lhs), __DPL forward<R>(rhs));
+    static constexpr auto operator()(S&& src, M cmask, L&& lhs, R&& rhs) {
+        return pow(src, dx::to_const_mask<S>(cmask), __DPL forward<L>(lhs),
+            __DPL forward<R>(rhs));
     }
 
-    template <simd_vector L, common_vector_with<L> R,
-        common_mask_with<vmask_t<L, R>> M>
+    template <simd_vector L, simd_vector R, result_mask_for<pow_t, L, R> M>
     requires (extended_mask<M> || extended_vector<L> || extended_vector<R>) &&
         unqualified_extended_mpow<dx::zero_t, M, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -207,13 +182,14 @@ public:
             __DPL forward<R>(rhs));
     }
 
-    template <simd_vector L, common_vector_with<L> R, vimask_t<L, R> M>
+    template <simd_vector L, simd_vector R, result_cmask_for<pow_t, L, R> M>
     requires (extended_vector<L> || extended_vector<R>) &&
         unqualified_extended_mpow<dx::zero_t, vcmask_t<L, R, M>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
-        dx::zero_t zero, vcmask_t<L, R, M> cmask, L&& lhs, R&& rhs) {
-        return pow(zero, cmask, __DPL forward<L>(lhs), __DPL forward<R>(rhs));
+        dx::zero_t zero, M cmask, L&& lhs, R&& rhs) {
+        return pow(zero, dx::to_const_mask<cpo_result_t<pow_t, L, R>>(cmask),
+            __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 };
 

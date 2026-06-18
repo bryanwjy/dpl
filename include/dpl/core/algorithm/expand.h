@@ -34,10 +34,8 @@ struct operation_signature<expand_t> {
 
 template <typename S, typename M, typename T>
 concept unqualified_canonical_mexpand =
-    (!simd_type<S> || same_as<common_abi_t<S, T>, simd_abi_type_t<S>>) &&
-    requires(S src, M mask, T val) {
-        expand(
-            internal::abi<conditional_t<simd_type<S>, S, T>>, src, mask, val);
+    (!simd_type<S> || same_as<T, S>) && requires(S src, M mask, T val) {
+        { expand(internal::abi<T>, src, mask, val) } -> same_as<T>;
     };
 
 template <>
@@ -47,12 +45,6 @@ private:
     using mask_t DPL_NODEBUG =
         basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
 
-    template <typename T>
-    using imask_t DPL_NODEBUG = mask_value_t<simd_abi_traits<T>::size>;
-
-    template <typename T, imask_t<T> V>
-    using cmask_t DPL_NODEBUG = const_mask<simd_abi_traits<T>::size, V>;
-
 public:
     template <simd_vector T>
     static constexpr T operator()(T&& val) noexcept {
@@ -61,61 +53,50 @@ public:
         return __DPL forward<T>(val);
     }
 
-    template <canonical_vector S, common_vector_with<S> T>
-    requires canonical_vector<T> &&
-        unqualified_canonical_mexpand<S, mask_t<S>, T>
+    template <canonical_vector T>
+    requires unqualified_canonical_mexpand<type_identity_t<T>, mask_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(S src, mask_t<S> mask, T val) noexcept {
-        return expand(internal::abi<S>, src, mask, val);
+    static constexpr T operator()(
+        type_identity_t<T> src, mask_t<T> mask, T val) noexcept {
+        return expand(internal::abi<T>, src, mask, val);
     }
 
-    template <fixed_width_vector S, imask_t<S> M, common_vector_with<S> T>
-    requires canonical_vector<T> &&
-        unqualified_canonical_mexpand<S, cmask_t<S, M>, T>
+    template <canonical_vector T, const_mask_for<T> M>
+    requires unqualified_canonical_mexpand<type_identity_t<T>,
+        launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        S src, cmask_t<S, M> cmask, T val) noexcept {
-        return expand(internal::abi<S>, src, cmask, val);
+    static constexpr T operator()(
+        type_identity_t<T> src, M cmask, T val) noexcept {
+        return expand(internal::abi<T>, src, dx::to_const_mask<T>(cmask), val);
     }
 
     template <canonical_vector T>
     requires unqualified_canonical_mexpand<dx::zero_t, mask_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
+    static constexpr T operator()(
         dx::zero_t zero, mask_t<T> mask, T val) noexcept {
         return expand(internal::abi<T>, zero, mask, val);
     }
 
-    template <fixed_width_vector T, imask_t<T> M>
-    requires unqualified_canonical_mexpand<dx::zero_t, cmask_t<T, M>, T>
+    template <canonical_vector T, const_mask_for<T> M>
+    requires unqualified_canonical_mexpand<dx::zero_t, launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        dx::zero_t zero, cmask_t<T, M> cmask, T val) noexcept {
-        return expand(internal::abi<T>, zero, cmask, val);
+    static constexpr T operator()(dx::zero_t zero, M cmask, T val) noexcept {
+        return expand(internal::abi<T>, zero, dx::to_const_mask<T>(cmask), val);
     }
 };
 
 template <typename S, typename M, typename T>
-concept unqualified_extended_mexpand = requires {
-    {
-        expand(internal::declarg<S>(), internal::declarg<M>(),
-            internal::declarg<T>())
-    } -> equivalent_vector_with<conditional_t<simd_type<S>, S, T>>;
-};
+concept unqualified_extended_mexpand =
+    (!simd_type<S> || equivalent_vector_with<S, T>) && requires {
+        {
+            expand(internal::declarg<S>(), internal::declarg<M>(),
+                internal::declarg<T>())
+        } -> equivalent_vector_with<T>;
+    };
 
 template <>
 struct extended_impl<expand_t> {
-private:
-    template <typename T>
-    using imask_t DPL_NODEBUG = mask_value_t<simd_abi_type_t<T>::size>;
-
-    template <typename T, imask_t<T> V>
-    using cmask_t DPL_NODEBUG = const_mask<simd_abi_type_t<T>::size, V>;
-
-    template <typename T>
-    using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
-
 public:
     template <simd_vector T>
     static constexpr T operator()(T&& val) noexcept {
@@ -124,8 +105,7 @@ public:
         return __DPL forward<T>(val);
     }
 
-    template <simd_vector S, common_vector_with<S> T,
-        equivalent_mask_with<mask_t<S>> M>
+    template <simd_vector S, exact_mask_for<S> M, common_vector_with<S> T>
     requires (extended_vector<S> || extended_mask<M> || extended_vector<T>) &&
         unqualified_extended_mexpand<S, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -134,15 +114,17 @@ public:
             __DPL forward<T>(val));
     }
 
-    template <fixed_width_vector S, imask_t<S> M, common_vector_with<S> T>
+    template <fixed_width_vector S, const_mask_for<S> M,
+        common_vector_with<S> T>
     requires (extended_vector<S> || extended_vector<T>) &&
-        unqualified_extended_mexpand<S, cmask_t<S, M>, T>
+        unqualified_extended_mexpand<S, launder_cmask_t<S, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(S&& src, cmask_t<S, M> cmask, T&& val) {
-        return expand( __DPL forward<S>(src), cmask, __DPL forward<T>(val));
+    static constexpr auto operator()(S&& src, M cmask, T&& val) {
+        return expand( __DPL forward<S>(src), dx::to_const_mask<S>(cmask),
+            __DPL forward<T>(val));
     }
 
-    template <simd_vector T, common_mask_with<mask_t<T>> M>
+    template <simd_vector T, exact_mask_for<T> M>
     requires (extended_mask<M> || extended_vector<T>) &&
         unqualified_extended_mexpand<dx::zero_t, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -150,13 +132,13 @@ public:
         return expand(zero, __DPL forward<M>(mask), __DPL forward<T>(val));
     }
 
-    template <fixed_width_vector T, imask_t<T> M>
+    template <fixed_width_vector T, const_mask_for<T> M>
     requires extended_vector<T> &&
-        unqualified_extended_mexpand<dx::zero_t, cmask_t<T, M>, T>
+        unqualified_extended_mexpand<dx::zero_t, launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        dx::zero_t zero, cmask_t<T, M> cmask, T&& val) {
-        return expand(zero, cmask, __DPL forward<T>(val));
+    static constexpr auto operator()(dx::zero_t zero, M cmask, T&& val) {
+        return expand(
+            zero, dx::to_const_mask<T>(cmask), __DPL forward<T>(val));
     }
 };
 
@@ -205,7 +187,8 @@ public:
         decltype(fallback_impl::prefix_sum(internal::declarg<M>()))>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(
-        S src, M cmask, T val) noexcept {
+        S src, M mask, T val) noexcept {
+        constexpr auto cmask = dx::to_const_mask<S>(mask);
         constexpr auto seq = fallback_impl::prefix_sum(cmask);
         return dx::permute(src, cmask, val, seq);
     }

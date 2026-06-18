@@ -44,7 +44,7 @@ struct operation_signature<trunc_t> {
 };
 
 template <typename S, typename M, typename T>
-concept unqualified_canonical_mtrunc =
+concept unqualified_canonical_mtrunc = cpo_invocable<trunc_t, T> &&
     (!simd_type<S> || same_as<S, cpo_result_t<trunc_t, T>>) && requires {
         {
             round(internal::abi<cpo_result_t<trunc_t, T>>,
@@ -55,6 +55,7 @@ concept unqualified_canonical_mtrunc =
 
 template <typename S, typename M, typename T>
 concept unqualified_canonical_mtruncne =
+    cpo_invocable<trunc_t, T, rounding::no_exc_t> &&
     (!simd_type<S> ||
         same_as<S, cpo_result_t<trunc_t, T, rounding::no_exc_t>>) &&
     requires {
@@ -71,12 +72,6 @@ private:
     template <typename T>
     using mask_t DPL_NODEBUG =
         basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
-
-    template <typename T>
-    using imask_t DPL_NODEBUG = mask_value_t<simd_abi_traits<T>::size>;
-
-    template <typename T, imask_t<T> M>
-    using cmask_t DPL_NODEBUG = const_mask<simd_abi_traits<T>::size, M>;
 
 public:
     template <simd_abi A, simd_element_for<A> E>
@@ -96,13 +91,14 @@ public:
         return round(internal::abi<T>, src, mask, val, trunc_exc_v);
     }
 
-    template <fixed_width_vector T, imask_t<T> M>
-    requires canonical_vector<T> &&
-        unqualified_canonical_mtrunc<type_identity_t<T>, cmask_t<T, M>, T>
+    template <canonical_vector T, const_mask_for<T> M>
+    requires unqualified_canonical_mtrunc<type_identity_t<T>,
+        launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
-        type_identity_t<T> src, cmask_t<T, M> cmask, T val) noexcept {
-        return round(internal::abi<T>, src, cmask, val, trunc_exc_v);
+        type_identity_t<T> src, M cmask, T val) noexcept {
+        return round(internal::abi<T>, src, dx::to_const_mask<T>(cmask), val,
+            trunc_exc_v);
     }
 
     template <canonical_vector T>
@@ -113,13 +109,12 @@ public:
         return round(internal::abi<T>, zero, mask, val, trunc_exc_v);
     }
 
-    template <fixed_width_vector T, imask_t<T> M>
-    requires canonical_vector<T> &&
-        unqualified_canonical_mtrunc<dx::zero_t, cmask_t<T, M>, T>
+    template <canonical_vector T, const_mask_for<T> M>
+    requires unqualified_canonical_mtrunc<dx::zero_t, launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(
-        dx::zero_t zero, cmask_t<T, M> cmask, T val) noexcept {
-        return round(internal::abi<T>, zero, cmask, val, trunc_exc_v);
+    static constexpr T operator()(dx::zero_t zero, M cmask, T val) noexcept {
+        return round(internal::abi<T>, zero, dx::to_const_mask<T>(cmask), val,
+            trunc_exc_v);
     }
     ///
 
@@ -140,13 +135,14 @@ public:
         return round(internal::abi<T>, src, mask, val, trunc_noexc_v);
     }
 
-    template <fixed_width_vector T, imask_t<T> M>
-    requires canonical_vector<T> &&
-        unqualified_canonical_mtruncne<type_identity_t<T>, cmask_t<T, M>, T>
+    template <canonical_vector T, const_mask_for<T> M>
+    requires unqualified_canonical_mtruncne<type_identity_t<T>,
+        launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(type_identity_t<T> src, cmask_t<T, M> cmask,
-        T val, rounding::no_exc_t) noexcept {
-        return round(internal::abi<T>, src, cmask, val, trunc_noexc_v);
+    static constexpr T operator()(
+        type_identity_t<T> src, M cmask, T val, rounding::no_exc_t) noexcept {
+        return round(internal::abi<T>, src, dx::to_const_mask<T>(cmask), val,
+            trunc_noexc_v);
     }
 
     template <canonical_vector T>
@@ -157,13 +153,14 @@ public:
         return round(internal::abi<T>, zero, mask, val, trunc_noexc_v);
     }
 
-    template <fixed_width_vector T, imask_t<T> M>
-    requires canonical_vector<T> &&
-        unqualified_canonical_mtruncne<dx::zero_t, cmask_t<T, M>, T>
+    template <canonical_vector T, const_mask_for<T> M>
+    requires unqualified_canonical_mtruncne<dx::zero_t, launder_cmask_t<T, M>,
+        T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(dx::zero_t zero, cmask_t<T, M> cmask, T val,
-        rounding::no_exc_t) noexcept {
-        return round(internal::abi<T>, zero, cmask, val, trunc_noexc_v);
+    static constexpr T operator()(
+        dx::zero_t zero, M cmask, T val, rounding::no_exc_t) noexcept {
+        return round(internal::abi<T>, zero, dx::to_const_mask<T>(cmask), val,
+            trunc_noexc_v);
     }
 };
 
@@ -182,7 +179,7 @@ concept unqualified_extended_truncne = requires {
 };
 
 template <typename S, typename M, typename T>
-concept unqualified_extended_mtrunc =
+concept unqualified_extended_mtrunc = cpo_invocable<trunc_t, T> &&
     (!simd_type<S> || equivalent_vector_with<S, cpo_result_t<trunc_t, T>>) &&
     requires {
         {
@@ -193,6 +190,7 @@ concept unqualified_extended_mtrunc =
 
 template <typename S, typename M, typename T>
 concept unqualified_extended_mtruncne =
+    cpo_invocable<trunc_t, T, rounding::no_exc_t> &&
     (!simd_type<S> ||
         equivalent_vector_with<S,
             cpo_result_t<trunc_t, T, rounding::no_exc_t>>) &&
@@ -206,17 +204,6 @@ concept unqualified_extended_mtruncne =
 
 template <>
 struct extended_impl<trunc_t> {
-private:
-    template <typename T>
-    using imask_t DPL_NODEBUG = mask_value_t<simd_abi_traits<T>::size>;
-
-    template <typename T, imask_t<T> M>
-    using cmask_t DPL_NODEBUG = const_mask<simd_abi_traits<T>::size, M>;
-
-    template <typename T>
-    using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
-
 public:
     template <extended_vector T>
     requires unqualified_extended_trunc<T>
@@ -225,8 +212,7 @@ public:
         return round(__DPL forward<T>(val), trunc_exc_v);
     }
 
-    template <simd_vector S, common_vector_with<S> T,
-        equivalent_mask_with<mask_t<S>> M>
+    template <simd_vector S, exact_mask_for<S> M, common_vector_with<S> T>
     requires (extended_vector<S> || extended_mask<M> || extended_vector<T>) &&
         unqualified_extended_mtrunc<S, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -235,16 +221,16 @@ public:
             __DPL forward<T>(val), trunc_exc_v);
     }
 
-    template <fixed_width_vector S, imask_t<S> M, common_vector_with<S> T>
+    template <simd_vector S, const_mask_for<S> M, common_vector_with<S> T>
     requires (extended_vector<S> || extended_vector<T>) &&
-        unqualified_extended_mtrunc<S, cmask_t<S, M>, T>
+        unqualified_extended_mtrunc<S, launder_cmask_t<S, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(S&& src, cmask_t<S, M> cmask, T&& val) {
-        return round( __DPL forward<S>(src), cmask, __DPL forward<T>(val),
-            trunc_exc_v);
+    static constexpr auto operator()(S&& src, M cmask, T&& val) {
+        return round( __DPL forward<S>(src), dx::to_const_mask<S>(cmask),
+            __DPL forward<T>(val), trunc_exc_v);
     }
 
-    template <simd_vector T, common_mask_with<mask_t<T>> M>
+    template <simd_vector T, result_mask_for<trunc_t, T> M>
     requires (extended_mask<M> || extended_vector<T>) &&
         unqualified_extended_mtrunc<dx::zero_t, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -253,13 +239,14 @@ public:
             zero, __DPL forward<M>(mask), __DPL forward<T>(val), trunc_exc_v);
     }
 
-    template <fixed_width_vector T, imask_t<T> M>
+    template <simd_vector T, result_cmask_for<trunc_t, T> M>
     requires extended_vector<T> &&
-        unqualified_extended_mtrunc<dx::zero_t, cmask_t<T, M>, T>
+        unqualified_extended_mtrunc<dx::zero_t,
+            launder_cmask_t<cpo_result_t<trunc_t, T>, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        dx::zero_t zero, cmask_t<T, M> cmask, T&& val) {
-        return round(zero, cmask, __DPL forward<T>(val), trunc_exc_v);
+    static constexpr auto operator()(dx::zero_t zero, M cmask, T&& val) {
+        return round(zero, dx::to_const_mask<cpo_result_t<trunc_t, T>>(cmask),
+            __DPL forward<T>(val), trunc_exc_v);
     }
 
     template <extended_vector T>
@@ -269,8 +256,7 @@ public:
         return round( __DPL forward<T>(val), trunc_noexc_v);
     }
 
-    template <simd_vector S, common_vector_with<S> T,
-        equivalent_mask_with<mask_t<S>> M>
+    template <simd_vector S, exact_mask_for<S> M, common_vector_with<S> T>
     requires (extended_vector<S> || extended_mask<M> || extended_vector<T>) &&
         unqualified_extended_mtruncne<S, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -280,17 +266,17 @@ public:
             __DPL forward<T>(val), trunc_noexc_v);
     }
 
-    template <fixed_width_vector S, imask_t<S> M, common_vector_with<S> T>
+    template <simd_vector S, const_mask_for<S> M, common_vector_with<S> T>
     requires (extended_vector<S> || extended_vector<T>) &&
-        unqualified_extended_mtruncne<S, cmask_t<S, M>, T>
+        unqualified_extended_mtruncne<S, launder_cmask_t<S, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
-        S&& src, cmask_t<S, M> cmask, T&& val, rounding::no_exc_t) {
-        return round( __DPL forward<S>(src), cmask, __DPL forward<T>(val),
-            trunc_noexc_v);
+        S&& src, M cmask, T&& val, rounding::no_exc_t) {
+        return round( __DPL forward<S>(src), dx::to_const_mask<S>(cmask),
+            __DPL forward<T>(val), trunc_noexc_v);
     }
 
-    template <simd_vector T, common_mask_with<mask_t<T>> M>
+    template <simd_vector T, result_mask_for<trunc_t, T, rounding::no_exc_t> M>
     requires (extended_mask<M> || extended_vector<T>) &&
         unqualified_extended_mtruncne<dx::zero_t, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -300,13 +286,18 @@ public:
             trunc_noexc_v);
     }
 
-    template <fixed_width_vector T, imask_t<T> M>
+    template <extended_vector T,
+        result_cmask_for<trunc_t, T, rounding::no_exc_t> M>
     requires extended_vector<T> &&
-        unqualified_extended_mtruncne<dx::zero_t, cmask_t<T, M>, T>
+        unqualified_extended_mtruncne<dx::zero_t,
+            launder_cmask_t<cpo_result_t<trunc_t, T, rounding::no_exc_t>, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
-        dx::zero_t zero, cmask_t<T, M> cmask, T&& val, rounding::no_exc_t) {
-        return round(zero, cmask, __DPL forward<T>(val), trunc_noexc_v);
+        dx::zero_t zero, M cmask, T&& val, rounding::no_exc_t) {
+        return round(zero,
+            dx::to_const_mask<cpo_result_t<trunc_t, T, rounding::no_exc_t>>(
+                cmask),
+            __DPL forward<T>(val), trunc_noexc_v);
     }
 };
 

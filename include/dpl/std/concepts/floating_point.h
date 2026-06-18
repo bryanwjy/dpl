@@ -4,6 +4,8 @@
 
 #include "dpl/config.h"
 
+#include "dpl/std/concepts/convertible_to.h"
+
 #if !DPL_MODULES
 #  include "dpl/std/stddef.h"
 #  include "dpl/std/type_traits/is_floating_point.h"
@@ -30,6 +32,7 @@ inline constexpr bool is_brain_float<T> = DPL_BUILTIN_bit_cast(
 } // namespace internal
 
 DPL_EXPORT template <typename T>
-concept brain_float = sizeof(T) == sizeof(int16) && internal::is_brain_float<T>;
+concept brain_float = sizeof(T) == sizeof(int16) &&
+    internal::is_brain_float<T> && convertible_to<T, float>;
 
 DPL_DEFAULT_NAMESPACE_END

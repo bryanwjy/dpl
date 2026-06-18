@@ -13,6 +13,7 @@
 #  include "dpl/core/dispatch/interface.h"
 #  include "dpl/core/dispatch/maskable/base.h"
 #  include "dpl/core/dispatch/operation/basic.h"
+#  include "dpl/core/immediate/const_mask.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -71,7 +72,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
     static constexpr void operator()(
         M mask, T src, simd_element_type_t<T>* ptr) noexcept {
-        constexpr auto cmask = dx::to_compatible_const_mask<T>(mask);
+        constexpr auto cmask = dx::to_const_mask<T>(mask);
         return store(internal::abi<T>, cmask, src, ptr);
     }
 
@@ -100,7 +101,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
     static constexpr void operator()(M mask, aligned_t aligned, T src,
         simd_element_type_t<T>* ptr) noexcept {
-        constexpr auto cmask = dx::to_compatible_const_mask<T>(mask);
+        constexpr auto cmask = dx::to_const_mask<T>(mask);
         return store(internal::abi<T>, cmask, aligned, src, ptr);
     }
 };

@@ -47,7 +47,7 @@ struct fallback_impl<negate_t> {
 };
 
 template <typename S, typename M, typename T>
-concept unqualified_canonical_mnegate =
+concept unqualified_canonical_mnegate = cpo_invocable<negate_t, T> &&
     (!simd_type<S> || same_as<S, cpo_result_t<negate_t, T>>) &&
     requires(S src, M mask, T val) {
         {
@@ -61,12 +61,6 @@ private:
     template <typename T>
     using mask_t DPL_NODEBUG =
         basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
-
-    template <typename T>
-    using imask_t DPL_NODEBUG = mask_value_t<simd_abi_traits<T>::size>;
-
-    template <typename T, imask_t<T> M>
-    using cmask_t DPL_NODEBUG = const_mask<simd_abi_traits<T>::size, M>;
 
 public:
     template <simd_abi A, simd_element_for<A> E>
@@ -86,12 +80,13 @@ public:
         return negate(internal::abi<T>, src, mask, val);
     }
 
-    template <fixed_width_vector T, imask_t<T> M>
-    requires unqualified_canonical_mnegate<type_identity_t<T>, cmask_t<T, M>, T>
+    template <canonical_vector T, const_mask_for<T> M>
+    requires unqualified_canonical_mnegate<type_identity_t<T>,
+        launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
-        type_identity_t<T> src, cmask_t<T, M> cmask, T val) noexcept {
-        return negate(internal::abi<T>, src, cmask, val);
+        type_identity_t<T> src, M cmask, T val) noexcept {
+        return negate(internal::abi<T>, src, dx::to_const_mask<T>(cmask), val);
     }
 
     template <canonical_vector T>
@@ -102,12 +97,11 @@ public:
         return negate(internal::abi<T>, zero, mask, val);
     }
 
-    template <fixed_width_vector T, imask_t<T> M>
-    requires unqualified_canonical_mnegate<dx::zero_t, cmask_t<T, M>, T>
+    template <fixed_width_vector T, const_mask_for<T> M>
+    requires unqualified_canonical_mnegate<dx::zero_t, launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(
-        dx::zero_t zero, cmask_t<T, M> cmask, T val) noexcept {
-        return negate(internal::abi<T>, zero, cmask, val);
+    static constexpr T operator()(dx::zero_t zero, M cmask, T val) noexcept {
+        return negate(internal::abi<T>, zero, dx::to_const_mask<T>(cmask), val);
     }
 };
 
@@ -117,25 +111,18 @@ concept unqualified_extended_negate = requires {
 };
 
 template <typename S, typename M, typename T>
-concept unqualified_extended_mnegate =
+concept unqualified_extended_mnegate = cpo_invocable<negate_t, T> &&
     (!simd_type<S> || equivalent_vector_with<S, cpo_result_t<negate_t, T>>) &&
     requires {
         {
             negate(internal::declarg<S>(), internal::declarg<M>(),
                 internal::declarg<T>())
-        } -> equivalent_vector_with<
-            conditional_t<simd_type<S>, S, cpo_result_t<negate_t, T>>>;
+        } -> equivalent_vector_with<cpo_result_t<negate_t, T>>;
     };
 
 template <>
 struct extended_impl<negate_t> {
 private:
-    template <typename T>
-    using imask_t DPL_NODEBUG = mask_value_t<simd_abi_traits<T>::size>;
-
-    template <typename T, imask_t<T> M>
-    using cmask_t DPL_NODEBUG = const_mask<simd_abi_traits<T>::size, M>;
-
     template <typename T>
     using mask_t DPL_NODEBUG =
         basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
@@ -148,8 +135,7 @@ public:
         return negate(__DPL forward<T>(val));
     }
 
-    template <simd_vector S, common_vector_with<S> T,
-        equivalent_mask_with<mask_t<S>> M>
+    template <simd_vector S, exact_mask_for<S> M, common_vector_with<S> T>
     requires (extended_vector<S> || extended_mask<M> || extended_vector<T>) &&
         unqualified_extended_mnegate<S, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -158,15 +144,16 @@ public:
             __DPL forward<T>(val));
     }
 
-    template <fixed_width_vector S, imask_t<S> M, common_vector_with<S> T>
+    template <simd_vector S, const_mask_for<S> M, common_vector_with<S> T>
     requires (extended_vector<S> || extended_vector<T>) &&
-        unqualified_extended_mnegate<S, cmask_t<S, M>, T>
+        unqualified_extended_mnegate<S, launder_cmask_t<S, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(S&& src, cmask_t<S, M> cmask, T&& val) {
-        return negate( __DPL forward<S>(src), cmask, __DPL forward<T>(val));
+    static constexpr auto operator()(S&& src, M cmask, T&& val) {
+        return negate( __DPL forward<S>(src), dx::to_const_mask<S>(cmask),
+            __DPL forward<T>(val));
     }
 
-    template <simd_vector T, common_mask_with<mask_t<T>> M>
+    template <simd_vector T, result_mask_for<negate_t, T> M>
     requires (extended_mask<M> || extended_vector<T>) &&
         unqualified_extended_mnegate<dx::zero_t, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -174,13 +161,13 @@ public:
         return negate(zero, __DPL forward<M>(mask), __DPL forward<T>(val));
     }
 
-    template <fixed_width_vector T, imask_t<T> M>
-    requires extended_vector<T> &&
-        unqualified_extended_mnegate<dx::zero_t, cmask_t<T, M>, T>
+    template <extended_vector T, result_cmask_for<negate_t, T> M>
+    requires unqualified_extended_mnegate<dx::zero_t,
+        launder_cmask_t<cpo_result_t<negate_t, T>, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        dx::zero_t zero, cmask_t<T, M> cmask, T&& val) {
-        return negate(zero, cmask, __DPL forward<T>(val));
+    static constexpr auto operator()(dx::zero_t zero, M cmask, T&& val) {
+        return negate(zero, dx::to_const_mask<cpo_result_t<negate_t, T>>(cmask),
+            __DPL forward<T>(val));
     }
 };
 } // namespace datapar::internal

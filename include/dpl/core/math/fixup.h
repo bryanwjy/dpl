@@ -3,7 +3,6 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/math/internal/masked_op.h"
 #include "dpl/core/math/isfinite.h"
 #include "dpl/core/math/isinf.h"
 #include "dpl/core/math/isnan.h"
@@ -12,7 +11,6 @@
 #include "dpl/core/math/signbit.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/concepts/extended.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_vector.h"
 #  include "dpl/core/dispatch/interface.h"
@@ -62,23 +60,25 @@ concept unqualified_canonical_fixup =
 
 template <typename T, typename C,
     typename M = basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>>
-concept unqualified_canonical_mfixup = requires {
-    {
-        fixup(internal::abi<cpo_result_t<fixup_t, T, T, C>>,
-            internal::declarg<T>(), internal::declarg<M>(),
-            internal::declarg<T>(), internal::declarg<C>())
-    } -> same_as<cpo_result_t<fixup_t, T, T, C>>;
-};
+concept unqualified_canonical_mfixup =
+    cpo_invocable<fixup_t, T, T, C> && requires {
+        {
+            fixup(internal::abi<cpo_result_t<fixup_t, T, T, C>>,
+                internal::declarg<T>(), internal::declarg<M>(),
+                internal::declarg<T>(), internal::declarg<C>())
+        } -> same_as<cpo_result_t<fixup_t, T, T, C>>;
+    };
 
 template <typename T, typename C,
     typename M = basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>>
-concept unqualified_canonical_zmfixup = requires {
-    {
-        fixup(internal::abi<cpo_result_t<fixup_t, T, T, C>>, dx::zero,
-            internal::declarg<M>(), internal::declarg<T>(),
-            internal::declarg<T>(), internal::declarg<C>())
-    } -> same_as<cpo_result_t<fixup_t, T, T, C>>;
-};
+concept unqualified_canonical_zmfixup =
+    cpo_invocable<fixup_t, T, T, C> && requires {
+        {
+            fixup(internal::abi<cpo_result_t<fixup_t, T, T, C>>, dx::zero,
+                internal::declarg<M>(), internal::declarg<T>(),
+                internal::declarg<T>(), internal::declarg<C>())
+        } -> same_as<cpo_result_t<fixup_t, T, T, C>>;
+    };
 
 template <>
 struct canonical_impl<fixup_t> {
@@ -86,12 +86,6 @@ public:
     template <typename T>
     using mask_t DPL_NODEBUG =
         basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
-
-    template <typename T>
-    using imask_t DPL_NODEBUG = mask_value_t<simd_abi_traits<T>::size>;
-
-    template <typename T, imask_t<T> V>
-    using cmask_t DPL_NODEBUG = const_mask<simd_abi_traits<T>::size, V>;
 
 public:
     template <canonical_vector T, fixflags_for<simd_element_type_t<T>> C>
@@ -110,14 +104,15 @@ public:
         return fixup(internal::abi<T>, lhs, mask, rhs, tokens);
     }
 
-    template <fixed_width_vector T, imask_t<T> M,
+    template <fixed_width_vector T, const_mask_for<T> M,
         fixflags_for<simd_element_type_t<T>> C>
     requires canonical_vector<T> &&
-        unqualified_canonical_mfixup<T, C, cmask_t<T, M>>
+        unqualified_canonical_mfixup<T, C, launder_cmask_t<T, M>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
-        type_identity_t<T> lhs, cmask_t<T, M> cmask, T rhs, C tokens) noexcept {
-        return fixup(internal::abi<T>, lhs, cmask, rhs, tokens);
+        type_identity_t<T> lhs, M cmask, T rhs, C tokens) noexcept {
+        return fixup(
+            internal::abi<T>, lhs, dx::to_const_mask<T>(cmask), rhs, tokens);
     }
 
     template <canonical_vector T, fixflags_for<simd_element_type_t<T>> C>
@@ -128,14 +123,15 @@ public:
         return fixup(internal::abi<T>, zero, mask, lhs, rhs, tokens);
     }
 
-    template <fixed_width_vector T, imask_t<T> M,
+    template <fixed_width_vector T, const_mask_for<T> M,
         fixflags_for<simd_element_type_t<T>> C>
     requires canonical_vector<T> &&
-        unqualified_canonical_zmfixup<T, C, cmask_t<T, M>>
+        unqualified_canonical_zmfixup<T, C, launder_cmask_t<T, M>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(dx::zero_t zero, cmask_t<T, M> cmask,
+    static constexpr T operator()(dx::zero_t zero, M cmask,
         type_identity_t<T> lhs, T rhs, C tokens) noexcept {
-        return fixup(internal::abi<T>, zero, cmask, lhs, rhs, tokens);
+        return fixup(internal::abi<T>, zero, dx::to_const_mask<T>(cmask), lhs,
+            rhs, tokens);
     }
 };
 
@@ -149,8 +145,9 @@ concept unqualified_extended_fixup = equivalent_vector_with<S, T> &&
     };
 
 template <typename S, typename M, typename T, typename C>
-concept unqualified_extended_mfixup = equivalent_vector_with<S, T> &&
-    unqualified_extended_fixup<S, T, C> && requires {
+concept unqualified_extended_mfixup =
+    equivalent_vector_with<S, T> && cpo_invocable<fixup_t, S, T, C> &&
+    fixflags_for<C, simd_element_type_t<T>> && requires {
         {
             fixup(internal::declarg<S>(), internal::declarg<M>(),
                 internal::declarg<T>(), internal::declarg<C>())
@@ -158,8 +155,9 @@ concept unqualified_extended_mfixup = equivalent_vector_with<S, T> &&
     };
 
 template <typename S, typename M, typename T, typename C>
-concept unqualified_extended_zmfixup = equivalent_vector_with<S, T> &&
-    unqualified_extended_fixup<S, T, C> && requires {
+concept unqualified_extended_zmfixup =
+    equivalent_vector_with<S, T> && cpo_invocable<fixup_t, S, T, C> &&
+    fixflags_for<C, simd_element_type_t<T>> && requires {
         {
             fixup(dx::zero, internal::declarg<M>(), internal::declarg<S>(),
                 internal::declarg<T>(), internal::declarg<C>())
@@ -168,17 +166,6 @@ concept unqualified_extended_zmfixup = equivalent_vector_with<S, T> &&
 
 template <>
 struct extended_impl<fixup_t> {
-public:
-    template <typename T>
-    using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
-
-    template <typename T>
-    using imask_t DPL_NODEBUG = mask_value_t<simd_abi_traits<T>::size>;
-
-    template <typename T, imask_t<T> V>
-    using cmask_t DPL_NODEBUG = const_mask<simd_abi_traits<T>::size, V>;
-
 public:
     template <simd_vector S, equivalent_vector_with<S> T,
         fixflags_for<simd_element_type_t<T>> C>
@@ -198,14 +185,14 @@ public:
             __DPL forward<T>(rhs), tokens);
     }
 
-    template <simd_vector S, imask_t<S> M, equivalent_vector_with<S> T,
+    template <simd_vector S, const_mask_for<S> M, equivalent_vector_with<S> T,
         fixflags_for<simd_element_type_t<T>> C>
-    requires unqualified_extended_mfixup<S, cmask_t<T, M>, T, C>
+    requires unqualified_extended_mfixup<S, launder_cmask_t<S, M>, T, C>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
-        S&& lhs, cmask_t<T, M> cmask, T&& rhs, C tokens) noexcept {
-        return fixup(
-            __DPL forward<S>(lhs), cmask, __DPL forward<T>(rhs), tokens);
+        S&& lhs, M cmask, T&& rhs, C tokens) noexcept {
+        return fixup( __DPL forward<S>(lhs), dx::to_const_mask<S>(cmask),
+            __DPL forward<T>(rhs), tokens);
     }
 
     template <simd_vector S, exact_mask_for<S> M, equivalent_vector_with<S> T,
@@ -218,13 +205,13 @@ public:
             __DPL forward<T>(rhs), tokens);
     }
 
-    template <simd_vector S, imask_t<S> M, equivalent_vector_with<S> T,
+    template <simd_vector S, const_mask_for<S> M, equivalent_vector_with<S> T,
         fixflags_for<simd_element_type_t<T>> C>
-    requires unqualified_extended_zmfixup<S, cmask_t<T, M>, T, C>
+    requires unqualified_extended_zmfixup<S, launder_cmask_t<S, M>, T, C>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(dx::zero_t zero, cmask_t<T, M> cmask,
-        S&& lhs, T&& rhs, C tokens) noexcept {
-        return fixup(zero, cmask, __DPL forward<S>(lhs),
+    static constexpr auto operator()(
+        dx::zero_t zero, M cmask, S&& lhs, T&& rhs, C tokens) noexcept {
+        return fixup(zero, dx::to_const_mask<S>(cmask), __DPL forward<S>(lhs),
             __DPL forward<T>(rhs), tokens);
     }
 };

@@ -26,8 +26,6 @@ import :core.dispatch;
 #include "dpl/core/operations/compare.h"
 #include "dpl/core/operations/concat.h"
 #include "dpl/core/operations/internal/array_for.h"
-#include "dpl/core/operations/internal/masked.h"
-#include "dpl/core/operations/internal/operation_base.h"
 #include "dpl/core/operations/internal/transform.h"
 #include "dpl/core/operations/logical.h"
 #include "dpl/core/operations/minmax.h"

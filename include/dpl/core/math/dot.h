@@ -52,8 +52,16 @@ struct operation_signature<dot_product_t> {
 };
 
 template <typename S, typename L, typename R>
+concept dot_product_result = simd_vector<L> && simd_vector<R> &&
+    simd_vector<S> && same_abi_as<simd_abi_type_t<S>, common_abi_t<L, R>>;
+
+template <typename S, typename L, typename R>
+concept canonical_dot_product_result = canonical_vector<L> &&
+    canonical_vector<R> && canonical_vector<S> && dot_product_result<S, L, R>;
+
+template <typename S, typename L, typename R>
 concept unqualified_canonical_dot_product =
-    same_as<simd_abi_type_t<S>, common_abi_t<L, R>> && requires {
+    canonical_dot_product_result<S, L, R> && requires {
         {
             dot_product(internal::abi<common_abi_t<L, R>>,
                 internal::declarg<S>(), internal::declarg<L>(),
@@ -63,6 +71,8 @@ concept unqualified_canonical_dot_product =
 
 template <typename S, typename M, typename L, typename R>
 concept unqualified_canonical_mdot_product =
+    canonical_dot_product_result<S, L, R> &&
+    cpo_invocable<dot_product_t, S, L, R> &&
     same_as<S, cpo_result_t<dot_product_t, S, L, R>> && requires {
         {
             dot_product(internal::abi<cpo_result_t<dot_product_t, S, L, R>>,
@@ -73,6 +83,7 @@ concept unqualified_canonical_mdot_product =
 
 template <typename M, typename S, typename L, typename R>
 concept unqualified_canonical_mzdot_product =
+    canonical_dot_product_result<S, L, R> &&
     cpo_invocable<dot_product_t, S, L, R> && requires {
         {
             dot_product(internal::abi<cpo_result_t<dot_product_t, S, L, R>>,
@@ -84,84 +95,62 @@ concept unqualified_canonical_mzdot_product =
 template <>
 struct canonical_impl<dot_product_t> {
 public:
-    template <typename E, typename L, typename R>
-    using source_t DPL_NODEBUG = basic_vector<E, common_abi_t<L, R>>;
-
-    template <typename E, typename L, typename R>
-    using mask_t DPL_NODEBUG = basic_mask<E, common_abi_t<L, R>>;
-
-    template <typename E, typename L, typename R>
-    using imask_t DPL_NODEBUG =
-        mask_value_t<simd_abi_traits<E, common_abi_t<L, R>>::size>;
-
-    template <typename E, typename L, typename R, imask_t<E, L, R> V>
-    using cmask_t DPL_NODEBUG =
-        const_mask<simd_abi_traits<E, common_abi_t<L, R>>::size, V>;
+    template <typename T>
+    using mask_t DPL_NODEBUG =
+        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
 
 private:
     template <canonical_vector L, common_vector_with<L> R,
-        simd_element_for<common_abi_t<L, R>> SE>
-    requires canonical_vector<R> &&
-        unqualified_canonical_dot_product<source_t<SE, L, R>, L, R>
+        canonical_dot_product_result<L, R> S>
+    requires unqualified_canonical_dot_product<S, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr source_t<SE, L, R> operator()(
-        source_t<SE, L, R> src, L lhs, R rhs) noexcept {
-        return dot_product(internal::abi<common_abi_t<L, R>>, src, lhs, rhs);
+    static constexpr S operator()(S src, L lhs, R rhs) noexcept {
+        return dot_product(internal::abi<S>, src, lhs, rhs);
     }
 
     template <canonical_vector L, common_vector_with<L> R,
-        simd_element_for<common_abi_t<L, R>> SE>
-    requires canonical_vector<R> &&
-        unqualified_canonical_mdot_product<source_t<SE, L, R>, mask_t<SE, L, R>,
-            L, R>
+        canonical_dot_product_result<L, R> S>
+    requires unqualified_canonical_mdot_product<S, mask_t<S>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr source_t<SE, L, R> operator()(
-        source_t<SE, L, R> src, mask_t<SE, L, R> mask, L lhs, R rhs) noexcept {
-        return dot_product(
-            internal::abi<common_abi_t<L, R>>, src, mask, lhs, rhs);
+    static constexpr S operator()(
+        S src, mask_t<S> mask, L lhs, R rhs) noexcept {
+        return dot_product(internal::abi<S>, src, mask, lhs, rhs);
     }
 
     template <canonical_vector L, common_vector_with<L> R,
-        simd_element_for<common_abi_t<L, R>> SE, imask_t<SE, L, R> M>
-    requires canonical_vector<R> &&
-        unqualified_canonical_mdot_product<source_t<SE, L, R>,
-            cmask_t<SE, L, R, M>, L, R>
+        canonical_dot_product_result<L, R> S, const_mask_for<S> M>
+    requires unqualified_canonical_mdot_product<S, launder_cmask_t<S, M>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr source_t<SE, L, R> operator()(source_t<SE, L, R> src,
-        cmask_t<SE, L, R, M> cmask, L lhs, R rhs) noexcept {
-        return dot_product(
-            internal::abi<common_abi_t<L, R>>, src, cmask, lhs, rhs);
+    static constexpr S operator()(S src, M cmask, L lhs, R rhs) noexcept {
+        return dot_product(internal::abi<common_abi_t<L, R>>, src,
+            dx::to_const_mask<S>(cmask), lhs, rhs);
     }
 
     template <canonical_vector L, common_vector_with<L> R,
-        simd_element_for<common_abi_t<L, R>> SE>
+        canonical_dot_product_result<L, R> S>
     requires canonical_vector<R> &&
-        unqualified_canonical_mzdot_product<mask_t<SE, L, R>,
-            source_t<SE, L, R>, L, R>
+        unqualified_canonical_mzdot_product<mask_t<S>, S, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(dx::zero_t zero, mask_t<SE, L, R> mask,
-        source_t<SE, L, R> src, L lhs, R rhs) noexcept {
-        return dot_product(
-            internal::abi<common_abi_t<L, R>>, zero, mask, src, lhs, rhs);
+    static constexpr auto operator()(
+        dx::zero_t zero, mask_t<S> mask, S src, L lhs, R rhs) noexcept {
+        return dot_product(internal::abi<S>, zero, mask, src, lhs, rhs);
     }
 
     template <canonical_vector L, common_vector_with<L> R,
-        simd_element_for<common_abi_t<L, R>> SE, imask_t<SE, L, R> M>
+        canonical_dot_product_result<L, R> S, const_mask_for<S> M>
     requires canonical_vector<R> &&
-        unqualified_canonical_mzdot_product<cmask_t<SE, L, R, M>,
-            source_t<SE, L, R>, L, R>
+        unqualified_canonical_mzdot_product<launder_cmask_t<S, M>, S, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(dx::zero_t zero,
-        cmask_t<SE, L, R, M> cmask, source_t<SE, L, R> src, L lhs,
-        R rhs) noexcept {
+    static constexpr auto operator()(
+        dx::zero_t zero, M cmask, S src, L lhs, R rhs) noexcept {
         return dot_product(
-            internal::abi<common_abi_t<L, R>>, zero, cmask, src, lhs, rhs);
+            internal::abi<S>, zero, dx::to_const_mask<S>(cmask), src, lhs, rhs);
     }
 };
 
 template <typename S, typename L, typename R>
 concept unqualified_extended_dot_product =
-    same_as<simd_abi_type_t<S>, common_abi_t<L, R>> && requires {
+    dot_product_result<S, L, R> && requires {
         {
             dot_product(internal::declarg<S>(), internal::declarg<L>(),
                 internal::declarg<R>())
@@ -169,7 +158,7 @@ concept unqualified_extended_dot_product =
     };
 
 template <typename S, typename M, typename L, typename R>
-concept unqualified_extended_mdot_product =
+concept unqualified_extended_mdot_product = dot_product_result<S, L, R> &&
     equivalent_vector_with<S, cpo_result_t<dot_product_t, S, L, R>> &&
     requires {
         {
@@ -178,8 +167,8 @@ concept unqualified_extended_mdot_product =
         } -> equivalent_vector_with<cpo_result_t<dot_product_t, S, L, R>>;
     };
 
-template <typename S, typename M, typename L, typename R>
-concept unqualified_extended_mzdot_product =
+template <typename M, typename S, typename L, typename R>
+concept unqualified_extended_mzdot_product = dot_product_result<S, L, R> &&
     equivalent_vector_with<S, cpo_result_t<dot_product_t, S, L, R>> &&
     requires {
         {
@@ -191,13 +180,6 @@ concept unqualified_extended_mzdot_product =
 
 template <>
 struct extended_impl<dot_product_t> {
-private:
-    template <typename S>
-    using simask_t DPL_NODEBUG = mask_value_t<simd_abi_type_t<S>::size>;
-
-    template <typename S, simask_t<S> V>
-    using scmask_t DPL_NODEBUG = const_mask<simd_abi_type_t<S>::size, V>;
-
 public:
     template <simd_vector S, simd_vector L, common_vector_with<L> R>
     requires (extended_vector<S> || extended_vector<L> || extended_vector<R>) &&
@@ -219,22 +201,21 @@ public:
             __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 
-    template <simd_vector S, simask_t<S> M, simd_vector L,
+    template <simd_vector S, const_mask_for<S> M, simd_vector L,
         common_vector_with<L> R>
     requires (extended_vector<S> || extended_vector<L> || extended_vector<R>) &&
-        unqualified_extended_mdot_product<S, scmask_t<S, M>, L, R>
+        unqualified_extended_mdot_product<S, launder_cmask_t<S, M>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        S&& src, scmask_t<S, M> cmask, L&& lhs, R&& rhs) {
-        return dot_product( __DPL forward<S>(src), cmask, __DPL forward<L>(lhs),
-            __DPL forward<R>(rhs));
+    static constexpr auto operator()(S&& src, M cmask, L&& lhs, R&& rhs) {
+        return dot_product( __DPL forward<S>(src), dx::to_const_mask<S>(cmask),
+            __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 
     template <simd_vector S, exact_mask_for<S> M, simd_vector L,
         common_vector_with<L> R>
     requires (extended_vector<S> || extended_vector<L> || extended_vector<R> ||
                  extended_mask<M>) &&
-        unqualified_extended_mzdot_product<S, M, L, R>
+        unqualified_extended_mzdot_product<M, S, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         dx::zero_t zero, M&& mask, S&& src, L&& lhs, R&& rhs) {
@@ -242,15 +223,16 @@ public:
             __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 
-    template <simd_vector S, simask_t<S> M, simd_vector L,
+    template <simd_vector S, const_mask_for<S> M, simd_vector L,
         common_vector_with<L> R>
     requires (extended_vector<S> || extended_vector<L> || extended_vector<R>) &&
-        unqualified_extended_mzdot_product<S, scmask_t<S, M>, L, R>
+        unqualified_extended_mzdot_product<S, launder_cmask_t<S, M>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        dx::zero_t zero, scmask_t<S, M> cmask, S&& src, L&& lhs, R&& rhs) {
-        return dot_product(zero, cmask, __DPL forward<S>(src),
-            __DPL forward<L>(lhs), __DPL forward<R>(rhs));
+    static constexpr auto operator()(dx::zero_t zero,
+        launder_cmask_t<S, M> cmask, S&& src, L&& lhs, R&& rhs) {
+        return dot_product(zero, dx::to_const_mask<S>(cmask),
+            __DPL forward<S>(src), __DPL forward<L>(lhs),
+            __DPL forward<R>(rhs));
     }
 };
 

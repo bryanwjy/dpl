@@ -38,7 +38,7 @@ concept unqualified_canonical_hmin = requires {
 };
 
 template <typename S, typename M, typename T>
-concept unqualified_canonical_mhmin =
+concept unqualified_canonical_mhmin = cpo_invocable<hmin_t, T> &&
     (!simd_type<S> || equivalent_vector_with<S, cpo_result_t<hmin_t, T>>) &&
     requires {
         {
@@ -52,19 +52,8 @@ template <>
 struct canonical_impl<hmin_t> {
 private:
     template <typename T>
-    using source_t DPL_NODEBUG = canonical_type_t<cpo_result_t<hmin_t, T>>;
-
-    template <typename T>
-    using mask_t DPL_NODEBUG = basic_mask<simd_element_type_t<source_t<T>>,
-        simd_abi_type_t<source_t<T>>>;
-
-    template <typename T>
-    using imask_t DPL_NODEBUG =
-        mask_value_t<simd_abi_traits<source_t<T>>::size>;
-
-    template <typename T, imask_t<T> M>
-    using cmask_t DPL_NODEBUG =
-        const_mask<simd_abi_traits<source_t<T>>::size, M>;
+    using mask_t DPL_NODEBUG =
+        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
 
 public:
     template <canonical_vector T>
@@ -75,19 +64,20 @@ public:
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mhmin<source_t<T>, mask_t<T>, T>
+    requires unqualified_canonical_mhmin<type_identity_t<T>, mask_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
-        source_t<T> src, mask_t<T> mask, T val) noexcept {
+        type_identity_t<T> src, mask_t<T> mask, T val) noexcept {
         return hmin(internal::abi<T>, src, mask, val);
     }
 
-    template <canonical_vector T, imask_t<T> M>
-    requires unqualified_canonical_mhmin<source_t<T>, cmask_t<T, M>, T>
+    template <canonical_vector T, const_mask_for<T> M>
+    requires unqualified_canonical_mhmin<type_identity_t<T>,
+        launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
-        source_t<T> src, cmask_t<T, M> cmask, T val) noexcept {
-        return hmin(internal::abi<T>, src, cmask, val);
+        type_identity_t<T> src, M cmask, T val) noexcept {
+        return hmin(internal::abi<T>, src, dx::to_const_mask<T>(cmask), val);
     }
 
     template <canonical_vector T>
@@ -98,12 +88,11 @@ public:
         return hmin(internal::abi<T>, zero, mask, val);
     }
 
-    template <canonical_vector T, imask_t<T> M>
-    requires unqualified_canonical_mhmin<dx::zero_t, cmask_t<T, M>, T>
+    template <canonical_vector T, const_mask_for<T> M>
+    requires unqualified_canonical_mhmin<dx::zero_t, launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(
-        dx::zero_t zero, cmask_t<T, M> cmask, T val) noexcept {
-        return hmin(internal::abi<T>, zero, cmask, val);
+    static constexpr T operator()(dx::zero_t zero, M cmask, T val) noexcept {
+        return hmin(internal::abi<T>, zero, dx::to_const_mask<T>(cmask), val);
     }
 };
 
@@ -113,7 +102,7 @@ concept unqualified_extended_hmin = requires {
 };
 
 template <typename S, typename M, typename T>
-concept unqualified_extended_mhmin =
+concept unqualified_extended_mhmin = cpo_invocable<hmin_t, T> &&
     (!simd_type<S> || equivalent_vector_with<S, cpo_result_t<hmin_t, T>>) &&
     requires {
         {
@@ -124,24 +113,6 @@ concept unqualified_extended_mhmin =
 
 template <>
 struct extended_impl<hmin_t> {
-private:
-    template <typename S>
-    using simask_t DPL_NODEBUG = mask_value_t<simd_abi_traits<S>::size>;
-
-    template <typename S, simask_t<S> M>
-    using scmask_t DPL_NODEBUG = const_mask<simd_abi_traits<S>::size, M>;
-
-    template <typename T>
-    using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<cpo_result_t<hmin_t, T>>,
-            simd_abi_type_t<cpo_result_t<hmin_t, T>>>;
-
-    template <typename T>
-    using imask_t DPL_NODEBUG = simask_t<cpo_result_t<hmin_t, T>>;
-
-    template <typename T, imask_t<T> M>
-    using cmask_t DPL_NODEBUG = scmask_t<cpo_result_t<hmin_t, T>, M>;
-
 public:
     template <extended_vector T>
     requires unqualified_extended_hmin<T>
@@ -160,16 +131,17 @@ public:
             __DPL forward<T>(val));
     }
 
-    template <simd_vector S, simask_t<S> M, common_vector_with<S> T,
+    template <simd_vector S, const_mask_for<S> M, common_vector_with<S> T,
         broadcastable_to<T> V>
     requires (extended_vector<S> || extended_vector<T>) &&
-        unqualified_extended_mhmin<S, scmask_t<S, M>, T>
+        unqualified_extended_mhmin<S, launder_cmask_t<S, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(S&& src, scmask_t<S, M> cmask, T&& val) {
-        return hmin(__DPL forward<S>(src), cmask, __DPL forward<T>(val));
+    static constexpr auto operator()(S&& src, M cmask, T&& val) {
+        return hmin(__DPL forward<S>(src), dx::to_const_mask<S>(cmask),
+            __DPL forward<T>(val));
     }
 
-    template <simd_vector T, common_mask_with<mask_t<T>> M>
+    template <simd_vector T, result_mask_for<hmin_t, T> M>
     requires (extended_vector<T> || extended_mask<M>) &&
         unqualified_extended_mhmin<dx::zero_t, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -177,25 +149,19 @@ public:
         return hmin(zero, __DPL forward<M>(mask), __DPL forward<T>(val));
     }
 
-    template <fixed_width_vector T, imask_t<T> M>
+    template <fixed_width_vector T, result_cmask_for<hmin_t, T> M>
     requires extended_vector<T> &&
-        unqualified_extended_mhmin<dx::zero_t, cmask_t<T, M>, T>
+        unqualified_extended_mhmin<dx::zero_t,
+            launder_cmask_t<cpo_result_t<hmin_t, T>, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        dx::zero_t zero, cmask_t<T, M> cmask, T&& val) {
-        return hmin(zero, cmask, __DPL forward<T>(val));
+    static constexpr auto operator()(dx::zero_t zero, M cmask, T&& val) {
+        return hmin(zero, dx::to_const_mask<cpo_result_t<hmin_t, T>>(cmask),
+            __DPL forward<T>(val));
     }
 };
 
 template <>
 struct fallback_impl<hmin_t> {
-private:
-    template <typename S>
-    using simask_t DPL_NODEBUG = mask_value_t<simd_abi_traits<S>::size>;
-
-    template <typename S, simask_t<S> M>
-    using scmask_t DPL_NODEBUG = const_mask<simd_abi_traits<S>::size, M>;
-
 public:
     template <simd_vector T>
     requires scan_operator_for<min_t, T>
@@ -217,11 +183,10 @@ public:
             __DPL forward<S>(src));
     }
 
-    template <simd_vector S, simask_t<S> M, simd_vector T>
-    requires cpo_invocable<reduce_t, S, scmask_t<S, M>, T, min_t>
+    template <simd_vector S, const_mask_for<S> M, simd_vector T>
+    requires cpo_invocable<reduce_t, S, M, T, min_t>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(S&& src,
-        scmask_t<S, M> cmask,
+    static constexpr auto DPL_VECTORCALL operator()(S&& src, M cmask,
         T&& val) noexcept(canonical_vector<S> && canonical_vector<T>) {
         return dx::reduce(
             __DPL forward<S>(src), cmask, __DPL forward<T>(val), dx::min);
@@ -239,11 +204,11 @@ public:
             zero);
     }
 
-    template <simd_vector T, simask_t<T> M>
-    requires cpo_invocable<reduce_t, dx::zero_t, scmask_t<T, M>, T, min_t>
+    template <simd_vector T, result_cmask_for<reduce_t, T, min_t> M>
+    requires cpo_invocable<reduce_t, dx::zero_t, M, T, min_t>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(dx::zero_t zero,
-        scmask_t<T, M> cmask, T&& val) noexcept(canonical_vector<T>) {
+    static constexpr auto DPL_VECTORCALL operator()(
+        dx::zero_t zero, M cmask, T&& val) noexcept(canonical_vector<T>) {
         return dx::reduce(zero, cmask, __DPL forward<T>(val), dx::min);
     }
 };

@@ -66,7 +66,7 @@ concept unqualified_canonical_fnmsub = requires {
 
 template <typename S, typename M, typename AT, typename BT, typename CT,
     typename A = common_abi_t<AT, BT, CT>>
-concept unqualified_canonical_mfnmsub =
+concept unqualified_canonical_mfnmsub = cpo_invocable<fnmsub_t, AT, BT, CT> &&
     (!simd_type<S> ||
         equivalent_vector_with<S, cpo_result_t<fnmsub_t, AT, BT, CT>>) &&
     requires {
@@ -81,18 +81,12 @@ template <>
 struct canonical_impl<fnmsub_t> {
 private:
     template <typename AT, typename BT, typename CT>
-    using source_t DPL_NODEBUG =
+    using result_t DPL_NODEBUG =
         basic_vector<simd_element_type_t<AT>, common_abi_t<AT, BT, CT>>;
 
     template <typename AT, typename BT, typename CT>
     using mask_t DPL_NODEBUG =
         basic_mask<simd_element_type_t<AT>, common_abi_t<AT, BT, CT>>;
-
-    template <typename AT, typename BT, typename CT>
-    using imask_t DPL_NODEBUG = mask_value_t<common_abi_t<AT, BT, CT>::size>;
-
-    template <typename AT, typename BT, typename CT, imask_t<AT, BT, CT> V>
-    using cmask_t DPL_NODEBUG = const_mask<common_abi_t<AT, BT, CT>::size, V>;
 
     template <typename L, typename R>
     using vector_t DPL_NODEBUG =
@@ -104,7 +98,8 @@ public:
     requires canonical_vector<BT> && canonical_vector<CT> &&
         unqualified_canonical_fnmsub<AT, BT, CT, A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(AT aval, BT bval, CT cval) noexcept {
+    static constexpr result_t<AT, BT, CT> operator()(
+        AT aval, BT bval, CT cval) noexcept {
         return fnmsub(internal::abi<A>, aval, bval, cval);
     }
 
@@ -113,7 +108,8 @@ public:
         typename A = common_abi_t<AT, BT>>
     requires canonical_vector<BT> && unqualified_canonical_fnmsub<AT, BT, CT, A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(AT aval, BT bval, CT&& cval) noexcept {
+    static constexpr vector_t<AT, BT> operator()(
+        AT aval, BT bval, CT&& cval) noexcept {
         return fnmsub(internal::abi<A>, aval, bval, __DPL forward<CT>(cval));
     }
 
@@ -122,7 +118,8 @@ public:
         typename A = common_abi_t<AT, CT>>
     requires canonical_vector<CT> && unqualified_canonical_fnmsub<AT, BT, CT, A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(AT aval, BT&& bval, CT cval) noexcept {
+    static constexpr vector_t<AT, CT> operator()(
+        AT aval, BT&& bval, CT cval) noexcept {
         return fnmsub(internal::abi<A>, aval, __DPL forward<BT>(bval), cval);
     }
 
@@ -131,7 +128,8 @@ public:
         typename A = common_abi_t<BT, CT>>
     requires canonical_vector<CT> && unqualified_canonical_fnmsub<AT, BT, CT, A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(AT&& aval, BT bval, CT cval) noexcept {
+    static constexpr vector_t<BT, CT> operator()(
+        AT&& aval, BT bval, CT cval) noexcept {
         return fnmsub(internal::abi<A>, __DPL forward<AT>(aval), bval, cval);
     }
 
@@ -139,7 +137,7 @@ public:
         broadcastable_to<AT> CT, typename A = simd_abi_type_t<AT>>
     requires unqualified_canonical_fnmsub<AT, BT, CT, A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(AT aval, BT&& bval, CT&& cval) noexcept {
+    static constexpr AT operator()(AT aval, BT&& bval, CT&& cval) noexcept {
         return fnmsub(internal::abi<A>, aval, __DPL forward<BT>(bval),
             __DPL forward<CT>(cval));
     }
@@ -148,7 +146,7 @@ public:
         broadcastable_to<BT> CT, typename A = simd_abi_type_t<BT>>
     requires unqualified_canonical_fnmsub<AT, BT, CT, A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(AT&& aval, BT bval, CT&& cval) noexcept {
+    static constexpr BT operator()(AT&& aval, BT bval, CT&& cval) noexcept {
         return fnmsub(internal::abi<A>, __DPL forward<AT>(aval), bval,
             __DPL forward<CT>(cval));
     }
@@ -157,7 +155,7 @@ public:
         broadcastable_to<CT> BT, typename A = simd_abi_type_t<CT>>
     requires unqualified_canonical_fnmsub<AT, BT, CT, A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(AT&& aval, BT&& bval, CT cval) noexcept {
+    static constexpr CT operator()(AT&& aval, BT&& bval, CT cval) noexcept {
         return fnmsub(internal::abi<A>, __DPL forward<AT>(aval),
             __DPL forward<BT>(bval), cval);
     }
@@ -165,43 +163,49 @@ public:
     template <canonical_vector AT, common_vector_with<AT> BT,
         common_vector_with<BT> CT, typename A = common_abi_t<AT, BT, CT>>
     requires canonical_vector<BT> && canonical_vector<CT> &&
-        unqualified_canonical_fnmsub<AT, BT, CT, A>
+        unqualified_canonical_mfnmsub<result_t<AT, BT, CT>, mask_t<AT, BT, CT>,
+            AT, BT, CT, A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(source_t<AT, BT, CT> src,
+    static constexpr result_t<AT, BT, CT> operator()(result_t<AT, BT, CT> src,
         mask_t<AT, BT, CT> mask, AT aval, BT bval, CT cval) noexcept {
         return fnmsub(internal::abi<A>, src, mask, aval, bval, cval);
     }
 
     template <canonical_vector AT, common_vector_with<AT> BT,
-        common_vector_with<BT> CT, imask_t<AT, BT, CT> M,
+        common_vector_with<BT> CT, const_mask_for<result_t<AT, BT, CT>> M,
         typename A = common_abi_t<AT, BT, CT>>
     requires canonical_vector<BT> && canonical_vector<CT> &&
-        unqualified_canonical_fnmsub<AT, BT, CT, A>
+        unqualified_canonical_mfnmsub<result_t<AT, BT, CT>,
+            launder_cmask_t<result_t<AT, BT, CT>, M>, AT, BT, CT, A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(source_t<AT, BT, CT> src,
-        cmask_t<AT, BT, CT, M> cmask, AT aval, BT bval, CT cval) noexcept {
-        return fnmsub(internal::abi<A>, src, cmask, aval, bval, cval);
+    static constexpr result_t<AT, BT, CT> operator()(
+        result_t<AT, BT, CT> src, M cmask, AT aval, BT bval, CT cval) noexcept {
+        return fnmsub(internal::abi<A>, src,
+            dx::to_const_mask<result_t<AT, BT, CT>>(cmask), aval, bval, cval);
     }
 
     template <canonical_vector AT, common_vector_with<AT> BT,
         common_vector_with<BT> CT, typename A = common_abi_t<AT, BT, CT>>
     requires canonical_vector<BT> && canonical_vector<CT> &&
-        unqualified_canonical_fnmsub<AT, BT, CT, A>
+        unqualified_canonical_mfnmsub<dx::zero_t, mask_t<AT, BT, CT>, AT, BT,
+            CT, A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(dx::zero_t zero, mask_t<AT, BT, CT> mask,
-        AT aval, BT bval, CT cval) noexcept {
+    static constexpr result_t<AT, BT, CT> operator()(dx::zero_t zero,
+        mask_t<AT, BT, CT> mask, AT aval, BT bval, CT cval) noexcept {
         return fnmsub(internal::abi<A>, zero, mask, aval, bval, cval);
     }
 
     template <canonical_vector AT, common_vector_with<AT> BT,
-        common_vector_with<BT> CT, imask_t<AT, BT, CT> M,
+        common_vector_with<BT> CT, const_mask_for<result_t<AT, BT, CT>> M,
         typename A = common_abi_t<AT, BT, CT>>
     requires canonical_vector<BT> && canonical_vector<CT> &&
-        unqualified_canonical_fnmsub<AT, BT, CT, A>
+        unqualified_canonical_mfnmsub<dx::zero_t, mask_t<AT, BT, CT>, AT, BT,
+            CT, A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(dx::zero_t zero,
-        cmask_t<AT, BT, CT, M> cmask, AT aval, BT bval, CT cval) noexcept {
-        return fnmsub(internal::abi<A>, zero, cmask, aval, bval, cval);
+    static constexpr result_t<AT, BT, CT> operator()(
+        dx::zero_t zero, M cmask, AT aval, BT bval, CT cval) noexcept {
+        return fnmsub(internal::abi<A>, zero,
+            dx::to_const_mask<result_t<AT, BT, CT>>(cmask), aval, bval, cval);
     }
 };
 
@@ -214,9 +218,8 @@ concept unqualified_extended_fnmsub = requires {
     } -> vector_with_common_abi<A>;
 };
 
-template <typename S, typename M, typename AT, typename BT, typename CT,
-    typename A = common_abi_t<AT, BT, CT>>
-concept unqualified_extended_mfnmsub =
+template <typename S, typename M, typename AT, typename BT, typename CT>
+concept unqualified_extended_mfnmsub = cpo_invocable<fnmsub_t, AT, BT, CT> &&
     (!simd_type<S> ||
         equivalent_vector_with<S, cpo_result_t<fnmsub_t, AT, BT, CT>>) &&
     requires {
@@ -230,22 +233,6 @@ concept unqualified_extended_mfnmsub =
 template <>
 struct extended_impl<fnmsub_t> {
 private:
-    template <typename S>
-    using simask_t DPL_NODEBUG = mask_value_t<simd_abi_type_t<S>::size>;
-
-    template <typename S, simask_t<S> V>
-    using scmask_t DPL_NODEBUG = const_mask<simd_abi_type_t<S>::size, V>;
-
-    template <typename AT, typename BT, typename CT>
-    using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<AT>, common_abi_t<AT, BT, CT>>;
-
-    template <typename AT, typename BT, typename CT>
-    using imask_t DPL_NODEBUG = mask_value_t<common_abi_t<AT, BT, CT>::size>;
-
-    template <typename AT, typename BT, typename CT, imask_t<AT, BT, CT> V>
-    using cmask_t DPL_NODEBUG = const_mask<common_abi_t<AT, BT, CT>::size, V>;
-
     template <typename L, typename R>
     using vector_t DPL_NODEBUG =
         basic_vector<simd_element_type_t<L>, common_abi_t<L, R>>;
@@ -327,7 +314,7 @@ public:
         typename A = common_abi_t<AT, BT, CT>>
     requires (extended_vector<S> || extended_mask<M> || extended_vector<AT> ||
                  extended_vector<BT> || extended_vector<CT>) &&
-        unqualified_extended_mfnmsub<S, M, AT, BT, CT, A>
+        unqualified_extended_mfnmsub<S, M, AT, BT, CT>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         S&& src, M&& mask, AT&& aval, BT&& bval, CT&& cval) {
@@ -336,25 +323,24 @@ public:
             __DPL forward<CT>(cval));
     }
 
-    template <fixed_width_vector S, simask_t<S> M, simd_vector AT,
-        common_vector_with<AT> BT, common_vector_with<BT> CT,
-        typename A = common_abi_t<AT, BT, CT>>
+    template <simd_vector S, const_mask_for<S> M, simd_vector AT,
+        common_vector_with<AT> BT, common_vector_with<BT> CT>
     requires (extended_vector<S> || extended_vector<AT> ||
                  extended_vector<BT> || extended_vector<CT>) &&
-        unqualified_extended_mfnmsub<S, scmask_t<S, M>, AT, BT, CT, A>
+        unqualified_extended_mfnmsub<S, launder_cmask_t<S, M>, AT, BT, CT>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
-        S&& src, scmask_t<S, M> cmask, AT&& aval, BT&& bval, CT&& cval) {
-        return fnmsub(__DPL forward<S>(src), cmask, __DPL forward<AT>(aval),
-            __DPL forward<BT>(bval), __DPL forward<CT>(cval));
+        S&& src, M cmask, AT&& aval, BT&& bval, CT&& cval) {
+        return fnmsub(__DPL forward<S>(src), dx::to_const_mask<S>(cmask),
+            __DPL forward<AT>(aval), __DPL forward<BT>(bval),
+            __DPL forward<CT>(cval));
     }
 
     template <simd_vector AT, common_vector_with<AT> BT,
-        common_vector_with<BT> CT, common_mask_with<mask_t<AT, BT, CT>> M,
-        typename A = common_abi_t<AT, BT, CT>>
+        common_vector_with<BT> CT, result_mask_for<fnmsub_t, AT, BT, CT> M>
     requires (extended_mask<M> || extended_vector<AT> || extended_vector<BT> ||
                  extended_vector<CT>) &&
-        unqualified_extended_mfnmsub<dx::zero_t, M, AT, BT, CT, A>
+        unqualified_extended_mfnmsub<dx::zero_t, M, AT, BT, CT>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         dx::zero_t zero, M&& mask, AT&& aval, BT&& bval, CT&& cval) {
@@ -363,20 +349,20 @@ public:
     }
 
     template <simd_vector AT, common_vector_with<AT> BT,
-        common_vector_with<BT> CT, imask_t<AT, BT, CT> M,
-        typename A = common_abi_t<AT, BT, CT>>
+        common_vector_with<BT> CT, result_cmask_for<fnmsub_t, AT, BT, CT> M>
     requires (extended_vector<AT> || extended_vector<BT> ||
                  extended_vector<CT>) &&
-        unqualified_extended_mfnmsub<dx::zero_t, cmask_t<AT, BT, CT, M>, AT, BT,
-            CT, A>
+        unqualified_extended_mfnmsub<dx::zero_t,
+            launder_cmask_t<cpo_result_t<fnmsub_t, AT, BT, CT>, M>, AT, BT, CT>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(dx::zero_t zero,
-        cmask_t<AT, BT, CT, M> cmask, AT&& aval, BT&& bval, CT&& cval) {
-        return fnmsub(zero, cmask, __DPL forward<AT>(aval),
-            __DPL forward<BT>(bval), __DPL forward<CT>(cval));
+    static constexpr auto operator()(
+        dx::zero_t zero, M cmask, AT&& aval, BT&& bval, CT&& cval) {
+        return fnmsub(zero,
+            dx::to_const_mask<cpo_result_t<fnmsub_t, AT, BT, CT>>(cmask),
+            __DPL forward<AT>(aval), __DPL forward<BT>(bval),
+            __DPL forward<CT>(cval));
     }
 };
-
 } // namespace datapar::internal
 
 namespace datapar {

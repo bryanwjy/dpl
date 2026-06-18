@@ -14,6 +14,7 @@
 #  include "dpl/core/fwd.h"
 
 #  include "dpl/core/concepts/cpo_invocable.h"
+#  include "dpl/core/concepts/mask_compatibility.h"
 #  include "dpl/core/immediate/const_mask.h"
 #  include "dpl/core/immediate/constants/zero.h"
 #  include "dpl/core/type_traits/cpo_result.h"
@@ -127,31 +128,25 @@ protected:
     template <typename M, canonical_ornot_simd... Ts>
     requires signature_compatible<D, Ts...> && cpo_invocable<D, Ts...> &&
         const_mask_for<M, result_t<Ts...>> && simd_vector<result_t<Ts...>> &&
-        masked_transformable<D, result_t<Ts...>, result_t<Ts...>,
-            launder_cmask_t<result_t<Ts...>, M>, Ts...>
+        masked_transformable<D, result_t<Ts...>, result_t<Ts...>, M, Ts...>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr result_t<Ts...> operator()(
         result_t<Ts...> src, M mask, Ts... args) noexcept {
         using R = result_t<Ts...>;
-        using CM = launder_cmask_t<R, M>;
-        if constexpr (canonical_cpo_invocable_r<D, R, R, CM, Ts...>) {
+        if constexpr (canonical_cpo_invocable_r<D, R, R, M, Ts...>) {
             if constexpr (all_same_abi<R, Ts...> &&
                 !inherits_from<D, basic_operation_base<D>>) {
                 if consteval {
-                    if constexpr (fallback_cpo_invocable_r<D, R, R, CM,
-                                      Ts...>) {
-                        return impl::fallback<D>(src,
-                            dx::to_compatible_const_mask<R>(mask), args...);
+                    if constexpr (fallback_cpo_invocable_r<D, R, R, M, Ts...>) {
+                        return impl::fallback<D>(src, mask, args...);
                     } else {
                         return fwd::select(mask, D::operator()(args...), src);
                     }
                 } else {
-                    return impl::canonical<D>(
-                        src, dx::to_compatible_const_mask<R>(mask), args...);
+                    return impl::canonical<D>(src, mask, args...);
                 }
             } else {
-                return impl::canonical<D>(
-                    src, dx::to_compatible_const_mask<R>(mask), args...);
+                return impl::canonical<D>(src, mask, args...);
             }
         } else if constexpr (fallback_cpo_invocable_r<D, R, R, M, Ts...>) {
             return impl::fallback<D>(src, mask, args...);
@@ -163,31 +158,26 @@ protected:
     template <typename M, canonical_ornot_simd... Ts>
     requires signature_compatible<D, Ts...> && cpo_invocable<D, Ts...> &&
         const_mask_for<M, result_t<Ts...>> && simd_vector<result_t<Ts...>> &&
-        masked_transformable<D, result_t<Ts...>, dx::zero_t,
-            launder_cmask_t<result_t<Ts...>, M>, Ts...>
+        masked_transformable<D, result_t<Ts...>, dx::zero_t, M, Ts...>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr result_t<Ts...> operator()(
         dx::zero_t zero, M mask, Ts... args) noexcept {
         using R = result_t<Ts...>;
-        using CM = launder_cmask_t<R, M>;
-        if constexpr (canonical_cpo_invocable_r<D, R, dx::zero_t, CM, Ts...>) {
+        if constexpr (canonical_cpo_invocable_r<D, R, dx::zero_t, M, Ts...>) {
             if constexpr (all_same_abi<result_t<Ts...>, Ts...> &&
                 !inherits_from<D, basic_operation_base<D>>) {
                 if consteval {
-                    if constexpr (fallback_cpo_invocable_r<D, R, dx::zero_t, CM,
+                    if constexpr (fallback_cpo_invocable_r<D, R, dx::zero_t, M,
                                       Ts...>) {
-                        return impl::fallback<D>(zero,
-                            dx::to_compatible_const_mask<R>(mask), args...);
+                        return impl::fallback<D>(zero, mask, args...);
                     } else {
                         return fwd::select(mask, D::operator()(args...), zero);
                     }
                 } else {
-                    return impl::canonical<D>(
-                        zero, dx::to_compatible_const_mask<R>(mask), args...);
+                    return impl::canonical<D>(zero, mask, args...);
                 }
             } else {
-                return impl::canonical<D>(
-                    zero, dx::to_compatible_const_mask<R>(mask), args...);
+                return impl::canonical<D>(zero, mask, args...);
             }
         } else if constexpr (fallback_cpo_invocable_r<D, R, dx::zero_t, M,
                                  Ts...>) {
@@ -197,11 +187,10 @@ protected:
         }
     }
 
-    template <simd_vector S, simd_mask M, typename... Ts>
+    template <simd_vector S, exact_mask_for<S> M, typename... Ts>
     requires signature_compatible<D, Ts...> &&
         extended_arguments<S, M, Ts...> && cpo_invocable<D, Ts...> &&
         equivalent_vector_with<S, result_t<Ts...>> &&
-        common_abi_with<simd_abi_type_t<S>, simd_abi_type_t<M>> &&
         (extendable_operation_r<D, result_t<Ts...>, S, M, Ts...> ||
             requires {
                 requires simd_expression<S> || simd_expression<M> ||
@@ -234,8 +223,8 @@ protected:
 
     template <simd_mask M, typename... Ts>
     requires signature_compatible<D, Ts...> && extended_arguments<M, Ts...> &&
-        cpo_invocable<D, Ts...> && simd_vector<result_t<Ts...>> &&
-        common_abi_with<simd_abi_type_t<result_t<Ts...>>, simd_abi_type_t<M>> &&
+        cpo_invocable<D, Ts...> && exact_mask_for<M, result_t<Ts...>> &&
+        simd_vector<result_t<Ts...>> &&
         (extendable_operation_r<D, result_t<Ts...>, dx::zero_t, M, Ts...> ||
             requires {
                 requires (simd_expression<M> || ... || simd_expression<Ts>);
@@ -266,42 +255,35 @@ protected:
         }
     }
 
-    template <simd_vector S, typename M, typename... Ts>
+    template <simd_vector S, const_mask_for<S> M, typename... Ts>
     requires signature_compatible<D, Ts...> && extended_arguments<S, Ts...> &&
-        cpo_invocable<D, Ts...> && const_mask_for<M, result_t<Ts...>> &&
-        equivalent_vector_with<S, result_t<Ts...>> &&
-        (extendable_operation_r<D, result_t<Ts...>, S,
-             launder_cmask_t<result_t<Ts...>, M>, Ts...> ||
+        cpo_invocable<D, Ts...> && equivalent_vector_with<S, result_t<Ts...>> &&
+        (extendable_operation_r<D, result_t<Ts...>, S, launder_cmask_t<S, M>,
+             Ts...> ||
             requires {
                 requires (simd_expression<S> || ... || simd_expression<Ts>);
                 operator()(internal::declarg<result_or_identity_t<S>>(),
                     internal::declarg<M>(),
                     internal::declarg<result_or_identity_t<Ts>>()...);
-            } ||
-            fallback_cpo_invocable_r<D, result_t<Ts...>, S,
-                launder_cmask_t<result_t<Ts...>, M>, Ts...>)
+            } || fallback_cpo_invocable_r<D, result_t<Ts...>, S, M, Ts...>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(S&& src, M mask, Ts&&... args) {
         using R DPL_NODEBUG = result_t<Ts...>;
-        if constexpr (extended_cpo_invocable_r<D, R, S, launder_cmask_t<R, M>,
-                          Ts...>) {
-            return impl::extended<D>(__DPL forward<S>(src),
-                dx::to_compatible_const_mask<R>(mask),
-                __DPL forward<Ts>(args)...);
+        if constexpr (extended_cpo_invocable_r<D, R, S, M, Ts...>) {
+            return impl::extended<D>(
+                __DPL forward<S>(src), mask, __DPL forward<Ts>(args)...);
         } else if constexpr (extended_nttp_invocable_r<D, R, S,
                                  launder_cmask_t<R, M>, Ts...>) {
             constexpr D Op;
             return extended<Op>(__DPL forward<S>(src),
-                dx::to_compatible_const_mask<R>(mask),
-                __DPL forward<Ts>(args)...);
+                dx::to_const_mask<S>(mask), __DPL forward<Ts>(args)...);
         } else if constexpr ((simd_expression<S> || ... ||
                                  simd_expression<Ts>)) {
             return operator()( __DPL forward<S>(src), mask,
                 internal::forward_or_eval(__DPL forward<Ts>(args))...);
         } else {
-            return impl::fallback<D>(__DPL forward<S>(src),
-                dx::to_compatible_const_mask<R>(mask),
-                __DPL forward<Ts>(args)...);
+            return impl::fallback<D>(
+                __DPL forward<S>(src), mask, __DPL forward<Ts>(args)...);
         }
     }
 
@@ -316,35 +298,30 @@ protected:
                 operator()(dx::zero, internal::declarg<M>(),
                     internal::declarg<result_or_identity_t<Ts>>()...);
             } ||
-            fallback_cpo_invocable_r<D, result_t<Ts...>, dx::zero_t,
-                launder_cmask_t<result_t<Ts...>, M>, Ts...>)
+            fallback_cpo_invocable_r<D, result_t<Ts...>, dx::zero_t, M, Ts...>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(dx::zero_t zero, M mask, Ts&&... args) {
         using R DPL_NODEBUG = result_t<Ts...>;
-        if constexpr (extended_cpo_invocable_r<D, R, dx::zero_t,
-                          launder_cmask_t<R, M>, Ts...>) {
-            return impl::extended<D>(zero,
-                dx::to_compatible_const_mask<R>(mask),
-                __DPL forward<Ts>(args)...);
+        if constexpr (extended_cpo_invocable_r<D, R, dx::zero_t, M, Ts...>) {
+            return impl::extended<D>(zero, mask, __DPL forward<Ts>(args)...);
         } else if constexpr (extended_nttp_invocable_r<D, R, dx::zero_t,
                                  launder_cmask_t<R, M>, Ts...>) {
             constexpr D Op;
-            return extended<Op>(zero, dx::to_compatible_const_mask<R>(mask),
-                __DPL forward<Ts>(args)...);
+            return extended<Op>(
+                zero, dx::to_const_mask<R>(mask), __DPL forward<Ts>(args)...);
         } else if constexpr ((... || simd_expression<Ts>)) {
             return operator()(zero, mask,
                 internal::forward_or_eval(__DPL forward<Ts>(args))...);
         } else {
-            return impl::fallback<D>(zero,
-                dx::to_compatible_const_mask<R>(mask),
-                __DPL forward<Ts>(args)...);
+            return impl::fallback<D>(zero, mask, __DPL forward<Ts>(args)...);
         }
     }
 
     template <typename M, typename... Ts>
     requires signature_compatible<D, Ts...> && cpo_invocable<D, Ts...> &&
         simd_vector<result_t<Ts...>> &&
-        (simd_mask<M> || const_mask_for<remove_cvref_t<M>, result_t<Ts...>>) &&
+        (exact_mask_for<M, result_t<Ts...>> ||
+            const_mask_for<M, result_t<Ts...>>) &&
         requires {
             operator()(
                 dx::zero, internal::declarg<M>(), internal::declarg<Ts>()...);

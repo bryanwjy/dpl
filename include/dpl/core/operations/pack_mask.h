@@ -9,6 +9,7 @@
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/dispatch/interface.h"
 #  include "dpl/core/dispatch/operation/primitive.h"
+#  include "dpl/core/immediate/const_mask.h"
 #  include "dpl/core/immediate/immediate.h"
 #  include "dpl/core/type_traits/simd_abi_traits.h"
 #  include "dpl/std/utility/bitset.h"
@@ -42,6 +43,12 @@ struct fallback_impl<pack_mask_t> {
         return [&]<size_t... Is>(index_sequence<Is...>) {
             return bitset_t<A, E>(val[imm<Is>]...);
         }(iota_sequence<E, A>);
+    }
+
+    template <const_mask_like M>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr size_t operator()(M) noexcept {
+        return dx::to_bitset(cmask_v<M::value>);
     }
 };
 

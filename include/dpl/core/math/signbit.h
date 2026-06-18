@@ -36,12 +36,6 @@ template <>
 struct fallback_impl<signbit_t> {
 private:
     template <typename T>
-    using imask_t DPL_NODEBUG = mask_value_t<simd_abi_traits<T>::size>;
-
-    template <typename T, imask_t<T> V>
-    using cmask_t DPL_NODEBUG = const_mask<simd_abi_traits<T>::size, V>;
-
-    template <typename T>
     using result_t DPL_NODEBUG =
         basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
 
@@ -63,11 +57,11 @@ public:
         return dx::cmplt(mask, val, zero);
     }
 
-    template <canonical_vector T, imask_t<T> M>
+    template <canonical_vector T, const_mask_for<T> M>
     requires signed_integral<simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr result_t<T>
-        DPL_VECTORCALL operator()(cmask_t<T, M> cmask, T val) noexcept {
+        DPL_VECTORCALL operator()(M cmask, T val) noexcept {
         auto const zero = dx::broadcast<T>(dx::zero);
         return dx::cmplt(cmask, val, zero);
     }
@@ -90,11 +84,11 @@ public:
             mask, dx::reinterpret<signed_representation_t<E>>(val));
     }
 
-    template <canonical_vector T, imask_t<T> M>
+    template <canonical_vector T, const_mask_for<T> M>
     requires floating_point<simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr result_t<T>
-        DPL_VECTORCALL operator()(cmask_t<T, M> cmask, T val) noexcept {
+        DPL_VECTORCALL operator()(M cmask, T val) noexcept {
         using E = simd_element_type_t<T>;
         return operator()(
             cmask, dx::reinterpret<signed_representation_t<E>>(val));
@@ -109,7 +103,7 @@ concept unqualified_canonical_signbit = requires {
 };
 
 template <typename S, typename T>
-concept unqualified_canonical_msignbit = canonical_mask<S> &&
+concept unqualified_canonical_msignbit = cpo_invocable<signbit_t, T> &&
     (!simd_mask<S> || same_as<S, cpo_result_t<signbit_t, T>>) && requires {
         {
             signbit(internal::abi<T>, internal::declarg<S>(),
@@ -127,12 +121,6 @@ private:
     template <typename T>
     using mask_t DPL_NODEBUG = cpo_result_t<cmpeq_t, T>;
 
-    template <typename T>
-    using imask_t DPL_NODEBUG = mask_value_t<simd_abi_traits<T>::size>;
-
-    template <typename T, imask_t<T> V>
-    using cmask_t DPL_NODEBUG = const_mask<simd_abi_traits<T>::size, V>;
-
 public:
     template <canonical_vector T>
     requires unqualified_canonical_signbit<T>
@@ -148,12 +136,11 @@ public:
         return signbit(internal::abi<T>, src, val);
     }
 
-    template <fixed_width_vector T, imask_t<T> M>
-    requires canonical_vector<T> &&
-        unqualified_canonical_msignbit<cmask_t<T, M>, T>
+    template <canonical_vector T, const_mask_for<T> M>
+    requires unqualified_canonical_msignbit<launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr mask_t<T> operator()(cmask_t<T, M> cmask, T val) noexcept {
-        return signbit(internal::abi<T>, cmask, val);
+    static constexpr mask_t<T> operator()(M cmask, T val) noexcept {
+        return signbit(internal::abi<T>, dx::to_const_mask<T>(cmask), val);
     }
 };
 
@@ -165,7 +152,7 @@ concept unqualified_extended_signbit = requires {
 };
 
 template <typename S, typename T>
-concept unqualified_extended_msignbit =
+concept unqualified_extended_msignbit = cpo_invocable<signbit_t, T> &&
     (!simd_mask<S> || equivalent_mask_with<S, cpo_result_t<signbit_t, T>>) &&
     requires {
         {
@@ -198,12 +185,13 @@ public:
         return signbit(__DPL forward<S>(src), __DPL forward<T>(arg));
     }
 
-    template <fixed_width_vector T, imask_t<T> M>
-    requires extended_vector<T> &&
-        unqualified_extended_msignbit<cmask_t<T, M>, T>
+    template <extended_vector T, result_cmask_for<signbit_t, T> M>
+    requires unqualified_extended_msignbit<
+        launder_cmask_t<cpo_result_t<signbit_t, T>, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(cmask_t<T, M> cmask, T&& arg) {
-        return signbit(cmask, __DPL forward<T>(arg));
+    static constexpr auto operator()(M cmask, T&& arg) {
+        return signbit(dx::to_const_mask<cpo_result_t<signbit_t, T>>(cmask),
+            __DPL forward<T>(arg));
     }
 };
 

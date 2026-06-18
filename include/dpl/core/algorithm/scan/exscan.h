@@ -42,7 +42,7 @@ concept unqualified_canonical_exscan = requires {
 };
 
 template <typename S, typename M, typename T, typename V, typename Op>
-concept unqualified_canonical_mexscan =
+concept unqualified_canonical_mexscan = cpo_invocable<exscan_t, T, V, Op> &&
     (!simd_type<S> ||
         equivalent_vector_with<S, cpo_result_t<exscan_t, T, V, Op>>) &&
     requires {
@@ -58,20 +58,13 @@ template <>
 struct canonical_impl<exscan_t> {
 private:
     template <typename T, typename V, typename Op>
-    using source_t DPL_NODEBUG =
+    using result_t DPL_NODEBUG =
         canonical_type_t<cpo_result_t<exscan_t, T, V, Op>>;
 
     template <typename T, typename V, typename Op>
     using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<source_t<T, V, Op>>,
-            simd_abi_type_t<source_t<T, V, Op>>>;
-
-    template <typename T, typename V, typename Op>
-    using imask_t DPL_NODEBUG =
-        mask_value_t<simd_abi_type_t<source_t<T, V, Op>>::size>;
-
-    template <typename T, typename V, typename Op, imask_t<T, V, Op> M>
-    using cmask_t DPL_NODEBUG = make_const_mask_t<source_t<T, V, Op>, M>;
+        basic_mask<simd_element_type_t<result_t<T, V, Op>>,
+            simd_abi_type_t<result_t<T, V, Op>>>;
 
 public:
     template <canonical_vector T, broadcastable_to<T> V,
@@ -85,24 +78,25 @@ public:
 
     template <canonical_vector T, broadcastable_to<T> V,
         scan_operator_for<T> Op>
-    requires unqualified_canonical_mexscan<source_t<T, V, Op>, mask_t<T, V, Op>,
+    requires unqualified_canonical_mexscan<result_t<T, V, Op>, mask_t<T, V, Op>,
         T, V, Op>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(source_t<T, V, Op> src, mask_t<T, V, Op> mask,
+    static constexpr T operator()(result_t<T, V, Op> src, mask_t<T, V, Op> mask,
         T val, V&& init, Op&& func) noexcept {
         return exscan(internal::abi<T>, src, mask, val, __DPL forward<V>(init),
             __DPL forward<Op>(func));
     }
 
     template <canonical_vector T, broadcastable_to<T> V,
-        scan_operator_for<T> Op, imask_t<T, V, Op> M>
-    requires unqualified_canonical_mexscan<source_t<T, V, Op>,
-        cmask_t<T, V, Op, M>, T, V, Op>
+        scan_operator_for<T> Op, result_cmask_for<exscan_t, T, V, Op> M>
+    requires unqualified_canonical_mexscan<result_t<T, V, Op>,
+        launder_cmask_t<cpo_result_t<exscan_t, T, V, Op>, M>, T, V, Op>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(source_t<T, V, Op> src,
-        cmask_t<T, V, Op, M> cmask, T val, V&& init, Op&& func) noexcept {
-        return exscan(internal::abi<T>, src, cmask, val, __DPL forward<V>(init),
-            __DPL forward<Op>(func));
+    static constexpr T operator()(
+        result_t<T, V, Op> src, M cmask, T val, V&& init, Op&& func) noexcept {
+        return exscan(internal::abi<T>, src,
+            dx::to_const_mask<cpo_result_t<exscan_t, T, V, Op>>(cmask), val,
+            __DPL forward<V>(init), __DPL forward<Op>(func));
     }
 
     template <canonical_vector T, broadcastable_to<T> V,
@@ -117,13 +111,14 @@ public:
     }
 
     template <canonical_vector T, broadcastable_to<T> V,
-        scan_operator_for<T> Op, imask_t<T, V, Op> M>
-    requires unqualified_canonical_mexscan<dx::zero_t, cmask_t<T, V, Op, M>, T,
-        V, Op>
+        scan_operator_for<T> Op, result_cmask_for<exscan_t, T, V, Op> M>
+    requires unqualified_canonical_mexscan<dx::zero_t,
+        launder_cmask_t<cpo_result_t<exscan_t, T, V, Op>, M>, T, V, Op>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(dx::zero_t zero, cmask_t<T, V, Op, M> cmask,
-        T val, V&& init, Op&& func) noexcept {
-        return exscan(internal::abi<T>, zero, cmask, val,
+    static constexpr T operator()(
+        dx::zero_t zero, M cmask, T val, V&& init, Op&& func) noexcept {
+        return exscan(internal::abi<T>, zero,
+            dx::to_const_mask<cpo_result_t<exscan_t, T, V, Op>>(cmask), val,
             __DPL forward<V>(init), __DPL forward<Op>(func));
     }
 };
@@ -137,7 +132,7 @@ concept unqualified_extended_exscan = requires {
 };
 
 template <typename S, typename M, typename T, typename V, typename Op>
-concept unqualified_extended_mexscan =
+concept unqualified_extended_mexscan = cpo_invocable<exscan_t, T, V, Op> &&
     (!simd_type<S> ||
         equivalent_vector_with<S, cpo_result_t<exscan_t, T, V, Op>>) &&
     requires {
@@ -150,26 +145,6 @@ concept unqualified_extended_mexscan =
 
 template <>
 struct extended_impl<exscan_t> {
-private:
-    template <typename S>
-    using simask_t DPL_NODEBUG = mask_value_t<simd_abi_type_t<S>::size>;
-
-    template <typename S, simask_t<S> V>
-    using scmask_t DPL_NODEBUG = const_mask<simd_abi_type_t<S>::size, V>;
-
-    template <typename T, typename V, typename Op>
-    using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<cpo_result_t<exscan_t, T, V, Op>>,
-            simd_abi_type_t<cpo_result_t<exscan_t, T, V, Op>>>;
-
-    template <typename T, typename V, typename Op>
-    using imask_t DPL_NODEBUG =
-        simask_t<simd_abi_type_t<cpo_result_t<exscan_t, T, V, Op>>>;
-
-    template <typename T, typename V, typename Op, imask_t<T, V, Op> M>
-    using cmask_t DPL_NODEBUG =
-        scmask_t<simd_abi_type_t<cpo_result_t<exscan_t, T, V, Op>>, M>;
-
 public:
     template <extended_vector T, broadcastable_to<T> V, scan_operator_for<T> Op>
     requires unqualified_extended_exscan<T, V, Op>
@@ -191,19 +166,20 @@ public:
             __DPL forward<Op>(func));
     }
 
-    template <simd_vector S, simask_t<S> M, common_vector_with<S> T,
+    template <simd_vector S, const_mask_for<S> M, common_vector_with<S> T,
         broadcastable_to<T> V, scan_operator_for<T> Op>
     requires (extended_vector<S> || extended_vector<T>) &&
-        unqualified_extended_mexscan<S, scmask_t<S, M>, T, V, Op>
+        unqualified_extended_mexscan<S, launder_cmask_t<S, M>, T, V, Op>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
-        S&& src, scmask_t<S, M> cmask, T&& val, V&& init, Op&& func) {
-        return exscan(__DPL forward<S>(src), cmask, __DPL forward<T>(val),
-            __DPL forward<V>(init), __DPL forward<Op>(func));
+        S&& src, M cmask, T&& val, V&& init, Op&& func) {
+        return exscan(__DPL forward<S>(src), dx::to_const_mask<S>(cmask),
+            __DPL forward<T>(val), __DPL forward<V>(init),
+            __DPL forward<Op>(func));
     }
 
     template <simd_vector T, broadcastable_to<T> V, scan_operator_for<T> Op,
-        common_mask_with<mask_t<T, V, Op>> M>
+        result_mask_for<exscan_t, T, V, Op> M>
     requires (extended_vector<T> || extended_mask<M>) &&
         unqualified_extended_mexscan<dx::zero_t, M, T, V, Op>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -214,14 +190,16 @@ public:
     }
 
     template <extended_vector T, broadcastable_to<T> V, scan_operator_for<T> Op,
-        imask_t<T, V, Op> M>
-    requires unqualified_extended_mexscan<dx::zero_t, cmask_t<T, V, Op, M>, T,
-        V, Op>
+        result_cmask_for<exscan_t, T, V, Op> M>
+    requires unqualified_extended_mexscan<dx::zero_t,
+        launder_cmask_t<cpo_result_t<exscan_t, T, V, Op>, M>, T, V, Op>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(dx::zero_t zero,
-        cmask_t<T, V, Op, M> cmask, T&& val, V&& init, Op&& func) {
-        return exscan(zero, cmask, __DPL forward<T>(val),
-            __DPL forward<V>(init), __DPL forward<Op>(func));
+    static constexpr auto operator()(
+        dx::zero_t zero, M cmask, T&& val, V&& init, Op&& func) {
+        return exscan(zero,
+            dx::to_const_mask<cpo_result_t<exscan_t, T, V, Op>>(cmask),
+            __DPL forward<T>(val), __DPL forward<V>(init),
+            __DPL forward<Op>(func));
     }
 };
 

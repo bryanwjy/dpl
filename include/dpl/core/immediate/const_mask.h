@@ -5,16 +5,16 @@
 
 #include "dpl/core/immediate/constants/all_bits.h"
 #include "dpl/core/immediate/constants/zero.h"
-#include "dpl/core/immediate/immediate.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/concepts/simd_abi.h"
+#  include "dpl/core/concepts/cpo_invocable.h"
 #  include "dpl/core/concepts/simd_type.h"
-#  include "dpl/core/type_traits/canonical_type.h"
+#  include "dpl/core/type_traits/cpo_result.h"
 #  include "dpl/core/type_traits/declarg.h"
 #  include "dpl/core/type_traits/enable_const_mask.h"
 #  include "dpl/core/type_traits/simd_abi_traits.h"
 #  include "dpl/std/bit/bit_type.h"
+#  include "dpl/std/bit/bit_width.h"
 #  include "dpl/std/bit/countl.h"
 #  include "dpl/std/bit/countr.h"
 #  include "dpl/std/bit/popcount.h"
@@ -82,10 +82,6 @@ public:
         }
     }();
 
-    __DPL_HIDE_FROM_ABI constexpr operator immediate<value>(
-        this const_mask) noexcept {
-        return imm<value>;
-    }
     __DPL_HIDE_FROM_ABI constexpr operator value_type(
         this const_mask) noexcept {
         return value;
@@ -279,80 +275,54 @@ public:
         const_mask<width, static_cast<internal::mask_value_t<width>>(V)>;
 };
 
-DPL_EXPORT template <typename T>
-concept mask_constant_like =
-    (is_integral_v<decltype(T::value)> || bitset_type<decltype(T::value)>) &&
-    !is_same_v<bool, remove_const_t<decltype(T::value)>> &&
-    convertible_to<T, decltype(T::value)> &&
-    equality_comparable_with<T, decltype(T::value)> &&
-    bool_constant<T() == T::value>::value &&
-    bool_constant<static_cast<decltype(T::value)>(T()) == T::value>::value;
+template <typename T>
+concept const_mask_like = enable_const_mask<remove_cv_t<T>> &&
+    (integral_constant_like<T> || bitset_constant_like<T>);
 
 template <typename M, typename T>
-concept const_mask_from_constant = mask_constant_like<M> && requires(M mask) {
-    typename make_const_mask_t<T, M::value>;
-} && explicitly_convertible_to<M, make_const_mask_t<T, M::value>>;
-
-DPL_EXPORT template <typename M, typename T>
-concept const_mask_for = fixed_width_simd_type<T> &&
-    (const_mask_from_constant<M, remove_cvref_t<T>> ||
-        same_as<datapar::zero_t, M> || same_as<datapar::all_bits_t, M>);
+concept const_mask_for = fixed_width_simd_type<T> && const_mask_like<M> &&
+    simd_abi_traits<T>::size >= __DPL bit_width(M::value);
 
 DPL_EXPORT template <fixed_width_simd_type T, const_mask_for<T> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr auto to_compatible_const_mask(M mask) noexcept {
-    return static_cast<make_const_mask_t<T, M::value>>(mask);
+consteval auto to_const_mask(M) noexcept {
+    constexpr auto width = simd_abi_traits<T>::size();
+    constexpr auto value = static_cast<internal::mask_value_t<width>>(M::value);
+    return const_mask<width, value>();
 }
-
-DPL_EXPORT template <fixed_width_simd_type T>
-DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr auto to_compatible_const_mask(datapar::zero_t) noexcept {
-    return const_mask<simd_abi_traits<T>::size, 0>();
-}
-
-DPL_EXPORT template <fixed_width_simd_type T>
-DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr auto to_compatible_const_mask(datapar::all_bits_t) noexcept {
-    constexpr auto V = static_cast<bit_type_t<simd_abi_traits<T>::size>>(-1);
-    return const_mask<simd_abi_traits<T>::size, V>();
-}
-
-template <typename T>
-concept const_mask_like = enable_const_mask<T> && integral_constant_like<T> &&
-    unsigned_integral<typename T::value_type> && requires {
-        T::width;
-        typename integral_constant<size_t, T::width>;
-    } && (T::width < sizeof(typename T::value_type) * char_bit_v);
-
-template <typename T>
-concept const_mask_convertible =
-    integral_constant_like<T> || bitset_constant_like<T>;
 
 template <size_t W, internal::mask_value_t<W> V>
-consteval bitset<W> to_bitset(const_mask<W, V> self) noexcept {
-    return static_cast<bitset<W>>(self);
+consteval bitset<W> to_bitset(const_mask<W, V> cmask) noexcept {
+    return static_cast<bitset<W>>(cmask);
 }
 
 namespace internal {
+template <typename M, typename D, typename... Ts>
+concept result_cmask_for =
+    cpo_invocable<D, Ts...> && const_mask_for<M, cpo_result_t<D, Ts...>>;
+
 template <typename S, typename M>
 struct launder_cmask {};
-template <simd_type S, const_mask_for<canonical_type_t<S>> M>
+template <simd_type S, const_mask_for<S> M>
 struct launder_cmask<S, M> {
     using type DPL_NODEBUG =
-        decltype(dx::to_compatible_const_mask<canonical_type_t<S>>(
-            internal::declarg<M>()));
+        decltype(dx::to_const_mask<S>(internal::declarg<M>()));
 };
+
 template <typename S, typename M>
 using launder_cmask_t DPL_NODEBUG = typename launder_cmask<S, M>::type;
 
 consteval auto auto_width(integral auto val) noexcept {
-    auto const uval = __DPL to_unsigned(val);
-    return 1zu << (__DPL bit_width(val) - __DPL has_single_bit(val));
+    auto const uval =
+        __DPL to_unsigned(__DPL bit_width(__DPL to_unsigned(val)));
+    return 1zu << (__DPL bit_width(uval) - __DPL has_single_bit(uval));
 }
+
 template <size_t W>
 consteval auto auto_width(bitset<W> const& val) noexcept {
-    return W;
+    return 1zu << (__DPL bit_width(W) - __DPL has_single_bit(W));
 }
+
 consteval auto launder_auto(integral auto val) noexcept {
     return __DPL to_unsigned(val);
 }
@@ -366,12 +336,16 @@ consteval auto launder_auto(bitset<W> const& val) noexcept {
 }
 } // namespace internal
 
-DPL_EXPORT template <auto V>
+template <auto V>
 requires requires {
     internal::auto_width(V);
     internal::launder_auto(V);
 }
-inline constexpr const_mask<internal::auto_width(V), internal::launder_auto(V)>
-    cmask_v{};
+using cmask_t DPL_NODEBUG =
+    const_mask<internal::auto_width(V), internal::launder_auto(V)>;
+
+template <auto V>
+requires requires { typename cmask_t<V>; }
+inline constexpr cmask_t<V> cmask_v{};
 } // namespace datapar
 DPL_DEFAULT_NAMESPACE_END

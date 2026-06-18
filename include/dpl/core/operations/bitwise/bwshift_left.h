@@ -97,16 +97,15 @@ concept unqualified_canonical_bwshift_left = requires {
     } -> vector_with<simd_element_type_t<T>, A>;
 };
 
-template <typename S, typename M, typename T, typename N = size_t,
-    typename A =
-        conditional_t<simd_type<S>, S, cpo_result_t<bwshift_left_t, T, N>>>
+template <typename S, typename M, typename T, typename N = size_t>
 concept unqualified_canonical_mbwshift_left =
+    cpo_invocable<bwshift_left_t, T, N> &&
     (!simd_type<S> || same_as<S, cpo_result_t<bwshift_left_t, T, N>>) &&
     requires {
         {
-            bwshift_left(internal::abi<A>, internal::declarg<S>(),
-                internal::declarg<M>(), internal::declarg<T>(),
-                internal::declarg<N>())
+            bwshift_left(internal::abi<cpo_result_t<bwshift_left_t, T, N>>,
+                internal::declarg<S>(), internal::declarg<M>(),
+                internal::declarg<T>(), internal::declarg<N>())
         } -> same_as<cpo_result_t<bwshift_left_t, T, N>>;
     };
 
@@ -120,12 +119,6 @@ private:
     using mask_t DPL_NODEBUG =
         basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
 
-    template <typename T>
-    using imask_t DPL_NODEBUG = mask_value_t<simd_abi_traits<T>::size>;
-
-    template <typename T, imask_t<T> M>
-    using cmask_t DPL_NODEBUG = const_mask<simd_abi_traits<T>::size, M>;
-
     template <typename L, typename R>
     using vresult_t DPL_NODEBUG =
         basic_vector<simd_element_type_t<L>, common_abi_t<L, R>>;
@@ -133,12 +126,6 @@ private:
     template <typename L, typename R>
     using vmask_t DPL_NODEBUG =
         basic_mask<simd_element_type_t<L>, common_abi_t<L, R>>;
-
-    template <typename L, typename R>
-    using vimask_t DPL_NODEBUG = imask_t<cpo_result_t<bwshift_left_t, L, R>>;
-
-    template <typename L, typename R, vimask_t<L, R> M>
-    using vcmask_t DPL_NODEBUG = cmask_t<cpo_result_t<bwshift_left_t, L, R>, M>;
 
 public:
     template <canonical_mask L>
@@ -159,7 +146,7 @@ public:
     template <canonical_vector L, canonical_vshift_vector_for<L> R>
     requires unqualified_canonical_bwshift_left<L, R, common_abi_t<L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L lhs, R rhs) noexcept {
+    static constexpr vresult_t<L, R> operator()(L lhs, R rhs) noexcept {
         return bwshift_left(internal::abi<common_abi_t<L, R>>, lhs, rhs);
     }
 
@@ -167,42 +154,42 @@ public:
     requires unqualified_canonical_mbwshift_left<vresult_t<L, R>, vmask_t<L, R>,
         L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
+    static constexpr vresult_t<L, R> operator()(
         vresult_t<L, R> src, vmask_t<L, R> mask, L lhs, R rhs) noexcept {
         return bwshift_left(
             internal::abi<common_abi_t<L, R>>, src, mask, lhs, rhs);
     }
 
     template <canonical_vector L, canonical_vshift_vector_for<L> R,
-        vimask_t<L, R> M>
+        const_mask_for<vresult_t<L, R>> M>
     requires unqualified_canonical_mbwshift_left<vresult_t<L, R>,
-        vcmask_t<L, R, M>, L, R>
+        launder_cmask_t<vresult_t<L, R>, M>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        vresult_t<L, R> src, vcmask_t<L, R, M> cmask, L lhs, R rhs) noexcept {
-        return bwshift_left(
-            internal::abi<common_abi_t<L, R>>, src, cmask, lhs, rhs);
+    static constexpr vresult_t<L, R> operator()(
+        vresult_t<L, R> src, M cmask, L lhs, R rhs) noexcept {
+        return bwshift_left(internal::abi<common_abi_t<L, R>>, src,
+            dx::to_const_mask<vresult_t<L, R>>(cmask), lhs, rhs);
     }
 
     template <canonical_vector L, canonical_vshift_vector_for<L> R>
     requires unqualified_canonical_mbwshift_left<dx::zero_t, vmask_t<L, R>, L,
         R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
+    static constexpr vresult_t<L, R> operator()(
         dx::zero_t zero, vmask_t<L, R> mask, L lhs, R rhs) noexcept {
         return bwshift_left(
             internal::abi<common_abi_t<L, R>>, zero, mask, lhs, rhs);
     }
 
     template <canonical_vector L, canonical_vshift_vector_for<L> R,
-        vimask_t<L, R> M>
-    requires unqualified_canonical_mbwshift_left<dx::zero_t, vcmask_t<L, R, M>,
-        L, R>
+        const_mask_for<vresult_t<L, R>> M>
+    requires unqualified_canonical_mbwshift_left<dx::zero_t,
+        launder_cmask_t<vresult_t<L, R>, M>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        dx::zero_t zero, vcmask_t<L, R, M> cmask, L lhs, R rhs) noexcept {
-        return bwshift_left(
-            internal::abi<common_abi_t<L, R>>, zero, cmask, lhs, rhs);
+    static constexpr vresult_t<L, R> operator()(
+        dx::zero_t zero, M cmask, L lhs, R rhs) noexcept {
+        return bwshift_left(internal::abi<common_abi_t<L, R>>, zero,
+            dx::to_const_mask<vresult_t<L, R>>(cmask), lhs, rhs);
     }
     ///
 
@@ -216,42 +203,46 @@ public:
     template <canonical_vector T>
     requires unqualified_canonical_mbwshift_left<result_t<T>, mask_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
+    static constexpr result_t<T> operator()(
         result_t<T> src, mask_t<T> mask, T val, size_t count) noexcept {
         return bwshift_left(internal::abi<result_t<T>>, src, mask, val, count);
     }
 
-    template <fixed_width_vector T, imask_t<T> M>
+    template <canonical_vector T, const_mask_for<T> M>
     requires canonical_vector<T> &&
-        unqualified_canonical_mbwshift_left<result_t<T>, cmask_t<T, M>, T>
+        unqualified_canonical_mbwshift_left<result_t<T>, launder_cmask_t<T, M>,
+            T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        result_t<T> src, cmask_t<T, M> cmask, T val, size_t count) noexcept {
-        return bwshift_left(internal::abi<result_t<T>>, src, cmask, val, count);
+    static constexpr result_t<T> operator()(
+        result_t<T> src, M cmask, T val, size_t count) noexcept {
+        return bwshift_left(internal::abi<result_t<T>>, src,
+            dx::to_const_mask<T>(cmask), val, count);
     }
 
     template <canonical_vector T>
     requires unqualified_canonical_mbwshift_left<dx::zero_t, mask_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
+    static constexpr result_t<T> operator()(
         dx::zero_t zero, mask_t<T> mask, T val, size_t count) noexcept {
         return bwshift_left(internal::abi<result_t<T>>, zero, mask, val, count);
     }
 
-    template <fixed_width_vector T, imask_t<T> M>
+    template <canonical_vector T, const_mask_for<T> M>
     requires canonical_vector<T> &&
-        unqualified_canonical_mbwshift_left<dx::zero_t, cmask_t<T, M>, T>
+        unqualified_canonical_mbwshift_left<dx::zero_t, launder_cmask_t<T, M>,
+            T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        dx::zero_t zero, cmask_t<T, M> cmask, T val, size_t count) noexcept {
-        return bwshift_left(internal::abi<T>, zero, cmask, val, count);
+    static constexpr result_t<T> operator()(
+        dx::zero_t zero, M cmask, T val, size_t count) noexcept {
+        return bwshift_left(
+            internal::abi<T>, zero, dx::to_const_mask<T>(cmask), val, count);
     }
 
     ///
     template <canonical_vector T, integral_constant_like N>
     requires unqualified_canonical_bwshift_left<T, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T val, N count) noexcept {
+    static constexpr result_t<T> operator()(T val, N count) noexcept {
         return bwshift_left(internal::abi<T>, val, count);
     }
 
@@ -259,35 +250,39 @@ public:
     requires canonical_vector<T> &&
         unqualified_canonical_mbwshift_left<result_t<T>, mask_t<T>, T, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
+    static constexpr result_t<T> operator()(
         result_t<T> src, mask_t<T> mask, T val, N count) noexcept {
         return bwshift_left(internal::abi<result_t<T>>, src, mask, val, count);
     }
 
-    template <fixed_width_vector T, imask_t<T> M, integral_constant_like N>
+    template <canonical_vector T, const_mask_for<T> M, integral_constant_like N>
     requires canonical_vector<T> &&
-        unqualified_canonical_mbwshift_left<T, cmask_t<T, M>, T, N>
+        unqualified_canonical_mbwshift_left<result_t<T>, launder_cmask_t<T, M>,
+            T, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        result_t<T> src, cmask_t<T, M> cmask, T val, N count) noexcept {
-        return bwshift_left(internal::abi<result_t<T>>, src, cmask, val, count);
+    static constexpr result_t<T> operator()(
+        result_t<T> src, M cmask, T val, N count) noexcept {
+        return bwshift_left(internal::abi<result_t<T>>, src,
+            dx::to_const_mask<result_t<T>>(cmask), val, count);
     }
 
     template <canonical_vector T, integral_constant_like N>
     requires unqualified_canonical_mbwshift_left<dx::zero_t, mask_t<T>, T, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
+    static constexpr result_t<T> operator()(
         dx::zero_t zero, mask_t<T> mask, T val, N count) noexcept {
         return bwshift_left(internal::abi<T>, zero, mask, val, count);
     }
 
-    template <fixed_width_vector T, imask_t<T> M, integral_constant_like N>
+    template <canonical_vector T, const_mask_for<T> M, integral_constant_like N>
     requires canonical_vector<T> &&
-        unqualified_canonical_mbwshift_left<dx::zero_t, cmask_t<T, M>, T, N>
+        unqualified_canonical_mbwshift_left<dx::zero_t, launder_cmask_t<T, M>,
+            T, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        dx::zero_t zero, cmask_t<T, M> cmask, T val, N count) noexcept {
-        return bwshift_left(internal::abi<T>, zero, cmask, val, count);
+    static constexpr result_t<T> operator()(
+        dx::zero_t zero, M cmask, T val, N count) noexcept {
+        return bwshift_left(
+            internal::abi<T>, zero, dx::to_const_mask<T>(cmask), val, count);
     }
 };
 
@@ -305,43 +300,21 @@ concept unqualified_extended_bwshift_left = requires {
     } -> vector_with_common_abi<A>;
 };
 
-template <typename S, typename M, typename T, typename N = size_t,
-    typename A =
-        conditional_t<simd_type<S>, S, cpo_result_t<bwshift_left_t, T, N>>>
+template <typename S, typename M, typename T, typename N = size_t>
 concept unqualified_extended_mbwshift_left =
+    cpo_invocable<cpo_result_t<bwshift_left_t, T, N>> &&
     (!simd_type<S> ||
         equivalent_vector_with<S, cpo_result_t<bwshift_left_t, T, N>>) &&
     requires {
         {
-            bwshift_left(internal::abi<A>, internal::declarg<S>(),
-                internal::declarg<M>(), internal::declarg<T>(),
-                internal::declarg<N>())
+            bwshift_left(internal::abi<cpo_result_t<bwshift_left_t, T, N>>,
+                internal::declarg<S>(), internal::declarg<M>(),
+                internal::declarg<T>(), internal::declarg<N>())
         } -> equivalent_vector_with<cpo_result_t<bwshift_left_t, T, N>>;
     };
 
 template <>
 struct extended_impl<bwshift_left_t> {
-private:
-    template <typename S>
-    using imask_t DPL_NODEBUG = mask_value_t<simd_abi_type_t<S>::size>;
-
-    template <typename S, imask_t<S> V>
-    using cmask_t DPL_NODEBUG = const_mask<simd_abi_type_t<S>::size, V>;
-
-    template <typename T>
-    using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
-
-    template <typename L, typename R>
-    using vimask_t DPL_NODEBUG = imask_t<cpo_result_t<bwshift_left_t, L, R>>;
-
-    template <typename L, typename R, vimask_t<L, R> M>
-    using vcmask_t DPL_NODEBUG = cmask_t<cpo_result_t<bwshift_left_t, L, R>, M>;
-
-    template <typename L, typename R>
-    using vmask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<L>, common_abi_t<L, R>>;
-
 public:
     template <extended_mask L>
     requires unqualified_extended_mask_bwshift_left<L>
@@ -377,19 +350,18 @@ public:
             __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 
-    template <fixed_width_vector S, imask_t<S> M, common_vector_with<S> L,
+    template <simd_vector S, const_mask_for<S> M, common_vector_with<S> L,
         vshift_vector_for<L> R>
     requires (extended_vector<S> || extended_vector<L> || extended_vector<R>) &&
-        unqualified_extended_mbwshift_left<S, cmask_t<S, M>, L, R>
+        unqualified_extended_mbwshift_left<S, launder_cmask_t<S, M>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        S&& src, cmask_t<S, M> cmask, L&& lhs, R&& rhs) {
-        return bwshift_left(
-            src, cmask, __DPL forward<L>(lhs), __DPL forward<R>(rhs));
+    static constexpr auto operator()(S&& src, M cmask, L&& lhs, R&& rhs) {
+        return bwshift_left(src, dx::to_const_mask<S>(cmask),
+            __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 
     template <simd_vector L, vshift_vector_for<L> R,
-        common_mask_with<vmask_t<L, R>> M>
+        result_mask_for<bwshift_left_t, L, R> M>
     requires (extended_mask<M> || extended_vector<L> || extended_vector<R>) &&
         unqualified_extended_mbwshift_left<dx::zero_t, M, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -399,52 +371,63 @@ public:
             __DPL forward<R>(rhs));
     }
 
-    template <simd_vector L, vshift_vector_for<L> R, vimask_t<L, R> M>
+    template <simd_vector L, vshift_vector_for<L> R,
+        result_cmask_for<bwshift_left_t, L, R> M>
     requires (extended_vector<L> || extended_vector<R>) &&
-        unqualified_extended_mbwshift_left<dx::zero_t, vcmask_t<L, R, M>, L, R>
+        unqualified_extended_mbwshift_left<dx::zero_t,
+            launder_cmask_t<cpo_result_t<bwshift_left_t, L, R>, M>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
-        dx::zero_t zero, vcmask_t<L, R, M> cmask, L&& lhs, R&& rhs) {
-        return bwshift_left(
-            zero, cmask, __DPL forward<L>(lhs), __DPL forward<R>(rhs));
+        dx::zero_t zero, M cmask, L&& lhs, R&& rhs) {
+        return bwshift_left(zero,
+            dx::to_const_mask<cpo_result_t<bwshift_left_t, L, R>>(cmask),
+            __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
     ///
+    template <extended_vector T>
+    requires unqualified_extended_bwshift_left<T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T&& val, size_t count) {
+        return bwshift_left(__DPL forward<T>(val), count);
+    }
 
     template <simd_vector S, exact_mask_for<S> M, common_vector_with<S> T>
     requires (extended_vector<S> || extended_mask<M> || extended_vector<T>) &&
         unqualified_extended_mbwshift_left<S, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(S&& src, M mask, T&& val, size_t count) {
+    static constexpr auto operator()(S&& src, M&& mask, T&& val, size_t count) {
         return bwshift_left( __DPL forward<S>(src), __DPL forward<M>(mask),
             __DPL forward<T>(val), count);
     }
 
-    template <fixed_width_vector S, imask_t<S> M, common_vector_with<S> T>
+    template <simd_vector S, const_mask_for<S> M, common_vector_with<S> T>
     requires (extended_vector<S> || extended_vector<T>) &&
-        unqualified_extended_mbwshift_left<S, cmask_t<S, M>, T>
+        unqualified_extended_mbwshift_left<S, launder_cmask_t<S, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        S&& src, cmask_t<S, M> cmask, T&& val, size_t count) {
-        return bwshift_left(
-            __DPL forward<S>(src), cmask, __DPL forward<T>(val), count);
+    static constexpr auto operator()(S&& src, M cmask, T&& val, size_t count) {
+        return bwshift_left( __DPL forward<S>(src),
+            dx::to_const_mask<S>(cmask), __DPL forward<T>(val), count);
     }
 
-    template <simd_vector T, common_mask_with<mask_t<T>> M>
+    template <simd_vector T, result_mask_for<bwshift_left_t, T, size_t> M>
     requires (extended_mask<M> || extended_vector<T>) &&
         unqualified_extended_mbwshift_left<dx::zero_t, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
-        dx::zero_t zero, M mask, T&& val, size_t count) {
+        dx::zero_t zero, M&& mask, T&& val, size_t count) {
         return bwshift_left(zero, mask, __DPL forward<T>(val), count);
     }
 
-    template <fixed_width_vector T, imask_t<T> M>
+    template <simd_vector T, result_cmask_for<bwshift_left_t, T, size_t> M>
     requires extended_vector<T> &&
-        unqualified_extended_mbwshift_left<dx::zero_t, cmask_t<T, M>, T>
+        unqualified_extended_mbwshift_left<dx::zero_t,
+            launder_cmask_t<cpo_result_t<bwshift_left_t, T, size_t>, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
-        dx::zero_t zero, cmask_t<T, M> cmask, T&& val, size_t count) {
-        return bwshift_left(zero, cmask, __DPL forward<T>(val), count);
+        dx::zero_t zero, M cmask, T&& val, size_t count) {
+        return bwshift_left(zero,
+            dx::to_const_mask<cpo_result_t<bwshift_left_t, T, size_t>>(cmask),
+            __DPL forward<T>(val), count);
     }
 
     ///
@@ -460,24 +443,23 @@ public:
     requires (extended_vector<S> || extended_mask<M> || extended_vector<T>) &&
         unqualified_extended_mbwshift_left<S, M, T, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(S&& src, M mask, T&& val, N count) {
+    static constexpr auto operator()(S&& src, M&& mask, T&& val, N count) {
         return bwshift_left( __DPL forward<S>(src), __DPL forward<M>(mask),
             __DPL forward<T>(val), count);
     }
 
-    template <fixed_width_vector S, imask_t<S> M, common_vector_with<S> T,
+    template <simd_vector S, const_mask_for<S> M, common_vector_with<S> T,
         integral_constant_like N>
     requires (extended_vector<S> || extended_vector<T>) &&
-        unqualified_extended_mbwshift_left<S, cmask_t<S, M>, T, N>
+        unqualified_extended_mbwshift_left<S, launder_cmask_t<S, M>, T, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        S&& src, cmask_t<S, M> cmask, T&& val, N count) {
-        return bwshift_left(
-            __DPL forward<S>(src), cmask, __DPL forward<T>(val), count);
+    static constexpr auto operator()(S&& src, M cmask, T&& val, N count) {
+        return bwshift_left( __DPL forward<S>(src),
+            dx::to_const_mask<S>(cmask), __DPL forward<T>(val), count);
     }
 
-    template <simd_vector T, common_mask_with<mask_t<T>> M,
-        integral_constant_like N>
+    template <simd_vector T, integral_constant_like N,
+        result_mask_for<bwshift_left_t, T, N> M>
     requires (extended_mask<M> || extended_vector<T>) &&
         unqualified_extended_mbwshift_left<dx::zero_t, M, T, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -487,12 +469,16 @@ public:
             zero, __DPL forward<M>(mask), __DPL forward<T>(val), count);
     }
 
-    template <extended_vector T, imask_t<T> M, integral_constant_like N>
-    requires unqualified_extended_mbwshift_left<dx::zero_t, cmask_t<T, M>, T, N>
+    template <extended_vector T, integral_constant_like N,
+        result_cmask_for<bwshift_left_t, T, N> M>
+    requires unqualified_extended_mbwshift_left<dx::zero_t,
+        launder_cmask_t<T, M>, T, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
-        dx::zero_t zero, cmask_t<T, M> cmask, T&& val, N count) {
-        return bwshift_left(zero, cmask, __DPL forward<T>(val), count);
+        dx::zero_t zero, M cmask, T&& val, N count) {
+        return bwshift_left(zero,
+            dx::to_const_mask<cpo_result_t<bwshift_left_t, T, N>>(cmask),
+            __DPL forward<T>(val), count);
     }
 };
 

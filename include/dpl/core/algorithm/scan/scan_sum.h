@@ -11,6 +11,7 @@
 #  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/dispatch/maskable/transform.h"
 #  include "dpl/core/dispatch/operation/algorithm.h"
+#  include "dpl/core/immediate/const_mask.h"
 #  include "dpl/core/operations/arithmetic/add.h"
 #endif
 
@@ -38,11 +39,11 @@ concept unqualified_canonical_scan_sum = requires {
 };
 
 template <typename S, typename M, typename T>
-concept unqualified_canonical_mscan_sum =
+concept unqualified_canonical_mscan_sum = cpo_invocable<scan_sum_t, T> &&
     (!simd_type<S> || equivalent_vector_with<S, cpo_result_t<scan_sum_t, T>>) &&
     requires {
         {
-            scan_sum(internal::abi<conditional_t<simd_type<S>, S, T>>,
+            scan_sum(internal::abi<cpo_result_t<scan_sum_t, T>>,
                 internal::declarg<S>(), internal::declarg<M>(),
                 internal::declarg<T>())
         } -> equivalent_vector_with<cpo_result_t<scan_sum_t, T>>;
@@ -52,18 +53,11 @@ template <>
 struct canonical_impl<scan_sum_t> {
 private:
     template <typename T>
-    using source_t DPL_NODEBUG = canonical_type_t<cpo_result_t<scan_sum_t, T>>;
+    using result_t DPL_NODEBUG = canonical_type_t<cpo_result_t<scan_sum_t, T>>;
 
     template <typename T>
-    using mask_t DPL_NODEBUG = basic_mask<simd_element_type_t<source_t<T>>,
-        simd_abi_type_t<source_t<T>>>;
-
-    template <typename T>
-    using imask_t DPL_NODEBUG =
-        mask_value_t<simd_abi_type_t<source_t<T>>::size>;
-
-    template <typename T, imask_t<T> M>
-    using cmask_t DPL_NODEBUG = make_const_mask_t<source_t<T>, M>;
+    using mask_t DPL_NODEBUG = basic_mask<simd_element_type_t<result_t<T>>,
+        simd_abi_type_t<result_t<T>>>;
 
 public:
     template <canonical_vector T>
@@ -74,19 +68,20 @@ public:
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mscan_sum<source_t<T>, mask_t<T>, T>
+    requires unqualified_canonical_mscan_sum<result_t<T>, mask_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
-        source_t<T> src, mask_t<T> mask, T val) noexcept {
+        result_t<T> src, mask_t<T> mask, T val) noexcept {
         return scan_sum(internal::abi<T>, src, mask, val);
     }
 
-    template <canonical_vector T, imask_t<T> M>
-    requires unqualified_canonical_mscan_sum<source_t<T>, cmask_t<T, M>, T>
+    template <canonical_vector T, result_cmask_for<scan_sum_t, T> M>
+    requires unqualified_canonical_mscan_sum<result_t<T>,
+        launder_cmask_t<cpo_result_t<scan_sum_t, T>, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(
-        source_t<T> src, cmask_t<T, M> cmask, T val) noexcept {
-        return scan_sum(internal::abi<T>, src, cmask, val);
+    static constexpr T operator()(result_t<T> src, M cmask, T val) noexcept {
+        return scan_sum(internal::abi<T>, src,
+            dx::to_const_mask<cpo_result_t<scan_sum_t, T>>(cmask), val);
     }
 
     template <canonical_vector T>
@@ -97,12 +92,13 @@ public:
         return scan_sum(internal::abi<T>, zero, mask, val);
     }
 
-    template <canonical_vector T, imask_t<T> M>
-    requires unqualified_canonical_mscan_sum<dx::zero_t, cmask_t<T, M>, T>
+    template <canonical_vector T, result_cmask_for<scan_sum_t, T> M>
+    requires unqualified_canonical_mscan_sum<dx::zero_t,
+        launder_cmask_t<cpo_result_t<scan_sum_t, T>, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(
-        dx::zero_t zero, cmask_t<T, M> cmask, T val) noexcept {
-        return scan_sum(internal::abi<T>, zero, cmask, val);
+    static constexpr T operator()(dx::zero_t zero, M cmask, T val) noexcept {
+        return scan_sum(internal::abi<T>, zero,
+            dx::to_const_mask<cpo_result_t<scan_sum_t, T>>(cmask), val);
     }
 };
 
@@ -112,7 +108,7 @@ concept unqualified_extended_scan_sum = requires {
 };
 
 template <typename S, typename M, typename T>
-concept unqualified_extended_mscan_sum =
+concept unqualified_extended_mscan_sum = cpo_invocable<scan_sum_t, T> &&
     (!simd_type<S> || equivalent_vector_with<S, cpo_result_t<scan_sum_t, T>>) &&
     requires {
         {
@@ -123,26 +119,6 @@ concept unqualified_extended_mscan_sum =
 
 template <>
 struct extended_impl<scan_sum_t> {
-private:
-    template <typename S>
-    using simask_t DPL_NODEBUG = mask_value_t<simd_abi_type_t<S>::size>;
-
-    template <typename S, simask_t<S> M>
-    using scmask_t DPL_NODEBUG = const_mask<simd_abi_type_t<S>::size, M>;
-
-    template <typename T>
-    using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<cpo_result_t<scan_sum_t, T>>,
-            simd_abi_type_t<cpo_result_t<scan_sum_t, T>>>;
-
-    template <typename T>
-    using imask_t DPL_NODEBUG =
-        simask_t<simd_abi_type_t<cpo_result_t<scan_sum_t, T>>>;
-
-    template <typename T, imask_t<T> M>
-    using cmask_t DPL_NODEBUG =
-        scmask_t<simd_abi_type_t<cpo_result_t<scan_sum_t, T>>, M>;
-
 public:
     template <extended_vector T>
     requires unqualified_extended_scan_sum<T>
@@ -161,16 +137,17 @@ public:
             __DPL forward<T>(val));
     }
 
-    template <simd_vector S, simask_t<S> M, common_vector_with<S> T,
+    template <simd_vector S, const_mask_for<S> M, common_vector_with<S> T,
         broadcastable_to<T> V>
     requires (extended_vector<S> || extended_vector<T>) &&
-        unqualified_extended_mscan_sum<S, scmask_t<S, M>, T>
+        unqualified_extended_mscan_sum<S, launder_cmask_t<S, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(S&& src, scmask_t<S, M> cmask, T&& val) {
-        return scan_sum(__DPL forward<S>(src), cmask, __DPL forward<T>(val));
+    static constexpr auto operator()(S&& src, M cmask, T&& val) {
+        return scan_sum(__DPL forward<S>(src), dx::to_const_mask<S>(cmask),
+            __DPL forward<T>(val));
     }
 
-    template <simd_vector T, common_mask_with<mask_t<T>> M>
+    template <simd_vector T, result_mask_for<scan_sum_t, T> M>
     requires (extended_vector<T> || extended_mask<M>) &&
         unqualified_extended_mscan_sum<dx::zero_t, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -178,25 +155,20 @@ public:
         return scan_sum(zero, __DPL forward<M>(mask), __DPL forward<T>(val));
     }
 
-    template <fixed_width_vector T, imask_t<T> M>
+    template <fixed_width_vector T, result_cmask_for<scan_sum_t, T> M>
     requires extended_vector<T> &&
-        unqualified_extended_mscan_sum<dx::zero_t, cmask_t<T, M>, T>
+        unqualified_extended_mscan_sum<dx::zero_t,
+            launder_cmask_t<cpo_result_t<scan_sum_t, T>, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        dx::zero_t zero, cmask_t<T, M> cmask, T&& val) {
-        return scan_sum(zero, cmask, __DPL forward<T>(val));
+    static constexpr auto operator()(dx::zero_t zero, M cmask, T&& val) {
+        return scan_sum(zero,
+            dx::to_const_mask<cpo_result_t<scan_sum_t, T>>(cmask),
+            __DPL forward<T>(val));
     }
 };
 
 template <>
 struct fallback_impl<scan_sum_t> {
-private:
-    template <typename S>
-    using simask_t DPL_NODEBUG = mask_value_t<simd_abi_type_t<S>::size>;
-
-    template <typename S, simask_t<S> M>
-    using scmask_t DPL_NODEBUG = const_mask<simd_abi_type_t<S>::size, M>;
-
 public:
     template <simd_vector T>
     requires scan_operator_for<add_t, T>
@@ -218,11 +190,10 @@ public:
             __DPL forward<S>(src));
     }
 
-    template <simd_vector S, simask_t<S> M, simd_vector T>
-    requires cpo_invocable<scan_t, S, scmask_t<S, M>, T, add_t>
+    template <simd_vector S, const_mask_for<S> M, simd_vector T>
+    requires cpo_invocable<scan_t, S, launder_cmask_t<S, M>, T, add_t>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(S&& src,
-        scmask_t<S, M> cmask,
+    static constexpr auto DPL_VECTORCALL operator()(S&& src, M cmask,
         T&& val) noexcept(canonical_vector<S> && canonical_vector<T>) {
         return dx::scan(
             __DPL forward<S>(src), cmask, __DPL forward<T>(val), dx::add);
@@ -240,11 +211,11 @@ public:
             zero);
     }
 
-    template <simd_vector T, simask_t<T> M>
-    requires cpo_invocable<scan_t, dx::zero_t, scmask_t<T, M>, T, add_t>
+    template <simd_vector T, result_cmask_for<scan_t, T, add_t> M>
+    requires cpo_invocable<scan_t, dx::zero_t, M, T, add_t>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(dx::zero_t zero,
-        scmask_t<T, M> cmask, T&& val) noexcept(canonical_vector<T>) {
+    static constexpr auto DPL_VECTORCALL operator()(
+        dx::zero_t zero, M cmask, T&& val) noexcept(canonical_vector<T>) {
         return dx::scan(zero, cmask, __DPL forward<T>(val), dx::add);
     }
 };

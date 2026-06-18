@@ -66,7 +66,7 @@ template <auto V>
 struct sinhcoshi_t {
 private:
     template <typename T>
-    using mask_type DPL_NODEBUG = make_const_mask_t<remove_cvref_t<T>, V>;
+    using mask_type DPL_NODEBUG = make_const_mask_t<T, V>;
 
     template <typename T>
     static constexpr mask_type<T> opmask{};
@@ -113,7 +113,7 @@ public:
 };
 
 template <typename S, typename M, typename T>
-concept unqualified_canonical_msinh =
+concept unqualified_canonical_msinh = cpo_invocable<sinh_t, T> &&
     (!simd_type<S> || same_as<S, cpo_result_t<sinh_t, T>>) &&
     requires(S src, M mask, T val) {
         {
@@ -127,12 +127,6 @@ private:
     template <typename T>
     using mask_t DPL_NODEBUG =
         basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
-
-    template <typename T>
-    using imask_t DPL_NODEBUG = mask_value_t<simd_abi_traits<T>::size>;
-
-    template <typename T, imask_t<T> M>
-    using cmask_t DPL_NODEBUG = const_mask<simd_abi_traits<T>::size, M>;
 
 public:
     template <simd_abi A, simd_element_for<A> E>
@@ -152,13 +146,13 @@ public:
         return sinh(internal::abi<T>, src, mask, val);
     }
 
-    template <fixed_width_vector T, imask_t<T> M>
-    requires canonical_vector<T> &&
-        unqualified_canonical_msinh<type_identity_t<T>, cmask_t<T, M>, T>
+    template <canonical_vector T, const_mask_for<T> M>
+    requires unqualified_canonical_msinh<type_identity_t<T>,
+        launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
-        type_identity_t<T> src, cmask_t<T, M> cmask, T val) noexcept {
-        return sinh(internal::abi<T>, src, cmask, val);
+        type_identity_t<T> src, M cmask, T val) noexcept {
+        return sinh(internal::abi<T>, src, dx::to_const_mask<T>(cmask), val);
     }
 
     template <canonical_vector T>
@@ -169,13 +163,11 @@ public:
         return sinh(internal::abi<T>, zero, mask, val);
     }
 
-    template <fixed_width_vector T, imask_t<T> M>
-    requires canonical_vector<T> &&
-        unqualified_canonical_msinh<dx::zero_t, cmask_t<T, M>, T>
+    template <canonical_vector T, const_mask_for<T> M>
+    requires unqualified_canonical_msinh<dx::zero_t, launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(
-        dx::zero_t zero, cmask_t<T, M> cmask, T val) noexcept {
-        return sinh(internal::abi<T>, zero, cmask, val);
+    static constexpr T operator()(dx::zero_t zero, M cmask, T val) noexcept {
+        return sinh(internal::abi<T>, zero, dx::to_const_mask<T>(cmask), val);
     }
 };
 
@@ -185,7 +177,7 @@ concept unqualified_extended_sinh = requires {
 };
 
 template <typename S, typename M, typename T>
-concept unqualified_extended_msinh =
+concept unqualified_extended_msinh = cpo_invocable<sinh_t, T> &&
     (!simd_type<S> || equivalent_vector_with<S, cpo_result_t<sinh_t, T>>) &&
     requires {
         {
@@ -196,17 +188,6 @@ concept unqualified_extended_msinh =
 
 template <>
 struct extended_impl<sinh_t> {
-private:
-    template <typename T>
-    using imask_t DPL_NODEBUG = mask_value_t<simd_abi_traits<T>::size>;
-
-    template <typename T, imask_t<T> M>
-    using cmask_t DPL_NODEBUG = const_mask<simd_abi_traits<T>::size, M>;
-
-    template <typename T>
-    using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
-
 public:
     template <extended_vector T>
     requires unqualified_extended_sinh<T>
@@ -215,8 +196,7 @@ public:
         return sinh(__DPL forward<T>(val));
     }
 
-    template <simd_vector S, common_vector_with<S> T,
-        equivalent_mask_with<mask_t<S>> M>
+    template <simd_vector S, exact_mask_for<S> M, common_vector_with<S> T>
     requires (extended_vector<S> || extended_mask<M> || extended_vector<T>) &&
         unqualified_extended_msinh<S, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -225,15 +205,16 @@ public:
             __DPL forward<T>(val));
     }
 
-    template <fixed_width_vector S, imask_t<S> M, common_vector_with<S> T>
+    template <simd_vector S, const_mask_for<S> M, common_vector_with<S> T>
     requires (extended_vector<S> || extended_vector<T>) &&
-        unqualified_extended_msinh<S, cmask_t<S, M>, T>
+        unqualified_extended_msinh<S, launder_cmask_t<S, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(S&& src, cmask_t<S, M> cmask, T&& val) {
-        return sinh( __DPL forward<S>(src), cmask, __DPL forward<T>(val));
+    static constexpr auto operator()(S&& src, M cmask, T&& val) {
+        return sinh( __DPL forward<S>(src), dx::to_const_mask<S>(cmask),
+            __DPL forward<T>(val));
     }
 
-    template <simd_vector T, common_mask_with<mask_t<T>> M>
+    template <simd_vector T, result_mask_for<sinh_t, T> M>
     requires (extended_mask<M> || extended_vector<T>) &&
         unqualified_extended_msinh<dx::zero_t, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -241,18 +222,18 @@ public:
         return sinh(zero, __DPL forward<M>(mask), __DPL forward<T>(val));
     }
 
-    template <fixed_width_vector T, imask_t<T> M>
-    requires extended_vector<T> &&
-        unqualified_extended_msinh<dx::zero_t, cmask_t<T, M>, T>
+    template <extended_vector T, result_cmask_for<sinh_t, T> M>
+    requires unqualified_extended_msinh<dx::zero_t,
+        launder_cmask_t<cpo_result_t<sinh_t, T>, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        dx::zero_t zero, cmask_t<T, M> cmask, T&& val) {
-        return sinh(zero, cmask, __DPL forward<T>(val));
+    static constexpr auto operator()(dx::zero_t zero, M cmask, T&& val) {
+        return sinh(zero, dx::to_const_mask<cpo_result_t<sinh_t, T>>(cmask),
+            __DPL forward<T>(val));
     }
 };
 
 template <typename S, typename M, typename T>
-concept unqualified_canonical_mcosh =
+concept unqualified_canonical_mcosh = cpo_invocable<cosh_t, T> &&
     (!simd_type<S> || same_as<S, cpo_result_t<cosh_t, T>>) &&
     requires(S src, M mask, T val) {
         {
@@ -266,12 +247,6 @@ private:
     template <typename T>
     using mask_t DPL_NODEBUG =
         basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
-
-    template <typename T>
-    using imask_t DPL_NODEBUG = mask_value_t<simd_abi_traits<T>::size>;
-
-    template <typename T, imask_t<T> M>
-    using cmask_t DPL_NODEBUG = const_mask<simd_abi_traits<T>::size, M>;
 
 public:
     template <simd_abi A, simd_element_for<A> E>
@@ -291,13 +266,13 @@ public:
         return cosh(internal::abi<T>, src, mask, val);
     }
 
-    template <fixed_width_vector T, imask_t<T> M>
-    requires canonical_vector<T> &&
-        unqualified_canonical_mcosh<type_identity_t<T>, cmask_t<T, M>, T>
+    template <canonical_vector T, const_mask_for<T> M>
+    requires unqualified_canonical_mcosh<type_identity_t<T>,
+        launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
-        type_identity_t<T> src, cmask_t<T, M> cmask, T val) noexcept {
-        return cosh(internal::abi<T>, src, cmask, val);
+        type_identity_t<T> src, M cmask, T val) noexcept {
+        return cosh(internal::abi<T>, src, dx::to_const_mask<T>(cmask), val);
     }
 
     template <canonical_vector T>
@@ -308,13 +283,11 @@ public:
         return cosh(internal::abi<T>, zero, mask, val);
     }
 
-    template <fixed_width_vector T, imask_t<T> M>
-    requires canonical_vector<T> &&
-        unqualified_canonical_mcosh<dx::zero_t, cmask_t<T, M>, T>
+    template <canonical_vector T, const_mask_for<T> M>
+    requires unqualified_canonical_mcosh<dx::zero_t, launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(
-        dx::zero_t zero, cmask_t<T, M> cmask, T val) noexcept {
-        return cosh(internal::abi<T>, zero, cmask, val);
+    static constexpr T operator()(dx::zero_t zero, M cmask, T val) noexcept {
+        return cosh(internal::abi<T>, zero, dx::to_const_mask<T>(cmask), val);
     }
 };
 
@@ -324,7 +297,7 @@ concept unqualified_extended_cosh = requires {
 };
 
 template <typename S, typename M, typename T>
-concept unqualified_extended_mcosh =
+concept unqualified_extended_mcosh = cpo_invocable<cosh_t, T> &&
     (!simd_type<S> || equivalent_vector_with<S, cpo_result_t<cosh_t, T>>) &&
     requires {
         {
@@ -335,17 +308,6 @@ concept unqualified_extended_mcosh =
 
 template <>
 struct extended_impl<cosh_t> {
-private:
-    template <typename T>
-    using imask_t DPL_NODEBUG = mask_value_t<simd_abi_traits<T>::size>;
-
-    template <typename T, imask_t<T> M>
-    using cmask_t DPL_NODEBUG = const_mask<simd_abi_traits<T>::size, M>;
-
-    template <typename T>
-    using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
-
 public:
     template <extended_vector T>
     requires unqualified_extended_cosh<T>
@@ -354,8 +316,7 @@ public:
         return cosh(__DPL forward<T>(val));
     }
 
-    template <simd_vector S, common_vector_with<S> T,
-        equivalent_mask_with<mask_t<S>> M>
+    template <simd_vector S, exact_mask_for<S> M, common_vector_with<S> T>
     requires (extended_vector<S> || extended_mask<M> || extended_vector<T>) &&
         unqualified_extended_mcosh<S, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -364,15 +325,16 @@ public:
             __DPL forward<T>(val));
     }
 
-    template <fixed_width_vector S, imask_t<S> M, common_vector_with<S> T>
+    template <simd_vector S, const_mask_for<S> M, common_vector_with<S> T>
     requires (extended_vector<S> || extended_vector<T>) &&
-        unqualified_extended_mcosh<S, cmask_t<S, M>, T>
+        unqualified_extended_mcosh<S, launder_cmask_t<S, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(S&& src, cmask_t<S, M> cmask, T&& val) {
-        return cosh( __DPL forward<S>(src), cmask, __DPL forward<T>(val));
+    static constexpr auto operator()(S&& src, M cmask, T&& val) {
+        return cosh( __DPL forward<S>(src), dx::to_const_mask<S>(cmask),
+            __DPL forward<T>(val));
     }
 
-    template <simd_vector T, common_mask_with<mask_t<T>> M>
+    template <simd_vector T, result_mask_for<cosh_t, T> M>
     requires (extended_mask<M> || extended_vector<T>) &&
         unqualified_extended_mcosh<dx::zero_t, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -380,13 +342,13 @@ public:
         return cosh(zero, __DPL forward<M>(mask), __DPL forward<T>(val));
     }
 
-    template <fixed_width_vector T, imask_t<T> M>
-    requires extended_vector<T> &&
-        unqualified_extended_mcosh<dx::zero_t, cmask_t<T, M>, T>
+    template <extended_vector T, result_cmask_for<cosh_t, T> M>
+    requires unqualified_extended_mcosh<dx::zero_t,
+        launder_cmask_t<cpo_result_t<cosh_t, T>, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        dx::zero_t zero, cmask_t<T, M> cmask, T&& val) {
-        return cosh(zero, cmask, __DPL forward<T>(val));
+    static constexpr auto operator()(dx::zero_t zero, M cmask, T&& val) {
+        return cosh(zero, dx::to_const_mask<cpo_result_t<cosh_t, T>>(cmask),
+            __DPL forward<T>(val));
     }
 };
 
@@ -396,7 +358,7 @@ concept unqualified_canonical_sinhcosh = requires(T val, O opmask) {
 };
 
 template <typename S, typename M, typename T, typename O>
-concept unqualified_canonical_msinhcosh =
+concept unqualified_canonical_msinhcosh = cpo_invocable<sinhcosh_t, T, O> &&
     (!simd_type<S> || same_as<S, cpo_result_t<sinhcosh_t, T, O>>) &&
     requires(S src, M mask, T val, O opmask) {
         {
@@ -411,18 +373,12 @@ private:
     using mask_t DPL_NODEBUG =
         basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
 
-    template <typename T>
-    using imask_t DPL_NODEBUG = mask_value_t<simd_abi_traits<T>::size>;
-
-    template <typename T, imask_t<T> M>
-    using cmask_t DPL_NODEBUG = const_mask<simd_abi_traits<T>::size, M>;
-
 public:
     template <fixed_width_vector T, const_mask_for<T> O>
     requires unqualified_canonical_sinhcosh<T, O>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(T val, O ops) noexcept {
-        constexpr auto opmask = dx::to_compatible_const_mask<T>(ops);
+        constexpr auto opmask = dx::to_const_mask<T>(ops);
         return sinhcosh(internal::abi<T>, val, opmask);
     }
 
@@ -433,19 +389,19 @@ public:
     static constexpr T operator()(
         type_identity_t<T> src, mask_t<T> mask, T val, O ops) noexcept {
 
-        constexpr auto opmask = dx::to_compatible_const_mask<T>(ops);
+        constexpr auto opmask = dx::to_const_mask<T>(ops);
         return sinhcosh(internal::abi<T>, src, mask, val, opmask);
     }
 
-    template <fixed_width_vector T, imask_t<T> M, const_mask_for<T> O>
-    requires canonical_vector<T> &&
-        unqualified_canonical_msinhcosh<type_identity_t<T>, cmask_t<T, M>, T,
-            launder_cmask_t<T, O>>
+    template <canonical_vector T, const_mask_for<T> M, const_mask_for<T> O>
+    requires unqualified_canonical_msinhcosh<type_identity_t<T>,
+        launder_cmask_t<T, M>, T, launder_cmask_t<T, O>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
-        type_identity_t<T> src, cmask_t<T, M> cmask, T val, O ops) noexcept {
-        constexpr auto opmask = dx::to_compatible_const_mask<T>(ops);
-        return sinhcosh(internal::abi<T>, src, cmask, val, opmask);
+        type_identity_t<T> src, M cmask, T val, O ops) noexcept {
+        constexpr auto opmask = dx::to_const_mask<T>(ops);
+        return sinhcosh(
+            internal::abi<T>, src, dx::to_const_mask<T>(cmask), val, opmask);
     }
 
     template <fixed_width_vector T, const_mask_for<T> O>
@@ -454,19 +410,20 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
         dx::zero_t zero, mask_t<T> mask, T val, O ops) noexcept {
-        constexpr auto opmask = dx::to_compatible_const_mask<T>(ops);
+        constexpr auto opmask = dx::to_const_mask<T>(ops);
         return sinhcosh(internal::abi<T>, zero, mask, val, opmask);
     }
 
-    template <fixed_width_vector T, imask_t<T> M, const_mask_for<T> O>
+    template <fixed_width_vector T, const_mask_for<T> M, const_mask_for<T> O>
     requires canonical_vector<T> &&
-        unqualified_canonical_msinhcosh<dx::zero_t, cmask_t<T, M>, T,
+        unqualified_canonical_msinhcosh<dx::zero_t, launder_cmask_t<T, M>, T,
             launder_cmask_t<T, O>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
-        dx::zero_t zero, cmask_t<T, M> cmask, T val, O ops) noexcept {
-        constexpr auto opmask = dx::to_compatible_const_mask<T>(ops);
-        return sinhcosh(internal::abi<T>, zero, cmask, val, opmask);
+        dx::zero_t zero, M cmask, T val, O ops) noexcept {
+        constexpr auto opmask = dx::to_const_mask<T>(ops);
+        return sinhcosh(
+            internal::abi<T>, zero, dx::to_const_mask<T>(cmask), val, opmask);
     }
 
     ///
@@ -486,13 +443,15 @@ public:
         return sinhcosh(internal::abi<T>, src, mask, val, opmask);
     }
 
-    template <fixed_width_vector T, imask_t<T> M, exact_mask_for<T> O>
+    template <fixed_width_vector T, const_mask_for<T> M, exact_mask_for<T> O>
     requires canonical_vector<T> && canonical_mask<O> &&
-        unqualified_canonical_msinhcosh<type_identity_t<T>, cmask_t<T, M>, T, O>
+        unqualified_canonical_msinhcosh<type_identity_t<T>,
+            launder_cmask_t<T, M>, T, O>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
-        type_identity_t<T> src, cmask_t<T, M> cmask, T val, O opmask) noexcept {
-        return sinhcosh(internal::abi<T>, src, cmask, val, opmask);
+        type_identity_t<T> src, M cmask, T val, O opmask) noexcept {
+        return sinhcosh(
+            internal::abi<T>, src, dx::to_const_mask<T>(cmask), val, opmask);
     }
 
     template <canonical_vector T, exact_mask_for<T> O>
@@ -504,13 +463,14 @@ public:
         return sinhcosh(internal::abi<T>, zero, mask, val, opmask);
     }
 
-    template <fixed_width_vector T, imask_t<T> M, exact_mask_for<T> O>
+    template <fixed_width_vector T, const_mask_for<T> M, exact_mask_for<T> O>
     requires canonical_vector<T> && canonical_mask<O> &&
-        unqualified_canonical_msinhcosh<dx::zero_t, cmask_t<T, M>, T, O>
+        unqualified_canonical_msinhcosh<dx::zero_t, launder_cmask_t<T, M>, T, O>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
-        dx::zero_t zero, cmask_t<T, M> cmask, T val, O opmask) noexcept {
-        return sinhcosh(internal::abi<T>, zero, cmask, val, opmask);
+        dx::zero_t zero, M cmask, T val, O opmask) noexcept {
+        return sinhcosh(
+            internal::abi<T>, zero, dx::to_const_mask<T>(cmask), val, opmask);
     }
 };
 
@@ -522,7 +482,7 @@ concept unqualified_extended_sinhcosh = requires {
 };
 
 template <typename S, typename M, typename T, typename O>
-concept unqualified_extended_msinhcosh =
+concept unqualified_extended_msinhcosh = cpo_invocable<sinhcosh_t, T, O> &&
     (!simd_type<S> ||
         equivalent_vector_with<S, cpo_result_t<sinhcosh_t, T, O>>) &&
     requires {
@@ -534,79 +494,71 @@ concept unqualified_extended_msinhcosh =
 
 template <>
 struct extended_impl<sinhcosh_t> {
-private:
-    template <typename T>
-    using imask_t DPL_NODEBUG = mask_value_t<simd_abi_traits<T>::size>;
-
-    template <typename T, imask_t<T> M>
-    using cmask_t DPL_NODEBUG = const_mask<simd_abi_traits<T>::size, M>;
-
-    template <typename T>
-    using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
-
 public:
-    template <fixed_width_vector T, const_mask_for<T> O>
+    template <simd_vector T, const_mask_for<T> O>
     requires extended_vector<T> && unqualified_extended_sinhcosh<T, O>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T val, O ops) {
-        constexpr auto opmask = dx::to_compatible_const_mask<T>(ops);
-        return sinhcosh(val, opmask);
+        constexpr auto opmask = dx::to_const_mask<T>(ops);
+        return sinhcosh(__DPL forward<T>(val), opmask);
     }
 
-    template <fixed_width_vector S, exact_mask_for<S> M, fixed_width_vector T,
+    template <simd_vector S, exact_mask_for<S> M, simd_vector T,
         const_mask_for<T> O>
     requires (extended_vector<S> || extended_mask<M> || extended_vector<T>) &&
         unqualified_extended_msinhcosh<S, M, T, launder_cmask_t<T, O>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(S&& src, M&& mask, T&& val, O ops) {
-        constexpr auto opmask = dx::to_compatible_const_mask<T>(ops);
+        constexpr auto opmask = dx::to_const_mask<T>(ops);
         return sinhcosh(__DPL forward<S>(src), __DPL forward<M>(mask),
             __DPL forward<T>(val), opmask);
     }
 
-    template <fixed_width_vector S, imask_t<S> M, fixed_width_vector T,
+    template <simd_vector S, const_mask_for<S> M, simd_vector T,
         const_mask_for<T> O>
     requires (extended_vector<S> || extended_vector<T>) &&
-        unqualified_extended_msinhcosh<S, cmask_t<T, M>, T,
+        unqualified_extended_msinhcosh<S, launder_cmask_t<S, M>, T,
             launder_cmask_t<T, O>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        S&& src, cmask_t<S, M> cmask, T&& val, O ops) {
-        constexpr auto opmask = dx::to_compatible_const_mask<T>(ops);
-        return sinhcosh(
-            __DPL forward<S>(src), cmask, __DPL forward<T>(val), opmask);
+    static constexpr auto operator()(S&& src, M cmask, T&& val, O ops) {
+        constexpr auto opmask = dx::to_const_mask<T>(ops);
+        return sinhcosh( __DPL forward<S>(src), dx::to_const_mask<S>(ops),
+            __DPL forward<T>(val), opmask);
     }
 
-    template <fixed_width_vector T, const_mask_for<T> O, exact_mask_for<T> M>
+    template <simd_vector T, const_mask_for<T> O,
+        result_mask_for<sinhcosh_t, T, O> M>
     requires (extended_mask<M> || extended_vector<T>) &&
         unqualified_extended_msinhcosh<dx::zero_t, M, T, launder_cmask_t<T, O>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         dx::zero_t zero, M&& mask, T&& val, O ops) {
-        constexpr auto opmask = dx::to_compatible_const_mask<T>(ops);
+        constexpr auto opmask = dx::to_const_mask<T>(ops);
         return sinhcosh(
             zero, __DPL forward<M>(mask), __DPL forward<T>(val), opmask);
     }
 
-    template <fixed_width_vector T, imask_t<T> M, const_mask_for<T> O>
+    template <simd_vector T, const_mask_for<T> O,
+        result_cmask_for<sinhcosh_t, T, O> M>
     requires extended_vector<T> &&
-        unqualified_extended_msinhcosh<dx::zero_t, cmask_t<T, M>, T,
+        unqualified_extended_msinhcosh<dx::zero_t,
+            launder_cmask_t<cpo_result_t<sinhcosh_t, T, O>, M>, T,
             launder_cmask_t<T, O>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        dx::zero_t zero, cmask_t<T, M> cmask, T&& val, O ops) {
-        constexpr auto opmask = dx::to_compatible_const_mask<T>(ops);
-        return sinhcosh(zero, cmask, __DPL forward<T>(val), opmask);
+    static constexpr auto operator()(dx::zero_t zero, M cmask, T&& val, O ops) {
+        constexpr auto opmask = dx::to_const_mask<T>(ops);
+        return sinhcosh(zero,
+            dx::to_const_mask<cpo_result_t<sinhcosh_t, T, O>>(cmask),
+            __DPL forward<T>(val), opmask);
     }
 
     ///
-    template <fixed_width_vector T, exact_mask_for<T> O>
-    requires extended_vector<T> && unqualified_extended_sinhcosh<T, O>
+    template <simd_vector T, exact_mask_for<T> O>
+    requires (extended_vector<T> || extended_vector<O>) &&
+        unqualified_extended_sinhcosh<T, O>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T val, O ops) {
-        constexpr auto opmask = dx::to_compatible_const_mask<T>(ops);
-        return sinhcosh(val, opmask);
+    static constexpr auto operator()(T&& val, O&& opmask) {
+        return sinhcosh(__DPL forward<T>(val), __DPL forward<O>(opmask));
     }
 
     template <simd_vector S, exact_mask_for<S> M, simd_vector T,
@@ -620,18 +572,19 @@ public:
             __DPL forward<T>(val), __DPL forward<O>(opmask));
     }
 
-    template <fixed_width_vector S, imask_t<S> M, fixed_width_vector T,
+    template <simd_vector S, const_mask_for<S> M, simd_vector T,
         exact_mask_for<T> O>
     requires (extended_vector<S> || extended_vector<T> || extended_mask<O>) &&
-        unqualified_extended_msinhcosh<S, cmask_t<T, M>, T, O>
+        unqualified_extended_msinhcosh<S, launder_cmask_t<S, M>, T, O>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        S&& src, cmask_t<T, M> cmask, T&& val, O&& opmask) {
-        return sinhcosh( __DPL forward<S>(src), cmask, __DPL forward<T>(val),
-            __DPL forward<O>(opmask));
+    static constexpr auto operator()(S&& src, M cmask, T&& val, O&& opmask) {
+        return sinhcosh( __DPL forward<S>(src),
+            dx::to_const_mask<launder_cmask_t<S, M>>(cmask),
+            __DPL forward<T>(val), __DPL forward<O>(opmask));
     }
 
-    template <simd_vector T, exact_mask_for<T> O, exact_mask_for<T> M>
+    template <simd_vector T, exact_mask_for<T> O,
+        result_mask_for<sinhcosh_t, T, O> M>
     requires (extended_mask<M> || extended_vector<T> || extended_mask<O>) &&
         unqualified_extended_msinhcosh<dx::zero_t, M, T, O>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -641,14 +594,17 @@ public:
             __DPL forward<O>(opmask));
     }
 
-    template <fixed_width_vector T, imask_t<T> M, exact_mask_for<T> O>
+    template <fixed_width_vector T, exact_mask_for<T> O,
+        result_cmask_for<sinhcosh_t, T, O> M>
     requires (extended_vector<T> || extended_mask<O>) &&
-        unqualified_canonical_msinhcosh<dx::zero_t, cmask_t<T, M>, T, O>
+        unqualified_canonical_msinhcosh<dx::zero_t,
+            launder_cmask_t<cpo_result_t<sinhcosh_t, T, O>, M>, T, O>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
-        dx::zero_t zero, cmask_t<T, M> cmask, T&& val, O&& opmask) {
-        return sinhcosh(
-            zero, cmask, __DPL forward<T>(val), __DPL forward<O>(opmask));
+        dx::zero_t zero, M cmask, T&& val, O&& opmask) {
+        return sinhcosh(zero,
+            dx::to_const_mask<cpo_result_t<sinhcosh_t, T, O>>(cmask),
+            __DPL forward<T>(val), __DPL forward<O>(opmask));
     }
 };
 
@@ -819,7 +775,7 @@ public:
     requires floating_point<simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(T val, O ops) noexcept {
-        constexpr auto opmask = dx::to_compatible_const_mask<T>(ops);
+        constexpr auto opmask = dx::to_const_mask<T>(ops);
         using E = simd_element_type_t<T>;
         using A = simd_abi_type_t<T>;
 
@@ -883,8 +839,7 @@ struct fallback_impl<sinh_t> {
     static constexpr basic_vector<E, A> operator()(
         basic_vector<E, A> val) noexcept {
         if constexpr (fixed_width_abi<A>) {
-            constexpr auto op =
-                dx::to_compatible_const_mask<basic_vector<E, A>>(dx::zero);
+            constexpr auto op = dx::to_const_mask<basic_vector<E, A>>(dx::zero);
             return fallback_impl<sinhcosh_t>::operator()(val, op);
         } else {
             return fallback_impl<sinhcosh_t>::operator()(
@@ -901,7 +856,7 @@ struct fallback_impl<cosh_t> {
         basic_vector<E, A> val) noexcept {
         if constexpr (fixed_width_abi<A>) {
             constexpr auto op =
-                dx::to_compatible_const_mask<basic_vector<E, A>>(dx::all_bits);
+                dx::to_const_mask<basic_vector<E, A>>(dx::all_bits);
             return fallback_impl<sinhcosh_t>::operator()(val, op);
         } else {
             return fallback_impl<sinhcosh_t>::operator()(

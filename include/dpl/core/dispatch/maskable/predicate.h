@@ -54,7 +54,7 @@ protected:
     requires signature_compatible<D, Ts...> && has_simd_vector<Ts...> &&
         cpo_invocable<D, Ts...> && simd_mask<result_t<Ts...>> &&
         cpo_invocable<bwand_t, basic_mask_t<Ts...>, result_t<Ts...>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr result_t<Ts...> operator()(
         basic_mask_t<Ts...> mask, Ts... args) noexcept {
         using M = basic_mask_t<Ts...>;
@@ -84,31 +84,26 @@ protected:
         cpo_invocable<D, Ts...> && simd_mask<result_t<Ts...>> &&
         const_mask_for<M, result_t<Ts...>> &&
         cpo_invocable<select_t, M, result_t<Ts...>, dx::zero_t>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr result_t<Ts...> operator()(M mask, Ts... args) noexcept {
         using R = result_t<Ts...>;
-        using CM = launder_cmask_t<R, M>;
-        if constexpr (canonical_cpo_invocable_r<D, R, CM, Ts...>) {
+        if constexpr (canonical_cpo_invocable_r<D, R, M, Ts...>) {
             if constexpr (all_same_abi<Ts...>) {
                 if consteval {
-                    if constexpr (fallback_cpo_invocable_r<D, R, CM, Ts...>) {
-                        return impl::fallback<D>(
-                            dx::to_compatible_const_mask<R>(mask), args...);
+                    if constexpr (fallback_cpo_invocable_r<D, R, M, Ts...>) {
+                        return impl::fallback<D>(mask, args...);
                     } else {
                         return fwd::select(
                             mask, D::operator()(args...), dx::zero);
                     }
                 } else {
-                    return impl::canonical<D>(
-                        dx::to_compatible_const_mask<R>(mask), args...);
+                    return impl::canonical<D>(mask, args...);
                 }
             } else {
-                return impl::canonical<D>(
-                    dx::to_compatible_const_mask<R>(mask), args...);
+                return impl::canonical<D>(mask, args...);
             }
-        } else if constexpr (fallback_cpo_invocable_r<D, R, CM, Ts...>) {
-            return impl::fallback<D>(
-                dx::to_compatible_const_mask<R>(mask), args...);
+        } else if constexpr (fallback_cpo_invocable_r<D, R, M, Ts...>) {
+            return impl::fallback<D>(mask, args...);
         } else {
             return fwd::select(mask, D::operator()(args...), dx::zero);
         }
@@ -155,27 +150,22 @@ protected:
                 requires (... || simd_expression<Ts>);
                 operator()(internal::declarg<M>(),
                     internal::declarg<result_or_identity_t<Ts>>()...);
-            } ||
-            fallback_cpo_invocable_r<D, result_t<Ts...>,
-                launder_cmask_t<result_t<Ts...>, M>, Ts...>)
+            } || fallback_cpo_invocable_r<D, result_t<Ts...>, M, Ts...>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, Ts&&... args) {
         using R DPL_NODEBUG = result_t<Ts...>;
-        if constexpr (extended_cpo_invocable_r<D, R, launder_cmask_t<R, M>,
-                          Ts...>) {
-            return impl::extended<D>(dx::to_compatible_const_mask<R>(mask),
-                __DPL forward<Ts>(args)...);
+        if constexpr (extended_cpo_invocable_r<D, R, M, Ts...>) {
+            return impl::extended<D>(mask, __DPL forward<Ts>(args)...);
         } else if constexpr (extended_nttp_invocable_r<D, R,
                                  launder_cmask_t<R, M>, Ts...>) {
             constexpr D Op;
-            return extended<Op>(dx::to_compatible_const_mask<R>(mask),
-                __DPL forward<Ts>(args)...);
+            return extended<Op>(
+                dx::to_const_mask<R>(mask), __DPL forward<Ts>(args)...);
         } else if constexpr ((... || simd_expression<Ts>)) {
             return operator()(
                 mask, internal::forward_or_eval(__DPL forward<Ts>(args))...);
         } else {
-            return impl::fallback<D>(dx::to_compatible_const_mask<R>(mask),
-                __DPL forward<Ts>(args)...);
+            return impl::fallback<D>(mask, __DPL forward<Ts>(args)...);
         }
     }
 };
