@@ -4,10 +4,10 @@
 #include "dpl/config.h"
 
 #include "dpl/core/operations/internal/transform.h"
-#include "dpl/core/operations/pack_mask.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/internal/abi.h"
+#  include "dpl/core/basic/to_bitset.h"
 #  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/concepts/mask_compatibility.h"
 #  include "dpl/core/concepts/simd_abi.h"
@@ -58,10 +58,10 @@ struct fallback_impl<countr_zero_t> {
     }
 
     template <canonical_mask T>
-    requires fixed_width_mask<T> && cpo_invocable<pack_mask_t, T>
+    requires fixed_width_mask<T> && cpo_invocable<to_bitset_t, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr size_t DPL_VECTORCALL operator()(T val) noexcept {
-        return __DPL countr_zero(dx::pack_mask(val));
+        return __DPL countr_zero(dx::to_bitset(val));
     }
 };
 

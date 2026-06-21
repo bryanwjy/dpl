@@ -22,8 +22,8 @@ namespace datapar::internal {
 void store(...) noexcept = delete;
 
 struct store_t :
-    private basic_operation_base<store_t>,
-    private maskable_operation_base<store_t> {
+    public basic_operation_base<store_t>,
+    public maskable_operation_base<store_t> {
     using operation_base<store_t>::operator();
 };
 

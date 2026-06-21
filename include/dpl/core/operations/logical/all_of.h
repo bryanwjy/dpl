@@ -5,10 +5,9 @@
 
 // IWYU pragma: always_keep
 
-#include "dpl/core/operations/pack_mask.h"
-
 #if !DPL_MODULES
 #  include "dpl/core/basic/internal/abi.h"
+#  include "dpl/core/basic/to_bitset.h"
 #  include "dpl/core/concepts/canonical.h"
 #  include "dpl/core/concepts/simd_mask.h"
 #  include "dpl/core/dispatch/interface.h"
@@ -39,12 +38,12 @@ template <>
 struct fallback_impl<all_of_t> {
 
     template <canonical_mask T>
-    requires fixed_width_mask<T> && regular_invocable<pack_mask_t, T> &&
-        requires(T val) { dx::pack_mask(val); }
+    requires fixed_width_mask<T> && regular_invocable<to_bitset_t, T> &&
+        requires(T val) { dx::to_bitset(val); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr bool DPL_VECTORCALL operator()(T val) noexcept {
-        using bitset_t = invoke_result_t<pack_mask_t, T>;
-        return ~bitset_t() == dx::pack_mask(val);
+        using bitset_t = invoke_result_t<to_bitset_t, T>;
+        return ~bitset_t() == dx::to_bitset(val);
     }
 
     template <const_mask_like T>

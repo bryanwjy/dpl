@@ -4,13 +4,13 @@
 #include "dpl/config.h"
 
 #include "dpl/core/operations/internal/array_for.h"
-#include "dpl/core/operations/pack_mask.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/basic/initialize.h"
+#  include "dpl/core/basic/from_bitset.h"
 #  include "dpl/core/basic/internal/abi.h"
 #  include "dpl/core/basic/load.h"
 #  include "dpl/core/basic/store.h"
+#  include "dpl/core/basic/to_bitset.h"
 #  include "dpl/core/basic/to_native_type.h"
 #  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/concepts/simd_abi.h"
@@ -89,17 +89,17 @@ struct fallback_impl<abi_cast_t<ToA>> {
         common_abi_with<ToA, FromA> &&
         (!same_as<simd_native_type_t<basic_mask<E, ToA>>,
             simd_native_type_t<basic_mask<E, FromA>>>) &&
-        cpo_invocable<pack_mask_t, basic_mask<E, FromA>>
+        cpo_invocable<to_bitset_t, basic_mask<E, FromA>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr basic_mask<E, ToA>
         DPL_VECTORCALL operator()(basic_mask<E, FromA> val) noexcept {
         using From = basic_mask<E, FromA>;
         using To = basic_mask<E, ToA>;
         if constexpr (From::size != To::size) {
-            auto const bits = dx::pack_mask(val);
-            return dx::initialize<To>(static_cast<bitset<To::size>>(bits));
+            auto const bits = dx::to_bitset(val);
+            return dx::from_bitset<To>(static_cast<bitset<To::size>>(bits));
         } else {
-            return dx::initialize<To>(dx::pack_mask(val));
+            return dx::from_bitset<To>(dx::to_bitset(val));
         }
     }
 };

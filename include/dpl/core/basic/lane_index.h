@@ -3,16 +3,18 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/basic/aligned.h"
+#include "dpl/core/basic/internal/abi.h"
+#include "dpl/core/basic/internal/iota_sequence.h"
+#include "dpl/core/basic/load.h"
+
 #if !DPL_MODULES
 #  include "dpl/core/fwd.h"
 
-#  include "dpl/core/basic/initialize.h"
-#  include "dpl/core/basic/internal/abi.h"
-#  include "dpl/core/basic/internal/iota_sequence.h"
 #  include "dpl/core/dispatch/interface.h"
 #  include "dpl/core/dispatch/operation/basic.h"
+#  include "dpl/core/operations/internal/array_for.h"
 #  include "dpl/core/type_traits/representation.h"
-#  include "dpl/std/utility/apply.h"
 #  include "dpl/std/utility/ignore.h"
 #endif
 
@@ -26,7 +28,7 @@ template <typename>
 void lane_index(...) noexcept = delete;
 
 template <typename T, typename U = __DPL ignore_t>
-struct lane_index_t : private basic_operation_base<lane_index_t<T, U>> {
+struct lane_index_t : public basic_operation_base<lane_index_t<T, U>> {
     using operation_base<lane_index_t<T, U>>::operator();
 };
 
@@ -46,6 +48,9 @@ concept unqualified_canonical_lane_index = requires {
     } -> same_as<basic_vector<signed_representation_t<E>, A>>;
 };
 
+template <fixed_width_abi A, signed_integral I, I... vals>
+alignas(simd_abi_traits<A>::alignment()) inline constexpr I array[] = {vals...};
+
 template <typename T, different_from<ignore_t> U>
 requires (simd_abi<T> && simd_element_for<U, T>) ||
     (simd_abi<U> && simd_element_for<T, U>)
@@ -55,6 +60,7 @@ private:
     using E DPL_NODEBUG = conditional_t<simd_abi<T>, U, T>;
     using I DPL_NODEBUG = signed_representation_t<E>;
 
+public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr basic_vector<I, A> operator()() noexcept
     requires unqualified_canonical_lane_index<E, A>
@@ -66,11 +72,10 @@ private:
     static constexpr basic_vector<I, A> operator()() noexcept
     requires fixed_width_abi<A> && (!unqualified_canonical_lane_index<E, A>)
     {
-        return __DPL apply(
-            [](auto... idx) {
-                return dx::initialize<I, A>(static_cast<I>(idx())...);
-            },
-            iota_sequence<E, A>);
+        return []<size_t... Is>(index_sequence<Is...>) {
+            return dx::load<I, A>(
+                dx::aligned, array<A, I, static_cast<I>(Is)...>.data);
+        }(iota_sequence<A, E>);
     }
 };
 

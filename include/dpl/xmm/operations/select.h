@@ -17,6 +17,7 @@
 #  include "dpl/core/immediate/const_mask.h"
 #  include "dpl/core/type_traits/common_size_type.h"
 #  include "dpl/xmm/basic/abi.h"
+#  include "dpl/xmm/basic/from_bitset.h"
 
 #  include <immintrin.h>
 #endif
@@ -109,7 +110,7 @@ inline simd<E> select(
     const_mask<16, V> condition, simd<E> lhs, simd<E> rhs) noexcept {
     constexpr auto imm = static_cast<int>(condition());
     if constexpr (same_as<int8, E>) {
-        constexpr auto imm = xmm::initialize<E>(bitset<16>(V));
+        constexpr auto imm = xmm::from_bitset<E>(bitset<16>(V));
         return _mm_blendv_epi8(+rhs, +lhs, +imm);
     } else {
         return xmm::reinterpret<E>(xmm::select(condition,

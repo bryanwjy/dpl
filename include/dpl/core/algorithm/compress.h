@@ -8,13 +8,13 @@
 #if !DPL_MODULES
 #  include "dpl/core/basic/broadcast.h"
 #  include "dpl/core/basic/lane_index.h"
+#  include "dpl/core/basic/to_bitset.h"
 #  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/dispatch/interface.h"
 #  include "dpl/core/dispatch/maskable/transform.h"
 #  include "dpl/core/dispatch/operation/algorithm.h"
 #  include "dpl/core/immediate/immediate.h"
 #  include "dpl/core/operations/bit.h"
-#  include "dpl/core/operations/pack_mask.h"
 #  include "dpl/core/operations/permute.h"
 #  include "dpl/core/operations/select.h"
 #  include "dpl/core/type_traits/simd_abi_traits.h"
@@ -221,7 +221,7 @@ public:
         using I = signed_representation_t<simd_element_type_t<T>>;
         using bitset_t = bitset<simd_abi_traits<S>::size>;
         constexpr auto rank = []<size_t... Is>(M mask, index_sequence<Is...>) {
-            constexpr auto set = static_cast<bitset_t>(dx::pack_mask(mask));
+            constexpr auto set = static_cast<bitset_t>(dx::to_bitset(mask));
             return index_sequence<fallback_impl::prefix_sum(set, Is)...>{};
         }(cmask, iota_sequence<S>);
 

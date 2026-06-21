@@ -4,13 +4,13 @@
 #include "dpl/config.h"
 
 #include "dpl/core/operations/abi_promotion.h"
-#include "dpl/core/operations/pack_mask.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/basic/initialize.h"
+#  include "dpl/core/basic/from_bitset.h"
 #  include "dpl/core/basic/internal/abi.h"
 #  include "dpl/core/basic/load.h"
 #  include "dpl/core/basic/store.h"
+#  include "dpl/core/basic/to_bitset.h"
 #  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/dispatch/interface.h"
 #  include "dpl/core/dispatch/operation/primitive.h"
@@ -156,13 +156,13 @@ struct fallback_impl<concat_t> {
     template <typename E, fixed_width_abi A, fixed_width_abi... As>
     requires (simd_element_for<E, A> && ... && simd_element_for<E, As>) &&
         concatable<basic_mask<E, A>, basic_mask<E, As>...> &&
-        (cpo_invocable<pack_mask_t, basic_mask<E, A>> && ... &&
-            cpo_invocable<pack_mask_t, basic_mask<E, As>>)
+        (cpo_invocable<to_bitset_t, basic_mask<E, A>> && ... &&
+            cpo_invocable<to_bitset_t, basic_mask<E, As>>)
     static consteval auto operator()(
         basic_mask<E, A> arg, basic_mask<E, As>... args) noexcept {
         using ToA = concat_target_t<A, As...>;
-        return dx::initialize<E, ToA>(
-            bitset(dx::pack_mask(arg), dx::pack_mask(args)...));
+        return dx::from_bitset<E, ToA>(
+            bitset(dx::to_bitset(arg), dx::to_bitset(args)...));
     }
 };
 

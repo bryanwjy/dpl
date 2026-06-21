@@ -6,8 +6,8 @@
 #include "dpl/core/basic/broadcast.h"
 #include "dpl/core/basic/broadcasting.h"
 #include "dpl/core/basic/extract.h"
-#include "dpl/core/basic/initialize.h"
-#include "dpl/core/basic/internal/iota_sequence.h"
+#include "dpl/core/basic/from_bitset.h"
+#include "dpl/core/basic/to_bitset.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/fwd.h"
@@ -16,7 +16,6 @@
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_element.h"
 #  include "dpl/core/immediate/const_mask.h"
-#  include "dpl/core/immediate/immediate.h"
 #  include "dpl/core/type_traits/simd_abi_traits.h"
 #  include "dpl/std/bit/bit_cast.h"
 #  include "dpl/std/concepts/different_from.h"
@@ -42,9 +41,7 @@ class basic_mask {
             return basic_mask(+other);
         } else if consteval {
             if constexpr (fixed_width_abi<A>) {
-                return [&]<size_t... Is>(index_sequence<Is...>) {
-                    return datapar::initialize<E, A>(bitset(other[imm<Is>]...));
-                }(iota_sequence<E, A>);
+                return datapar::from_bitset<E, A>(datapar::to_bitset(other));
             }
         }
 
@@ -78,7 +75,7 @@ public:
     __DPL_HIDE_FROM_ABI constexpr basic_mask(
         bitset<abi_traits::size> data) noexcept
     requires fixed_width_abi<A>
-        : basic_mask(datapar::initialize<E, A>(data)) {}
+        : basic_mask(datapar::from_bitset<E, A>(data)) {}
 
     template <size_t W, internal::mask_value_t<W> V>
     requires fixed_width_abi<A> &&
@@ -90,9 +87,8 @@ public:
               datapar::to_bitset(const_mask<abi_traits::size, V>(mask))) {}
 
     template <core_convertible_to<bool>... Bs>
-    requires fixed_width_abi<A>
-    __DPL_HIDE_FROM_ABI explicit(sizeof...(Bs) !=
-        abi_traits::size) constexpr basic_mask(Bs&&... args) noexcept
+    requires fixed_width_abi<A> && (sizeof...(Bs) == abi_traits::size)
+    __DPL_HIDE_FROM_ABI explicit constexpr basic_mask(Bs&&... args) noexcept
         : basic_mask(bitset<abi_traits::size>(
               static_cast<bool>(__DPL forward<Bs>(args))...)) {}
 

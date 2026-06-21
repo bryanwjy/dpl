@@ -29,6 +29,7 @@ import :std.utility;
 #include "dpl/core/basic/lane_index.h"
 #include "dpl/core/basic/load.h"
 #include "dpl/core/basic/store.h"
+#include "dpl/core/basic/to_bitset.h"
 #include "dpl/core/basic/to_canonical.h"
 #include "dpl/core/basic/to_native_type.h"
 // IWYU pragma: end_exports

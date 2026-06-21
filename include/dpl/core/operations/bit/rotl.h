@@ -6,13 +6,13 @@
 #include "dpl/core/operations/arithmetic/subtract.h"
 #include "dpl/core/operations/bit/vrot_vector_for.h"
 #include "dpl/core/operations/bitwise.h"
-#include "dpl/core/operations/pack_mask.h"
 #include "dpl/core/operations/reinterpret.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/broadcast.h"
-#  include "dpl/core/basic/initialize.h"
+#  include "dpl/core/basic/from_bitset.h"
 #  include "dpl/core/basic/internal/abi.h"
+#  include "dpl/core/basic/to_bitset.h"
 #  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/dispatch/interface.h"
@@ -74,11 +74,11 @@ struct fallback_impl<rotl_t> {
     }
 
     template <canonical_mask T>
-    requires fixed_width_mask<T> && cpo_invocable<pack_mask_t, T>
+    requires fixed_width_mask<T> && cpo_invocable<to_bitset_t, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr T DPL_VECTORCALL operator()(T val, size_t size) noexcept {
-        using bitset_t = invoke_result_t<pack_mask_t, T>;
-        return dx::initialize<T>(__DPL rotl(dx::pack_mask(val), size));
+        using bitset_t = invoke_result_t<to_bitset_t, T>;
+        return dx::from_bitset<T>(__DPL rotl(dx::to_bitset(val), size));
     }
 
     template <simd_abi A, simd_element_for<A> LE, simd_element_for<A> RE>

@@ -4,14 +4,14 @@
 #include "dpl/config.h"
 
 #include "dpl/core/operations/abi_promotion.h"
-#include "dpl/core/operations/pack_mask.h"
 #include "dpl/core/operations/split_result.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/basic/initialize.h"
+#  include "dpl/core/basic/from_bitset.h"
 #  include "dpl/core/basic/internal/abi.h"
 #  include "dpl/core/basic/load.h"
 #  include "dpl/core/basic/store.h"
+#  include "dpl/core/basic/to_bitset.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_type.h"
 #  include "dpl/core/dispatch/interface.h"
@@ -121,11 +121,11 @@ struct fallback_impl<split_t<N>> {
 
     template <fixed_width_abi A, simd_element_for<A> E>
     requires splittable<basic_mask<E, A>, N> &&
-        cpo_invocable<pack_mask_t, basic_mask<E, A>>
+        cpo_invocable<to_bitset_t, basic_mask<E, A>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static consteval auto operator()(basic_mask<E, A> src) noexcept {
         using ToA = split_target_t<N, A>;
-        auto const set = dx::pack_mask(src);
+        auto const set = dx::to_bitset(src);
         constexpr auto S = simd_abi_traits<ToA, E>::size;
         constexpr auto chunk = A::size / N;
         using bitset_t = bitset<chunk>;
@@ -136,7 +136,7 @@ struct fallback_impl<split_t<N>> {
 
         return __DPL apply(
             [](auto const&... set) {
-                return dx::make_split_result(dx::initialize<E, ToA>(set)...);
+                return dx::make_split_result(dx::from_bitset<E, ToA>(set)...);
             }(),
             data);
     }

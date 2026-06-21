@@ -29,7 +29,6 @@ import :core.dispatch;
 #include "dpl/core/operations/internal/transform.h"
 #include "dpl/core/operations/logical.h"
 #include "dpl/core/operations/minmax.h"
-#include "dpl/core/operations/pack_mask.h"
 #include "dpl/core/operations/permute.h"
 #include "dpl/core/operations/reinterpret.h"
 #include "dpl/core/operations/select.h"

@@ -6,7 +6,7 @@
 #include "dpl/core/operations/internal/array_for.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/basic/initialize.h"
+#  include "dpl/core/basic/from_bitset.h"
 #  include "dpl/core/basic/internal/abi.h"
 #  include "dpl/core/basic/internal/iota_sequence.h"
 #  include "dpl/core/basic/load.h"
@@ -96,7 +96,7 @@ struct fallback_impl<reinterpret_t<ToE>> {
         } else if consteval {
             // Workaround MSVC's unions
             return [&]<size_t... Is>(index_sequence<Is...>) {
-                return dx::initialize<ToE, A>(bitset<width>(from[imm<Is>]...));
+                return dx::from_bitset<ToE, A>(bitset<width>(from[imm<Is>]...));
             }(iota_sequence<FromE, A>);
         } else {
             return __DPL bit_cast<basic_mask<ToE, A>>(from);

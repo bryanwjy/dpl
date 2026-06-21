@@ -7,11 +7,11 @@
 
 #include "dpl/core/operations/bitwise/vshift_vector_for.h"
 #include "dpl/core/operations/internal/transform.h"
-#include "dpl/core/operations/pack_mask.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/basic/initialize.h"
+#  include "dpl/core/basic/from_bitset.h"
 #  include "dpl/core/basic/internal/abi.h"
+#  include "dpl/core/basic/to_bitset.h"
 #  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/concepts/mask_compatibility.h"
 #  include "dpl/core/concepts/simd_abi.h"
@@ -73,11 +73,11 @@ struct fallback_impl<bwshift_left_t> {
     }
 
     template <fixed_width_abi A, simd_element_for<A> E>
-    requires regular_invocable<pack_mask_t, basic_mask<E, A>>
+    requires regular_invocable<to_bitset_t, basic_mask<E, A>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(
         basic_mask<E, A> val, size_t shift) noexcept {
-        return dx::initialize<E, A>(dx::pack_mask(val) << shift);
+        return dx::from_bitset<E, A>(dx::to_bitset(val) << shift);
     }
 };
 

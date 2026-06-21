@@ -9,6 +9,7 @@
 #include "dpl/core/operations/internal/transform.h"
 
 #if !DPL_MODULES
+#  include "dpl/core/basic/from_bitset.h"
 #  include "dpl/core/basic/internal/abi.h"
 #  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/concepts/simd_abi.h"
@@ -58,14 +59,14 @@ struct fallback_impl<bwnot_t> {
 
     template <simd_abi A, simd_element_for<A> E>
     requires cpo_invocable<bwandnot_t, basic_mask<E, A>, true_type> ||
-        cpo_invocable<pack_mask_t, basic_mask<E, A>>
+        cpo_invocable<to_bitset_t, basic_mask<E, A>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr basic_mask<E, A>
         DPL_VECTORCALL operator()(basic_mask<E, A> val) noexcept {
         if constexpr (cpo_invocable<bwandnot_t, basic_mask<E, A>, true_type>) {
             return bwandnot_t::operator()(val, true_type{});
         } else {
-            return dx::initialize<E, A>(~dx::pack_mask(val));
+            return dx::from_bitset<E, A>(~dx::to_bitset(val));
         }
     }
 };

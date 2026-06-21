@@ -255,6 +255,10 @@ public:
             return __DPL countl_zero(value);
         }
     }
+
+    friend consteval bitset<W> to_bitset(const_mask cmask) noexcept {
+        return static_cast<bitset<W>>(cmask);
+    }
 };
 
 template <typename C, auto>
@@ -289,11 +293,6 @@ consteval auto to_const_mask(M) noexcept {
     constexpr auto width = simd_abi_traits<T>::size();
     constexpr auto value = static_cast<internal::mask_value_t<width>>(M::value);
     return const_mask<width, value>();
-}
-
-template <size_t W, internal::mask_value_t<W> V>
-consteval bitset<W> to_bitset(const_mask<W, V> cmask) noexcept {
-    return static_cast<bitset<W>>(cmask);
 }
 
 namespace internal {

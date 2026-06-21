@@ -6,11 +6,11 @@
 // IWYU pragma: always_keep
 
 #include "dpl/core/operations/internal/transform.h"
-#include "dpl/core/operations/pack_mask.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/basic/initialize.h"
+#  include "dpl/core/basic/from_bitset.h"
 #  include "dpl/core/basic/internal/abi.h"
+#  include "dpl/core/basic/to_bitset.h"
 #  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/dispatch/broadcastable/binary.h"
@@ -56,14 +56,14 @@ struct fallback_impl<cmpeq_t> : binary_broadcasting_fallback<cmpeq_t> {
 
     template <fixed_width_abi A, simd_element_for<A> LE, simd_element_for<A> RE>
     requires common_size_with<LE, RE> &&
-        cpo_invocable<pack_mask_t, basic_mask<LE, A>> &&
-        cpo_invocable<pack_mask_t, basic_mask<RE, A>>
+        cpo_invocable<to_bitset_t, basic_mask<LE, A>> &&
+        cpo_invocable<to_bitset_t, basic_mask<RE, A>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(
         basic_mask<LE, A> lhs, basic_mask<RE, A> rhs) noexcept {
         using T = common_size_type_t<LE, RE>;
-        return dx::initialize<T, A>(
-            (dx::pack_mask(lhs) ^ dx::pack_mask(rhs)).invert());
+        return dx::from_bitset<T, A>(
+            (dx::to_bitset(lhs) ^ dx::to_bitset(rhs)).invert());
     }
 
     using binary_broadcasting_fallback<cmpeq_t>::operator();
