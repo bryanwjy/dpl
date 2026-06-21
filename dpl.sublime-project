@@ -33,7 +33,7 @@
                     "clangd.malloc-trim": true,
                     "clangd.experimental-modules-support": true,
                 },
-            	"enabled": false,
+            	"enabled": true,
 			},
         },
 	},

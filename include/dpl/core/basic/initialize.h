@@ -16,7 +16,6 @@
 #  include "dpl/std/bit/char_bit.h"
 #  include "dpl/std/bit/has_single_bit.h"
 #  include "dpl/std/concepts/different_from.h"
-#  include "dpl/std/concepts/invocable.h"
 #  include "dpl/std/concepts/same_as.h"
 #  include "dpl/std/utility/bitset.h"
 #  include "dpl/std/utility/forward.h"
@@ -65,7 +64,7 @@ private:
 public:
     template <typename... Args>
     requires requires { typename deduced_simd<Args...>; } &&
-        regular_invocable<initialize_t<deduced_simd<Args...>>, Args...>
+        cpo_invocable<initialize_t<deduced_simd<Args...>>, Args...>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr deduced_simd<Args...> operator()(Args&&... args) noexcept {
         return initialize_t<deduced_simd<Args...>>::operator()(
@@ -74,7 +73,7 @@ public:
 
     template <size_t W>
     requires requires { typename deduced_mask<W>; } &&
-        regular_invocable<initialize_t<deduced_mask<W>>, bitset<W>>
+        cpo_invocable<initialize_t<deduced_mask<W>>, bitset<W>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr deduced_mask<W> operator()(bitset<W> data) noexcept {
         return initialize_t<deduced_mask<W>>::operator()(data);

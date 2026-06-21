@@ -90,7 +90,7 @@ void check_signatures() {
         dpp::aligned_t, E const*>);
 }
 
-void instantiate_all() {
+void check_signatures() {
     check_signatures<float>();
     check_signatures<double>();
     check_signatures<dpl::int8>();

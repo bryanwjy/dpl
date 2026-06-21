@@ -56,7 +56,7 @@ public:
 
     template <core_convertible_to<E>... Args>
     __DPL_HIDE_FROM_ABI explicit(
-        !same_as<invoke_result_t<internal::initialize_t<A>, Args...>,
+        !same_as<internal::cpo_result_t<internal::initialize_t<A>, Args...>,
             basic_vector>) constexpr basic_vector(Args&&... args) noexcept
         : basic_vector(datapar::initialize<basic_vector>(
               __DPL forward<Args>(args)...)) {}
@@ -74,7 +74,6 @@ public:
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     explicit constexpr operator vector_type(this basic_vector self) noexcept {
-
         return self.data_;
     }
 
