@@ -14,7 +14,7 @@
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 
-template <size_t W>
+DPL_EXPORT template <size_t W>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr int bit_width(bitset<W> const& val) noexcept {
     return static_cast<int>(W) - __DPL countl_zero(val);

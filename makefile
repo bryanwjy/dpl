@@ -42,8 +42,10 @@ $(OBJD_TARGETS) $(JCMD_TARGETS)
 
 TEST_OBJ_TARGETS := $(filter %.pass.cpp.o,$(OBJ_TARGETS))
 TEST_OBJ_DIRECTIVES := $(patsubst %.cpp.o,%.jdir,$(TEST_OBJ_TARGETS))
+COMPILE_OBJ_TARGETS := $(filter %.compile.pass.cpp.o,$(OBJ_TARGETS))
 PASS_OBJ_TARGETS := $(filter-out %.compile.pass.cpp.o,$(TEST_OBJ_TARGETS))
 PASS_EXES := $(patsubst %.cpp.o,%,$(PASS_OBJ_TARGETS))
+PASS_COMPILED := $(patsubst %.cpp.o,%.crc,$(COMPILE_OBJ_TARGETS))
 TEST_CRC := $(addsuffix .crc, $(PASS_EXES))
 
 .PHONY: all clean jmap jgraph compile_commands module_dependencies parallel_probes FORCE
@@ -61,12 +63,16 @@ else \
 fi
 endef
 
-all: $(TEST_CRC) $(PASS_EXES) $(OUTPUT_DIR)/compile_commands.json $(OUTPUT_DIR)/candidate_flags.txt
+all: $(TEST_CRC) $(PASS_EXES) $(PASS_COMPILED) $(OUTPUT_DIR)/compile_commands.json $(OUTPUT_DIR)/candidate_flags.txt
 	@
 
 $(OUTPUT_DIR)/%.pass.crc: $(OUTPUT_DIR)/%.pass
 	@$< && echo "\033[0;34mTEST\033[0m $*: \033[0;32mSUCCESS\033[0m" && \
 	cksum $< > $@ || { echo "TEST $(OUTPUT_DIR)/%,%,$<): \033[0;31mFAILED\033[0m" && rm -f $@; exit 1; }
+
+$(OUTPUT_DIR)/%.compile.pass.crc: $(OUTPUT_DIR)/%.compile.pass.cpp.o $(COMPILE_STAMP)
+	@echo "\033[0;34mCOMPILE\033[0m $(patsubst $(OUTPUT_DIR)/%,%,$@): \033[0;32mSUCCESS\033[0m" && \
+	cksum $< > $@ || { echo "\033[0;34mCOMPILE\033[0m $(patsubst $(OUTPUT_DIR)/%,%,$@): \033[0;31mFAILED\033[0m"; exit 1; }
 
 $(OUTPUT_DIR)/%.pass: $(OUTPUT_DIR)/%.pass.cpp.o $(OUTPUT_DIR)/link.command
 	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) -o '$@' $< $(LDLIBS)

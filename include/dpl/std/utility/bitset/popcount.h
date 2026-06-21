@@ -18,7 +18,7 @@
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 
-template <size_t W>
+DPL_EXPORT template <size_t W>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr int popcount(bitset<W> const& val) noexcept {
     if constexpr (integral_bitset_type<bitset<W>>) {

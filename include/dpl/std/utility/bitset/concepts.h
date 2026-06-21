@@ -16,10 +16,10 @@
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 
-template <typename T>
+DPL_EXPORT template <typename T>
 concept bitset_type = is_bitset_v<T>;
 
-template <typename T>
+DPL_EXPORT template <typename T>
 concept integral_bitset_type =
     bitset_type<T> && integral<typename remove_cv_t<T>::underlying_type>;
 

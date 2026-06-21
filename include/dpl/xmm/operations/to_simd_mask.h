@@ -11,8 +11,8 @@
 #include "dpl/xmm/operations/reinterpret.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/basic/immediate.h"
 #  include "dpl/core/concepts/common_size_with.h"
+#  include "dpl/core/immediate/immediate.h"
 #  include "dpl/core/operations/to_simd_mask.h"
 #  include "dpl/xmm/basic/abi.h"
 #  include "dpl/xmm/basic/extract.h"

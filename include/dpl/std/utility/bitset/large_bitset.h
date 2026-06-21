@@ -23,7 +23,7 @@ DPL_DISABLE_WARNING("-Wc++26-extensions")
 DPL_DEFAULT_NAMESPACE_BEGIN
 
 DPL_EXPORT template <size_t W>
-class bitset : private details::bitset::storage<W> {
+class bitset : public details::bitset::storage<W> {
     static_assert(W > 0);
     using base_type DPL_NODEBUG = details::bitset::storage<W>;
     using base_type::storage_;
@@ -54,10 +54,11 @@ public:
 
     template <size_t... Ws>
     requires (sizeof...(Ws) > 1 && (... + Ws) == W)
-    __DPL_HIDE_FROM_ABI constexpr bitset(bitset<Ws> const&... vals) noexcept {
+    __DPL_HIDE_FROM_ABI constexpr bitset(bitset<Ws> const&... vals) noexcept
+        : base_type{} {
         [&]<size_t H, size_t... Ts>(this auto self, bitset<H> const& head,
             bitset<Ts> const&... tail) constexpr {
-            constexpr auto args = sizeof...(vals) + 1zu;
+            constexpr auto args = sizeof...(tail) + 1zu;
             if constexpr (args > 1) {
                 *this <<= self(tail...);
             }

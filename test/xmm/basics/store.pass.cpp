@@ -63,7 +63,7 @@ constexpr void test_element() {
         assert(out[i] == in[i]);
     }
 
-    // (2) store into the middle of a larger buffer: confirms store(ptr, v)
+    // (2) store into the middle of a larger buffer: confirms store(v, ptr)
     // writes exactly `lanes` contiguous elements starting at ptr, touching
     // nothing on either side. An over/under-write either fails to be a
     // constant expression (caught by static_assert) or, at runtime under

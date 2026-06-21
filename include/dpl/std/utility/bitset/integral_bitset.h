@@ -31,7 +31,7 @@ class alignas(W / __DPL char_bit_v) bitset;
 
 DPL_EXPORT template <size_t W>
 requires requires { typename bit_type_t<details::bitset::ceil_pow2(W)>; }
-class bitset<W> : private details::bitset::storage<W> {
+class bitset<W> : public details::bitset::storage<W> {
     // TODO iterators?
     using base_type DPL_NODEBUG = details::bitset::storage<W>;
     using base_type::value_;
@@ -67,7 +67,9 @@ public:
     __DPL_HIDE_FROM_ABI explicit(sizeof...(Bs) != W) constexpr bitset(
         Bs... vals) noexcept
         : base_type([&]<size_t... Is>(index_sequence<Is...>) {
-            return (... | (vals << Is));
+            return static_cast<underlying_type>((... |
+                static_cast<underlying_type>(
+                    static_cast<underlying_type>(vals) << Is)));
         }(make_index_sequence<sizeof...(Bs)>{})) {}
 
     __DPL_HIDE_FROM_ABI explicit constexpr operator underlying_type(
@@ -77,10 +79,11 @@ public:
 
     template <size_t... Ws>
     requires (sizeof...(Ws) > 1 && (... + Ws) == W)
-    __DPL_HIDE_FROM_ABI constexpr bitset(bitset<Ws>... vals) noexcept {
+    __DPL_HIDE_FROM_ABI constexpr bitset(bitset<Ws>... vals) noexcept
+        : base_type{} {
         [&]<size_t H, size_t... Ts>(this auto self, bitset<H> const& head,
             bitset<Ts> const&... tail) constexpr {
-            constexpr auto args = sizeof...(vals) + 1zu;
+            constexpr auto args = sizeof...(tail) + 1zu;
             if constexpr (args > 1) {
                 *this <<= self(tail...);
             }
@@ -116,19 +119,46 @@ public:
         return self.value_ & (one << idx);
     }
 
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) constexpr bitset operator&(
-        this bitset self, bitset other) noexcept {
-        return bitset(static_cast<underlying_type>(self.value_ & other.value_));
+    template <size_t OW>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD, PURE) constexpr auto operator&(
+        bitset<OW> const& other) const noexcept {
+        if constexpr (OW > W) {
+            auto dst(other);
+            dst &= *this;
+            return dst;
+        } else {
+            auto dst(*this);
+            dst &= other;
+            return dst;
+        }
     }
 
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) constexpr bitset operator|(
-        this bitset self, bitset other) noexcept {
-        return bitset(static_cast<underlying_type>(self.value_ | other.value_));
+    template <size_t OW>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD, PURE) constexpr auto operator|(
+        bitset<OW> const& other) const noexcept {
+        if constexpr (OW > W) {
+            auto dst(other);
+            dst |= *this;
+            return dst;
+        } else {
+            auto dst(*this);
+            dst |= other;
+            return dst;
+        }
     }
 
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) constexpr bitset operator^(
-        this bitset self, bitset other) noexcept {
-        return bitset(static_cast<underlying_type>(self.value_ ^ other.value_));
+    template <size_t OW>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD, PURE) constexpr auto operator^(
+        bitset<OW> const& other) const noexcept {
+        if constexpr (OW > W) {
+            auto dst(other);
+            dst ^= *this;
+            return dst;
+        } else {
+            auto dst(*this);
+            dst ^= other;
+            return dst;
+        }
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) constexpr bitset operator~(
@@ -207,17 +237,28 @@ public:
         return *this;
     }
 
-    __DPL_HIDE_FROM_ABI constexpr bitset& operator&=(bitset other) noexcept {
+    template <size_t OW>
+    requires (OW <= W)
+    __DPL_HIDE_FROM_ABI constexpr bitset& operator&=(
+        bitset<OW> const& other) noexcept {
         this->value_ &= other.value_;
         return *this;
     }
 
-    __DPL_HIDE_FROM_ABI constexpr bitset& operator|=(bitset other) noexcept {
+    template <size_t OW>
+    requires (OW <= W)
+    __DPL_HIDE_FROM_ABI constexpr bitset& operator|=(
+        bitset<OW> const& other) noexcept {
+        using underlying = typename bitset<OW>::underlying_type;
         this->value_ |= other.value_;
         return *this;
     }
 
-    __DPL_HIDE_FROM_ABI constexpr bitset& operator^=(bitset other) noexcept {
+    template <size_t OW>
+    requires (OW <= W)
+    __DPL_HIDE_FROM_ABI constexpr bitset& operator^=(
+        bitset<OW> const& other) noexcept {
+        using underlying = typename bitset<OW>::underlying_type;
         this->value_ ^= other.value_;
         return *this;
     }

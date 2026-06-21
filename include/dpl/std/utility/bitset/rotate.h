@@ -10,7 +10,7 @@
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 
-template <size_t W>
+DPL_EXPORT template <size_t W>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr bitset<W> rotl(bitset<W> const& val, int count) noexcept {
     // TODO: optimize for large sets
@@ -25,7 +25,7 @@ constexpr bitset<W> rotl(bitset<W> const& val, int count) noexcept {
     return (val >> -count) | (val << (W + count));
 }
 
-template <size_t W>
+DPL_EXPORT template <size_t W>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr bitset<W> rotr(bitset<W> const& val, int count) noexcept {
     // TODO: optimize for large sets
