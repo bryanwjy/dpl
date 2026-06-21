@@ -19,7 +19,7 @@ import :core.immediate;
 #include "dpl/core/dispatch/broadcastable/binary.h"
 #include "dpl/core/dispatch/broadcastable/selection.h"
 #include "dpl/core/dispatch/broadcastable/ternary.h"
-#include "dpl/core/dispatch/concepts/extension_fallback.h"
+#include "dpl/core/dispatch/concepts/operation.h"
 #include "dpl/core/dispatch/evaluate.h"
 #include "dpl/core/dispatch/interface.h"
 #include "dpl/core/dispatch/maskable/accumulation.h"

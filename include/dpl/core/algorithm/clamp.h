@@ -7,7 +7,6 @@
 #  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/dispatch/broadcastable/ternary.h"
-#  include "dpl/core/dispatch/concepts/extension_fallback.h"
 #  include "dpl/core/dispatch/interface.h"
 #  include "dpl/core/dispatch/maskable/transform.h"
 #  include "dpl/core/dispatch/operation/algorithm.h"
@@ -166,10 +165,9 @@ concept unqualified_extended_clamp = requires(AT a, BT b, CT c) {
 template <>
 struct extended_impl<clamp_t> {
     template <simd_vector AT, simd_vector BT, simd_vector CT>
-    requires (extended_simd_type<AT> || extended_simd_type<BT> ||
-                 extended_simd_type<CT>) &&
-        (unqualified_extended_clamp<AT, BT, CT> ||
-            extension_fallback<clamp_t, AT, BT, CT>)
+    requires (extended_vector<AT> || extended_vector<BT> ||
+                 extended_vector<CT>) &&
+        unqualified_extended_clamp<AT, BT, CT>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(AT&& val, BT&& low, CT&& high) {
         if constexpr (unqualified_extended_clamp<AT, BT, CT>) {
@@ -181,9 +179,8 @@ struct extended_impl<clamp_t> {
         }
     }
 
-    template <simd_vector AT, simd_vector BT, typename CT>
+    template <simd_vector AT, common_vector_with<AT> BT, typename CT>
     requires (extended_vector<AT> || extended_vector<BT>) && (!simd_type<CT>) &&
-        common_abi_with<simd_abi_type_t<AT>, simd_abi_type_t<BT>> &&
         unqualified_extended_clamp<AT, BT, CT, common_abi_t<AT, BT>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(AT&& val, BT&& low, CT&& high) {
@@ -191,9 +188,8 @@ struct extended_impl<clamp_t> {
             __DPL forward<CT>(high));
     }
 
-    template <simd_vector AT, typename BT, simd_vector CT>
+    template <simd_vector AT, typename BT, common_vector_with<AT> CT>
     requires (extended_vector<AT> || extended_vector<CT>) && (!simd_type<BT>) &&
-        common_abi_with<simd_abi_type_t<AT>, simd_abi_type_t<CT>> &&
         unqualified_extended_clamp<AT, BT, CT, common_abi_t<AT, CT>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(AT&& val, BT&& low, CT&& high) {
@@ -201,9 +197,8 @@ struct extended_impl<clamp_t> {
             __DPL forward<CT>(high));
     }
 
-    template <typename AT, simd_vector BT, simd_vector CT>
+    template <typename AT, simd_vector BT, common_vector_with<BT> CT>
     requires (extended_vector<BT> || extended_vector<CT>) && (!simd_type<AT>) &&
-        common_abi_with<simd_abi_type_t<BT>, simd_abi_type_t<CT>> &&
         unqualified_extended_clamp<AT, BT, CT, common_abi_t<BT, CT>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(AT&& val, BT&& low, CT&& high) {

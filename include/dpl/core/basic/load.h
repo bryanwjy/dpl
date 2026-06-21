@@ -12,7 +12,6 @@
 #  include "dpl/core/dispatch/interface.h"
 #  include "dpl/core/dispatch/maskable/transform.h"
 #  include "dpl/core/dispatch/operation/basic.h"
-#  include "dpl/std/concepts/invocable.h"
 #  include "dpl/std/concepts/same_as.h"
 #  include "dpl/std/utility/ignore.h"
 #endif
@@ -24,8 +23,8 @@ void load(...) noexcept = delete;
 
 template <typename T, typename U = __DPL ignore_t>
 struct load_t :
-    private basic_operation_base<load_t<T, U>>,
-    private maskable_transform_base<load_t<T, U>> {
+    public basic_operation_base<load_t<T, U>>,
+    public maskable_transform_base<load_t<T, U>> {
     using operation_base<load_t<T, U>>::operator();
     using maskable_transform_base<load_t<T, U>>::operator();
 };
@@ -45,78 +44,71 @@ struct operation_signature<load_t<T, U>> {
     {}
 };
 
-template <typename A, typename E>
-struct fixed_width_canonical {
-private:
-    class private_t {
-        constexpr private_t() noexcept = default;
-    };
-
-protected:
-    consteval void operator()(private_t) noexcept {}
-};
-
 template <typename A, typename... Ts>
 concept unqualified_load =
     requires { load(internal::abi<A>, internal::declarg<Ts>()...); };
 
-template <fixed_width_abi A, simd_element_for<A> E>
-struct fixed_width_canonical<A, E> {
+template <typename T, different_from<ignore_t> U>
+requires (simd_abi<T> && simd_element_for<U, T>) ||
+    (simd_abi<U> && simd_element_for<T, U>)
+struct canonical_impl<load_t<T, U>> {
 private:
-    static constexpr auto size = simd_abi_traits<A, E>::size();
-    using imask_t DPL_NODEBUG = mask_value_t<size>;
+    using E DPL_NODEBUG = conditional_t<simd_abi<T>, U, T>;
+    using A DPL_NODEBUG = conditional_t<simd_abi<T>, T, U>;
 
-    template <imask_t M>
-    using cmask_t DPL_NODEBUG = const_mask<size, M>;
+    using vector_t DPL_NODEBUG = basic_vector<E, A>;
+    using mask_t DPL_NODEBUG = basic_mask<E, A>;
 
-protected:
-    template <imask_t M>
-    requires unqualified_load<A, basic_vector<E, A>, cmask_t<M>, E const*>
+public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(
-        basic_vector<E, A> src, cmask_t<M> cmask, E const* data) noexcept {
-        return load(internal::abi<A>, src, cmask, data);
-    }
-
-    template <imask_t M>
-    requires unqualified_load<A, dx::zero_t, cmask_t<M>, E const*>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(
-        dx::zero_t zero, cmask_t<M> cmask, E const* data) noexcept {
-        return load(internal::abi<A>, zero, cmask, data);
-    }
-
-    template <imask_t M>
-    requires unqualified_load<A, basic_vector<E, A>, cmask_t<M>, dx::aligned_t,
-        E const*>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(basic_vector<E, A> src,
-        cmask_t<M> cmask, aligned_t aligned, E const* data) noexcept {
-        return load(internal::abi<A>, src, cmask, aligned, data);
-    }
-
-    template <imask_t M>
-    requires unqualified_load<A, dx::zero_t, cmask_t<M>, aligned_t, E const*>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(dx::zero_t zero,
-        cmask_t<M> cmask, aligned_t aligned, E const* data) noexcept {
-        return load(internal::abi<A>, zero, cmask, aligned, data);
-    }
-};
-
-template <simd_abi A, simd_element_for<A> E>
-struct canonical_impl<load_t<A, E>> : private fixed_width_canonical<A, E> {
-    using fixed_width_canonical<A, E>::operator();
-
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(E const* data) noexcept
+    static constexpr vector_t operator()(E const* data) noexcept
     requires unqualified_load<A, E const*>
     {
         return load(internal::abi<A>, data);
     }
 
+    template <const_mask_for<vector_t> M>
+    requires unqualified_load<A, basic_vector<E, A>,
+        launder_cmask_t<vector_t, M>, E const*>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(
+    static constexpr vector_t operator()(
+        vector_t src, M cmask, E const* data) noexcept {
+        return load(
+            internal::abi<A>, src, dx::to_const_mask<vector_t>(cmask), data);
+    }
+
+    template <const_mask_for<vector_t> M>
+    requires unqualified_load<A, dx::zero_t, launder_cmask_t<vector_t, M>,
+        E const*>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr vector_t operator()(
+        dx::zero_t zero, M cmask, E const* data) noexcept {
+        return load(
+            internal::abi<A>, zero, dx::to_const_mask<vector_t>(cmask), data);
+    }
+
+    template <const_mask_for<vector_t> M>
+    requires unqualified_load<A, vector_t, launder_cmask_t<vector_t, M>,
+        dx::aligned_t, E const*>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr vector_t operator()(
+        vector_t src, M cmask, aligned_t aligned, E const* data) noexcept {
+        return load(internal::abi<A>, src, dx::to_const_mask<vector_t>(cmask),
+            aligned, data);
+    }
+
+    template <const_mask_for<vector_t> M>
+    requires unqualified_load<A, dx::zero_t, launder_cmask_t<vector_t, M>,
+        aligned_t, E const*>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr vector_t operator()(
+        dx::zero_t zero, M cmask, aligned_t aligned, E const* data) noexcept {
+        return load(internal::abi<A>, zero, dx::to_const_mask<vector_t>(cmask),
+            aligned, data);
+    }
+
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr vector_t operator()(
         aligned_t aligned, E const* data) noexcept
     requires unqualified_load<A, aligned_t, E const*>
     {
@@ -124,34 +116,33 @@ struct canonical_impl<load_t<A, E>> : private fixed_width_canonical<A, E> {
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(
-        basic_vector<E, A> src, basic_mask<E, A> mask, E const* data) noexcept
-    requires unqualified_load<basic_vector<E, A>, basic_mask<E, A>, E const*>
+    static constexpr vector_t operator()(
+        vector_t src, mask_t mask, E const* data) noexcept
+    requires unqualified_load<vector_t, mask_t, E const*>
     {
         return load(internal::abi<A>, src, mask, data);
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(
-        dx::zero_t zero, basic_mask<E, A> mask, E const* data) noexcept
-    requires unqualified_load<dx::zero_t, basic_mask<E, A>, E const*>
+    static constexpr vector_t operator()(
+        dx::zero_t zero, mask_t mask, E const* data) noexcept
+    requires unqualified_load<dx::zero_t, mask_t, E const*>
     {
         return load(internal::abi<A>, zero, mask, data);
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(basic_vector<E, A> src,
-        basic_mask<E, A> mask, aligned_t aligned, E const* data) noexcept
-    requires unqualified_load<basic_vector<E, A>, basic_mask<E, A>, aligned_t,
-        E const*>
+    static constexpr vector_t operator()(
+        vector_t src, mask_t mask, aligned_t aligned, E const* data) noexcept
+    requires unqualified_load<vector_t, mask_t, aligned_t, E const*>
     {
         return load(internal::abi<A>, src, mask, aligned, data);
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(dx::zero_t zero,
-        basic_mask<E, A> mask, aligned_t aligned, E const* data) noexcept
-    requires unqualified_load<dx::zero_t, basic_mask<E, A>, aligned_t, E const*>
+    static constexpr vector_t operator()(
+        dx::zero_t zero, mask_t mask, aligned_t aligned, E const* data) noexcept
+    requires unqualified_load<dx::zero_t, mask_t, aligned_t, E const*>
     {
         return load(internal::abi<A>, zero, mask, aligned, data);
     }
@@ -197,7 +188,7 @@ public:
     }
 };
 
-template <simd_type T>
+template <simd_vector T>
 struct canonical_impl<load_t<T>> :
     canonical_impl<load_t<simd_abi_type_t<T>, simd_element_type_t<T>>> {};
 

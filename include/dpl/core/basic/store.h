@@ -128,8 +128,8 @@ struct aligned_store_t {
 
 namespace datapar {
 inline namespace cpo {
-inline constexpr internal::store_t store{};
-inline constexpr internal::aligned_store_t aligned_store{};
+DPL_EXPORT inline constexpr internal::store_t store{};
+DPL_EXPORT inline constexpr internal::aligned_store_t aligned_store{};
 } // namespace cpo
 } // namespace datapar
 DPL_DEFAULT_NAMESPACE_END

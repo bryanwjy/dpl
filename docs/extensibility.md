@@ -191,7 +191,7 @@ Depending on compiler options/capability, SIMD operations may be evaluated eager
 auto c = a + b * d;
 ```
 
-may be evaluated as a sequence of independent operations, producing intermediate results that are stored and reloaded. This can lead to suboptimal code generation, increased register pressure, and unnecessary memory traffic.
+_may_ be evaluated as a sequence of independent operations, producing intermediate results that are stored and reloaded. This can lead to suboptimal code generation, increased register pressure, and unnecessary memory traffic.
 
 Expression templates allows implementations to reason about the full operation at once, enabling optimizations such as operation fusion, elimination of temporaries, and more efficient use of hardware intrinsics.
 
@@ -201,23 +201,31 @@ For example, consider a custom SIMD type that returns the following struct from 
 
 ```c++
 struct multiply {
-    using value_type = float;
-    using abi_type = xmm::abi_tag;
+    using value_type = float;  // Necessary member to be classified as a simd-type
+    using abi_type = xmm::abi_tag;  // Necessary member to be classified as a simd-type
+    using result_type = basic_vector<value_type, abi_type>; // Necessary member to be classified as a simd-expression
 
     __m128 lhs;
     __m128 rhs;
 
+    // Necessary member to be classified as a simd-vector
     explicit operator __m128(this multiply self) noexcept {
         return _mm_mul_ps(self.lhs, self.rhs);
     }
 
+    // Necessary member to be classified as a simd-expression
+    result_type evaluate() const noexcept {
+        return _mm_mul_ps(self.lhs, self.rhs);
+    }
+
+    // ADL functions to hook into the DPL's dispatch mechanism
     template<simd_with<float, abi_type> R>
-    friend basic_vector<float, abi_type> add(abi_type, multiply lhs, R rhs) noexcept {
-        return _mm_fmadd_ps(lhs.lhs,lhs.rhs, static_cast<__m128>(rhs));
+    friend result_type add(multiply lhs, R rhs) noexcept {
+        return _mm_fmadd_ps(lhs.lhs, lhs.rhs, static_cast<__m128>(rhs));
     }
 
     template<simd_with<float, abi_type> L>
-    friend basic_vector<float, abi_type> add(abi_type, L lhs, multiply rhs) noexcept {
+    friend result_type add(L lhs, multiply rhs) noexcept {
         return _mm_fmadd_ps(rhs.lhs, rhs.rhs, static_cast<__m128>(lhs));
     }
 };
@@ -227,10 +235,10 @@ A subsequent `add` operation will resolve to one of the overloads above via ADL,
 
 DPL provides the necessary mechanisms to support expression templates, but barely defines any in the core library. More advanced compositions—such as fused operations (e.g., multiply-add)—are intentionally left to user-defined implementations, allowing backends to exploit hardware-specific capabilities where appropriate.
 
-One such example in the core library is logical negation of the primary SIMD mask type (`operator!`), which returns an unexported [`negated_mask`](../include/dpl/core/operations/negated_mask.h) type. This type participates in subsequent operations (e.g., `select`) by altering their behavior—for instance, swapping arguments—so that the negation need not be materialized explicitly. This is the *only* case where an expression template is used in DPL.
+One such example in the core library is logical negation of the canonical SIMD mask type (`operator!`), which returns an unexported [`negated_mask`](../include/dpl/core/operations/negated_mask.h) type. This type participates in subsequent operations (e.g., `select`) by altering their behavior—for instance, swapping arguments—so that the negation need not be materialized explicitly. This is the *only* case where an expression template is used in DPL.
 
 ### Limitations
 
-Operations involving the primary DPL SIMD types (`basic_vector` and `basic_mask`) must always return primary types. Returning expression template types from such operations violates this expectation and may lead to incorrect behavior or ill-formed programs, as many components of DPL rely on this invariant.
+Operations involving the canonical DPL SIMD types (`basic_vector` and `basic_mask`) must always return canonical types. Returning expression template types from such operations violates this expectation and may lead to incorrect behavior or ill-formed programs, as many components of DPL rely on this invariant.
 
-Users wishing to implement expression templates should do so in conjunction with custom SIMD and mask types. This ensures that all participating operations are consistently defined and that DPL’s dispatch and fallback mechanisms behave as intended.
+Users wishing to implement expression templates should do so in conjunction with custom vector and mask types. This ensures that all participating operations are consistently defined and that DPL’s dispatch and fallback mechanisms behave as intended.

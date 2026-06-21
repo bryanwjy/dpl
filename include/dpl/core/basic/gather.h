@@ -45,23 +45,25 @@ template <>
 struct canonical_impl<gather_t> {
 
 private:
-    template <typename A, typename E>
-    using imask_t DPL_NODEBUG = mask_value_t<simd_abi_traits<A, E>::size>;
-    template <typename A, typename E, imask_t<A, E> M>
-    using cmask_t DPL_NODEBUG = const_mask<simd_abi_traits<A, E>::size, M>;
+    template <typename E, typename A>
+    using vector_t DPL_NODEBUG = basic_vector<E, A>;
+    template <typename E, typename A>
+    using mask_t DPL_NODEBUG = basic_mask<E, A>;
 
 public:
     template <simd_abi A, simd_element_for<A> I, simd_element_for<A> E>
-    requires integral<I>
+    requires integral<I> &&
+        (unqualified_canonical_gather<A, E const*, vector_t<I, A>> ||
+            fixed_width_abi<A>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(
-        E const* ptr, basic_vector<I, A> idx) noexcept {
+    static constexpr vector_t<E, A> operator()(
+        E const* ptr, vector_t<I, A> idx) noexcept {
         if constexpr (unqualified_canonical_gather<A, E const*,
-                          basic_vector<I, A>>) {
+                          vector_t<I, A>>) {
             return gather(internal::abi<A>, ptr, idx);
         } else {
             // TODO: maybe remove this?
-            return []<size_t... Is>(E const* ptr, basic_vector<I, A> idx,
+            return []<size_t... Is>(E const* ptr, vector_t<I, A> idx,
                        index_sequence<Is...>) {
                 constexpr auto size = sizeof...(Is);
                 auto const zero = E();
@@ -73,47 +75,48 @@ public:
 
     template <simd_abi A, simd_element_for<A> E, simd_element_for<A> I>
     requires integral<I> &&
-        unqualified_canonical_gather<A, basic_vector<E, A>, basic_mask<E, A>,
-            E const*, basic_vector<I, A>>
+        unqualified_canonical_gather<A, vector_t<E, A>, basic_mask<E, A>,
+            E const*, vector_t<I, A>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(basic_vector<E, A> src,
-        basic_mask<E, A> mask, E const* ptr, basic_vector<I, A> idx) noexcept {
+    static constexpr vector_t<E, A> operator()(vector_t<E, A> src,
+        basic_mask<E, A> mask, E const* ptr, vector_t<I, A> idx) noexcept {
         return gather(internal::abi<A>, src, mask, ptr, idx);
     }
 
-    template <fixed_width_abi A, simd_element_for<A> E, imask_t<A, E> M,
-        simd_element_for<A> I>
+    template <fixed_width_abi A, simd_element_for<A> E,
+        const_mask_for<vector_t<E, A>> M, simd_element_for<A> I>
     requires integral<I> &&
-        unqualified_canonical_gather<A, basic_vector<E, A>, cmask_t<A, E, M>,
-            E const*, basic_vector<I, A>>
+        unqualified_canonical_gather<A, vector_t<E, A>,
+            launder_cmask_t<vector_t<E, A>, M>, E const*, vector_t<I, A>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(basic_vector<E, A> src,
-        cmask_t<A, E, M> cmask, E const* ptr, basic_vector<I, A> idx) noexcept {
-        return gather(internal::abi<A>, src, cmask, ptr, idx);
+    static constexpr vector_t<E, A> operator()(vector_t<E, A> src, M cmask,
+        E const* ptr, vector_t<I, A> idx) noexcept {
+        return gather(internal::abi<A>, src,
+            dx::to_const_mask<vector_t<E, A>>(cmask), ptr, idx);
     }
 
     template <simd_abi A, simd_element_for<A> E, simd_element_for<A> I>
     requires integral<I> &&
         unqualified_canonical_gather<A, dx::zero_t, basic_mask<E, A>, E const*,
-            basic_vector<I, A>>
+            vector_t<I, A>>
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-        static constexpr basic_vector<E, A> operator()(dx::zero_t zero,
-            basic_mask<E, A> mask, E const* ptr,
-            basic_vector<I, A> idx) noexcept
+        static constexpr vector_t<E, A> operator()(dx::zero_t zero,
+            basic_mask<E, A> mask, E const* ptr, vector_t<I, A> idx) noexcept
     requires requires { gather(internal::abi<A>, zero, mask, ptr, idx); }
     {
         return gather(internal::abi<A>, zero, mask, ptr, idx);
     }
 
-    template <fixed_width_abi A, simd_element_for<A> E, imask_t<A, E> M,
-        simd_element_for<A> I>
+    template <fixed_width_abi A, simd_element_for<A> E,
+        const_mask_for<vector_t<E, A>> M, simd_element_for<A> I>
     requires integral<I> &&
-        unqualified_canonical_gather<A, dx::zero_t, cmask_t<A, E, M>, E const*,
-            basic_vector<I, A>>
+        unqualified_canonical_gather<A, dx::zero_t,
+            launder_cmask_t<vector_t<E, A>, M>, E const*, vector_t<I, A>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(dx::zero_t zero,
-        cmask_t<A, E, M> cmask, E const* ptr, basic_vector<I, A> idx) noexcept {
-        return gather(internal::abi<A>, zero, cmask, ptr, idx);
+    static constexpr vector_t<E, A> operator()(
+        dx::zero_t zero, M cmask, E const* ptr, vector_t<I, A> idx) noexcept {
+        return gather(internal::abi<A>, zero,
+            dx::to_const_mask<vector_t<E, A>>(cmask), ptr, idx);
     }
 };
 } // namespace datapar::internal

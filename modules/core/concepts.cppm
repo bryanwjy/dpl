@@ -18,7 +18,6 @@ import :core.type_traits;
 #include "dpl/core/concepts/common_abi_with.h"
 #include "dpl/core/concepts/common_simd_type_with.h"
 #include "dpl/core/concepts/common_size_with.h"
-#include "dpl/core/concepts/decayable.h"
 #include "dpl/core/concepts/equivalence.h"
 #include "dpl/core/concepts/extended.h"
 #include "dpl/core/concepts/mask_compatibility.h"
