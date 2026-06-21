@@ -86,7 +86,7 @@ constexpr void test_concat2() {
 
 template <dpl::size_t W1, dpl::size_t W2, dpl::size_t W3>
 constexpr void test_concat3() {
-    // exercises two levels of recursion in the concatenating constructor
+    // attempt two levels of recursion in the concatenating constructor
     bitset<W1> a(true);
     bitset<W2> b(true);
     bitset<W3> c; // all zero

@@ -16,10 +16,6 @@ using dpl::bitset;
 template <typename T>
 void implicit_sink(T) {}
 
-template <typename T, typename... Args>
-concept brace_implicit_constructible =
-    requires(Args... args) { implicit_sink<T>({args...}); };
-
 template <dpl::size_t W>
 void check_integral_explicitness() {
     using U = typename bitset<W>::underlying_type;

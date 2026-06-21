@@ -46,7 +46,8 @@ public:
     template <same_as<bool>... Bs>
     requires (sizeof...(Bs) > 0) && (sizeof...(Bs) <= W)
     __DPL_HIDE_FROM_ABI explicit(sizeof...(Bs) != W) constexpr bitset(
-        Bs... vals) noexcept {
+        Bs... vals) noexcept
+        : base_type{} {
         [&]<size_t... Is>(index_sequence<Is...>) {
             (..., (vals ? set(Is) : clear(Is)));
         }(make_index_sequence<sizeof...(Bs)>{});

@@ -42,13 +42,19 @@ public:
 
 private:
     static constexpr underlying_type one = static_cast<underlying_type>(1);
-    static constexpr underlying_type all =
-        static_cast<underlying_type>((one << W) - one);
 
     template <size_t>
     friend class bitset;
 
 public:
+    static constexpr underlying_type all = []() {
+        if constexpr (W == sizeof(underlying_type) * char_bit_v) {
+            return static_cast<underlying_type>(
+                ~static_cast<underlying_type>(0));
+        } else {
+            return static_cast<underlying_type>((one << W) - one);
+        }
+    }();
     __DPL_HIDE_FROM_ABI constexpr bitset() noexcept : base_type{} {}
 
     template <integral T = underlying_type>
@@ -163,8 +169,7 @@ public:
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) constexpr bitset operator~(
         this bitset self) noexcept {
-        if constexpr (__DPL has_single_bit(W) &&
-            W == sizeof(underlying_type) * char_bit_v) {
+        if constexpr (W == sizeof(underlying_type) * char_bit_v) {
             return bitset(static_cast<underlying_type>(~self.value_));
         } else {
             return bitset(static_cast<underlying_type>(self.value_ ^ all));

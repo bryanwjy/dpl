@@ -26,13 +26,6 @@ struct tuple_element<I, bitset<W>> {
 };
 
 DPL_EXPORT template <size_t I, size_t W>
-requires requires { typename bitset<W>; } &&
-    is_integral_v<typename bitset<W>::underlying_type>
-DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) constexpr auto get(bitset<W> value) noexcept {
-    return value[I];
-}
-
-DPL_EXPORT template <size_t I, size_t W>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) constexpr auto get(
     bitset<W> const& value) noexcept {
     return value[I];
