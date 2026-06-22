@@ -110,8 +110,8 @@ DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr mask<E> broadcast(abi_tag tag, same_as<bool> auto scalar) noexcept {
     static_assert(!is_const_v<E> && !is_volatile_v<E>);
-    return scalar ? xmm::broadcast<E>(tag, dx::all_bits)
-                  : xmm::broadcast<E>(tag, dx::zero);
+    return scalar ? +xmm::broadcast<E>(tag, dx::all_bits)
+                  : +xmm::broadcast<E>(tag, dx::zero);
 }
 
 DPL_EXPORT template <simd_element E, integral_constant_like V>
@@ -120,9 +120,9 @@ DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr mask<E> broadcast(abi_tag tag, V) noexcept {
     static_assert(!is_const_v<E> && !is_volatile_v<E>);
     if constexpr (V::value) {
-        return xmm::broadcast<E>(tag, dx::all_bits);
+        return +xmm::broadcast<E>(tag, dx::all_bits);
     } else {
-        return xmm::broadcast<E>(tag, dx::zero);
+        return +xmm::broadcast<E>(tag, dx::zero);
     }
 }
 
