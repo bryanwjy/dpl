@@ -19,11 +19,8 @@ void check_signature() {
     using P = E*;
     using V = vec_t<E> const&;
 
-    // --- deduced call (no explicit template args) returns void ---
     static_assert(dpl::is_same_v<
         decltype(dpp::store(dpl::declval<V>(), dpl::declval<P>())), void>);
-
-    // --- canonical call chain is noexcept ---
     static_assert(noexcept(dpp::store(dpl::declval<V>(), dpl::declval<P>())));
 }
 

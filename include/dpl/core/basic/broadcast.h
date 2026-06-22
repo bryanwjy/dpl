@@ -112,8 +112,8 @@ struct canonical_impl<broadcast_t<T, U>> {
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT template <typename T, typename... Ts>
-inline constexpr internal::broadcast_t<T, Ts...> broadcast{};
+DPL_EXPORT template <typename T, typename U = __DPL ignore_t>
+inline constexpr internal::broadcast_t<T, U> broadcast{};
 }
 } // namespace datapar
 
