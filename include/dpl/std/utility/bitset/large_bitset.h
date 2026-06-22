@@ -232,7 +232,7 @@ public:
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD, PURE) constexpr bitset operator>>(
-        size_t shift) noexcept {
+        size_t shift) const noexcept {
         auto dst(*this);
         dst >>= shift;
         return dst;
@@ -244,6 +244,15 @@ public:
         bitset<OW> const& other) noexcept {
         if constexpr (OW <= chunk_size) {
             this->storage_[0] &= other.value_;
+            for (auto i = 1zu; i < extent_v<underlying_type>; ++i) {
+                this->storage_[i] = 0zu;
+            }
+        } else if constexpr (integral_bitset_type<bitset<OW>>) {
+            this->storage_[0] &= (other.value_ & -1zu);
+            this->storage_[1] &= ((other.value_ >> 64) & -1zu);
+            for (auto i = 2zu; i < extent_v<underlying_type>; ++i) {
+                this->storage_[i] = 0zu;
+            }
         } else {
             auto* ptr = this->storage_;
             for (auto const val : other.storage_) {
@@ -263,9 +272,12 @@ public:
     requires (OW <= W)
     __DPL_HIDE_FROM_ABI constexpr bitset& operator|=(
         bitset<OW> const& other) noexcept {
-        using underlying = typename bitset<OW>::underlying_type;
         if constexpr (OW <= chunk_size) {
             this->storage_[0] |= other.value_;
+        } else if constexpr (integral_bitset_type<bitset<OW>>) {
+            // Only true if underlying of other is uint128
+            this->storage_[0] |= (other.value_ & -1zu);
+            this->storage_[1] |= ((other.value_ >> 64) & -1zu);
         } else {
             for (auto* ptr = this->storage_; auto const val : other.storage_) {
                 *ptr++ |= val;
@@ -279,9 +291,11 @@ public:
     requires (OW <= W)
     __DPL_HIDE_FROM_ABI constexpr bitset& operator^=(
         bitset<OW> const& other) noexcept {
-        using underlying = typename bitset<OW>::underlying_type;
         if constexpr (OW <= chunk_size) {
             this->storage_[0] ^= other.value_;
+        } else if constexpr (integral_bitset_type<bitset<OW>>) {
+            this->storage_[0] ^= (other.value_ & -1zu);
+            this->storage_[1] ^= ((other.value_ >> 64) & -1zu);
         } else {
             for (auto* ptr = this->storage_; auto const val : other.storage_) {
                 *ptr++ ^= val;

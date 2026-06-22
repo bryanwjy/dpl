@@ -22,7 +22,10 @@ DPL_EXPORT template <size_t W>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr int countr_one(bitset<W> const& val) noexcept {
     if constexpr (integral_bitset_type<bitset<W>>) {
-        return __DPL countr_one(__DPL to_underlying(val));
+        constexpr auto chunk = sizeof(bitset<W>) * __DPL char_bit_v;
+        constexpr auto padding = chunk - W;
+        auto const result = __DPL countr_one(__DPL to_underlying(val));
+        return result > W ? W : result;
     } else {
         static_assert(is_base_of_v<details::bitset::storage<W>, bitset<W>>);
         using type DPL_NODEBUG = typename bitset<W>::underlying_type;
@@ -46,7 +49,10 @@ DPL_EXPORT template <size_t W>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr int countr_zero(bitset<W> const& val) noexcept {
     if constexpr (integral_bitset_type<bitset<W>>) {
-        return __DPL countr_one(__DPL to_underlying(val));
+        constexpr auto chunk = sizeof(bitset<W>) * __DPL char_bit_v;
+        constexpr auto padding = chunk - W;
+        auto const result = __DPL countr_zero(__DPL to_underlying(val));
+        return result > W ? W : result;
     } else {
         static_assert(is_base_of_v<details::bitset::storage<W>, bitset<W>>);
         using type DPL_NODEBUG = typename bitset<W>::underlying_type;

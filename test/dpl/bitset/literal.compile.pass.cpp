@@ -8,7 +8,7 @@ import dpl;
 namespace {
 using namespace dpl::bit_literals;
 
-// ---- binary ----------------------------------------------------------------
+// binary
 
 static_assert(dpl::to_underlying("0b0"_bits) == 0);
 static_assert(dpl::to_underlying("0b1"_bits) == 1);
@@ -16,7 +16,7 @@ static_assert(dpl::to_underlying("0b1010"_bits) == 0b1010); // 10
 static_assert(dpl::to_underlying("0b11111111"_bits) == 0xFF);
 static_assert(dpl::to_underlying("0B1010"_bits) == 0b1010); // uppercase prefix
 
-// ---- hex ---------------------------------------------------------------
+// hex
 
 static_assert(dpl::to_underlying("0x0"_bits) == 0x0);
 static_assert(dpl::to_underlying("0x1"_bits) == 0x1);
@@ -25,7 +25,7 @@ static_assert(dpl::to_underlying("0xff"_bits) == 0xFF); // lowercase digits
 static_assert(dpl::to_underlying("0xFF"_bits) == 0xFF); // uppercase digits
 static_assert(dpl::to_underlying("0X1A"_bits) == 0x1A); // uppercase prefix
 
-// ---- octal -------------------------------------------------------------
+// octal
 
 static_assert(dpl::to_underlying("00"_bits) == 0);
 static_assert(dpl::to_underlying("01"_bits) == 1);

@@ -7,7 +7,6 @@
 // IWYU pragma: begin_exports
 #include "dpl/std/utility/bitset/bit_width.h"
 #include "dpl/std/utility/bitset/bitset_traits.h"
-#include "dpl/std/utility/bitset/byteswap.h"
 #include "dpl/std/utility/bitset/concepts.h"
 #include "dpl/std/utility/bitset/countl.h"
 #include "dpl/std/utility/bitset/countr.h"

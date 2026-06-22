@@ -6,11 +6,8 @@
 // IWYU pragma: private, include "dpl/std/utility/bitset.h"
 
 #include "dpl/std/utility/bitset/bitset_traits.h"
+#include "dpl/std/utility/bitset/countl.h"
 #include "dpl/std/utility/structured_bindings.h"
-
-#if !DPL_MODULES
-#  include "dpl/std/bit/countl.h"
-#endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 

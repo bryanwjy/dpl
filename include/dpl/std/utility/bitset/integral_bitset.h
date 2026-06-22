@@ -193,13 +193,14 @@ public:
 
     template <size_t W2>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) constexpr bool operator==(
-        bitset<W2> const& other) const {
+        bitset<W2> const& other) const noexcept {
         if constexpr (integral<typename bitset<W2>::underlying_type>) {
             return this->value_ == other.value_;
         } else {
             return this->value_ == other.storage_[0] && [&]() {
-                for (auto v : other.storage_) {
-                    if (v != 0) {
+                for (auto i = 1zu;
+                    i < extent_v<typename bitset<W2>::underlying_type>; ++i) {
+                    if (0zu != other.storage_[i]) {
                         return false;
                     }
                 }
@@ -211,7 +212,7 @@ public:
 
     template <size_t W2>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) constexpr bool operator!=(
-        bitset<W2> const& other) const {
+        bitset<W2> const& other) const noexcept {
         return !(*this == other);
     }
 
@@ -254,7 +255,6 @@ public:
     requires (OW <= W)
     __DPL_HIDE_FROM_ABI constexpr bitset& operator|=(
         bitset<OW> const& other) noexcept {
-        using underlying = typename bitset<OW>::underlying_type;
         this->value_ |= other.value_;
         return *this;
     }
@@ -263,7 +263,6 @@ public:
     requires (OW <= W)
     __DPL_HIDE_FROM_ABI constexpr bitset& operator^=(
         bitset<OW> const& other) noexcept {
-        using underlying = typename bitset<OW>::underlying_type;
         this->value_ ^= other.value_;
         return *this;
     }

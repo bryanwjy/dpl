@@ -13,31 +13,23 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 DPL_EXPORT template <size_t W>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr bitset<W> rotl(bitset<W> const& val, int count) noexcept {
-    // TODO: optimize for large sets
-    count %= W;
+    count %= static_cast<int>(W);
+    count += count < 0 ? static_cast<int>(W) : 0;
     if (count == 0)
         return val;
 
-    if (count > 0) {
-        return (val << count) | (val >> (W - count));
-    }
-
-    return (val >> -count) | (val << (W + count));
+    return (val << count) | (val >> (W - count));
 }
 
 DPL_EXPORT template <size_t W>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr bitset<W> rotr(bitset<W> const& val, int count) noexcept {
-    // TODO: optimize for large sets
-    count %= W;
+    count %= static_cast<int>(W);
+    count += count < 0 ? static_cast<int>(W) : 0;
     if (count == 0)
         return val;
 
-    if (count > 0) {
-        return (val >> count) | (val << (W - count));
-    }
-
-    return (val << -count) | (val >> (W + count));
+    return (val >> count) | (val << (W - count));
 }
 
 DPL_DEFAULT_NAMESPACE_END
