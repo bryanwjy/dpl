@@ -3,7 +3,6 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/basic/aligned.h"
 #include "dpl/core/basic/internal/abi.h"
 
 #if !DPL_MODULES
@@ -12,9 +11,9 @@
 #  include "dpl/core/dispatch/interface.h"
 #  include "dpl/core/dispatch/maskable/transform.h"
 #  include "dpl/core/dispatch/operation/basic.h"
-#  include "dpl/std/concepts/invocable.h"
 #  include "dpl/std/concepts/same_as.h"
 #  include "dpl/std/utility/ignore.h"
+#  include "dpl/std/utility/unreachable.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -24,8 +23,8 @@ void expand_load(...) noexcept = delete;
 
 template <typename T, typename U = __DPL ignore_t>
 struct expand_load_t :
-    private basic_operation_base<expand_load_t<T, U>>,
-    private maskable_transform_base<expand_load_t<T, U>> {
+    public basic_operation_base<expand_load_t<T, U>>,
+    public maskable_transform_base<expand_load_t<T, U>> {
     using operation_base<expand_load_t<T, U>>::operator();
     using maskable_transform_base<expand_load_t<T, U>>::operator();
 };

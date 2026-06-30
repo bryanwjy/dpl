@@ -3,16 +3,15 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/basic/initialize.h"
 #include "dpl/core/basic/internal/abi.h"
-#include "dpl/core/basic/internal/iota_sequence.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/dispatch/interface.h"
+#  include "dpl/core/dispatch/maskable/transform.h"
 #  include "dpl/core/dispatch/operation/basic.h"
 #  include "dpl/core/immediate/constants/zero.h"
-#  include "dpl/core/immediate/immediate.h"
+
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -20,8 +19,8 @@ namespace datapar::internal {
 void gather(...) noexcept = delete;
 
 struct gather_t :
-    private basic_operation_base<gather_t>,
-    private maskable_transform_base<gather_t> {
+    public basic_operation_base<gather_t>,
+    public maskable_transform_base<gather_t> {
     using operation_base<gather_t>::operator();
     using maskable_transform_base<gather_t>::operator();
 };
@@ -53,24 +52,11 @@ private:
 public:
     template <simd_abi A, simd_element_for<A> I, simd_element_for<A> E>
     requires integral<I> &&
-        (unqualified_canonical_gather<A, E const*, vector_t<I, A>> ||
-            fixed_width_abi<A>)
+        unqualified_canonical_gather<A, E const*, vector_t<I, A>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr vector_t<E, A> operator()(
         E const* ptr, vector_t<I, A> idx) noexcept {
-        if constexpr (unqualified_canonical_gather<A, E const*,
-                          vector_t<I, A>>) {
-            return gather(internal::abi<A>, ptr, idx);
-        } else {
-            // TODO: maybe remove this?
-            return []<size_t... Is>(E const* ptr, vector_t<I, A> idx,
-                       index_sequence<Is...>) {
-                constexpr auto size = sizeof...(Is);
-                auto const zero = E();
-                return dx::initialize<E, A>(
-                    (Is < idx.size() ? ptr[idx[imm<Is>]] : zero)...);
-            }(ptr, idx, iota_sequence<E, A>);
-        }
+        return gather(internal::abi<A>, ptr, idx);
     }
 
     template <simd_abi A, simd_element_for<A> E, simd_element_for<A> I>

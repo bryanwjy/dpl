@@ -4,7 +4,6 @@
 #include "dpl/config.h"
 
 #include "dpl/core/basic/internal/abi.h"
-#include "dpl/core/basic/to_canonical.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/fwd.h"
@@ -12,7 +11,6 @@
 #  include "dpl/core/concepts/canonical.h"
 #  include "dpl/core/dispatch/interface.h"
 #  include "dpl/core/dispatch/operation/basic.h"
-#  include "dpl/core/type_traits/canonical_type.h"
 #  include "dpl/core/type_traits/simd_value_type.h"
 #  include "dpl/std/concepts/integral.h"
 #  include "dpl/std/concepts/integral_constant_like.h"
@@ -25,7 +23,7 @@ concept extraction_index = integral_constant_like<T> || integral<T>;
 
 void extract(...) noexcept = delete;
 
-struct extract_t : private basic_operation_base<extract_t> {
+struct extract_t : public basic_operation_base<extract_t> {
     using operation_base<extract_t>::operator();
 };
 

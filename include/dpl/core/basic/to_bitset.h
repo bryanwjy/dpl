@@ -16,7 +16,7 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void to_bitset(...) noexcept = delete;
 
-struct to_bitset_t : private basic_operation_base<to_bitset_t> {
+struct to_bitset_t : public basic_operation_base<to_bitset_t> {
     using operation_base<to_bitset_t>::operator();
 };
 

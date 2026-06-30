@@ -26,7 +26,7 @@ template <typename>
 void from_bitset(...) noexcept = delete;
 
 template <typename T, typename U = __DPL ignore_t>
-struct from_bitset_t : private basic_operation_base<from_bitset_t<T, U>> {
+struct from_bitset_t : public basic_operation_base<from_bitset_t<T, U>> {
     using operation_base<from_bitset_t<T, U>>::operator();
 };
 

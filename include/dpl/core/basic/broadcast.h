@@ -25,7 +25,7 @@ template <typename>
 void broadcast(...) noexcept = delete;
 
 template <typename T, typename U>
-struct broadcast_t : private basic_operation_base<broadcast_t<T, U>> {
+struct broadcast_t : public basic_operation_base<broadcast_t<T, U>> {
     using operation_base<broadcast_t<T, U>>::operator();
 };
 

@@ -11,14 +11,10 @@
 #  include "dpl/core/concepts/simd_type.h"
 #  include "dpl/core/dispatch/interface.h"
 #  include "dpl/core/dispatch/operation/basic.h"
-#  include "dpl/core/type_traits/simd_abi_traits.h"
-#  include "dpl/std/bit/bit_type.h"
-#  include "dpl/std/bit/char_bit.h"
-#  include "dpl/std/bit/has_single_bit.h"
 #  include "dpl/std/concepts/different_from.h"
 #  include "dpl/std/concepts/same_as.h"
-#  include "dpl/std/utility/bitset.h"
 #  include "dpl/std/utility/forward.h"
+#  include "dpl/std/utility/ignore.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -28,7 +24,7 @@ template <typename>
 void initialize(...) noexcept = delete;
 
 template <typename T, typename U = __DPL ignore_t>
-struct initialize_t : private basic_operation_base<initialize_t<T, U>> {
+struct initialize_t : public basic_operation_base<initialize_t<T, U>> {
     using operation_base<initialize_t<T, U>>::operator();
 };
 

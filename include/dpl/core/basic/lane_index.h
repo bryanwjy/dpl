@@ -13,7 +13,6 @@
 
 #  include "dpl/core/dispatch/interface.h"
 #  include "dpl/core/dispatch/operation/basic.h"
-#  include "dpl/core/operations/internal/array_for.h"
 #  include "dpl/core/type_traits/representation.h"
 #  include "dpl/std/utility/ignore.h"
 #endif

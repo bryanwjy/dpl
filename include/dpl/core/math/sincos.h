@@ -3,6 +3,7 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/math/internal/gather.h"
 #include "dpl/core/math/internal/ilogb.h"
 #include "dpl/core/math/internal/pair.h"
 #include "dpl/core/math/internal/polynomial.h"
@@ -12,7 +13,6 @@
 #include "dpl/core/math/trunc.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/basic/gather.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/dispatch/interface.h"
 #  include "dpl/core/dispatch/maskable/transform.h"
@@ -827,14 +827,14 @@ private:
         return [](basic_vector<sint, A> q, basic_vector<E, A> const arg,
                    basic_vector<sint, A> const exp) {
             auto x =
-                fmath::single(arg) * dx::gather(fmath::rempi_table<E>, exp);
+                fmath::single(arg) * mx::gather(fmath::rempi_table<E>, exp);
             auto di = quantize_quarters(x.upper);
             q = di.i;
             x.upper = di.f;
             x = fmath::normalize(x);
 
             auto y =
-                fmath::single(arg) * dx::gather(fmath::rempi_table<E> + 1, exp);
+                fmath::single(arg) * mx::gather(fmath::rempi_table<E> + 1, exp);
             x = x + y;
             di = quantize_quarters(x.upper);
             q += di.i;
@@ -843,8 +843,8 @@ private:
 
             using pair = fmath::pair<E, A>;
             y = pair{
-                .upper = dx::gather(fmath::rempi_table<E> + 2, exp),
-                .lower = dx::gather(fmath::rempi_table<E> + 3, exp),
+                .upper = mx::gather(fmath::rempi_table<E> + 2, exp),
+                .lower = mx::gather(fmath::rempi_table<E> + 3, exp),
             };
             y = y * arg;
             x = x + y;
