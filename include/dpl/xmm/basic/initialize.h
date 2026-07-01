@@ -19,8 +19,6 @@ DPL_DISABLE_WARNING("-Wc++26-extensions")
 #  include "dpl/core/type_traits/simd_abi_traits.h"
 #  include "dpl/std/bit/bit_cast.h"
 #  include "dpl/std/concepts/convertible_to.h"
-#  include "dpl/std/type_traits/is_const.h"
-#  include "dpl/std/type_traits/is_volatile.h"
 #  include "dpl/std/utility/forward.h"
 
 #  include <immintrin.h>
@@ -34,7 +32,6 @@ requires (... && !same_as<Args, bool>) &&
     (sizeof...(Args) == simd_abi_traits<E, abi_tag>::size)
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr simd<E> initialize(abi_tag tag, Args&&... args) noexcept {
-    static_assert(!is_const_v<E> && !is_volatile_v<E>);
     if consteval {
 #if !DPL_COMPILER_MSVC
         using array = E[abi_tag::size / sizeof(E)];

@@ -121,6 +121,13 @@ concept sized_element = sizeof(E) == N && simd_element<E>;
 template <typename E>
 inline constexpr auto iota = make_index_sequence<abi_tag::size / sizeof(E)>{};
 
+template <simd_element E>
+using imask_t DPL_NODEBUG = bit_type_t<simd_abi_traits<abi_tag, E>::size>;
+
+template <simd_element E, imask_t<E> V>
+using cmask_t DPL_NODEBUG =
+    dx::const_mask<simd_abi_traits<abi_tag, E>::size, V>;
+
 } // namespace datapar::xmm
 
 DPL_DEFAULT_NAMESPACE_END

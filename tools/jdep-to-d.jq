@@ -1,5 +1,5 @@
 
-# No copyright, written by ChatGPT
+# Written by ChatGPT
 
 # arguments:
 #   $jmap = global logical-name → file map

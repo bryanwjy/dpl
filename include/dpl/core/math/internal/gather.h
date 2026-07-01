@@ -29,10 +29,15 @@ constexpr basic_vector<E, A>
     } else {
         return [&]<size_t... Is>(index_sequence<Is...>) {
             constexpr auto size = sizeof...(Is);
-            auto const zero = E();
-            return dx::initialize<E, A>(
-                (Is < idx.size() ? ptr[idx[imm<Is>]] : zero)...);
-        }(iota_sequence<E, A>);
+            return dx::initialize<E>([&]<size_t J>(immediate<J> imm) {
+                if constexpr (J < basic_vector<I, A>::size()) {
+                    return ptr[idx[imm]];
+                } else {
+                    constexpr E zero{};
+                    return zero;
+                }
+            }(imm<Is>)...);
+        }(iota_sequence<E>);
     }
 }
 

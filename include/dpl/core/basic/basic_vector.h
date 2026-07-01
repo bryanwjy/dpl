@@ -14,12 +14,15 @@
 #  include "dpl/core/immediate/broadcastable_base.h"
 #  include "dpl/core/type_traits/simd_abi_traits.h"
 #  include "dpl/std/concepts/different_from.h"
+#  include "dpl/std/type_traits/decay.h"
+#  include "dpl/std/type_traits/is_same.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 DPL_EXPORT template <typename E, typename A>
 class basic_vector {
+    static_assert(is_same_v<E, decay_t<E>> && is_same_v<A, decay_t<A>>);
     static_assert(simd_element_for<E, A> &&
             is_same_v<simd_element_representation_t<A, E>, E>,
         "Unsupported element type");

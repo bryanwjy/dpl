@@ -1,5 +1,5 @@
 #!/usr/bin/awk -f
-# No copyright; written by Google Gemini
+# Written by Google Gemini
 
 /#define[ \t]+DPL_COMPILER_[A-Z_]+[ \t]+1/ {
     # Match the specific part we want: DPL_COMPILER_...

@@ -18,6 +18,15 @@ void to_bitset(...) noexcept = delete;
 
 struct to_bitset_t : public basic_operation_base<to_bitset_t> {
     using operation_base<to_bitset_t>::operator();
+
+    template <const_mask_like M>
+    static consteval auto operator()(M mask) noexcept
+    requires requires {
+        { to_bitset(mask) } -> bitset_type;
+    }
+    {
+        return to_bitset(mask);
+    }
 };
 
 template <>

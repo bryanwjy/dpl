@@ -27,6 +27,7 @@ namespace datapar {
 
 DPL_EXPORT template <typename E, typename A>
 class basic_mask {
+    static_assert(is_same_v<E, decay_t<E>> && is_same_v<A, decay_t<A>>);
     static_assert(simd_element_for<E, A> &&
             is_same_v<simd_element_representation_t<A, E>, E>,
         "Unsupported element type");
@@ -80,7 +81,7 @@ public:
     template <size_t W, internal::mask_value_t<W> V>
     requires fixed_width_abi<A> &&
         requires { typename const_mask<abi_traits::size, V>; }
-    __DPL_HIDE_FROM_ABI explicit(convertible_to<const_mask<W, V>,
+    __DPL_HIDE_FROM_ABI explicit(!convertible_to<const_mask<W, V>,
         const_mask<abi_traits::size, V>>) constexpr basic_mask(const_mask<W, V>
             mask) noexcept
         : basic_mask(

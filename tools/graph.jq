@@ -1,5 +1,5 @@
 #!/usr/bin/jq -f
-# No copyright, written by Google Gemini
+# Written by Google Gemini
 # Generate a lookup table for ALL modules at once
 # 1. Build a Unified Graph
 # This maps BOTH Logical Names and File Paths to their requirements

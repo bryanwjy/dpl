@@ -7,11 +7,11 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 
 DPL_EXPORT template <typename T>
-using type_identity_t = T;
-
-DPL_EXPORT template <typename T>
 struct type_identity {
     using type DPL_NODEBUG = T;
 };
+
+DPL_EXPORT template <typename T>
+using type_identity_t = typename type_identity<T>::type;
 
 DPL_DEFAULT_NAMESPACE_END

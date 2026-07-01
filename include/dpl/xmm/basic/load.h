@@ -14,8 +14,6 @@
 #if !DPL_MODULES
 #  include "dpl/core/basic/aligned.h"
 #  include "dpl/std/bit/bit_cast.h"
-#  include "dpl/std/type_traits/is_const.h"
-#  include "dpl/std/type_traits/is_volatile.h"
 #  include "dpl/std/utility/sequence.h"
 
 #  include <immintrin.h>
@@ -27,7 +25,6 @@ namespace datapar::xmm {
 DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
 constexpr simd<E> load(abi_tag tag, E const* data) noexcept {
-    static_assert(!is_const_v<E> && !is_volatile_v<E>);
     if consteval {
         return []<size_t... Is>(
                    index_sequence<Is...>, abi_tag tag, E const* data) {
@@ -58,7 +55,6 @@ constexpr simd<E> load(abi_tag tag, E const* data) noexcept {
 DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
 constexpr simd<E> load(abi_tag tag, aligned_t, E const* data) noexcept {
-    static_assert(!is_const_v<E> && !is_volatile_v<E>);
     if consteval {
         return xmm::load(tag, data);
     } else {

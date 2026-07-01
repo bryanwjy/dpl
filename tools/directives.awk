@@ -1,5 +1,5 @@
 #!/usr/bin/awk -f
-# No copyright; written by Google Gemini
+# Written by Google Gemini
 
 BEGIN {
     in_block = 0

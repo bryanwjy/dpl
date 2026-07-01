@@ -22,8 +22,6 @@ DPL_DISABLE_WARNING("-Wc++26-extensions")
 #  include "dpl/core/type_traits/representation.h"
 #  include "dpl/core/type_traits/simd_abi_traits.h"
 #  include "dpl/std/bit/bit_cast.h"
-#  include "dpl/std/type_traits/is_const.h"
-#  include "dpl/std/type_traits/is_volatile.h"
 #  include "dpl/std/utility/bitset.h"
 #  include "dpl/std/utility/to_signed.h"
 
@@ -53,7 +51,6 @@ DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr mask<E> from_bitset(
     bitset<simd_abi_traits<E, abi_tag>::size> mask) noexcept {
-    static_assert(!is_const_v<E> && !is_volatile_v<E>);
     constexpr auto width = simd_abi_traits<E, abi_tag>::size;
     if consteval {
         return [&]<size_t... Is>(index_sequence<Is...>) {

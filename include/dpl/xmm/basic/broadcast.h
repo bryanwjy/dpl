@@ -15,8 +15,6 @@
 #  include "dpl/core/immediate/constants/all_bits.h"
 #  include "dpl/core/immediate/constants/zero.h"
 #  include "dpl/std/bit/bit_cast.h"
-#  include "dpl/std/type_traits/is_const.h"
-#  include "dpl/std/type_traits/is_volatile.h"
 #  include "dpl/std/type_traits/type_identity.h"
 #  include "dpl/std/utility/sequence.h"
 
@@ -29,7 +27,6 @@ namespace datapar::xmm {
 DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr simd<E> broadcast(abi_tag tag, type_identity_t<E> scalar) noexcept {
-    static_assert(!is_const_v<E> && !is_volatile_v<E>);
     if consteval {
         constexpr auto seq = make_index_sequence<abi_tag::size / sizeof(E)>{};
         constexpr auto forward = [](auto, E scalar) { return scalar; };

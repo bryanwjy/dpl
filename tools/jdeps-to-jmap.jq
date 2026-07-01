@@ -1,5 +1,5 @@
 
-# No copyright, written by ChatGPT
+# Written by ChatGPT
 reduce .[] as $doc
   ({}; 
    reduce $doc.rules[] as $rule

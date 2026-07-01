@@ -137,7 +137,7 @@ public:
     }
 };
 
-template <simd_type T>
+template <simd_vector T>
 struct canonical_impl<expand_load_t<T>> :
     canonical_impl<expand_load_t<simd_abi_type_t<T>, simd_element_type_t<T>>> {
 };

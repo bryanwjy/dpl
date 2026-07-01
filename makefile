@@ -19,7 +19,7 @@ ifeq ($(filter -std=%,$(CXXFLAGS)),)
 CXXFLAGS += -std=c++23
 endif
 
-CXXFLAGS += -msse4.2 -mfma
+CXXFLAGS += -mfma -mavx2
 CPPFLAGS += -I$(INCLUDE_DIR)
 
 SRCS := $(shell find $(MODULES_DIR) $(SRC_DIR) $(TEST_DIR) -type f \( -name '*.cpp' -o -name '*.cppm' \) 2>/dev/null)

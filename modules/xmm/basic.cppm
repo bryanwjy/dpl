@@ -14,6 +14,7 @@ export import dpl;
 #include "dpl/xmm/basic/broadcast.h"
 #include "dpl/xmm/basic/extract.h"
 #include "dpl/xmm/basic/from_bitset.h"
+#include "dpl/xmm/basic/gather.h"
 #include "dpl/xmm/basic/initialize.h"
 #include "dpl/xmm/basic/load.h"
 #include "dpl/xmm/basic/store.h"

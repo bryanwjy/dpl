@@ -50,57 +50,107 @@ private:
     using mask_t DPL_NODEBUG = basic_mask<E, A>;
 
 public:
-    template <simd_abi A, simd_element_for<A> I, simd_element_for<A> E>
-    requires integral<I> &&
-        unqualified_canonical_gather<A, E const*, vector_t<I, A>>
+    template <simd_abi A, simd_element_for<A> E>
+    requires unqualified_canonical_gather<A, E const*, vector_t<int, A>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr vector_t<E, A> operator()(
-        E const* ptr, vector_t<I, A> idx) noexcept {
+        E const* ptr, vector_t<int, A> idx) noexcept {
         return gather(internal::abi<A>, ptr, idx);
     }
 
-    template <simd_abi A, simd_element_for<A> E, simd_element_for<A> I>
-    requires integral<I> &&
-        unqualified_canonical_gather<A, vector_t<E, A>, basic_mask<E, A>,
-            E const*, vector_t<I, A>>
+    template <simd_abi A, simd_element_for<A> E>
+    requires unqualified_canonical_gather<A, vector_t<E, A>, basic_mask<E, A>,
+        E const*, vector_t<int, A>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr vector_t<E, A> operator()(vector_t<E, A> src,
-        basic_mask<E, A> mask, E const* ptr, vector_t<I, A> idx) noexcept {
+        basic_mask<E, A> mask, E const* ptr, vector_t<int, A> idx) noexcept {
         return gather(internal::abi<A>, src, mask, ptr, idx);
     }
 
     template <fixed_width_abi A, simd_element_for<A> E,
-        const_mask_for<vector_t<E, A>> M, simd_element_for<A> I>
-    requires integral<I> &&
-        unqualified_canonical_gather<A, vector_t<E, A>,
-            launder_cmask_t<vector_t<E, A>, M>, E const*, vector_t<I, A>>
+        const_mask_for<vector_t<E, A>> M>
+    requires unqualified_canonical_gather<A, vector_t<E, A>,
+        launder_cmask_t<vector_t<E, A>, M>, E const*, vector_t<int, A>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr vector_t<E, A> operator()(vector_t<E, A> src, M cmask,
-        E const* ptr, vector_t<I, A> idx) noexcept {
+        E const* ptr, vector_t<int, A> idx) noexcept {
         return gather(internal::abi<A>, src,
             dx::to_const_mask<vector_t<E, A>>(cmask), ptr, idx);
     }
 
-    template <simd_abi A, simd_element_for<A> E, simd_element_for<A> I>
-    requires integral<I> &&
-        unqualified_canonical_gather<A, dx::zero_t, basic_mask<E, A>, E const*,
-            vector_t<I, A>>
-        DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-        static constexpr vector_t<E, A> operator()(dx::zero_t zero,
-            basic_mask<E, A> mask, E const* ptr, vector_t<I, A> idx) noexcept
-    requires requires { gather(internal::abi<A>, zero, mask, ptr, idx); }
-    {
+    template <simd_abi A, simd_element_for<A> E>
+    requires unqualified_canonical_gather<A, dx::zero_t, basic_mask<E, A>,
+        E const*, vector_t<int, A>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr vector_t<E, A> operator()(dx::zero_t zero,
+        basic_mask<E, A> mask, E const* ptr, vector_t<int, A> idx) noexcept {
         return gather(internal::abi<A>, zero, mask, ptr, idx);
     }
 
     template <fixed_width_abi A, simd_element_for<A> E,
-        const_mask_for<vector_t<E, A>> M, simd_element_for<A> I>
-    requires integral<I> &&
-        unqualified_canonical_gather<A, dx::zero_t,
-            launder_cmask_t<vector_t<E, A>, M>, E const*, vector_t<I, A>>
+        const_mask_for<vector_t<E, A>> M>
+    requires unqualified_canonical_gather<A, dx::zero_t,
+        launder_cmask_t<vector_t<E, A>, M>, E const*, vector_t<int, A>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr vector_t<E, A> operator()(
-        dx::zero_t zero, M cmask, E const* ptr, vector_t<I, A> idx) noexcept {
+        dx::zero_t zero, M cmask, E const* ptr, vector_t<int, A> idx) noexcept {
+        return gather(internal::abi<A>, zero,
+            dx::to_const_mask<vector_t<E, A>>(cmask), ptr, idx);
+    }
+
+    template <simd_abi A, simd_element_for<A> E>
+    requires different_from<ptrdiff_t, int> &&
+        unqualified_canonical_gather<A, E const*, vector_t<ptrdiff_t, A>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr vector_t<E, A> operator()(
+        E const* ptr, vector_t<ptrdiff_t, A> idx) noexcept {
+        return gather(internal::abi<A>, ptr, idx);
+    }
+
+    template <simd_abi A, simd_element_for<A> E>
+    requires different_from<ptrdiff_t, int> &&
+        unqualified_canonical_gather<A, vector_t<E, A>, basic_mask<E, A>,
+            E const*, vector_t<ptrdiff_t, A>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr vector_t<E, A> operator()(vector_t<E, A> src,
+        basic_mask<E, A> mask, E const* ptr,
+        vector_t<ptrdiff_t, A> idx) noexcept {
+        return gather(internal::abi<A>, src, mask, ptr, idx);
+    }
+
+    template <fixed_width_abi A, simd_element_for<A> E,
+        const_mask_for<vector_t<E, A>> M>
+    requires different_from<ptrdiff_t, int> &&
+        unqualified_canonical_gather<A, vector_t<E, A>,
+            launder_cmask_t<vector_t<E, A>, M>, E const*,
+            vector_t<ptrdiff_t, A>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr vector_t<E, A> operator()(vector_t<E, A> src, M cmask,
+        E const* ptr, vector_t<ptrdiff_t, A> idx) noexcept {
+        return gather(internal::abi<A>, src,
+            dx::to_const_mask<vector_t<E, A>>(cmask), ptr, idx);
+    }
+
+    template <simd_abi A, simd_element_for<A> E>
+    requires different_from<ptrdiff_t, int> &&
+        unqualified_canonical_gather<A, dx::zero_t, basic_mask<E, A>, E const*,
+            vector_t<ptrdiff_t, A>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr vector_t<E, A> operator()(dx::zero_t zero,
+        basic_mask<E, A> mask, E const* ptr,
+        vector_t<ptrdiff_t, A> idx) noexcept {
+        return gather(internal::abi<A>, zero, mask, ptr, idx);
+    }
+
+    template <fixed_width_abi A, simd_element_for<A> E,
+        const_mask_for<vector_t<E, A>> M>
+    requires different_from<ptrdiff_t, int> &&
+        unqualified_canonical_gather<A, dx::zero_t,
+            launder_cmask_t<vector_t<E, A>, M>, E const*,
+            vector_t<ptrdiff_t, A>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr vector_t<E, A> operator()(dx::zero_t zero, M cmask,
+        E const* ptr, vector_t<ptrdiff_t, A> idx) noexcept {
         return gather(internal::abi<A>, zero,
             dx::to_const_mask<vector_t<E, A>>(cmask), ptr, idx);
     }
