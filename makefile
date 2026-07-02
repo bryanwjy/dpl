@@ -22,35 +22,66 @@ endif
 CXXFLAGS += -mfma -mavx2
 CPPFLAGS += -I$(INCLUDE_DIR)
 
-SRCS := $(shell find $(MODULES_DIR) $(SRC_DIR) $(TEST_DIR) -type f \( -name '*.cpp' -o -name '*.cppm' \) 2>/dev/null)
-CPP_SRCS := $(filter %.cpp,$(SRCS))
-CPPM_SRCS := $(filter %.cppm,$(SRCS))
-COMPILE_SRCS := $(CPP_SRCS) $(filter $(SRC_DIR)/%.cppm,$(CPPM_SRCS))
+ALL_SOURCES := $(shell find $(MODULES_DIR) $(SRC_DIR) $(TEST_DIR) -type f \( -name '*.cpp' -o -name '*.cppm' \) 2>/dev/null)
+CPP_SOURCES := $(filter %.cpp,$(ALL_SOURCES))
+MODULE_SOURCES := $(filter %.cppm,$(ALL_SOURCES))
+COMPILE_SOURCES := $(CPP_SOURCES) $(filter-out $(MODULES_DIR)/%,$(MODULE_SOURCES))
+PASS_SOURCES := $(filter %.pass.cpp,$(CPP_SOURCES))
+# TODO Death tests
+# VERIFY_SOURCES := $(filter %.verify.cpp,$(CPP_SOURCES))
 
-BMI_TARGETS := $(addsuffix .pcm, $(CPPM_SRCS:$(ROOT_DIR)/%=$(OUTPUT_DIR)/%))
-MRSP_TARGETS += $(addsuffix .mrsp, $(SRCS:$(ROOT_DIR)/%=$(OUTPUT_DIR)/%))
-JCMD_TARGETS := $(addsuffix .jcmd, $(SRCS:$(ROOT_DIR)/%=$(OUTPUT_DIR)/%))
-JSCAN_TARGETS := $(addsuffix .jscan, $(SRCS:$(ROOT_DIR)/%=$(OUTPUT_DIR)/%))
-PRE_TARGETS := $(addsuffix .pre, $(SRCS:$(ROOT_DIR)/%=$(OUTPUT_DIR)/%))
-DEP_TARGETS := $(addsuffix .d, $(SRCS:$(ROOT_DIR)/%=$(OUTPUT_DIR)/%))
-OBJ_TARGETS := $(addsuffix .o, $(COMPILE_SRCS:$(ROOT_DIR)/%=$(OUTPUT_DIR)/%))
-TRSP_TARGETS := $(patsubst $(ROOT_DIR)/%,$(OUTPUT_DIR)/%.trsp,$(filter %.pass.cpp,$(CPP_SRCS)))
+# Include subdirs
 
-ALL_TARGETS := $(BMI_TARGETS) $(BMID_TARGETS) \
-$(JDEP_TARGETS) $(MRSP_TARGETS) $(TRSP_TARGETS) $(OBJ_TARGETS) \
-$(OBJD_TARGETS) $(JCMD_TARGETS)
+# Precompiled modules
+PCM_TARGETS := $(addsuffix .pcm, $(MODULE_SOURCES:$(ROOT_DIR)/%=$(OUTPUT_DIR)/%))
+# Object files
+OBJ_TARGETS := $(addsuffix .o, $(COMPILE_SOURCES:$(ROOT_DIR)/%=$(OUTPUT_DIR)/%))
+MOBJ_TARGETS := $(filter %.cppm.o,$(OBJ_TARGETS))
+OBJ_TARGETS := $(filter-out %.cppm.o,$(OBJ_TARGETS))
 
-TEST_OBJ_TARGETS := $(filter %.pass.cpp.o,$(OBJ_TARGETS))
-TEST_OBJ_DIRECTIVES := $(patsubst %.cpp.o,%.jdir,$(TEST_OBJ_TARGETS))
-COMPILE_OBJ_TARGETS := $(filter %.compile.pass.cpp.o,$(OBJ_TARGETS))
-PASS_OBJ_TARGETS := $(filter-out %.compile.pass.cpp.o,$(TEST_OBJ_TARGETS))
-PASS_EXES := $(patsubst %.cpp.o,%,$(PASS_OBJ_TARGETS))
-PASS_COMPILED := $(patsubst %.cpp.o,%.crc,$(COMPILE_OBJ_TARGETS))
-TEST_CRC := $(addsuffix .crc, $(PASS_EXES))
+OUTPUT_STEMS := $(ALL_SOURCES:$(ROOT_DIR)/%=$(OUTPUT_DIR)/%)
+# Module response files
+MRSP_TARGETS := $(addsuffix .mrsp,$(OUTPUT_STEMS))
+# Compile command files: For static analyses
+JCMD_TARGETS := $(addsuffix .jcmd,$(OUTPUT_STEMS))
+# Scan command files: For dependency scanning
+JSCAN_TARGETS := $(addsuffix .jscan,$(OUTPUT_STEMS))
 
-.PHONY: all clean jmap jgraph compile_commands module_dependencies parallel_probes FORCE
+OUTPUT_STEMS := $(PASS_SOURCES:$(ROOT_DIR)/%=$(OUTPUT_DIR)/%)
+# Test response files
+TRSP_TARGETS := $(addsuffix .trsp, $(OUTPUT_STEMS))
+# Directive files (Extra compile flags defined in the test file)
+JDIR_TARGETS := $(addsuffix .jdir, $(OUTPUT_STEMS))
+# Link response files
+LRSP_TARGETS := $(addsuffix .lrsp, $(OUTPUT_STEMS))
+OUTPUT_STEMS :=
 
-.PRECIOUS: $(DEP_TARGETS) $(MRSP_TARGETS) $(TRSP_TARGETS) $(OUTPUT_DIR)/jmap.json $(OUTPUT_DIR)/jgraph.json $(OUTPUT_DIR)/compile_commands.json
+COMPILE_PASS_TARGETS := $(filter %.compile.pass.cpp.o,$(OBJ_TARGETS))
+PASS_TARGETS := $(filter %.pass.cpp.o,$(OBJ_TARGETS))
+PASS_TARGETS := $(filter-out %.compile.pass.cpp.o,$(PASS_TARGETS))
+PASS_TARGETS := $(patsubst %.cpp.o,%,$(PASS_TARGETS))
+
+# Dependency makefiles
+DEP_FILES := $(addsuffix .d, $(ALL_SOURCES:$(ROOT_DIR)/%=$(OUTPUT_DIR)/%))
+
+ALL_TARGETS := $(PCM_TARGETS) $(MRSP_TARGETS) $(JCMD_TARGETS) $(JSCAN_TARGETS) \
+$(OBJ_TARGETS) $(LRSP_TARGETS) $(MOBJ_TARGETS) $(TRSP_TARGETS) $(JDIR_TARGETS) $(PASS_TARGETS)
+
+COMPILE_PASS_CRC := $(patsubst %.cpp.o,%.crc,$(COMPILE_PASS_TARGETS))
+PASS_CRC := $(addsuffix .crc,$(PASS_TARGETS))
+TEST_CRC := $(PASS_CRC) $(COMPILE_PASS_CRC)
+TEST_SUBDIRS := $(shell find $(TEST_DIR) -type d)
+TEST_SUBDIRS := $(TEST_SUBDIRS:$(ROOT_DIR)/%=%)
+TEST_ALIAS := $(TEST_CRC:$(OUTPUT_DIR)/%.crc=%)
+
+BUILD_JSON := $(OUTPUT_DIR)/jmap.json $(OUTPUT_DIR)/jgraph.json $(OUTPUT_DIR)/compile_commands.json \
+$(OUTPUT_DIR)/module_dependencies.json $(OUTPUT_DIR)/scan_commands.json
+BUILD_TXT := $(OUTPUT_DIR)/candidate_flags.txt $(OUTPUT_DIR)/module_implementations.txt
+BUILD_FILES := $(BUILD_JSON) $(BUILD_TXT)
+BUILD_JSON_ALIAS := $(basename $(notdir $(BUILD_JSON)))
+BUILD_TXT_ALIAS := $(basename $(notdir $(BUILD_TXT)))
+
+.PHONY: all clean parallel_probes FORCE $(BUILD_JSON_ALIAS) $(BUILD_TXT_ALIAS) $(TEST_ALIAS) $(TEST_SUBDIRS)
 
 define replace_if_different
 @mkdir -p '$(@D)'
@@ -63,22 +94,16 @@ else \
 fi
 endef
 
-all: $(TEST_CRC) $(PASS_EXES) $(PASS_COMPILED) $(OUTPUT_DIR)/compile_commands.json $(OUTPUT_DIR)/candidate_flags.txt
+define subdir_to_crc
+$(patsubst $(ROOT_DIR)/%.cpp,$(OUTPUT_DIR)/%.crc,$(wildcard $(ROOT_DIR)/$(1)/*.pass.cpp)) \
+$(patsubst $(ROOT_DIR)/%.cpp,$(OUTPUT_DIR)/%.crc,$(wildcard $(ROOT_DIR)/$(1)/**/*.pass.cpp))
+endef
+
+all: $(TEST_CRC) $(ALL_TARGETS) $(BUILD_FILES)
 	@
 
-$(OUTPUT_DIR)/%.pass.crc: $(OUTPUT_DIR)/%.pass
-	@$< && echo "\033[0;34mTEST\033[0m $*: \033[0;32mSUCCESS\033[0m" && \
-	cksum $< > $@ || { echo "TEST $(OUTPUT_DIR)/%,%,$<): \033[0;31mFAILED\033[0m" && rm -f $@; exit 1; }
-
-$(OUTPUT_DIR)/%.compile.pass.crc: $(OUTPUT_DIR)/%.compile.pass.cpp.o $(COMPILE_STAMP)
-	@echo "\033[0;34mCOMPILE\033[0m $(patsubst $(OUTPUT_DIR)/%,%,$@): \033[0;32mSUCCESS\033[0m" && \
-	cksum $< > $@ || { echo "\033[0;34mCOMPILE\033[0m $(patsubst $(OUTPUT_DIR)/%,%,$@): \033[0;31mFAILED\033[0m"; exit 1; }
-
-$(OUTPUT_DIR)/%.pass: $(OUTPUT_DIR)/%.pass.cpp.o $(OUTPUT_DIR)/link.command
-	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) -o '$@' $< $(LDLIBS)
-
 clean:
-	@rm -rf $(OUTPUT_DIR)
+	@rm -f $(TEST_CRC) $(ALL_TARGETS) $(BUILD_FILES)
 
 $(OUTPUT_DIR)/env.stamp: FORCE
 	$(call replace_if_different, printf "%s\n" \
@@ -94,17 +119,16 @@ $(OUTPUT_DIR)/compile.command: makefile $(OUTPUT_DIR)/env.stamp
 $(OUTPUT_DIR)/link.command: makefile $(OUTPUT_DIR)/env.stamp
 	@$(call replace_if_different, echo "$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) $(LDLIBS)")
 
-jmap: $(OUTPUT_DIR)/jmap.json
-	@
+$(PASS_CRC):$(OUTPUT_DIR)/%.crc: $(OUTPUT_DIR)/%
+	@$< && echo "\033[0;34mTEST\033[0m $*: \033[0;32mSUCCESS\033[0m" && \
+	cksum $< > $@ || { echo "TEST $*): \033[0;31mFAILED\033[0m" && rm -f $@; exit 1; }
 
-jgraph: $(OUTPUT_DIR)/jgraph.json
-	@
+$(COMPILE_PASS_CRC):$(OUTPUT_DIR)/%.crc: $(OUTPUT_DIR)/%.cpp.o
+	@echo "\033[0;34mCOMPILE\033[0m $*: \033[0;32mSUCCESS\033[0m" && \
+	cksum $< > $@ || { echo "\033[0;34mCOMPILE\033[0m $*: \033[0;31mFAILED\033[0m"; exit 1; }
 
-module_dependencies: $(OUTPUT_DIR)/module_dependencies.json
-	@
-
-compile_commands: $(OUTPUT_DIR)/compile_commands.json
-	@
+$(PASS_TARGETS):%.pass: %.pass.cpp.o %.pass.cpp.lrsp $(OUTPUT_DIR)/link.command
+	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) -o '$@' $< $(LDLIBS) @$*.pass.cpp.lrsp
 
 $(OUTPUT_DIR)/jmap.json: $(TOOLS_DIR)/jdeps-to-jmap.jq $(OUTPUT_DIR)/module_dependencies.json
 	@jq -f $(TOOLS_DIR)/jdeps-to-jmap.jq -s $(OUTPUT_DIR)/module_dependencies.json > $@
@@ -118,93 +142,80 @@ $(OUTPUT_DIR)/compile_commands.json: $(JCMD_TARGETS)
 $(OUTPUT_DIR)/scan_commands.json: $(JSCAN_TARGETS)
 	@jq -s '.' $^ > $@
 
-$(OUTPUT_DIR)/module_dependencies.json: $(OUTPUT_DIR)/scan_commands.json
-	@clang-scan-deps-21 -format=p1689 -compilation-database=$^ -o $@
+$(OUTPUT_DIR)/module_dependencies.json: $(OUTPUT_DIR)/scan_commands.json $(ALL_SOURCES)
+	@clang-scan-deps-21 -format=p1689 -compilation-database=$< -o $@
 
-$(OUTPUT_DIR)/%.cppm.mrsp: $(OUTPUT_DIR)/jgraph.json $(OUTPUT_DIR)/jmap.json $(TOOLS_DIR)/module-response.jq
-	$(call replace_if_different, $(TOOLS_DIR)/module-response.jq \
-	--arg module $(@:.mrsp=.pcm) \
-	--slurpfile jmap $(OUTPUT_DIR)/jmap.json \
-    -r $(OUTPUT_DIR)/jgraph.json)
+$(OUTPUT_DIR)/module_implementations.txt: FORCE
+	@mkdir -p '$(@D)'
+	@$(file >$@.tmp,$(subst $(space),$(newline),$(strip $(MOBJ_TARGETS))))
+	@cmp -s $@.tmp $@ 2>/dev/null && rm $@.tmp || mv $@.tmp $@
 
-$(OUTPUT_DIR)/%.cpp.mrsp: $(OUTPUT_DIR)/jgraph.json $(OUTPUT_DIR)/jmap.json $(TOOLS_DIR)/module-response.jq
-	$(call replace_if_different, $(TOOLS_DIR)/module-response.jq \
-	--arg module $(@:.mrsp=.o) \
-	--slurpfile jmap $(OUTPUT_DIR)/jmap.json \
-    -r $(OUTPUT_DIR)/jgraph.json)
+$(OUTPUT_DIR)/candidate_flags.txt: $(JDIR_TARGETS)
+	@jq -r '.[] | .["compile-flags"] // [] | .[]' $^ | sort -u > $@
 
 $(OUTPUT_DIR)/scan_barrier.mk: $(OUTPUT_DIR)/jmap.json $(OUTPUT_DIR)/module_dependencies.json $(TOOLS_DIR)/jdep-to-d.jq
 	@jq -f $(TOOLS_DIR)/jdep-to-d.jq --slurpfile jmap $(OUTPUT_DIR)/jmap.json -r $(OUTPUT_DIR)/module_dependencies.json > $(OUTPUT_DIR)/scan_barrier.mk
 
 -include $(OUTPUT_DIR)/scan_barrier.mk
 
-$(OUTPUT_DIR)/src/%.cppm.o: $(SRC_DIR)/%.cppm $(OUTPUT_DIR)/src/%.cppm.mrsp $(OUTPUT_DIR)/compile.command | $(OUTPUT_DIR)/scan_barrier.mk
-	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) -MMD -MP -MF '$(@:.o=.d)' -MT '$@' -fmodule-output=$(@:.o=.pcm) -fmodules-reduced-bmi -c $< -o '$@' @$(@:.o=.mrsp)
+$(TEST_ALIAS):%.pass: $(OUTPUT_DIR)/%.pass
+$(BUILD_JSON_ALIAS):%: $(OUTPUT_DIR)/%.json
+$(BUILD_TXT_ALIAS):%: $(OUTPUT_DIR)/%.txt
+.SECONDEXPANSION:
+$(TEST_SUBDIRS):%: $$(call subdir_to_crc,%)
+$(MOBJ_TARGETS):%.o: %.pcm
+$(filter %.pass.cpp.o,$(OBJ_TARGETS)):%.o: %.trsp
+$(filter %.pass.cpp.o,$(JCMD_TARGETS)):%.jcmd: %.trsp
 
-$(OUTPUT_DIR)/src/%.cppm.pcm: $(OUTPUT_DIR)/src/%.cppm.o
-	@
+$(PCM_TARGETS):$(OUTPUT_DIR)/%.cppm.pcm: $(ROOT_DIR)/%.cppm $(OUTPUT_DIR)/%.cppm.mrsp $(OUTPUT_DIR)/compile.command | $(OUTPUT_DIR)/scan_barrier.mk
+	@tmpfile=$$(mktemp); \
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -MMD -MP -MF '$(@:.pcm=.d)' -MT '$@' \
+	  -fmodule-output="$$tmpfile" -fmodules-reduced-bmi -c $< -o '$(@:.pcm=.o)' @$(@:.pcm=.mrsp); \
+	if cmp -s "$$tmpfile" '$@' 2>/dev/null; then \
+	    rm "$$tmpfile"; \
+	else \
+	    mv "$$tmpfile" '$@'; \
+	fi
 
-$(OUTPUT_DIR)/modules/%.cppm.pcm: $(MODULES_DIR)/%.cppm $(OUTPUT_DIR)/modules/%.cppm.mrsp $(OUTPUT_DIR)/compile.command | $(OUTPUT_DIR)/scan_barrier.mk
-	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) -MMD -MP -MF '$(@:.pcm=.d)' -MT '$@' -fmodule-output=$@ -fmodules-reduced-bmi -c $< -o '$(@:.pcm=.o)' @$(@:.pcm=.mrsp)
+$(OBJ_TARGETS):$(OUTPUT_DIR)/%.cpp.o: $(ROOT_DIR)/%.cpp $(OUTPUT_DIR)/%.cpp.mrsp $(OUTPUT_DIR)/compile.command | $(OUTPUT_DIR)/scan_barrier.mk
+	@mkdir -p '$(@D)'
+	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) -MMD -MP -MF '$(@:.o=.d)' -MT '$@' -c $< -o '$@' @$(@:.o=.mrsp) $(if $(filter %.pass,$*),@$(@:.o=.trsp))
 
-$(OUTPUT_DIR)/%.cppm.jcmd: $(OUTPUT_DIR)/%.cppm.mrsp $(OUTPUT_DIR)/compile.command $(TOOLS_DIR)/generate-jcmd.jq
-	@jq -f $(TOOLS_DIR)/generate-jcmd.jq -n \
-	--arg directory '$(OUTPUT_DIR)' \
-	--rawfile args '$(OUTPUT_DIR)/$*.cppm.mrsp' \
-	--arg command '$(CXX) $(CPPFLAGS) $(CXXFLAGS) -x c++ -fmodules-reduced-bmi -c $(ROOT_DIR)/$*.cppm -o $*.cppm.o' \
-	--arg file '$(ROOT_DIR)/$*.cppm' \
-	--arg output '$(@:.jcmd=.pcm)' > $@
+-include $(DEP_FILES)
 
-# Unused only defined for completeness
-$(OUTPUT_DIR)/%.cpp.jcmd: $(OUTPUT_DIR)/%.cpp.mrsp $(OUTPUT_DIR)/compile.command $(TOOLS_DIR)/generate-jcmd.jq
-	@jq -f $(TOOLS_DIR)/generate-jcmd.jq -n \
-	--arg directory '$(OUTPUT_DIR)' \
-	--rawfile args '$(OUTPUT_DIR)/$*.cpp.mrsp' \
-	--arg command '$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(ROOT_DIR)/$*.cpp -o $*.cpp.o' \
-	--arg file '$(ROOT_DIR)/$*.cpp' \
-	--arg output '$(@:.jcmd=.o)' > $@
-
-$(OUTPUT_DIR)/%.pass.cpp.jcmd: $(OUTPUT_DIR)/%.pass.cpp.mrsp $(OUTPUT_DIR)/%.pass.cpp.trsp $(OUTPUT_DIR)/compile.command $(TOOLS_DIR)/generate-jcmd.jq
-	@jq -f $(TOOLS_DIR)/generate-jcmd.jq -n \
-	--arg directory '$(OUTPUT_DIR)' \
-	--rawfile mrsp '$(OUTPUT_DIR)/$*.pass.cpp.mrsp' \
-	--rawfile trsp '$(OUTPUT_DIR)/$*.pass.cpp.trsp' \
-	--arg command '$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(ROOT_DIR)/$*.cpp -o $*.cpp.o' \
-	--arg file '$(ROOT_DIR)/$*.cpp' \
-	--arg output '$(@:.jcmd=.o)' > $@
-
-$(OUTPUT_DIR)/%.cppm.jscan: $(OUTPUT_DIR)/compile.command $(TOOLS_DIR)/generate-jcmd.jq $(ROOT_DIR)/%.cppm
+$(JCMD_TARGETS):$(OUTPUT_DIR)/%.jcmd: $(OUTPUT_DIR)/%.mrsp $(OUTPUT_DIR)/compile.command $(TOOLS_DIR)/generate-jcmd.jq
 	$(call replace_if_different, jq -f $(TOOLS_DIR)/generate-jcmd.jq -n \
-		--arg directory '$(OUTPUT_DIR)' \
-		--arg command '$(CXX) $(CPPFLAGS) $(CXXFLAGS) --precompile $(ROOT_DIR)/$*.cppm -o $*.cppm.pcm' \
-		--arg file '$(ROOT_DIR)/$*.cppm' \
-		--arg output '$(@:.jscan=.pcm)')
+	--arg directory '$(OUTPUT_DIR)' \
+	--rawfile args '$(OUTPUT_DIR)/$*.mrsp' \
+	$(if $(filter %.pass.cpp,$*),--rawfile trsp '$(OUTPUT_DIR)/$*.trsp') \
+	--arg command '$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(if $(filter %.cppm,$*),-x c++ -fmodules-reduced-bmi )-c $(ROOT_DIR)/$* -o $*.o' \
+	--arg file '$(ROOT_DIR)/$*' \
+	--arg output '$(if $(filter modules/%.cppm,$*),$*.pcm,$*.o)')
 
-$(OUTPUT_DIR)/%.cpp.jscan: $(OUTPUT_DIR)/compile.command $(TOOLS_DIR)/generate-jcmd.jq | $(ROOT_DIR)/%.cpp
+$(JSCAN_TARGETS):$(OUTPUT_DIR)/%.jscan: $(ROOT_DIR)/% $(OUTPUT_DIR)/compile.command $(TOOLS_DIR)/generate-jcmd.jq
 	$(call replace_if_different, jq -f $(TOOLS_DIR)/generate-jcmd.jq -n \
-		--arg directory '$(OUTPUT_DIR)' \
-		--arg command '$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(ROOT_DIR)/$*.cpp -o $*.cpp.o' \
-		--arg file '$(ROOT_DIR)/$*.cppm' \
-		--arg output '$(@:.jscan=.o)')
+	--arg directory '$(OUTPUT_DIR)' \
+	--arg command '$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(if $(filter %.cppm,$*),-x c++ -fmodules-reduced-bmi )-c $(ROOT_DIR)/$* -o $*.o' \
+	--arg file '$(ROOT_DIR)/$*' \
+	--arg output '$(if $(filter %.cppm,$*),$(@:.jscan=.pcm),$(@:.jscan=.o))')
 
-$(OUTPUT_DIR)/%.pass.jdir: $(ROOT_DIR)/%.pass.cpp $(TOOLS_DIR)/directives.awk
+$(JDIR_TARGETS):$(OUTPUT_DIR)/%.jdir: $(ROOT_DIR)/% $(TOOLS_DIR)/directives.awk
 	$(call replace_if_different, $(TOOLS_DIR)/directives.awk -v family=$(CXX_FAMILY) $<)
 
-$(OUTPUT_DIR)/candidate_flags.txt: $(TEST_OBJ_DIRECTIVES)
-	@jq -r '.[] | .["compile-flags"] // [] | .[]' $^ | sort -u > $@
+$(MRSP_TARGETS):%.mrsp: $(OUTPUT_DIR)/jgraph.json $(OUTPUT_DIR)/jmap.json $(TOOLS_DIR)/module-response.jq
+	$(call replace_if_different, $(TOOLS_DIR)/module-response.jq \
+	--arg module $(if $(filter %.cppm,$*),$*.pcm,$*.o) \
+	--slurpfile jmap $(OUTPUT_DIR)/jmap.json \
+    -r $(OUTPUT_DIR)/jgraph.json)
 
-# Unused only defined for completeness
-$(OUTPUT_DIR)/%.cpp.o: $(ROOT_DIR)/%.cpp $(OUTPUT_DIR)/%.cpp.mrsp $(OUTPUT_DIR)/compile.command | $(OUTPUT_DIR)/scan_barrier.mk
-	@mkdir -p '$(@D)'
-	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) -MMD -MP -MF '$(@:.o=.d)' -MT '$@' -c $< -o '$@' @$(@:.o=.mrsp)
+$(LRSP_TARGETS):%.lrsp: $(OUTPUT_DIR)/jgraph.json $(OUTPUT_DIR)/jmap.json $(OUTPUT_DIR)/module_implementations.txt $(TOOLS_DIR)/link-response.jq
+	$(call replace_if_different, jq -f $(TOOLS_DIR)/link-response.jq \
+	--arg module '$*.o' \
+	--slurpfile jmap $(OUTPUT_DIR)/jmap.json \
+	--rawfile impl $(OUTPUT_DIR)/module_implementations.txt \
+	-r $(OUTPUT_DIR)/jgraph.json)
 
-$(OUTPUT_DIR)/%.pass.cpp.o: $(ROOT_DIR)/%.pass.cpp $(OUTPUT_DIR)/%.pass.cpp.mrsp $(OUTPUT_DIR)/%.pass.cpp.trsp $(OUTPUT_DIR)/compile.command | $(OUTPUT_DIR)/scan_barrier.mk
-	@mkdir -p '$(@D)'
-	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) -MMD -MP -MF '$(@:.o=.d)' -MT '$@' -c $< -o '$@' @$(@:.o=.mrsp) @$(@:.o=.trsp)
-
--include $(DEP_TARGETS)
-
-$(OUTPUT_DIR)/%.pass.cpp.trsp: $(OUTPUT_DIR)/%.pass.jdir $(OUTPUT_DIR)/supported_flags.txt
+$(TRSP_TARGETS):%.trsp: %.jdir $(OUTPUT_DIR)/supported_flags.txt
 	@$(call replace_if_different, (jq -r '.[] | .["compile-flags"] // [] | .[]' $< | grep -Fxf $(OUTPUT_DIR)/supported_flags.txt - || true))
 
 $(OUTPUT_DIR)/supported_flags.txt: $(OUTPUT_DIR)/candidate_flags.txt
