@@ -104,7 +104,7 @@ public:
     template <size_t ToW>
     requires (ToW != W)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) explicit(ToW < W) constexpr
-    operator bitset<ToW>() noexcept {
+    operator bitset<ToW>() const noexcept {
         using To = typename bitset<ToW>::underlying_type;
         if constexpr (is_scalar_v<To>) {
             return bitset<ToW>(static_cast<To>(value_));

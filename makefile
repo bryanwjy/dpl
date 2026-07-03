@@ -80,8 +80,9 @@ BUILD_TXT := $(OUTPUT_DIR)/candidate_flags.txt $(OUTPUT_DIR)/module_implementati
 BUILD_FILES := $(BUILD_JSON) $(BUILD_TXT)
 BUILD_JSON_ALIAS := $(basename $(notdir $(BUILD_JSON)))
 BUILD_TXT_ALIAS := $(basename $(notdir $(BUILD_TXT)))
+MODULE_ALIAS := $(basename $(MODULE_SOURCES:$(ROOT_DIR)/%=%))
 
-.PHONY: all clean parallel_probes FORCE $(BUILD_JSON_ALIAS) $(BUILD_TXT_ALIAS) $(TEST_ALIAS) $(TEST_SUBDIRS)
+.PHONY: all clean parallel_probes FORCE $(BUILD_JSON_ALIAS) $(BUILD_TXT_ALIAS) $(TEST_ALIAS) $(TEST_SUBDIRS) $(MODULE_ALIAS)
 
 define replace_if_different
 @mkdir -p '$(@D)'
@@ -158,6 +159,7 @@ $(OUTPUT_DIR)/scan_barrier.mk: $(OUTPUT_DIR)/jmap.json $(OUTPUT_DIR)/module_depe
 
 -include $(OUTPUT_DIR)/scan_barrier.mk
 
+$(MODULE_ALIAS):%: $(OUTPUT_DIR)/%.cppm.pcm
 $(TEST_ALIAS):%.pass: $(OUTPUT_DIR)/%.pass
 $(BUILD_JSON_ALIAS):%: $(OUTPUT_DIR)/%.json
 $(BUILD_TXT_ALIAS):%: $(OUTPUT_DIR)/%.txt

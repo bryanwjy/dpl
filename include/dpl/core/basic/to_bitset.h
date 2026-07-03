@@ -8,6 +8,7 @@
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/dispatch/interface.h"
 #  include "dpl/core/dispatch/operation/basic.h"
+#  include "dpl/core/immediate/const_mask.h"
 #  include "dpl/core/type_traits/simd_abi_traits.h"
 #  include "dpl/std/utility/bitset.h"
 #endif

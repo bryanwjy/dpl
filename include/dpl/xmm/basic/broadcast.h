@@ -28,23 +28,19 @@ DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr simd<E> broadcast(abi_tag tag, type_identity_t<E> scalar) noexcept {
     if consteval {
-        constexpr auto seq = make_index_sequence<abi_tag::size / sizeof(E)>{};
         constexpr auto forward = [](auto, E scalar) { return scalar; };
-        return [forward]<size_t... Is>(
-                   index_sequence<Is...>, abi_tag tag, E data) {
-            return dx::xmm::initialize<E>(tag, forward(Is, data)...);
-        }(iota<E>, tag, scalar);
+        return [forward]<size_t... Is>(index_sequence<Is...>, E data) {
+            return xmm::initialize<E>(forward(Is, data)...);
+        }(iota<E>, scalar);
     } else {
-        if constexpr (same_as<float, representation_t<E>>) {
+        if constexpr (is_same_v<native_vector_t<E>, __m128>) {
             return _mm_set1_ps(__DPL bit_cast<float>(scalar));
-        } else if constexpr (same_as<double, representation_t<E>>) {
+        } else if constexpr (is_same_v<native_vector_t<E>, __m128d>) {
             return _mm_set1_pd(__DPL bit_cast<double>(scalar));
-        } else if constexpr (bfloat16_like<representation_t<E>> ||
-            float16_like<representation_t<E>>) {
+        } else if constexpr (!is_same_v<native_vector_t<E>, __m128i>) {
             return __DPL bit_cast<native_vector_t<E>>(
                 _mm_set1_epi16(__DPL bit_cast<int16>(scalar)));
         } else {
-            static_assert(integral<representation_t<E>>);
             if constexpr (sizeof(E) == sizeof(int32)) {
                 return _mm_set1_epi32(__DPL bit_cast<int32>(scalar));
             } else if constexpr (sizeof(E) == sizeof(int16)) {
@@ -62,16 +58,14 @@ constexpr simd<E> broadcast(abi_tag tag, type_identity_t<E> scalar) noexcept {
 DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr simd<E> broadcast(abi_tag tag, dx::zero_t) noexcept {
-    static_assert(!is_const_v<E> && !is_volatile_v<E>);
     if consteval {
         return xmm::broadcast<E>(tag, 0);
     } else {
-        if constexpr (same_as<float, representation_t<E>>) {
+        if constexpr (is_same_v<native_vector_t<E>, __m128>) {
             return _mm_setzero_ps();
-        } else if constexpr (same_as<double, representation_t<E>>) {
+        } else if constexpr (is_same_v<native_vector_t<E>, __m128d>) {
             return _mm_setzero_pd();
-        } else if constexpr (bfloat16_like<representation_t<E>> ||
-            float16_like<representation_t<E>>) {
+        } else if constexpr (!is_same_v<native_vector_t<E>, __m128i>) {
             return __DPL bit_cast<native_vector_t<E>>(_mm_setzero_si128());
         } else {
             static_assert(integral<E>);
@@ -83,18 +77,16 @@ constexpr simd<E> broadcast(abi_tag tag, dx::zero_t) noexcept {
 DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr simd<E> broadcast(abi_tag tag, dx::all_bits_t) noexcept {
-    static_assert(!is_const_v<E> && !is_volatile_v<E>);
     if consteval {
         return xmm::broadcast<E>(tag, dx::all_bits_v<E>);
     } else {
         auto xmm0 = _mm_undefined_si128();
         xmm0 = _mm_cmpeq_epi32(xmm0, xmm0);
-        if constexpr (same_as<float, representation_t<E>>) {
+        if constexpr (is_same_v<native_vector_t<E>, __m128>) {
             return _mm_castsi128_ps(xmm0);
-        } else if constexpr (same_as<double, representation_t<E>>) {
+        } else if constexpr (is_same_v<native_vector_t<E>, __m128d>) {
             return _mm_castsi128_pd(xmm0);
-        } else if constexpr (bfloat16_like<representation_t<E>> ||
-            float16_like<representation_t<E>>) {
+        } else if constexpr (!is_same_v<native_vector_t<E>, __m128i>) {
             return __DPL bit_cast<native_vector_t<E>>(xmm0);
         } else {
             static_assert(integral<E>);
@@ -106,7 +98,6 @@ constexpr simd<E> broadcast(abi_tag tag, dx::all_bits_t) noexcept {
 DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr mask<E> broadcast(abi_tag tag, same_as<bool> auto scalar) noexcept {
-    static_assert(!is_const_v<E> && !is_volatile_v<E>);
     return scalar ? +xmm::broadcast<E>(tag, dx::all_bits)
                   : +xmm::broadcast<E>(tag, dx::zero);
 }
@@ -115,7 +106,6 @@ DPL_EXPORT template <simd_element E, integral_constant_like V>
 requires same_as<typename V::value_type, bool>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr mask<E> broadcast(abi_tag tag, V) noexcept {
-    static_assert(!is_const_v<E> && !is_volatile_v<E>);
     if constexpr (V::value) {
         return +xmm::broadcast<E>(tag, dx::all_bits);
     } else {

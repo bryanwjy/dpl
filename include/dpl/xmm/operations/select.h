@@ -53,6 +53,85 @@ inline simd<E>
     }
 }
 
+template <simd_element L, common_size_with<L> R>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+inline simd<R>
+    DPL_VECTORCALL select(mask<L> lhs, dx::zero_t, simd<R> rhs) noexcept {
+    using bit = unsigned_representation_t<L>;
+    auto const result = _mm_andnot_si128(
+        +xmm::reinterpret<bit>(lhs), +xmm::reinterpret<bit>(rhs));
+    return xmm::reinterpret<R>(simd<bit>(result));
+}
+
+template <simd_element L, common_size_with<L> R>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+inline simd<R>
+    DPL_VECTORCALL select(mask<L> lhs, simd<R> rhs, dx::zero_t) noexcept {
+    using bit = unsigned_representation_t<L>;
+    auto const result =
+        _mm_and_si128(+xmm::reinterpret<bit>(lhs), +xmm::reinterpret<bit>(rhs));
+    return xmm::reinterpret<R>(simd<bit>(result));
+}
+
+template <simd_element L, common_size_with<L> R>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+inline simd<R>
+    DPL_VECTORCALL select(mask<L> lhs, dx::all_bits_t, simd<R> rhs) noexcept {
+    using bit = unsigned_representation_t<L>;
+    auto const result =
+        _mm_or_si128(+xmm::reinterpret<bit>(lhs), +xmm::reinterpret<bit>(rhs));
+    return xmm::reinterpret<R>(simd<bit>(result));
+}
+
+template <simd_element L, common_size_with<L> R>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+inline simd<R>
+    DPL_VECTORCALL select(mask<L> lhs, simd<R> rhs, dx::all_bits_t) noexcept {
+    using bit = unsigned_representation_t<L>;
+    auto const all = [](__m128i val) { return _mm_cmpeq_epi32(val, val); }(
+                         _mm_undefined_si128());
+    auto const result =
+        _mm_or_si128(_mm_xor_si128(all, +xmm::reinterpret<bit>(lhs)),
+            +xmm::reinterpret<bit>(rhs));
+    return xmm::reinterpret<R>(simd<bit>(result));
+}
+
+template <simd_element L, simd_element R>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+inline auto DPL_VECTORCALL select(
+    abi_tag, mask<L> lhs, dx::zero_t zero, simd<R> rhs) noexcept
+requires requires { xmm::select(lhs, zero, rhs); }
+{
+    return xmm::select(lhs, zero, rhs);
+}
+
+template <simd_element L, simd_element R>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+inline auto DPL_VECTORCALL select(
+    abi_tag, mask<L> lhs, simd<R> rhs, dx::zero_t zero) noexcept
+requires requires { xmm::select(lhs, rhs, zero); }
+{
+    return xmm::select(lhs, rhs, zero);
+}
+
+template <simd_element L, simd_element R>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+inline auto DPL_VECTORCALL select(
+    abi_tag, mask<L> lhs, dx::all_bits_t all_bits, simd<R> rhs) noexcept
+requires requires { xmm::select(lhs, all_bits, rhs); }
+{
+    return xmm::select(lhs, all_bits, rhs);
+}
+
+template <simd_element L, simd_element R>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+inline auto DPL_VECTORCALL select(
+    abi_tag, mask<L> lhs, simd<R> rhs, dx::all_bits_t all_bits) noexcept
+requires requires { xmm::select(lhs, rhs, all_bits); }
+{
+    return xmm::select(lhs, rhs, all_bits);
+}
+
 DPL_EXPORT template <simd_element C, simd_element L, simd_element R>
 requires common_size_with<L, R> && common_size_with<L, C> &&
     common_size_with<R, C>
@@ -181,6 +260,38 @@ inline simd<E> select(abi_tag tag,
     const_mask<simd_abi_traits<abi_tag, E>::size, V> condition, simd<E> lhs,
     simd<E> rhs) noexcept {
     return xmm::select(condition, lhs, rhs);
+}
+
+DPL_EXPORT template <simd_element C, simd_element E>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+inline simd<E> bit_drop(mask<C> mask, simd<E> val) noexcept
+requires requires { xmm::select(mask, dx::zero, val); }
+{
+    return xmm::select(mask, dx::zero, val);
+}
+
+DPL_EXPORT template <simd_element C, simd_element E>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+inline simd<E> bit_keep(mask<C> mask, simd<E> val) noexcept
+requires requires { xmm::select(mask, val, dx::zero); }
+{
+    return xmm::select(mask, val, dx::zero);
+}
+
+DPL_EXPORT template <simd_element C, simd_element E>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+inline simd<E> bit_fill(mask<C> mask, simd<E> val) noexcept
+requires requires { xmm::select(mask, dx::all_bits, val); }
+{
+    return xmm::select(mask, dx::all_bits, val);
+}
+
+DPL_EXPORT template <simd_element C, simd_element E>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+inline simd<E> bit_spill(mask<C> mask, simd<E> val) noexcept
+requires requires { xmm::select(mask, val, dx::all_bits); }
+{
+    return xmm::select(mask, val, dx::all_bits);
 }
 
 } // namespace datapar::xmm

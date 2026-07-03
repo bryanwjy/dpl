@@ -3,7 +3,7 @@
 
 #include <cassert>
 
-import dpl.xmm;
+import dpl;
 
 namespace {
 

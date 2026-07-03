@@ -5,6 +5,7 @@
 
 // IWYU pragma: always_keep
 #include "dpl/core/operations/arithmetic/subtract.h"
+#include "dpl/core/operations/internal/transform.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/internal/abi.h"
@@ -17,6 +18,8 @@
 #  include "dpl/core/dispatch/operation/primitive.h"
 #  include "dpl/core/immediate/constants/zero.h"
 #  include "dpl/std/type_traits/type_identity.h"
+#  include "dpl/std/utility/to_signed.h"
+#  include "dpl/std/utility/to_unsigned.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -38,11 +41,20 @@ struct operation_signature<negate_t> {
 template <>
 struct fallback_impl<negate_t> {
     template <simd_abi A, simd_element_for<A> E>
-    requires cpo_invocable<subtract_t, dx::zero_t, basic_vector<E, A>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(
         basic_vector<E, A> val) noexcept {
-        return dx::subtract(dx::zero, val);
+        return internal::transform<basic_vector<E, A>>(
+            [](auto val) {
+                if consteval {
+                    if constexpr (signed_integral<E>) {
+                        return __DPL to_signed(-__DPL to_unsigned(val));
+                    }
+                }
+
+                return -val;
+            },
+            val);
     }
 };
 

@@ -12,7 +12,7 @@
 #include "dpl/xmm/basic/extract.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/immediate/immediate.h"
+#  include "dpl/core/basic/aligned.h"
 #  include "dpl/std/bit/bit_cast.h"
 
 #  include <immintrin.h>
@@ -22,18 +22,11 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::xmm {
 DPL_EXPORT template <simd_element E>
-__DPL_HIDE_FROM_ABI constexpr void store(
-    abi_tag tag, simd<E> src, E* dst) noexcept {
+__DPL_HIDE_FROM_ABI constexpr void store(simd<E> src, E* dst) noexcept {
     if consteval {
-        return []<size_t I = 0>(this auto self, abi_tag tag, simd<E> src,
-                   E* dst, immediate<I> idx = {}) {
-            if constexpr (I == simd<E>::size()) {
-                return;
-            } else {
-                dst[I] = dx::xmm::extract(tag, src, idx);
-                self(tag, src, dst, dx::imm<I + 1>);
-            }
-        }(tag, src, dst);
+        for (auto i = 0zu; i < src.size(); ++i) {
+            dst[i] = xmm::extract(src, i);
+        }
     } else {
         if constexpr (same_as<float, representation_t<E>>) {
             _mm_storeu_ps(reinterpret_cast<float*>(dst), +src);
@@ -58,10 +51,10 @@ __DPL_HIDE_FROM_ABI constexpr void store(
 }
 
 DPL_EXPORT template <simd_element E>
-__DPL_HIDE_FROM_ABI constexpr void aligned_store(
-    abi_tag tag, simd<E> src, E* dst) noexcept {
+__DPL_HIDE_FROM_ABI constexpr void store(
+    aligned_t, simd<E> src, E* dst) noexcept {
     if consteval {
-        return dx::xmm::store(tag, src, dst);
+        return xmm::store(src, dst);
     } else {
         if constexpr (same_as<float, representation_t<E>>) {
             _mm_store_ps(reinterpret_cast<float*>(dst), +src);
@@ -86,13 +79,18 @@ __DPL_HIDE_FROM_ABI constexpr void aligned_store(
 }
 
 DPL_EXPORT template <simd_element E>
-__DPL_HIDE_FROM_ABI constexpr void store(simd<E> src, E* dst) noexcept {
-    xmm::store(xmm::abi, src, dst);
+__DPL_HIDE_FROM_ABI constexpr void store(abi_tag, simd<E> src, E* dst) noexcept
+requires requires { xmm::store(src, dst); }
+{
+    xmm::store(src, dst);
 }
 
 DPL_EXPORT template <simd_element E>
-__DPL_HIDE_FROM_ABI constexpr void aligned_store(simd<E> src, E* dst) noexcept {
-    xmm::aligned_store(xmm::abi, src, dst);
+__DPL_HIDE_FROM_ABI constexpr void store(
+    abi_tag, aligned_t aligned, simd<E> src, E* dst) noexcept
+requires requires { xmm::store(aligned, src, dst); }
+{
+    xmm::store(aligned, src, dst);
 }
 
 } // namespace datapar::xmm

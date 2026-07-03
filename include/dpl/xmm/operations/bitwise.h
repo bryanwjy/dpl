@@ -14,6 +14,7 @@
 #  include "dpl/core/fwd.h"
 
 #  include "dpl/core/concepts/common_size_with.h"
+#  include "dpl/core/immediate/immediate.h"
 #  include "dpl/core/type_traits/common_size_type.h"
 #  include "dpl/core/type_traits/representation.h"
 #  include "dpl/std/concepts/integral_constant_like.h"
@@ -31,11 +32,11 @@ template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<E>
     DPL_VECTORCALL bwor(simd<E> lhs, simd<E> rhs) noexcept {
-    if constexpr (same_as<__m128i, native_vector_t<E>>) {
+    if constexpr (is_same_v<__m128i, native_vector_t<E>>) {
         return _mm_or_si128(+lhs, +rhs);
-    } else if constexpr (same_as<__m128, native_vector_t<E>>) {
+    } else if constexpr (is_same_v<__m128, native_vector_t<E>>) {
         return _mm_or_ps(+lhs, +rhs);
-    } else if constexpr (same_as<__m128d, native_vector_t<E>>) {
+    } else if constexpr (is_same_v<__m128d, native_vector_t<E>>) {
         return _mm_or_pd(+lhs, +rhs);
     } else {
         using rep = signed_representation_t<E>;
@@ -49,11 +50,11 @@ template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<E>
     DPL_VECTORCALL bwand(simd<E> lhs, simd<E> rhs) noexcept {
-    if constexpr (same_as<__m128i, native_vector_t<E>>) {
+    if constexpr (is_same_v<__m128i, native_vector_t<E>>) {
         return _mm_and_si128(+lhs, +rhs);
-    } else if constexpr (same_as<__m128, native_vector_t<E>>) {
+    } else if constexpr (is_same_v<__m128, native_vector_t<E>>) {
         return _mm_and_ps(+lhs, +rhs);
-    } else if constexpr (same_as<__m128d, native_vector_t<E>>) {
+    } else if constexpr (is_same_v<__m128d, native_vector_t<E>>) {
         return _mm_and_pd(+lhs, +rhs);
     } else {
         using rep = signed_representation_t<E>;
@@ -67,11 +68,11 @@ template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<E>
     DPL_VECTORCALL bwxor(simd<E> lhs, simd<E> rhs) noexcept {
-    if constexpr (same_as<__m128i, native_vector_t<E>>) {
+    if constexpr (is_same_v<__m128i, native_vector_t<E>>) {
         return _mm_xor_si128(+lhs, +rhs);
-    } else if constexpr (same_as<__m128, native_vector_t<E>>) {
+    } else if constexpr (is_same_v<__m128, native_vector_t<E>>) {
         return _mm_xor_ps(+lhs, +rhs);
-    } else if constexpr (same_as<__m128d, native_vector_t<E>>) {
+    } else if constexpr (is_same_v<__m128d, native_vector_t<E>>) {
         return _mm_xor_pd(+lhs, +rhs);
     } else {
         using rep = signed_representation_t<E>;
@@ -85,11 +86,11 @@ template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<E>
     DPL_VECTORCALL bwandnot(simd<E> lhs, simd<E> rhs) noexcept {
-    if constexpr (same_as<__m128i, native_vector_t<E>>) {
+    if constexpr (is_same_v<__m128i, native_vector_t<E>>) {
         return _mm_andnot_si128(+rhs, +lhs);
-    } else if constexpr (same_as<__m128, native_vector_t<E>>) {
+    } else if constexpr (is_same_v<__m128, native_vector_t<E>>) {
         return _mm_andnot_ps(+rhs, +lhs);
-    } else if constexpr (same_as<__m128d, native_vector_t<E>>) {
+    } else if constexpr (is_same_v<__m128d, native_vector_t<E>>) {
         return _mm_andnot_pd(+rhs, +lhs);
     } else {
         using rep = signed_representation_t<E>;
@@ -103,9 +104,8 @@ template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<E>
     DPL_VECTORCALL bwnot(simd<E> val) noexcept {
-    auto const all = _mm_set1_epi32(-1);
-    return xmm::bwxor(
-        val, xmm::reinterpret<E>(simd<signed_representation_t<E>>(all)));
+    auto const all = simd<int>(_mm_set1_epi32(-1));
+    return xmm::bwxor(val, xmm::reinterpret<E>(all));
 }
 
 template <simd_element E>
@@ -263,14 +263,12 @@ inline mask<E>
         using bit = unsigned_representation_t<E>;
         return xmm::reinterpret<E>(
             xmm::bwshift_left(xmm::reinterpret<bit>(val), shift));
-    } else if constexpr (enumeration<E>) {
-        using bit = underlying_type_t<E>;
-        return xmm::reinterpret<E>(
-            xmm::bwshift_left(xmm::reinterpret<bit>(val), shift));
     } else {
         auto const idx = _mm_load_si128(
             reinterpret_cast<__m128i const*>(details::iota_epi8));
-        auto const vshift = _mm_set1_epi8(static_cast<char>(shift));
+        constexpr auto invalid = static_cast<char>(-1);
+        auto const vshift = _mm_set1_epi8(
+            shift < mask<E>::size() ? static_cast<char>(shift) : invalid);
         return _mm_shuffle_epi8(+val, _mm_sub_epi8(idx, vshift));
     }
 }
@@ -290,8 +288,9 @@ inline mask<E>
     } else {
         auto const idx = _mm_load_si128(
             reinterpret_cast<__m128i const*>(details::niota_epi8));
-        auto const vshift = _mm_set1_epi8(static_cast<char>(shift));
-
+        constexpr auto invalid = static_cast<char>(-1);
+        auto const vshift = _mm_set1_epi8(
+            shift < mask<E>::size() ? static_cast<char>(shift) : invalid);
         // if msb is set: dst = 0; else: dst = src[idx % 16]
         return _mm_shuffle_epi8(+val, _mm_add_epi8(idx, vshift));
     }
@@ -313,7 +312,7 @@ requires requires { xmm::bwshift_right(val, shift); }
     return xmm::bwshift_right(val, shift);
 }
 
-template <integral auto V, simd_element E>
+template <size_t V, simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline mask<E>
     DPL_VECTORCALL bwshift_left(
@@ -331,7 +330,7 @@ inline mask<E>
     }
 }
 
-template <integral auto V, simd_element E>
+template <size_t V, simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline mask<E>
     DPL_VECTORCALL bwshift_right(
@@ -403,13 +402,13 @@ inline simd<E>
 template <template_barrier_t = __DPL template_barrier, simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<E>
-    DPL_VECTORCALL bwshift_right(abi_tag tag, simd<E> val, int shift) noexcept {
+    DPL_VECTORCALL bwshift_right(simd<E> val, int shift) noexcept {
     if constexpr (floating_point<representation_t<E>> ||
         bfloat16_like<representation_t<E>> ||
         float16_like<representation_t<E>>) {
         using bit = unsigned_representation_t<E>;
-        return xmm::reinterpret<E>(tag,
-            xmm::bwshift_right(tag, xmm::reinterpret<bit>(tag, val), shift));
+        return xmm::reinterpret<E>(
+            xmm::bwshift_right(xmm::reinterpret<bit>(val), shift));
     } else if constexpr (sizeof(E) == sizeof(int64)) {
         if constexpr (unsigned_integral<E>) {
             return _mm_srl_epi64(+val, _mm_cvtsi32_si128(shift));
@@ -478,7 +477,7 @@ requires requires { xmm::bwshift_right(val, shift); }
     return xmm::bwshift_right(val, shift);
 }
 
-template <integral auto V, simd_element E>
+template <size_t V, simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<E>
     DPL_VECTORCALL bwshift_left(
@@ -514,7 +513,7 @@ inline simd<E>
     }
 }
 
-template <integral auto V, simd_element E>
+template <size_t V, simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline simd<E>
     DPL_VECTORCALL bwshift_right(

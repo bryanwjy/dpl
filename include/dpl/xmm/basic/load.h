@@ -24,12 +24,11 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::xmm {
 DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
-constexpr simd<E> load(abi_tag tag, E const* data) noexcept {
+constexpr simd<E> load(E const* data) noexcept {
     if consteval {
-        return []<size_t... Is>(
-                   index_sequence<Is...>, abi_tag tag, E const* data) {
-            return dx::xmm::initialize<E>(tag, data[Is]...);
-        }(iota<E>, tag, data);
+        return []<size_t... Is>(index_sequence<Is...>, E const* data) {
+            return dx::xmm::initialize<E>(data[Is]...);
+        }(iota<E>, data);
     } else {
         if constexpr (same_as<float, representation_t<E>>) {
             return _mm_loadu_ps(reinterpret_cast<float const*>(data));
@@ -54,9 +53,9 @@ constexpr simd<E> load(abi_tag tag, E const* data) noexcept {
 
 DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
-constexpr simd<E> load(abi_tag tag, aligned_t, E const* data) noexcept {
+constexpr simd<E> load(aligned_t, E const* data) noexcept {
     if consteval {
-        return xmm::load(tag, data);
+        return xmm::load(data);
     } else {
         if constexpr (same_as<float, representation_t<E>>) {
             return _mm_load_ps(reinterpret_cast<float const*>(data));
@@ -76,14 +75,18 @@ constexpr simd<E> load(abi_tag tag, aligned_t, E const* data) noexcept {
 
 DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
-constexpr simd<E> load(E const* data) noexcept {
-    return xmm::load(xmm::abi, data);
+constexpr simd<E> load(abi_tag, E const* data) noexcept
+requires requires { xmm::load(data); }
+{
+    return xmm::load(data);
 }
 
 DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
-constexpr simd<E> aligned_load(E const* data) noexcept {
-    return xmm::load(xmm::abi, dx::aligned, data);
+constexpr simd<E> load(abi_tag, aligned_t aligned, E const* data) noexcept
+requires requires { xmm::load(aligned, data); }
+{
+    return xmm::load(aligned, data);
 }
 
 } // namespace datapar::xmm

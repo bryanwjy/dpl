@@ -24,8 +24,8 @@ namespace datapar::internal {
 void abs(...) noexcept = delete;
 
 struct DPL_EMPTY_BASES abs_t :
-    private arithmetic_base<abs_t>,
-    private maskable_transform_base<abs_t> {
+    public arithmetic_base<abs_t>,
+    public maskable_transform_base<abs_t> {
     using operation_base<abs_t>::operator();
     using maskable_transform_base<abs_t>::operator();
 };
@@ -38,12 +38,14 @@ struct operation_signature<abs_t> {
 template <>
 struct fallback_impl<abs_t> {
     template <fixed_width_abi A, simd_element_for<A> E>
-    requires (!unsigned_integral<E>) &&
+    requires signed_integral<E> &&
         cpo_invocable<max_t, basic_vector<E, A>,
             cpo_result_t<negate_t, basic_vector<E, A>>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr basic_vector<E, A>
         DPL_VECTORCALL operator()(basic_vector<E, A> val) noexcept {
+        // Due to issues with nans, inf, signed zeros,
+        // this is only allowed for ints
         return dx::max(val, dx::negate(val));
     }
 
