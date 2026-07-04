@@ -18,8 +18,6 @@
 #  include "dpl/core/dispatch/operation/primitive.h"
 #  include "dpl/core/immediate/constants/zero.h"
 #  include "dpl/std/type_traits/type_identity.h"
-#  include "dpl/std/utility/to_signed.h"
-#  include "dpl/std/utility/to_unsigned.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -45,16 +43,7 @@ struct fallback_impl<negate_t> {
     static constexpr auto DPL_VECTORCALL operator()(
         basic_vector<E, A> val) noexcept {
         return internal::transform<basic_vector<E, A>>(
-            [](auto val) {
-                if consteval {
-                    if constexpr (signed_integral<E>) {
-                        return __DPL to_signed(-__DPL to_unsigned(val));
-                    }
-                }
-
-                return -val;
-            },
-            val);
+            [](auto val) { return -val; }, val);
     }
 };
 

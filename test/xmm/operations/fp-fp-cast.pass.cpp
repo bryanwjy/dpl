@@ -12,10 +12,6 @@ using abi = xmm::abi_tag;
 template <typename... Ts>
 constexpr auto element_count = dpp::simd_abi_traits<Ts...>::size;
 
-static_assert(
-    dpp::all_of(dpp::fmsubadd(dpp::broadcast<float, abi>(2.0f), 1.0f, 1.0f) ==
-        dpp::initialize<float, abi>(1.0f, 3.0f, 1.0f, 3.0f)));
-
 #if DPL_SUPPORTS_EXT_BFLOAT16 & !defined(__BFLT16_MAX__)
 consteval dpl::bfloat16 operator""_bf16(long double val) noexcept {
     return static_cast<dpl::bfloat16>(val);
@@ -137,6 +133,7 @@ constexpr bool test() {
     assert(one_way<float>(dpl::bit_cast<double>(1ll << 52)));
     assert(one_way<float>(dpl::bit_cast<double>(1ll)));
 
+    // Three values where there is insufficient precision
     assert(one_way<float>(0x1.p24 + 1.0));
     assert(one_way<float>(0x1.p10 + 0x1.p-14));
     assert(one_way<float>(1.0 + 0x1.p-24));
@@ -215,20 +212,10 @@ constexpr bool test_fp16() noexcept {
     assert(round_trip<dpl::bfloat16>(-dpp::infinity_v<dpl::float16>));
     assert(round_trip<dpl::bfloat16>(1e-6f16));
     assert(one_way<dpl::bfloat16>(dpp::max_value_v<dpl::float16>));
-    assert([]() {
-        // possible compiler bug corrupts at runtime, the result of
-        // dpl::bit_cast<dpl::bfloat16>(static_cast<unsigned short>(1 <<
-        // 7)); Unable to repro in compiler explorer, unsure why
-        auto const low = static_cast<unsigned short>(1 << 10);
-        auto const f16 = dpl::bit_cast<dpl::float16>(low);
-        return round_trip<dpl::bfloat16>(f16);
-    }());
-
-    assert([]() {
-        auto const low = static_cast<unsigned short>(1);
-        auto const bf16 = dpl::bit_cast<dpl::float16>(low);
-        return round_trip<dpl::bfloat16>(bf16);
-    });
+    assert(round_trip<dpl::bfloat16>(
+        dpl::bit_cast<dpl::float16>(static_cast<unsigned short>(1 << 10))));
+    assert(round_trip<dpl::bfloat16>(
+        dpl::bit_cast<dpl::float16>(static_cast<unsigned short>(1))));
 #  endif
 #endif
 
@@ -237,6 +224,11 @@ constexpr bool test_fp16() noexcept {
 
 constexpr bool test_bf16() noexcept {
 #if DPL_SUPPORTS_BFLOAT16
+    constexpr auto min_normal =
+        static_cast<dpl::bfloat16>(dpl::bit_cast<float>(1 << 23));
+    constexpr auto min_subnormal =
+        static_cast<dpl::bfloat16>(dpl::bit_cast<float>(1 << 16));
+
     assert(round_trip<float>(BF16(0.0)));
     assert(round_trip<float>(BF16(-0.0), bitcmp));
     assert(round_trip<float>(BF16(1.0)));
@@ -247,19 +239,8 @@ constexpr bool test_bf16() noexcept {
     assert(round_trip<float>(dpp::max_value_v<dpl::bfloat16>));
     assert(round_trip<float>(dpp::infinity_v<dpl::bfloat16>));
     assert(round_trip<float>(-dpp::infinity_v<dpl::bfloat16>));
-    assert([]() {
-        // possible compiler bug corrupts at runtime, the result of
-        // dpl::bit_cast<dpl::bfloat16>(static_cast<unsigned short>(1 << 7));
-        // Unable to repro in compiler explorer, unsure why
-        auto const low = static_cast<unsigned short>(1 << 7);
-        auto const bf16 = dpl::bit_cast<dpl::bfloat16>(low);
-        return round_trip<float>(bf16);
-    }());
-    assert([]() {
-        auto const low = static_cast<unsigned short>(1);
-        auto const bf16 = dpl::bit_cast<dpl::bfloat16>(low);
-        round_trip<float>(bf16);
-    });
+    assert(round_trip<float>(min_normal));
+    assert(round_trip<float>(min_subnormal));
     assert(one_way<dpl::bfloat16>(nextafter(1.0f)));
     assert(one_way<dpl::bfloat16>(nextbefore(1.0f)));
     assert(one_way<dpl::bfloat16>(dpl::bit_cast<float>(1)));
@@ -277,19 +258,8 @@ constexpr bool test_bf16() noexcept {
     assert(round_trip<double>(dpp::max_value_v<dpl::bfloat16>));
     assert(round_trip<double>(dpp::infinity_v<dpl::bfloat16>));
     assert(round_trip<double>(-dpp::infinity_v<dpl::bfloat16>));
-    assert([]() {
-        // possible compiler bug corrupts at runtime, the result of
-        // dpl::bit_cast<dpl::bfloat16>(static_cast<unsigned short>(1 << 7));
-        // Unable to repro in compiler explorer, unsure why
-        auto const low = static_cast<unsigned short>(1 << 7);
-        auto const bf16 = dpl::bit_cast<dpl::bfloat16>(low);
-        return round_trip<double>(bf16);
-    }());
-    assert([]() {
-        auto const low = static_cast<unsigned short>(1);
-        auto const bf16 = dpl::bit_cast<dpl::bfloat16>(low);
-        round_trip<double>(bf16);
-    });
+    assert(round_trip<double>(min_normal));
+    assert(round_trip<double>(min_subnormal));
     assert(one_way<dpl::bfloat16>(nextafter(1.0)));
     assert(one_way<dpl::bfloat16>(nextbefore(1.0)));
     assert(one_way<dpl::bfloat16>(dpl::bit_cast<double>(1ll << 52)));
@@ -309,20 +279,8 @@ constexpr bool test_bf16() noexcept {
     assert(round_trip<dpl::float16>(-dpp::infinity_v<dpl::bfloat16>));
     assert(one_way<dpl::float16>(BF16(1e-40)));
     assert(one_way<dpl::float16>(dpp::max_value_v<dpl::bfloat16>));
-    assert([]() {
-        // possible compiler bug corrupts at runtime, the result of
-        // dpl::bit_cast<dpl::bfloat16>(static_cast<unsigned short>(1 <<
-        // 7)); Unable to repro in compiler explorer, unsure why
-        auto const low = static_cast<unsigned short>(1 << 7);
-        auto const bf16 = dpl::bit_cast<dpl::bfloat16>(low);
-        return one_way<dpl::float16>(bf16);
-    }());
-
-    assert([]() {
-        auto const low = static_cast<unsigned short>(1);
-        auto const bf16 = dpl::bit_cast<dpl::bfloat16>(low);
-        return round_trip<dpl::float16>(bf16);
-    });
+    assert(one_way<dpl::float16>(min_normal));
+    assert(one_way<dpl::float16>(min_subnormal));
 #  endif
 #endif
 
