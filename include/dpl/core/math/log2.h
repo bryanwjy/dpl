@@ -3,6 +3,7 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/math/ext.h" // IWYU pragma: keep
 #include "dpl/core/math/fixup.h"
 #include "dpl/core/math/frexp.h"
 #include "dpl/core/math/internal/pair.h"
@@ -160,12 +161,6 @@ public:
 
 template <>
 struct fallback_impl<log2_t> {
-private:
-    template <typename E>
-    static constexpr auto float16_like =
-        brain_float<E> || (digits_v<E> == 12 && sizeof(E) == 2);
-
-public:
     template <simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(
@@ -223,10 +218,9 @@ public:
 
     /*
     template <canonical_vector T>
-    requires float16_like<simd_element_type_t<T>> &&
-        convertible_to<float, simd_element_type_t<T>> &&
-        cpo_invocable<round_t, T, decltype(rounding_opt)>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    requires (same_as<ext::float16, simd_element_type_t<T>> ||
+    same_as<ext::bfloat16, simd_element_type_t<T>>) && cpo_invocable<round_t, T,
+    decltype(rounding_opt)> DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(T val) noexcept {
         using simdf = basic_vector<E, A>;
         auto const decomp =

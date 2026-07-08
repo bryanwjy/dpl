@@ -7,13 +7,9 @@ This library is an exploration of an idea I had about compile-time declarative d
 
 ## Why build this?
 
-**Curiosity & Free Time:** I wanted to see if I could build a working SIMD abstraction from the ground up
+**Exploring C++23 and beyond:** I’m using this as a playground for new features.
 
-**Skill Showcase:** It’s a place for me to practice and display advanced C++ techniques—useful for when I eventually look for my next role.
-
-**Exploring C++23 and beyond:** I’m using this as a playground for new features like C++ Modules, Explicit Object Parameters (deducing this), and consteval logic.
-
-**A Different Take on SIMD**: While I’m inspired by the STL’s `std::simd`, I’m not intending to replace the standard library. Instead, I aim to enable extensibility alongside portability. My goal was to design a SIMD library that leverages the user’s understanding of the underlying hardware—allowing generic code to be easily specialized for hardware-specific optimizations, and further extended when needed. Unlike `std::simd`, which is primarily designed as a portable abstraction over the abstract machine, DPL can be used either as a portable abstraction or as a hardware-aware layer depending on the user’s preference and level of specialization.
+**A Different Take on SIMD**: While I’m inspired by the STL’s `std::simd`, I’m not intending to replace the standard library. Instead, I aim to enable extensibility alongside portability. My goal was to design a SIMD library that leverages the user’s understanding of the underlying hardware—allowing generic code to be easily specialized for hardware-specific optimizations, and further extended when needed. Unlike `std::simd`, which is primarily designed as a portable abstraction, DPL can be used either as a portable abstraction or as a hardware-aware layer depending on the user’s preference and level of specialization.
 
 
 ## Technical Features

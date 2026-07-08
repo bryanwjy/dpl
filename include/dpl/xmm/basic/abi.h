@@ -13,6 +13,7 @@
 // IWYU pragma: begin_exports
 #  include "dpl/core/basic/basic_mask.h"
 #  include "dpl/core/basic/basic_vector.h"
+#  include "dpl/core/math/ext.h"
 // IWYU pragma: end_exports
 #  include "dpl/core/concepts/simd_element.h"
 #  include "dpl/core/type_traits/enable_simd_abi.h"
@@ -53,17 +54,17 @@ template <>
 struct native_vector<double> {
     using type = __m128d;
 };
-template <brain_float T>
-struct native_vector<T> {
+template <>
+struct native_vector<ext::bfloat16> {
     using type = __m128bh;
 };
-template <floating_point T>
-requires (sizeof(T) == 2) && (!brain_float<T>)
-struct native_vector<T> {
+template <>
+struct native_vector<ext::float16> {
     using type = __m128h;
 };
 
 template <integral T>
+requires different_from<remove_cv_t<T>, bool>
 struct native_vector<T> {
     using type = __m128i;
 };
@@ -97,23 +98,12 @@ DPL_EXPORT struct abi_tag : simd_abi_base<abi_tag> {
 DPL_EXPORT inline constexpr abi_tag abi{};
 
 DPL_EXPORT template <typename E>
-using simd DPL_NODEBUG = dx::basic_vector<E, abi_tag>;
+using vector DPL_NODEBUG = dx::basic_vector<E, abi_tag>;
 DPL_EXPORT template <typename E>
 using mask DPL_NODEBUG = dx::basic_mask<E, abi_tag>;
 
-template <typename T>
-concept float16_like =
-    floating_point<T> && !brain_float<T> && sizeof(T) == sizeof(int16);
-
-template <typename T>
-concept bfloat16_like = floating_point<T> && brain_float<T>;
-
 template <typename E>
 concept simd_element = simd_element_for<E, abi_tag>;
-
-template <typename E>
-concept basic_element = simd_element_for<E, abi_tag> &&
-    (integral<E> || floating_point<E>) && !same_as<bool, E>;
 
 template <typename E, size_t N>
 concept sized_element = sizeof(E) == N && simd_element<E>;

@@ -27,8 +27,8 @@ namespace datapar::xmm {
 
 template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<E>
-    DPL_VECTORCALL bwornot(simd<E> lhs, simd<E> rhs) noexcept {
+inline vector<E>
+    DPL_VECTORCALL bwornot(vector<E> lhs, vector<E> rhs) noexcept {
     return xmm::bwor(lhs, xmm::bwnot(rhs));
 }
 
@@ -36,12 +36,12 @@ template <simd_element L, simd_element R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline mask<common_size_type_t<L, R>>
     DPL_VECTORCALL bwornot(mask<L> lhs, mask<R> rhs) noexcept {
-    return +xmm::bwornot(simd<L>(+lhs), simd<R>(+rhs));
+    return +xmm::bwornot(vector<L>(+lhs), vector<R>(+rhs));
 }
 
 template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-inline simd<E> bwornot(abi_tag, simd<E> lhs, simd<E> rhs) noexcept
+inline vector<E> bwornot(abi_tag, vector<E> lhs, vector<E> rhs) noexcept
 requires requires { xmm::bwornot(lhs, rhs); }
 {
     return xmm::bwornot(lhs, rhs);

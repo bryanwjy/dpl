@@ -22,13 +22,13 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::xmm {
 DPL_EXPORT template <simd_element E>
-__DPL_HIDE_FROM_ABI constexpr bitset<simd<E>::size()> to_bitset(
-    mask<E> src) noexcept {
-    using bitset_t = bitset<simd<E>::size()>;
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD) constexpr bitset<vector<E>::size()>
+to_bitset(mask<E> src) noexcept {
+    using bitset_t = bitset<vector<E>::size()>;
     if consteval {
         return [&]<size_t... Is>(index_sequence<Is...>) {
             return bitset_t(xmm::extract(src, imm<Is>)...);
-        }(make_index_sequence<simd<E>::size()>{});
+        }(make_index_sequence<vector<E>::size()>{});
     } else {
         if constexpr (same_as<float, representation_t<E>>) {
             return bitset_t(static_cast<typename bitset_t::underlying_type>(
@@ -58,8 +58,8 @@ __DPL_HIDE_FROM_ABI constexpr bitset<simd<E>::size()> to_bitset(
 }
 
 DPL_EXPORT template <simd_element E>
-__DPL_HIDE_FROM_ABI constexpr bitset<simd<E>::size()> to_bitset(
-    abi_tag, mask<E> src) noexcept {
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD) constexpr bitset<vector<E>::size()>
+to_bitset(abi_tag, mask<E> src) noexcept {
     return xmm::to_bitset(src);
 }
 } // namespace datapar::xmm

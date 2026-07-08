@@ -40,12 +40,8 @@ template <template_barrier_t = template_barrier, simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline mask<E>
     DPL_VECTORCALL bwshift_right(mask<E> val, int shift) noexcept {
-    if constexpr (floating_point<E>) {
+    if constexpr (!integral<E>) {
         using bit = unsigned_representation_t<E>;
-        return xmm::reinterpret<E>(
-            xmm::bwshift_right(xmm::reinterpret<bit>(val), shift));
-    } else if constexpr (enumeration<E>) {
-        using bit = underlying_type_t<E>;
         return xmm::reinterpret<E>(
             xmm::bwshift_right(xmm::reinterpret<bit>(val), shift));
     } else {
@@ -64,12 +60,8 @@ DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline mask<E>
     DPL_VECTORCALL bwshift_right(
         mask<E> val, immediate<V> imm = dx::imm<V>) noexcept {
-    if constexpr (floating_point<E>) {
+    if constexpr (!integral<E>) {
         using bit = unsigned_representation_t<E>;
-        return xmm::reinterpret<E>(
-            xmm::bwshift_right(xmm::reinterpret<bit>(val), imm));
-    } else if constexpr (enumeration<E>) {
-        using bit = underlying_type_t<E>;
         return xmm::reinterpret<E>(
             xmm::bwshift_right(xmm::reinterpret<bit>(val), imm));
     } else {
@@ -79,11 +71,9 @@ inline mask<E>
 
 template <template_barrier_t = template_barrier, simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<E>
-    DPL_VECTORCALL bwshift_right(simd<E> val, int shift) noexcept {
-    if constexpr (floating_point<representation_t<E>> ||
-        bfloat16_like<representation_t<E>> ||
-        float16_like<representation_t<E>>) {
+inline vector<E>
+    DPL_VECTORCALL bwshift_right(vector<E> val, int shift) noexcept {
+    if constexpr (!integral<E>) {
         using bit = unsigned_representation_t<E>;
         return xmm::reinterpret<E>(
             xmm::bwshift_right(xmm::reinterpret<bit>(val), shift));
@@ -141,13 +131,11 @@ inline simd<E>
 
 template <size_t V, simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<E>
+inline vector<E>
     DPL_VECTORCALL bwshift_right(
-        simd<E> val, immediate<V> imm = dx::imm<V>) noexcept {
+        vector<E> val, immediate<V> imm = dx::imm<V>) noexcept {
     static_assert(V >= 0 && V < sizeof(E) * char_bit_v);
-    if constexpr (floating_point<representation_t<E>> ||
-        bfloat16_like<representation_t<E>> ||
-        float16_like<representation_t<E>>) {
+    if constexpr (!integral<E>) {
         using bit = unsigned_representation_t<E>;
         return xmm::reinterpret<E>(
             xmm::bwshift_right(xmm::reinterpret<bit>(val), imm));
@@ -206,9 +194,9 @@ template <template_barrier_t = template_barrier, simd_element L,
     common_size_with<L> R>
 requires integral<R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<L>
-    DPL_VECTORCALL bwshift_right(simd<L> lhs, simd<R> rhs) noexcept {
-    if constexpr (floating_point<L> || bfloat16_like<L> || float16_like<L>) {
+inline vector<L>
+    DPL_VECTORCALL bwshift_right(vector<L> lhs, vector<R> rhs) noexcept {
+    if constexpr (!integral<L>) {
         using bit = unsigned_representation_t<L>;
         return xmm::reinterpret<L>(
             xmm::bwshift_right(xmm::reinterpret<bit>(lhs), rhs));
@@ -280,12 +268,12 @@ inline simd<L>
             auto xmm1 = +rhs;
             auto xmm3 = _mm_cvtepu8_epi16(xmm1);
             auto xmm2 = _mm_cvtepu8_epi16(xmm0);
-            xmm2 = +xmm::bwshift_right(simd<i16>(xmm2), simd<i16>(xmm3));
+            xmm2 = +xmm::bwshift_right(vector<i16>(xmm2), vector<i16>(xmm3));
             xmm1 = _mm_srli_si128(xmm1, 8);
             xmm0 = _mm_srli_si128(xmm0, 8);
             xmm1 = _mm_cvtepu8_epi16(xmm1);
             xmm0 = _mm_cvtepu8_epi16(xmm0);
-            xmm0 = +xmm::bwshift_right(simd<i16>(xmm0), simd<i16>(xmm1));
+            xmm0 = +xmm::bwshift_right(vector<i16>(xmm0), vector<i16>(xmm1));
             xmm1 = _mm_srli_epi16(_mm_cmpeq_epi32(xmm1, xmm1), 8);
             xmm2 = _mm_and_si128(xmm2, xmm1);
             xmm1 = _mm_and_si128(xmm0, xmm1);
@@ -331,7 +319,7 @@ requires requires { xmm::bwshift_right<I::value>(val); }
 
 template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-inline simd<E> bwshift_right(abi_tag tag, simd<E> val, int shift) noexcept
+inline vector<E> bwshift_right(abi_tag tag, vector<E> val, int shift) noexcept
 requires requires { xmm::bwshift_right(val, shift); }
 {
     return xmm::bwshift_right(val, shift);
@@ -339,7 +327,7 @@ requires requires { xmm::bwshift_right(val, shift); }
 
 template <simd_element E, integral_constant_like I>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-inline simd<E> bwshift_right(abi_tag, simd<E> val, I) noexcept
+inline vector<E> bwshift_right(abi_tag, vector<E> val, I) noexcept
 requires requires { xmm::bwshift_right<I::value>(val); }
 {
     return xmm::bwshift_right<I::value>(val);
@@ -347,7 +335,7 @@ requires requires { xmm::bwshift_right<I::value>(val); }
 
 template <simd_element L, simd_element R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-inline simd<L> bwshift_right(abi_tag, simd<L> lhs, simd<R> rhs) noexcept
+inline vector<L> bwshift_right(abi_tag, vector<L> lhs, vector<R> rhs) noexcept
 requires requires { xmm::bwshift_right(lhs, rhs); }
 {
     return xmm::bwshift_right(lhs, rhs);

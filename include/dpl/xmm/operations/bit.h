@@ -32,8 +32,8 @@ namespace details {
 
 template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<unsigned_representation_t<E>>
-    DPL_VECTORCALL popcount(simd<E> val) noexcept {
+inline vector<unsigned_representation_t<E>>
+    DPL_VECTORCALL popcount(vector<E> val) noexcept {
     if constexpr (sizeof(E) == 1) {
 #if DPL_SIMD_X86_AVX512BITALG && DPL_SIMD_X86_AVX512VL
         return _mm_popcnt_epi8(
@@ -83,33 +83,33 @@ inline simd<unsigned_representation_t<E>>
 #  if DPL_SIMD_X86_AVX512VPOPCNTDQ
 template <imask_t<uint32> M, common_size_with<uint32> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<uint32>
+inline vector<uint32>
     DPL_VECTORCALL popcount(
-        simd<uint32> src, cmask_t<uint32, M>, simd<E> val) noexcept {
+        vector<uint32> src, cmask_t<uint32, M>, vector<E> val) noexcept {
     return _mm_mask_popcnt_epi32(+src, M, +xmm::reinterpret<uint32>(val));
 }
 
 template <imask_t<uint32> M, common_size_with<uint32> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<uint32>
+inline vector<uint32>
     DPL_VECTORCALL popcount(
-        dx::zero_t, cmask_t<uint32, M>, simd<E> val) noexcept {
+        dx::zero_t, cmask_t<uint32, M>, vector<E> val) noexcept {
     return _mm_maskz_popcnt_epi32(M, +xmm::reinterpret<uint32>(val));
 }
 
 template <imask_t<uint64> M, common_size_with<uint64> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<uint64>
+inline vector<uint64>
     DPL_VECTORCALL popcount(
-        simd<uint64> src, cmask_t<uint64, M>, simd<E> val) noexcept {
+        vector<uint64> src, cmask_t<uint64, M>, vector<E> val) noexcept {
     return _mm_mask_popcnt_epi64(+src, M, +xmm::reinterpret<uint64>(val));
 }
 
 template <imask_t<uint64> M, common_size_with<uint64> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<uint64>
+inline vector<uint64>
     DPL_VECTORCALL popcount(
-        dx::zero_t, cmask_t<uint64, M>, simd<E> val) noexcept {
+        dx::zero_t, cmask_t<uint64, M>, vector<E> val) noexcept {
     return _mm_maskz_popcnt_epi64(M, +xmm::reinterpret<uint64>(val));
 }
 #  endif
@@ -117,33 +117,33 @@ inline simd<uint64>
 #  if DPL_SIMD_X86_AVX512BITALG
 template <imask_t<uint16> M, common_size_with<uint16> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<uint16>
+inline vector<uint16>
     DPL_VECTORCALL popcount(
-        simd<uint16> src, cmask_t<uint16, M>, simd<E> val) noexcept {
+        vector<uint16> src, cmask_t<uint16, M>, vector<E> val) noexcept {
     return _mm_mask_popcnt_epi16(+src, M, +xmm::reinterpret<uint16>(val));
 }
 
 template <imask_t<uint16> M, common_size_with<uint16> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<uint16>
+inline vector<uint16>
     DPL_VECTORCALL popcount(
-        dx::zero_t, cmask_t<uint16, M>, simd<E> val) noexcept {
+        dx::zero_t, cmask_t<uint16, M>, vector<E> val) noexcept {
     return _mm_maskz_popcnt_epi16(M, +xmm::reinterpret<uint16>(val));
 }
 
 template <imask_t<uint8> M, common_size_with<uint8> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<uint8>
+inline vector<uint8>
     DPL_VECTORCALL popcount(
-        simd<uint8> src, cmask_t<uint8, M>, simd<E> val) noexcept {
+        vector<uint8> src, cmask_t<uint8, M>, vector<E> val) noexcept {
     return _mm_mask_popcnt_epi8(+src, M, +xmm::reinterpret<uint8>(val));
 }
 
 template <imask_t<uint8> M, common_size_with<uint8> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<uint8>
+inline vector<uint8>
     DPL_VECTORCALL popcount(
-        dx::zero_t, cmask_t<uint8, M>, simd<E> val) noexcept {
+        dx::zero_t, cmask_t<uint8, M>, vector<E> val) noexcept {
     return _mm_maskz_popcnt_epi8(M, +xmm::reinterpret<uint8>(val));
 }
 #  endif
@@ -151,8 +151,8 @@ inline simd<uint8>
 
 template <common_size_with<int64> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<unsigned_representation_t<E>>
-    DPL_VECTORCALL countl_zero(simd<E> val) noexcept {
+inline vector<unsigned_representation_t<E>>
+    DPL_VECTORCALL countl_zero(vector<E> val) noexcept {
 #if DPL_SIMD_X86_AVX512CD && DPL_SIMD_X86_AVX512VL
     return _mm_lzcnt_epi64(+xmm::reinterpret<signed_representation_t<E>>(val));
 #else
@@ -165,8 +165,8 @@ inline simd<unsigned_representation_t<E>>
 
 template <common_size_with<int32> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<unsigned_representation_t<E>>
-    DPL_VECTORCALL countl_zero(simd<E> val) noexcept {
+inline vector<unsigned_representation_t<E>>
+    DPL_VECTORCALL countl_zero(vector<E> val) noexcept {
 #if DPL_SIMD_X86_AVX512CD && DPL_SIMD_X86_AVX512VL
     return _mm_lzcnt_epi32(+xmm::reinterpret<signed_representation_t<E>>(val));
 #else
@@ -182,41 +182,41 @@ inline simd<unsigned_representation_t<E>>
 #if DPL_SIMD_X86_AVX512CD && DPL_SIMD_X86_AVX512VL
 template <imask_t<uint64> M, common_size_with<uint64> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<uint64>
+inline vector<uint64>
     DPL_VECTORCALL countl_zero(
-        simd<uint64> src, cmask_t<E, M>, simd<E> val) noexcept {
+        vector<uint64> src, cmask_t<E, M>, vector<E> val) noexcept {
     return _mm_mask_lzcnt_epi64(+src, M, +xmm::reinterpret<uint64>(val));
 }
 
 template <imask_t<uint64> M, common_size_with<uint64> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<uint64>
+inline vector<uint64>
     DPL_VECTORCALL countl_zero(
-        dx::zero_t, cmask_t<E, M>, simd<E> val) noexcept {
+        dx::zero_t, cmask_t<E, M>, vector<E> val) noexcept {
     return _mm_maskz_lzcnt_epi64(M, +xmm::reinterpret<uint64>(val));
 }
 
 template <imask_t<uint32> M, common_size_with<uint32> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<uint32>
+inline vector<uint32>
     DPL_VECTORCALL countl_zero(
-        simd<uint32> src, cmask_t<E, M>, simd<E> val) noexcept {
+        vector<uint32> src, cmask_t<E, M>, vector<E> val) noexcept {
     return _mm_mask_lzcnt_epi32(+src, M, +xmm::reinterpret<uint32>(val));
 }
 
 template <imask_t<uint32> M, common_size_with<uint32> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<uint32>
+inline vector<uint32>
     DPL_VECTORCALL countl_zero(
-        dx::zero_t, cmask_t<E, M>, simd<E> val) noexcept {
+        dx::zero_t, cmask_t<E, M>, vector<E> val) noexcept {
     return _mm_maskz_lzcnt_epi32(M, +xmm::reinterpret<uint32>(val));
 }
 #endif
 
 template <common_size_with<uint16> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<uint16>
-    DPL_VECTORCALL countl_zero(simd<E> val) noexcept {
+inline vector<uint16>
+    DPL_VECTORCALL countl_zero(vector<E> val) noexcept {
     auto vval = +xmm::reinterpret<uint16>(val);
     vval = _mm_or_si128(vval, _mm_srli_epi16(vval, 1));
     vval = _mm_or_si128(vval, _mm_srli_epi16(vval, 2));
@@ -227,8 +227,8 @@ inline simd<uint16>
 
 template <common_size_with<uint8> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<uint8>
-    DPL_VECTORCALL countl_zero(simd<E> val) noexcept {
+inline vector<uint8>
+    DPL_VECTORCALL countl_zero(vector<E> val) noexcept {
     auto vval = +xmm::reinterpret<uint8>(val);
     vval = _mm_or_si128(vval, _mm_srli_epi16(vval, 1));
     vval = _mm_or_si128(vval, _mm_srli_epi16(vval, 2));
@@ -238,129 +238,130 @@ inline simd<uint8>
 
 template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<unsigned_representation_t<E>>
-    DPL_VECTORCALL countl_one(simd<E> val) noexcept {
+inline vector<unsigned_representation_t<E>>
+    DPL_VECTORCALL countl_one(vector<E> val) noexcept {
     using sbit = signed_representation_t<E>;
     auto vval = +xmm::reinterpret<sbit>(val);
     return xmm::countl_zero(
-        simd<sbit>(_mm_xor_si128(vval, _mm_cmpeq_epi32(vval, vval))));
+        vector<sbit>(_mm_xor_si128(vval, _mm_cmpeq_epi32(vval, vval))));
 }
 
 template <simd_element E, imask_t<E> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<unsigned_representation_t<E>>
-    DPL_VECTORCALL countl_one(simd<unsigned_representation_t<E>> src,
-        cmask_t<E, M> mask, simd<E> val) noexcept
+inline vector<unsigned_representation_t<E>>
+    DPL_VECTORCALL countl_one(vector<unsigned_representation_t<E>> src,
+        cmask_t<E, M> mask, vector<E> val) noexcept
 requires requires { xmm::countl_zero(src, mask, src); }
 {
     using ubit = unsigned_representation_t<E>;
     auto vval = +xmm::reinterpret<ubit>(val);
     return xmm::countl_zero(src, mask,
-        simd<ubit>(_mm_xor_si128(vval, _mm_cmpeq_epi32(vval, vval))));
+        vector<ubit>(_mm_xor_si128(vval, _mm_cmpeq_epi32(vval, vval))));
 }
 
 template <simd_element E, imask_t<E> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<unsigned_representation_t<E>>
+inline vector<unsigned_representation_t<E>>
     DPL_VECTORCALL countl_one(
-        dx::zero_t zero, cmask_t<E, M> mask, simd<E> val) noexcept
-requires requires(simd<unsigned_representation_t<E>> rep) {
+        dx::zero_t zero, cmask_t<E, M> mask, vector<E> val) noexcept
+requires requires(vector<unsigned_representation_t<E>> rep) {
     xmm::countl_zero(zero, mask, rep);
 }
 {
     using ubit = unsigned_representation_t<E>;
     auto vval = +xmm::reinterpret<ubit>(val);
     return xmm::countl_zero(zero, mask,
-        simd<ubit>(_mm_xor_si128(vval, _mm_cmpeq_epi32(vval, vval))));
+        vector<ubit>(_mm_xor_si128(vval, _mm_cmpeq_epi32(vval, vval))));
 }
 
 template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<unsigned_representation_t<E>>
-    DPL_VECTORCALL countr_zero(simd<E> val) noexcept {
+inline vector<unsigned_representation_t<E>>
+    DPL_VECTORCALL countr_zero(vector<E> val) noexcept {
     if constexpr (!unsigned_integral<E>) {
         using bit = unsigned_representation_t<E>;
         return xmm::countr_zero(xmm::reinterpret<bit>(val));
     } else {
-        auto const nval = xmm::subtract(simd<E>(_mm_setzero_si128()), val);
+        auto const nval = xmm::subtract(vector<E>(_mm_setzero_si128()), val);
         return xmm::popcount(xmm::subtract(
-            simd<E>(_mm_and_si128(+val, +nval)), xmm::broadcast<E>(1u)));
+            vector<E>(_mm_and_si128(+val, +nval)), xmm::broadcast<E>(1u)));
     }
 }
 
 template <simd_element E, imask_t<E> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<unsigned_representation_t<E>>
-    DPL_VECTORCALL countr_zero(simd<unsigned_representation_t<E>> src,
-        cmask_t<E, M> mask, simd<E> val) noexcept
+inline vector<unsigned_representation_t<E>>
+    DPL_VECTORCALL countr_zero(vector<unsigned_representation_t<E>> src,
+        cmask_t<E, M> mask, vector<E> val) noexcept
 requires requires { xmm::popcount(src, mask, src); }
 {
     if constexpr (!unsigned_integral<E>) {
         using bit = unsigned_representation_t<E>;
         return xmm::countr_zero(src, mask, xmm::reinterpret<bit>(val));
     } else {
-        auto const nval = xmm::subtract(simd<E>(_mm_setzero_si128()), val);
+        auto const nval = xmm::subtract(vector<E>(_mm_setzero_si128()), val);
         return xmm::popcount(src, mask,
             xmm::subtract(
-                simd<E>(_mm_and_si128(+val, +nval)), xmm::broadcast<E>(1u)));
+                vector<E>(_mm_and_si128(+val, +nval)), xmm::broadcast<E>(1u)));
     }
 }
 
 template <simd_element E, imask_t<E> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<unsigned_representation_t<E>>
+inline vector<unsigned_representation_t<E>>
     DPL_VECTORCALL countr_zero(
-        dx::zero_t zero, cmask_t<E, M> mask, simd<E> val) noexcept
-requires requires(
-    simd<unsigned_representation_t<E>> src) { xmm::popcount(zero, mask, src); }
+        dx::zero_t zero, cmask_t<E, M> mask, vector<E> val) noexcept
+requires requires(vector<unsigned_representation_t<E>> src) {
+    xmm::popcount(zero, mask, src);
+}
 {
     if constexpr (!unsigned_integral<E>) {
         using bit = unsigned_representation_t<E>;
         return xmm::countr_zero(zero, mask, xmm::reinterpret<bit>(val));
     } else {
-        auto const nval = xmm::subtract(simd<E>(_mm_setzero_si128()), val);
+        auto const nval = xmm::subtract(vector<E>(_mm_setzero_si128()), val);
         return xmm::popcount(zero, mask,
             xmm::subtract(
-                simd<E>(_mm_and_si128(+val, +nval)), xmm::broadcast<E>(1u)));
+                vector<E>(_mm_and_si128(+val, +nval)), xmm::broadcast<E>(1u)));
     }
 }
 
 template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<unsigned_representation_t<E>>
-    DPL_VECTORCALL countr_one(simd<E> val) noexcept {
+inline vector<unsigned_representation_t<E>>
+    DPL_VECTORCALL countr_one(vector<E> val) noexcept {
     using bit = unsigned_representation_t<E>;
     auto vval = +xmm::reinterpret<bit>(val);
     return xmm::countr_zero(
-        simd<bit>(_mm_xor_si128(vval, _mm_cmpeq_epi32(vval, vval))));
+        vector<bit>(_mm_xor_si128(vval, _mm_cmpeq_epi32(vval, vval))));
 }
 
 template <simd_element E, imask_t<E> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<unsigned_representation_t<E>>
-    DPL_VECTORCALL countr_one(simd<unsigned_representation_t<E>> src,
-        cmask_t<E, M> mask, simd<E> val) noexcept
+inline vector<unsigned_representation_t<E>>
+    DPL_VECTORCALL countr_one(vector<unsigned_representation_t<E>> src,
+        cmask_t<E, M> mask, vector<E> val) noexcept
 requires requires { xmm::countr_zero(src, mask, src); }
 {
     using ubit = unsigned_representation_t<E>;
     auto vval = +xmm::reinterpret<ubit>(val);
     return xmm::countr_zero(src, mask,
-        simd<ubit>(_mm_xor_si128(vval, _mm_cmpeq_epi32(vval, vval))));
+        vector<ubit>(_mm_xor_si128(vval, _mm_cmpeq_epi32(vval, vval))));
 }
 
 template <simd_element E, imask_t<E> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<unsigned_representation_t<E>>
+inline vector<unsigned_representation_t<E>>
     DPL_VECTORCALL countr_one(
-        dx::zero_t zero, cmask_t<E, M> mask, simd<E> val) noexcept
-requires requires(simd<unsigned_representation_t<E>> rep) {
+        dx::zero_t zero, cmask_t<E, M> mask, vector<E> val) noexcept
+requires requires(vector<unsigned_representation_t<E>> rep) {
     xmm::countr_zero(zero, mask, rep);
 }
 {
     using ubit = unsigned_representation_t<E>;
     auto vval = +xmm::reinterpret<ubit>(val);
     return xmm::countr_zero(zero, mask,
-        simd<ubit>(_mm_xor_si128(vval, _mm_cmpeq_epi32(vval, vval))));
+        vector<ubit>(_mm_xor_si128(vval, _mm_cmpeq_epi32(vval, vval))));
 }
 
 namespace details {
@@ -378,8 +379,8 @@ alignas(16) inline constexpr char byteswap_lut_epi16[]{
 
 template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
-inline simd<E>
-    DPL_VECTORCALL byteswap(simd<E> val) noexcept {
+inline vector<E>
+    DPL_VECTORCALL byteswap(vector<E> val) noexcept {
     if constexpr (!same_as<native_vector_t<E>, __m128i>) {
         using bit = unsigned_representation_t<E>;
         return xmm::reinterpret<E>(xmm::byteswap(xmm::reinterpret<bit>(val)));
@@ -403,7 +404,7 @@ inline simd<E>
 
 template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-inline auto DPL_VECTORCALL popcount(abi_tag, simd<E> val) noexcept
+inline auto DPL_VECTORCALL popcount(abi_tag, vector<E> val) noexcept
 requires requires { xmm::popcount(val); }
 {
     return xmm::popcount(val);
@@ -411,7 +412,7 @@ requires requires { xmm::popcount(val); }
 
 template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-inline auto DPL_VECTORCALL countl_zero(abi_tag, simd<E> val) noexcept
+inline auto DPL_VECTORCALL countl_zero(abi_tag, vector<E> val) noexcept
 requires requires { xmm::countl_zero(val); }
 {
     return xmm::countl_zero(val);
@@ -419,7 +420,7 @@ requires requires { xmm::countl_zero(val); }
 
 template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-inline auto DPL_VECTORCALL countr_zero(abi_tag, simd<E> val) noexcept
+inline auto DPL_VECTORCALL countr_zero(abi_tag, vector<E> val) noexcept
 requires requires { xmm::countl_zero(val); }
 {
     return xmm::countl_zero(val);
@@ -427,8 +428,8 @@ requires requires { xmm::countl_zero(val); }
 
 template <simd_element E, imask_t<E> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-inline auto DPL_VECTORCALL popcount(abi_tag, type_identity_t<simd<E>> src,
-    cmask_t<E, M> mask, simd<E> val) noexcept
+inline auto DPL_VECTORCALL popcount(abi_tag, type_identity_t<vector<E>> src,
+    cmask_t<E, M> mask, vector<E> val) noexcept
 requires requires { xmm::popcount(src, mask, val); }
 {
     return xmm::popcount(src, mask, val);
@@ -436,8 +437,8 @@ requires requires { xmm::popcount(src, mask, val); }
 
 template <simd_element E, imask_t<E> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-inline auto DPL_VECTORCALL countl_zero(abi_tag, type_identity_t<simd<E>> src,
-    cmask_t<E, M> mask, simd<E> val) noexcept
+inline auto DPL_VECTORCALL countl_zero(abi_tag, type_identity_t<vector<E>> src,
+    cmask_t<E, M> mask, vector<E> val) noexcept
 requires requires { xmm::countl_zero(src, mask, val); }
 {
     return xmm::countl_zero(src, mask, val);
@@ -445,8 +446,8 @@ requires requires { xmm::countl_zero(src, mask, val); }
 
 template <simd_element E, imask_t<E> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-inline auto DPL_VECTORCALL countr_zero(abi_tag, type_identity_t<simd<E>> src,
-    cmask_t<E, M> mask, simd<E> val) noexcept
+inline auto DPL_VECTORCALL countr_zero(abi_tag, type_identity_t<vector<E>> src,
+    cmask_t<E, M> mask, vector<E> val) noexcept
 requires requires { xmm::countl_zero(src, mask, val); }
 {
     return xmm::countl_zero(src, mask, val);
@@ -455,7 +456,7 @@ requires requires { xmm::countl_zero(src, mask, val); }
 template <simd_element E, imask_t<E> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 inline auto DPL_VECTORCALL popcount(
-    abi_tag, dx::zero_t zero, cmask_t<E, M> mask, simd<E> val) noexcept
+    abi_tag, dx::zero_t zero, cmask_t<E, M> mask, vector<E> val) noexcept
 requires requires { xmm::popcount(zero, mask, val); }
 {
     return xmm::popcount(zero, mask, val);
@@ -464,7 +465,7 @@ requires requires { xmm::popcount(zero, mask, val); }
 template <simd_element E, imask_t<E> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 inline auto DPL_VECTORCALL countl_zero(
-    abi_tag, dx::zero_t zero, cmask_t<E, M> mask, simd<E> val) noexcept
+    abi_tag, dx::zero_t zero, cmask_t<E, M> mask, vector<E> val) noexcept
 requires requires { xmm::countl_zero(zero, mask, val); }
 {
     return xmm::countl_zero(zero, mask, val);
@@ -473,7 +474,7 @@ requires requires { xmm::countl_zero(zero, mask, val); }
 template <simd_element E, imask_t<E> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 inline auto DPL_VECTORCALL countr_zero(
-    abi_tag, dx::zero_t zero, cmask_t<E, M> mask, simd<E> val) noexcept
+    abi_tag, dx::zero_t zero, cmask_t<E, M> mask, vector<E> val) noexcept
 requires requires { xmm::countl_zero(zero, mask, val); }
 {
     return xmm::countl_zero(zero, mask, val);
@@ -481,7 +482,7 @@ requires requires { xmm::countl_zero(zero, mask, val); }
 
 template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-inline auto DPL_VECTORCALL byteswap(abi_tag, simd<E> val) noexcept
+inline auto DPL_VECTORCALL byteswap(abi_tag, vector<E> val) noexcept
 requires requires { xmm::byteswap(val); }
 {
     return xmm::byteswap(val);

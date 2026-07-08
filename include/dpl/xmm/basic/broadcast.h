@@ -26,7 +26,7 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::xmm {
 DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr simd<E> broadcast(abi_tag tag, type_identity_t<E> scalar) noexcept {
+constexpr vector<E> broadcast(abi_tag tag, type_identity_t<E> scalar) noexcept {
     if consteval {
         constexpr auto forward = [](auto, E scalar) { return scalar; };
         return [forward]<size_t... Is>(index_sequence<Is...>, E data) {
@@ -57,7 +57,7 @@ constexpr simd<E> broadcast(abi_tag tag, type_identity_t<E> scalar) noexcept {
 
 DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr simd<E> broadcast(abi_tag tag, dx::zero_t) noexcept {
+constexpr vector<E> broadcast(abi_tag tag, dx::zero_t) noexcept {
     if consteval {
         return xmm::broadcast<E>(tag, 0);
     } else {
@@ -76,7 +76,7 @@ constexpr simd<E> broadcast(abi_tag tag, dx::zero_t) noexcept {
 
 DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr simd<E> broadcast(abi_tag tag, dx::all_bits_t) noexcept {
+constexpr vector<E> broadcast(abi_tag tag, dx::all_bits_t) noexcept {
     if consteval {
         return xmm::broadcast<E>(tag, dx::all_bits_v<E>);
     } else {
@@ -115,7 +115,7 @@ constexpr mask<E> broadcast(abi_tag tag, V) noexcept {
 
 DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr simd<E> broadcast(type_identity_t<E> scalar) noexcept {
+constexpr vector<E> broadcast(type_identity_t<E> scalar) noexcept {
     return xmm::broadcast<E>(xmm::abi, scalar);
 }
 
@@ -127,13 +127,13 @@ constexpr mask<E> broadcast(T boolean) noexcept {
 
 DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr simd<E> broadcast(dx::zero_t zero) noexcept {
+constexpr vector<E> broadcast(dx::zero_t zero) noexcept {
     return xmm::broadcast<E>(xmm::abi, zero);
 }
 
 DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr simd<E> broadcast(dx::all_bits_t all) noexcept {
+constexpr vector<E> broadcast(dx::all_bits_t all) noexcept {
     return xmm::broadcast<E>(xmm::abi, all);
 }
 

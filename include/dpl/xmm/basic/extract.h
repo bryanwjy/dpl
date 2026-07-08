@@ -28,7 +28,7 @@ namespace datapar::xmm {
 
 DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr E extract(simd<E> src, size_t idx) noexcept {
+constexpr E extract(vector<E> src, size_t idx) noexcept {
 #if !DPL_COMPILER_MSVC
     struct alignas(abi_tag::alignment) buffer {
         E data[abi_tag::size / sizeof(E)];
@@ -37,25 +37,25 @@ constexpr E extract(simd<E> src, size_t idx) noexcept {
 #else
     if constexpr (is_same_v<float, representation_t<E>>) {
         return __DPL bit_cast<E>((+src).m128_f32[idx]);
-    } else if constexpr (is_same_v<double, representation_t<E>>) {
+    } else if constexpr (is_same_v<double, E>) {
         return __DPL bit_cast<E>((+src).m128d_f64[idx]);
-    } else if constexpr (bfloat16_like<representation_t<E>> ||
-        float16_like<representation_t<E>>) {
+    } else if constexpr (is_same_v<ext::float16, E> ||
+        is_same_v<ext::bfloat16, E>) {
         return __DPL bit_cast<E>((+src).m128i_i16[idx]);
     } else {
-        if constexpr (is_same_v<representation_t<E>, int32>) {
+        if constexpr (is_same_v<E, int32>) {
             return __DPL bit_cast<E>((+src).m128i_i32[idx]);
-        } else if constexpr (is_same_v<representation_t<E>, int16>) {
+        } else if constexpr (is_same_v<E, int16>) {
             return __DPL bit_cast<E>((+src).m128i_i16[idx]);
-        } else if constexpr (is_same_v<representation_t<E>, int8>) {
+        } else if constexpr (is_same_v<E, int8>) {
             return __DPL bit_cast<E>((+src).m128i_i8[idx]);
-        } else if constexpr (is_same_v<representation_t<E>, int64>) {
+        } else if constexpr (is_same_v<E, int64>) {
             return __DPL bit_cast<E>((+src).m128i_i64[idx]);
-        } else if constexpr (is_same_v<representation_t<E>, uint32>) {
+        } else if constexpr (is_same_v<E, uint32>) {
             return __DPL bit_cast<E>((+src).m128i_u32[idx]);
-        } else if constexpr (is_same_v<representation_t<E>, uint16>) {
+        } else if constexpr (is_same_v<E, uint16>) {
             return __DPL bit_cast<E>((+src).m128i_u16[idx]);
-        } else if constexpr (is_same_v<representation_t<E>, uint8>) {
+        } else if constexpr (is_same_v<E, uint8>) {
             return __DPL bit_cast<E>((+src).m128i_u8[idx]);
         } else {
             return __DPL bit_cast<E>((+src).m128i_u64[idx]);
@@ -66,19 +66,19 @@ constexpr E extract(simd<E> src, size_t idx) noexcept {
 
 DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr E extract(simd<E> src, integral_constant_like auto idx) noexcept {
+constexpr E extract(vector<E> src, integral_constant_like auto idx) noexcept {
     if consteval {
         return xmm::extract(src, static_cast<size_t>(idx));
     } else {
         constexpr auto imm8 = static_cast<int>(idx());
-        if constexpr (is_same_v<native_vector_t<E>, __m128>) {
+        if constexpr (is_same_v<E, float>) {
             return __DPL bit_cast<E>(_mm_extract_ps(+src, imm8));
-        } else if constexpr (is_same_v<native_vector_t<E>, __m128d>) {
+        } else if constexpr (is_same_v<E, double>) {
             return __DPL bit_cast<E>(
                 _mm_extract_epi64(_mm_castpd_si128(+src), idx));
-        } else if constexpr (!is_same_v<native_vector_t<E>, __m128i>) {
+        } else if constexpr (is_same_v<E, ext::float16>) {
 #if DPL_SIMD_X86_AVX512FP16
-            if constexpr (!bfloat16_like<representation_t<E>>) {
+            if constexpr (same_as<ext::float16, E>) {
                 return __DPL bit_cast<E>(static_cast<int16>(
                     _mm_extract_epi16(_mm_castph_si128(+src), imm8)));
             } else {
@@ -131,18 +131,18 @@ constexpr bool is_true(T val) noexcept {
 DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr bool extract(mask<E> src, size_t idx) noexcept {
-    return xmm::is_true(xmm::extract(simd<E>(+src), idx));
+    return xmm::is_true(xmm::extract(vector<E>(+src), idx));
 }
 
 DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr bool extract(mask<E> src, integral_constant_like auto idx) noexcept {
-    return xmm::is_true(xmm::extract(simd<E>(+src), idx));
+    return xmm::is_true(xmm::extract(vector<E>(+src), idx));
 }
 
 DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr E extract(abi_tag, simd<E> src, size_t idx) noexcept
+constexpr E extract(abi_tag, vector<E> src, size_t idx) noexcept
 requires requires { xmm::extract(src, idx); }
 {
     return xmm::extract(src, idx);
@@ -151,7 +151,7 @@ requires requires { xmm::extract(src, idx); }
 DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr E extract(
-    abi_tag, simd<E> src, integral_constant_like auto idx) noexcept
+    abi_tag, vector<E> src, integral_constant_like auto idx) noexcept
 requires requires { xmm::extract(src, idx); }
 {
     return xmm::extract(src, idx);

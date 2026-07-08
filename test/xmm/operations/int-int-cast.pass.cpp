@@ -4,7 +4,7 @@
 // @dpl[clang].compile-flags: -fconstexpr-steps=2000000
 // @dpl[msvc].compile-flags: /constexpr:steps2000000
 
-#include <cassert>
+#include "../common.h"
 
 import dpl.xmm;
 

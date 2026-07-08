@@ -1,7 +1,4 @@
-
-
 // Copyright 2025 Bryan Wong
-
 #pragma once
 
 #include "dpl/config.h"
@@ -17,8 +14,6 @@
 #include "dpl/xmm/operations/select.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/fwd.h"
-
 #  include "dpl/core/immediate/constants/infinity.h"
 #  include "dpl/core/immediate/constants/max_value.h"
 #  include "dpl/core/immediate/constants/msb.h"
@@ -44,33 +39,32 @@ struct convert_t;
 template <>
 struct convert_t<float> {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<float> DPL_VECTORCALL operator()(
-        simd<float> src) noexcept {
+    static inline vector<float> DPL_VECTORCALL operator()(
+        vector<float> src) noexcept {
         return src;
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<float> DPL_VECTORCALL operator()(
-        simd<double> src) noexcept {
+    static inline vector<float> DPL_VECTORCALL operator()(
+        vector<double> src) noexcept {
         return _mm_cvtpd_ps(+src);
     }
 
-    template <float16_like E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<float>
-        DPL_VECTORCALL operator()(simd<E> src) noexcept {
+    static inline vector<float> DPL_VECTORCALL operator()(
+        vector<ext::float16> src) noexcept {
 #if DPL_SIMD_X86_F16C
         return _mm_cvtph_ps(+src);
 #else
         auto const arg =
-            simd<uint32>(_mm_cvtepu16_epi32(+xmm::reinterpret<uint16>(src)));
+            vector<uint32>(_mm_cvtepu16_epi32(+xmm::reinterpret<uint16>(src)));
         auto const msb = xmm::broadcast<uint32>(0x8000);
         auto const signs = xmm::reinterpret<float>(
             xmm::bwshift_left<16>(xmm::bwand(arg, msb)));
         auto const parg = xmm::bwshift_left<13>(xmm::bwandnot(arg, msb));
 
         constexpr auto exp_mask = xmm::broadcast<uint32>(0x0f800000);
-        auto const isfinite = simd<uint32>(_mm_cmplt_epi32(+parg, +exp_mask));
+        auto const isfinite = vector<uint32>(_mm_cmplt_epi32(+parg, +exp_mask));
 
         constexpr auto inf32 = xmm::broadcast<uint32>(0x7f800000);
         auto const nonfinite = xmm::bwandnot(xmm::bwor(inf32, parg), isfinite);
@@ -84,10 +78,9 @@ struct convert_t<float> {
 #endif
     }
 
-    template <bfloat16_like E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<float>
-        DPL_VECTORCALL operator()(simd<E> src) noexcept {
+    static inline vector<float> DPL_VECTORCALL operator()(
+        vector<ext::bfloat16> src) noexcept {
 #if DPL_SIMD_X86_AVX512BF16 & DPL_SIMD_X86_AVX512VL
         return _mm_cvtpbh_ps(+src);
 #else
@@ -98,8 +91,8 @@ struct convert_t<float> {
 
     template <integral E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<float>
-        DPL_VECTORCALL operator()(simd<E> src) noexcept {
+    static inline vector<float>
+        DPL_VECTORCALL operator()(vector<E> src) noexcept {
         if constexpr (sizeof(E) == sizeof(int64)) {
 #if DPL_SIMD_X86_AVX512DQ & DPL_SIMD_X86_AVX512VL
             if constexpr (unsigned_integral<representation_t<E>>) {
@@ -186,8 +179,8 @@ template <integral_cast_target_like<int64> To>
 struct convert_t<To> {
     template <integral E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To>
-        DPL_VECTORCALL operator()(simd<E> src) noexcept {
+    static inline vector<To>
+        DPL_VECTORCALL operator()(vector<E> src) noexcept {
         if constexpr (sizeof(E) == sizeof(To)) {
             return +src;
         } else if constexpr (sizeof(E) == sizeof(int32)) {
@@ -213,7 +206,8 @@ struct convert_t<To> {
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To> DPL_VECTORCALL operator()(simd<float> src) noexcept {
+    static inline vector<To> DPL_VECTORCALL operator()(
+        vector<float> src) noexcept {
 #if DPL_SIMD_X86_AVX512DQ & DPL_SIMD_X86_AVX512VL
         if constexpr (unsigned_integral<To>) {
             return _mm_cvttps_epu64(+src);
@@ -228,8 +222,8 @@ struct convert_t<To> {
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To> DPL_VECTORCALL operator()(
-        simd<double> src) noexcept {
+    static inline vector<To> DPL_VECTORCALL operator()(
+        vector<double> src) noexcept {
 #if DPL_SIMD_X86_AVX512DQ & DPL_SIMD_X86_AVX512VL
         if constexpr (unsigned_integral<To>) {
             return _mm_cvttpd_epu64(+src);
@@ -242,10 +236,9 @@ struct convert_t<To> {
 #endif
     }
 
-    template <float16_like E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To>
-        DPL_VECTORCALL operator()(simd<E> src) noexcept {
+    static inline vector<To> DPL_VECTORCALL operator()(
+        vector<ext::float16> src) noexcept {
 #if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
         if constexpr (unsigned_integral<To>) {
             return _mm_cvttph_epu64(+src);
@@ -258,10 +251,9 @@ struct convert_t<To> {
 #endif
     }
 
-    template <bfloat16_like E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To>
-        DPL_VECTORCALL operator()(simd<E> src) noexcept {
+    static inline vector<To> DPL_VECTORCALL operator()(
+        vector<ext::bfloat16> src) noexcept {
         constexpr convert_t<float> convert{};
         return operator()(convert(src));
     }
@@ -271,8 +263,8 @@ template <integral_cast_target_like<int32> To>
 struct convert_t<To> {
     template <integral E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To>
-        DPL_VECTORCALL operator()(simd<E> src) noexcept {
+    static inline vector<To>
+        DPL_VECTORCALL operator()(vector<E> src) noexcept {
         if constexpr (sizeof(E) == sizeof(int64)) {
 #if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
             return _mm_cvtepi64_epi32(+src);
@@ -299,7 +291,8 @@ struct convert_t<To> {
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To> DPL_VECTORCALL operator()(simd<float> src) noexcept {
+    static inline vector<To> DPL_VECTORCALL operator()(
+        vector<float> src) noexcept {
         if constexpr (unsigned_integral<To>) {
 #if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
             return _mm_cvttps_epu32(+src);
@@ -320,8 +313,8 @@ struct convert_t<To> {
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To> DPL_VECTORCALL operator()(
-        simd<double> src) noexcept {
+    static inline vector<To> DPL_VECTORCALL operator()(
+        vector<double> src) noexcept {
         if constexpr (unsigned_integral<To>) {
 #if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
             return _mm_cvttpd_epu32(+src);
@@ -334,10 +327,9 @@ struct convert_t<To> {
         }
     }
 
-    template <float16_like E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To>
-        DPL_VECTORCALL operator()(simd<E> src) noexcept {
+    static inline vector<To> DPL_VECTORCALL operator()(
+        vector<ext::float16> src) noexcept {
 #if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
         if constexpr (signed_integral<To>) {
             return _mm_cvttph_epi32(+src);
@@ -366,10 +358,9 @@ struct convert_t<To> {
 #endif
     }
 
-    template <bfloat16_like E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To>
-        DPL_VECTORCALL operator()(simd<E> src) noexcept {
+    static inline vector<To> DPL_VECTORCALL operator()(
+        vector<ext::bfloat16> src) noexcept {
         constexpr convert_t<float> convert{};
         return operator()(convert(src));
     }
@@ -379,8 +370,8 @@ template <integral_cast_target_like<int16> To>
 struct convert_t<To> {
     template <integral E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To>
-        DPL_VECTORCALL operator()(simd<E> src) noexcept {
+    static inline vector<To>
+        DPL_VECTORCALL operator()(vector<E> src) noexcept {
         if constexpr (sizeof(E) == sizeof(int64)) {
 #if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
             return _mm_cvtepi64_epi16(+src);
@@ -413,31 +404,32 @@ struct convert_t<To> {
     template <floating_point E>
     requires (same_as<float, E> || same_as<double, E>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To>
-        DPL_VECTORCALL operator()(simd<E> src) noexcept
+    static inline vector<To>
+        DPL_VECTORCALL operator()(vector<E> src) noexcept
     requires requires(convert_t<int32> cvtepi32) { cvtepi32(src); }
     {
         constexpr convert_t<int32> to_int;
         return operator()(to_int(src));
     }
 
-    template <float16_like E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To>
-        DPL_VECTORCALL operator()(simd<E> src) noexcept {
+    static inline vector<To> DPL_VECTORCALL operator()(
+        vector<ext::float16> src) noexcept {
 #if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
-        if constexpr (unsigned_integral<representation_t<To>>) {
+        if constexpr (unsigned_integral<To>) {
             cosntexpr auto cmp_lt_oq = 17; // lessthan, ordered, quiet
-            auto const error = xmm::broadcast<E>(dx::msb);
-            auto const neg = _mm_cmp_ph(+src, xmm::broadcast<E>(0), cmp_lt_oq);
+            auto const error = xmm::broadcast<ext::float16>(dx::msb);
+            auto const neg =
+                _mm_cmp_ph(+src, xmm::broadcast<ext::float16>(0), cmp_lt_oq);
             return _mm_mask_blend_ph(neg, _mm_cvttph_epi16(+src), error);
         } else {
             return _mm_cvttph_epi16(+src);
         }
 #else
         constexpr convert_t<int32> to_int32;
-        auto const hi = simd<E>(__DPL bit_cast<__m128h>(_mm_unpackhi_epi64(
-            __DPL bit_cast<__m128i>(+src), _mm_setzero_si128())));
+        auto const hi =
+            vector<ext::float16>(__DPL bit_cast<__m128h>(_mm_unpackhi_epi64(
+                __DPL bit_cast<__m128i>(+src), _mm_setzero_si128())));
         auto const lo_mask = _mm_set1_epi32(0xffff);
         auto const left = operator()(to_int32(src));
         auto const right = operator()(to_int32(hi));
@@ -453,13 +445,13 @@ struct convert_t<To> {
 #endif
     }
 
-    template <bfloat16_like E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To>
-        DPL_VECTORCALL operator()(simd<E> src) noexcept {
+    static inline vector<To> DPL_VECTORCALL operator()(
+        vector<ext::bfloat16> src) noexcept {
         constexpr convert_t<int32> to_int32;
-        auto const hi = simd<E>(__DPL bit_cast<__m128bh>(_mm_unpackhi_epi64(
-            __DPL bit_cast<__m128i>(+src), _mm_setzero_si128())));
+        auto const hi =
+            vector<ext::bfloat16>(__DPL bit_cast<__m128bh>(_mm_unpackhi_epi64(
+                __DPL bit_cast<__m128i>(+src), _mm_setzero_si128())));
         auto const lo_mask = _mm_set1_epi32(0xffff);
         auto const left = operator()(to_int32(src));
         auto const right = operator()(to_int32(hi));
@@ -479,8 +471,8 @@ template <integral_cast_target_like<int8> To>
 struct convert_t<To> {
     template <integral E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To>
-        DPL_VECTORCALL operator()(simd<E> src) noexcept {
+    static inline vector<To>
+        DPL_VECTORCALL operator()(vector<E> src) noexcept {
         if constexpr (sizeof(E) == sizeof(int64)) {
 #if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
             return _mm_cvtepi64_epi8(+src);
@@ -515,22 +507,20 @@ struct convert_t<To> {
 
     template <floating_point E>
     requires (same_as<float, E> || same_as<double, E>) &&
-        requires(convert_t<int32> cvtepi32, simd<E> val) { cvtepi32(val); }
+        requires(convert_t<int32> cvtepi32, vector<E> val) { cvtepi32(val); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To>
-        DPL_VECTORCALL operator()(simd<E> src) noexcept {
-        // AVX10.X supports fp8
-        static_assert(sizeof(E) > sizeof(To));
+    static inline vector<To>
+        DPL_VECTORCALL operator()(vector<E> src) noexcept {
         constexpr convert_t<int32> cvtepi32;
         return operator()(cvtepi32(src));
     }
 
-    template <typename E>
-    requires (float16_like<E> || bfloat16_like<E>) &&
-        requires(convert_t<int16> cvtepi16, simd<E> val) { cvtepi16(val); }
+    template <floating_point_like E>
+    requires (sizeof(E) == sizeof(int16)) &&
+        requires(convert_t<int16> cvtepi16, vector<E> val) { cvtepi16(val); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To>
-        DPL_VECTORCALL operator()(simd<E> src) noexcept {
+    static inline vector<To>
+        DPL_VECTORCALL operator()(vector<E> src) noexcept {
         constexpr convert_t<int16> cvtepi16;
         return operator()(cvtepi16(src));
     }
@@ -540,21 +530,20 @@ template <>
 struct convert_t<double> {
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<double> DPL_VECTORCALL operator()(
-        simd<float> src) noexcept {
+    static inline vector<double> DPL_VECTORCALL operator()(
+        vector<float> src) noexcept {
         return _mm_cvtps_pd(+src);
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<double> DPL_VECTORCALL operator()(
-        simd<double> src) noexcept {
+    static inline vector<double> DPL_VECTORCALL operator()(
+        vector<double> src) noexcept {
         return src;
     }
 
-    template <float16_like E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<double>
-        DPL_VECTORCALL operator()(simd<E> src) noexcept {
+    static inline vector<double> DPL_VECTORCALL operator()(
+        vector<ext::float16> src) noexcept {
 #if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
         return _mm_cvtph_pd(+src);
 #else
@@ -566,7 +555,7 @@ struct convert_t<double> {
         auto const parg = xmm::bwshift_left<42>(xmm::bwandnot(arg, msb));
 
         constexpr auto exp_mask = xmm::broadcast<uint64>(0x1full << 52);
-        auto const isfinite = simd<uint64>(_mm_cmpgt_epi64(+exp_mask, +parg));
+        auto const isfinite = vector<uint64>(_mm_cmpgt_epi64(+exp_mask, +parg));
 
         constexpr auto inf64 = xmm::broadcast<uint64>(
             __DPL bit_cast<uint64>(dx::infinity_v<double>));
@@ -580,18 +569,17 @@ struct convert_t<double> {
 #endif
     }
 
-    template <bfloat16_like E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<double>
-        DPL_VECTORCALL operator()(simd<E> src) noexcept {
+    static inline vector<double> DPL_VECTORCALL operator()(
+        vector<ext::bfloat16> src) noexcept {
         constexpr convert_t<float> to_float32;
         return operator()(to_float32(src));
     }
 
     template <integral E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<double>
-        DPL_VECTORCALL operator()(simd<E> src) noexcept {
+    static inline vector<double>
+        DPL_VECTORCALL operator()(vector<E> src) noexcept {
         if constexpr (sizeof(E) == sizeof(int64)) {
 #if DPL_SIMD_X86_AVX512DQ & DPL_SIMD_X86_AVX512VL
             return _mm_cvtepi64_pd(+src);
@@ -639,19 +627,19 @@ struct convert_t<double> {
     }
 };
 
-template <float16_like To>
-struct convert_t<To> {
+template <>
+struct convert_t<ext::float16> {
 private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To> DPL_VECTORCALL to_postive_inthalf(
-        simd<float> f32) noexcept {
+    static inline vector<ext::float16> DPL_VECTORCALL to_postive_inthalf(
+        vector<float> f32) noexcept {
         auto const bits = xmm::reinterpret<uint32>(f32);
         auto const mantissa = xmm::bwand(
             xmm::bwshift_right<13>(bits), xmm::broadcast<uint32>(0x3ff));
         auto const exp =
             _mm_subs_epu16(+xmm::bwshift_right<23>(bits), _mm_set1_epi32(112));
-        auto const bexp = simd<uint32>(_mm_slli_epi32(exp, 10));
-        return xmm::reinterpret<To>(
+        auto const bexp = vector<uint32>(_mm_slli_epi32(exp, 10));
+        return xmm::reinterpret<ext::float16>(
             xmm::select(mask<float>(_mm_cmpge_ps(+f32, _mm_set1_ps(0x1p16f))),
                 xmm::broadcast<uint32>(0x7c00), xmm::bwor(bexp, mantissa)));
     }
@@ -659,8 +647,8 @@ private:
 public:
     template <integral E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To>
-        DPL_VECTORCALL operator()(simd<E> src) noexcept {
+    static inline vector<ext::float16>
+        DPL_VECTORCALL operator()(vector<E> src) noexcept {
         constexpr convert_t<float> to_fp32;
         if constexpr (sizeof(E) == sizeof(int64)) {
 #if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
@@ -675,18 +663,18 @@ public:
                 auto const all = _mm_set1_epi64x(0xffff);
                 auto const isinf = mask<uint16>(_mm_packs_epi32(
                     _mm_packs_epi32(_mm_cmpgt_epi64(+src, all), zero), zero));
-                auto const trunc32 = simd<int32>(
+                auto const trunc32 = vector<int32>(
                     _mm_packus_epi32(_mm_and_si128(+src, all), zero));
-                auto const trunc = to_postive_inthalf<To>(to_fp32(trunc32));
+                auto const trunc = to_postive_inthalf(to_fp32(trunc32));
                 return xmm::select(
-                    isinf, xmm::broadcast<To>(dx::infinity), trunc);
+                    isinf, xmm::broadcast<ext::float16>(dx::infinity), trunc);
             } else {
                 auto const abs = xmm::reinterpret<uint64>(xmm::abs(src));
-                auto const vsign16 = simd<uint16>(_mm_and_si128(
+                auto const vsign16 = vector<uint16>(_mm_and_si128(
                     _mm_packs_epi32(_mm_packs_epi32(+src, zero), zero),
                     _mm_set1_epi16(0x8000)));
 
-                return xmm::reinterpret<To>(xmm::bit_fill(
+                return xmm::reinterpret<ext::float16>(xmm::bit_fill(
                     vsign16, operator()(xmm::reinterpret<uint64>(abs))));
             }
 #endif
@@ -703,16 +691,17 @@ public:
                 auto const all = _mm_set1_epi32(0xffff);
                 auto const isinf = mask<uint16>(
                     _mm_packs_epi32(_mm_cmpgt_epi32(+src, all), zero));
-                auto const clamped = simd<E>(_mm_and_si128(+src, all));
-                auto const trunc = to_postive_inthalf<To>(to_fp32(clamped));
+                auto const clamped = vector<E>(_mm_and_si128(+src, all));
+                auto const trunc = to_postive_inthalf(to_fp32(clamped));
                 return xmm::select(xmm::abi, isinf,
-                    xmm::broadcast<To>(xmm::abi, dx::infinity), trunc);
+                    xmm::broadcast<ext::float16>(xmm::abi, dx::infinity),
+                    trunc);
             } else {
                 auto const abs =
                     xmm::reinterpret<uint32>(xmm::abs(xmm::abi, src));
-                auto const vsign16 = simd<uint16>(_mm_and_si128(
+                auto const vsign16 = vector<uint16>(_mm_and_si128(
                     _mm_packs_epi32(+src, zero), _mm_set1_epi16(0x8000)));
-                return xmm::reinterpret<To>(xmm::abi,
+                return xmm::reinterpret<ext::float16>(xmm::abi,
                     xmm::bit_fill(xmm::abi,
                         vsign16,
                         operator()(xmm::reinterpret<uint32>(xmm::abi, abs))));
@@ -729,19 +718,20 @@ public:
             if constexpr (unsigned_integral<representation_t<E>>) {
                 auto const zero = _mm_setzero_si128();
                 auto const lo =
-                    to_fp32(simd<uint32>(_mm_unpacklo_epi16(+src, zero)));
+                    to_fp32(vector<uint32>(_mm_unpacklo_epi16(+src, zero)));
                 auto const hi =
-                    to_fp32(simd<uint32>(_mm_unpackhi_epi16(+src, zero)));
-                auto const lo16 = xmm::reinterpret<float>(
-                    xmm::abi, to_postive_inthalf<To>(lo));
-                auto const hi16 = xmm::reinterpret<float>(
-                    xmm::abi, to_postive_inthalf<To>(hi));
+                    to_fp32(vector<uint32>(_mm_unpackhi_epi16(+src, zero)));
+                auto const lo16 =
+                    xmm::reinterpret<float>(xmm::abi, to_postive_inthalf(lo));
+                auto const hi16 =
+                    xmm::reinterpret<float>(xmm::abi, to_postive_inthalf(hi));
                 using simdf = remove_const_t<decltype(lo)>;
-                return xmm::reinterpret<To>(xmm::abi,
+                return xmm::reinterpret<ext::float16>(xmm::abi,
                     simdf(_mm_shuffle_ps(lo16, hi16, _MM_SHUFFLE(1, 0, 1, 0))));
             } else {
-                auto const sign = xmm::reinterpret<To>(xmm::abi,
-                    simd<uint32>(_mm_and_si128(+src, _mm_set1_epi16(0x8000))));
+                auto const sign = xmm::reinterpret<ext::float16>(xmm::abi,
+                    vector<uint32>(
+                        _mm_and_si128(+src, _mm_set1_epi16(0x8000))));
                 auto const abs = operator()(xmm::reinterpret<uint16>(
                     xmm::abi, xmm::abs(xmm::abi, src)));
                 return xmm::bwor(xmm::abi, sign, abs);
@@ -764,8 +754,8 @@ public:
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To> DPL_VECTORCALL operator()(
-        simd<double> src) noexcept {
+    static inline vector<ext::float16> DPL_VECTORCALL operator()(
+        vector<double> src) noexcept {
 #if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
         return _mm_cvtpd_ph(+src);
 #else
@@ -783,20 +773,22 @@ public:
                 xmm::add(shifted, xmm::broadcast<uint64>(round_mask))));
         auto const limit = xmm::broadcast<double>(0x1p16);
         auto const isinf = mask<double>(_mm_cmpge_pd(+abs, +limit));
-        auto const isnan = xmm::bwand(simd<double>(_mm_cmpunord_pd(+src, +src)),
-            xmm::reinterpret<double>(xmm::broadcast<int64>(0x7fff)));
+        auto const isnan =
+            xmm::bwand(vector<double>(_mm_cmpunord_pd(+src, +src)),
+                xmm::reinterpret<double>(xmm::broadcast<int64>(0x7fff)));
 
-        constexpr auto infval =
-            static_cast<int64>(__DPL bit_cast<int16>(dx::infinity_v<To>));
-        auto const inf16 = xmm::reinterpret<To>(xmm::broadcast<int64>(infval));
+        constexpr auto infval = static_cast<int64>(
+            __DPL bit_cast<int16>(dx::infinity_v<ext::float16>));
+        auto const inf16 =
+            xmm::reinterpret<ext::float16>(xmm::broadcast<int64>(infval));
         auto const f16 = xmm::select(isinf, xmm::reinterpret<double>(inf16),
             xmm::reinterpret<double>(rounded));
         auto const result =
             xmm::bwor(sign16, xmm::reinterpret<uint64>(xmm::bwor(isnan, f16)));
         auto const zero = _mm_setzero_si128();
         // The cast here is just to ditribute the bits into place
-        return xmm::reinterpret<To>(xmm::abi,
-            simd<To>(_mm_packus_epi32(
+        return xmm::reinterpret<ext::float16>(xmm::abi,
+            vector<ext::float16>(_mm_packus_epi32(
                 _mm_shuffle_ps(_mm_castsi128_ps(+result),
                     _mm_castsi128_ps(zero), _MM_SHUFFLE(2, 0, 2, 0)),
                 zero)));
@@ -804,7 +796,8 @@ public:
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To> DPL_VECTORCALL operator()(simd<float> src) noexcept {
+    static inline vector<ext::float16> DPL_VECTORCALL operator()(
+        vector<float> src) noexcept {
 #if DPL_SIMD_X86_F16C
         return __DPL bit_cast<__m128h>(
             _mm_cvtps_ph(+src, _MM_FROUND_TO_NEAREST_INT));
@@ -825,33 +818,35 @@ public:
         auto const limit = xmm::broadcast<float>(0x1p16f);
         auto const isinf = mask<float>(_mm_cmpge_ps(+abs, +limit));
         auto const isnan =
-            xmm::bwandnot(simd<float>(_mm_cmpunord_ps(+src, +src)),
+            xmm::bwandnot(vector<float>(_mm_cmpunord_ps(+src, +src)),
                 xmm::reinterpret<float>(msb32));
 
-        constexpr auto infval =
-            static_cast<int32>(__DPL bit_cast<int16>(dx::infinity_v<To>));
-        auto const inf16 = xmm::reinterpret<To>(xmm::broadcast<int32>(infval));
+        constexpr auto infval = static_cast<int32>(
+            __DPL bit_cast<int16>(dx::infinity_v<ext::float16>));
+        auto const inf16 =
+            xmm::reinterpret<ext::float16>(xmm::broadcast<int32>(infval));
         auto const f16 = xmm::select(isinf, xmm::reinterpret<float>(inf16),
             xmm::reinterpret<float>(rounded));
         auto const result =
             xmm::bwor(sign16, xmm::reinterpret<uint32>(xmm::bwor(isnan, f16)));
-        return xmm::reinterpret<To>(
-            simd<uint32>(_mm_packus_epi32(+result, _mm_setzero_si128())));
+        return xmm::reinterpret<ext::float16>(
+            vector<uint32>(_mm_packus_epi32(+result, _mm_setzero_si128())));
 #endif
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To> DPL_VECTORCALL operator()(simd<To> src) noexcept {
+    static inline vector<ext::float16> DPL_VECTORCALL operator()(
+        vector<ext::float16> src) noexcept {
         return src;
     }
 
-    template <bfloat16_like E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To>
-        DPL_VECTORCALL operator()(simd<E> src) noexcept {
+    static inline vector<ext::float16> DPL_VECTORCALL operator()(
+        vector<ext::bfloat16> src) noexcept {
         constexpr convert_t<float> to_f32;
-        auto const hi = simd<E>(__DPL bit_cast<__m128bh>(_mm_unpackhi_epi64(
-            __DPL bit_cast<__m128i>(+src), _mm_setzero_si128())));
+        auto const hi =
+            vector<ext::bfloat16>(__DPL bit_cast<__m128bh>(_mm_unpackhi_epi64(
+                __DPL bit_cast<__m128i>(+src), _mm_setzero_si128())));
         auto const left = operator()(to_f32(src));
         auto const right = operator()(to_f32(hi));
         return __DPL bit_cast<__m128h>(
@@ -860,12 +855,12 @@ public:
     }
 };
 
-template <bfloat16_like To>
-struct convert_t<To> {
+template <>
+struct convert_t<ext::bfloat16> {
     template <integral E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To>
-        DPL_VECTORCALL operator()(simd<E> src) noexcept {
+    static inline vector<ext::bfloat16>
+        DPL_VECTORCALL operator()(vector<E> src) noexcept {
         constexpr convert_t<float> to_fp32;
         if constexpr (sizeof(E) == sizeof(int64)) {
             return operator()(to_fp32(src));
@@ -873,7 +868,7 @@ struct convert_t<To> {
             return operator()(to_fp32(src));
         } else if constexpr (sizeof(E) == sizeof(int16)) {
             auto const hi =
-                simd<E>(_mm_unpackhi_epi64(+src, _mm_setzero_si128()));
+                vector<E>(_mm_unpackhi_epi64(+src, _mm_setzero_si128()));
             auto const left = operator()(to_fp32(src));
             auto const right = operator()(to_fp32(hi));
             return __DPL bit_cast<__m128bh>(
@@ -887,16 +882,17 @@ struct convert_t<To> {
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To> DPL_VECTORCALL operator()(
-        simd<double> src) noexcept {
+    static inline vector<ext::bfloat16> DPL_VECTORCALL operator()(
+        vector<double> src) noexcept {
         constexpr convert_t<float> to_fp32;
         return operator()(to_fp32(src));
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To> DPL_VECTORCALL operator()(simd<float> src) noexcept {
+    static inline vector<ext::bfloat16> DPL_VECTORCALL operator()(
+        vector<float> src) noexcept {
 #if DPL_SIMD_X86_AVX512BF16 & DPL_SIMD_X86_AVX512VL
-        return _mm_cvtneps_pbh(+from);
+        return _mm_cvtneps_pbh(+src);
 #else
         // deal with nan & inf
         auto const fval = +src;
@@ -916,17 +912,18 @@ struct convert_t<To> {
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To> DPL_VECTORCALL operator()(simd<To> src) noexcept {
+    static inline vector<ext::bfloat16> DPL_VECTORCALL operator()(
+        vector<ext::bfloat16> src) noexcept {
         return src;
     }
 
-    template <float16_like E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static inline simd<To>
-        DPL_VECTORCALL operator()(simd<E> src) noexcept {
+    static inline vector<ext::bfloat16> DPL_VECTORCALL operator()(
+        vector<ext::float16> src) noexcept {
         constexpr convert_t<float> to_f32;
-        auto const hi = simd<E>(__DPL bit_cast<__m128h>(_mm_unpackhi_epi64(
-            __DPL bit_cast<__m128i>(+src), _mm_setzero_si128())));
+        auto const hi =
+            vector<ext::float16>(__DPL bit_cast<__m128h>(_mm_unpackhi_epi64(
+                __DPL bit_cast<__m128i>(+src), _mm_setzero_si128())));
         auto const left = operator()(to_f32(src));
         auto const right = operator()(to_f32(hi));
         return __DPL bit_cast<__m128bh>(
@@ -940,10 +937,9 @@ struct convert_t {};
 
 } // namespace details
 
-DPL_EXPORT template <simd_element_for<xmm::abi_tag> To,
-    simd_element_for<xmm::abi_tag> E>
+DPL_EXPORT template <simd_element To, simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-inline simd<To> element_cast(simd<E> src) noexcept
+inline vector<To> element_cast(vector<E> src) noexcept
 requires requires(xmm::details::convert_t<To> cvt) { cvt(src); }
 {
     constexpr xmm::details::convert_t<To> cvt;
@@ -953,11 +949,16 @@ requires requires(xmm::details::convert_t<To> cvt) { cvt(src); }
 DPL_EXPORT template <simd_element_for<xmm::abi_tag> To,
     simd_element_for<xmm::abi_tag> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-inline simd<To> element_cast(abi_tag, simd<E> src) noexcept
+inline vector<To> element_cast(abi_tag, vector<E> src) noexcept
 requires requires(xmm::details::convert_t<To> cvt) { cvt(src); }
 {
     constexpr xmm::details::convert_t<To> cvt;
     return cvt(src);
+}
+
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+inline vector<float> to_float(vector<ext::bfloat16> arg) noexcept {
+    return xmm::element_cast<float>(arg);
 }
 
 } // namespace datapar::xmm

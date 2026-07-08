@@ -1,7 +1,5 @@
 // Generated with Claude
-#include "dpl/config.h"
-
-#include <cassert>
+#include "../common.h"
 
 import dpl.xmm;
 
@@ -10,7 +8,7 @@ namespace xmm = dpl::datapar::xmm;
 namespace dpp = dpl::datapar;
 using abi_t = xmm::abi_tag;
 template <typename E>
-using vec_t = xmm::simd<E>;
+using vec_t = xmm::vector<E>;
 template <typename E>
 using abi_traits = dpp::simd_abi_traits<abi_t, E>;
 

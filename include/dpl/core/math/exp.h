@@ -3,6 +3,7 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/math/ext.h" // IWYU pragma: keep
 #include "dpl/core/math/fma.h"
 #include "dpl/core/math/internal/constants.h"
 #include "dpl/core/math/internal/ldexp.h"
@@ -167,9 +168,6 @@ struct fallback_impl<exp_t> {
 private:
     static constexpr auto rounding_opt =
         rounding::no_exc | rounding::to_nearest_int;
-    template <typename E>
-    static constexpr auto float16_like =
-        brain_float<E> || (digits_v<E> == 12 && sizeof(E) == 2);
 
 public:
     template <simd_abi A>
@@ -226,10 +224,9 @@ public:
 
     /*
     template <canonical_vector T>
-    requires float16_like<simd_element_type_t<T>> &&
-        convertible_to<float, simd_element_type_t<T>> &&
-        cpo_invocable<round_t, T, decltype(rounding_opt)>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    requires (same_as<ext::float16, simd_element_type_t<T>> ||
+    same_as<ext::bfloat16, simd_element_type_t<T>>) && cpo_invocable<round_t, T,
+    decltype(rounding_opt)> DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(T val) noexcept {
         using E = simd_element_type_t<T>;
         using sint = signed_representation_t<E>;
@@ -247,12 +244,11 @@ public:
             polynomial;
         auto u = dx::fmadd(dx::multiply(s, s), polynomial(s), s) + dx::one;
         u = fmath::ldexp(fmath::compliance::speed, u, q);
-        if constexpr (brain_float<E>) {
+        if constexpr (same_as<ext::bfloat16>) {
             u = dx::select(val > 100.0f, dx::infinity, u);
             // underflow
             return dx::select(val < -92.186785f, dx::zero, u);
         } else {
-            static_assert(digits_v<E> == 12 && sizeof(E) == 2);
             constexpr E max_ln = 11.089866f;
             constexpr E min_ln = -16.63553f;
             u = dx::select(val > max_ln, dx::infinity, u);

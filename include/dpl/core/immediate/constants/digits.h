@@ -4,15 +4,10 @@
 #include "dpl/config.h"
 
 #include "dpl/core/immediate/broadcastable_base.h"
-#include "dpl/core/immediate/constants/one.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/simd_element.h"
 #  include "dpl/core/type_traits/floating_point_traits.h"
-#  include "dpl/std/bit/bit_cast.h"
-#  include "dpl/std/bit/bit_type.h"
-#  include "dpl/std/bit/countr.h"
-#  include "dpl/std/concepts/floating_point.h"
 #  include "dpl/std/concepts/integral.h"
 #endif
 

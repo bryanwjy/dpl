@@ -3,6 +3,7 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/math/ext.h"
 #include "dpl/core/math/fixup.h"
 #include "dpl/core/math/fma.h"
 
@@ -163,7 +164,7 @@ private:
             return unsigned_representation_t<E>(0x7FDE6238DA3C2118);
         } else if constexpr (same_as<E, float>) {
             return unsigned_representation_t<E>(0x7EF311C3);
-        } else if constexpr (brain_float<E>) {
+        } else if constexpr (same_as<E, ext::bfloat16>) {
             return unsigned_representation_t<E>(0x7EF3);
         } else {
             static_assert(sizeof(E) == 2);

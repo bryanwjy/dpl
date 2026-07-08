@@ -7,6 +7,7 @@
 #  include "dpl/std/bit/bit_cast.h"
 #  include "dpl/std/bit/char_bit.h"
 #  include "dpl/std/bit/countr.h"
+#  include "dpl/std/concepts/derived_from.h"
 #  include "dpl/std/concepts/floating_point.h"
 #  include "dpl/std/utility/bitset.h"
 #endif

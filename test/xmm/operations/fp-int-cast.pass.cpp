@@ -4,9 +4,7 @@
 // @dpl[clang].compile-flags: -fconstexpr-steps=2000000
 // @dpl[msvc].compile-flags: /constexpr:steps2000000
 
-#include "dpl/config.h"
-
-#include <cassert>
+#include "../common.h"
 
 import dpl.xmm;
 
@@ -40,7 +38,7 @@ array(Args...)
     -> array<dpl::decay_t<dpl::common_type_t<Args...>>, sizeof...(Args)>;
 
 template <dpl::floating_point_like T>
-constexpr bool bit_equality(xmm::simd<T> lhs, xmm::simd<T> rhs) noexcept {
+constexpr bool bit_equality(xmm::vector<T> lhs, xmm::vector<T> rhs) noexcept {
     return dpp::all_of(
         dpp::reinterpret<dpl::int32>(lhs) == dpp::reinterpret<dpl::int32>(rhs));
 }

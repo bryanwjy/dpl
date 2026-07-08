@@ -26,9 +26,9 @@ namespace datapar::xmm {
 
 template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<E>
-    DPL_VECTORCALL bwnot(simd<E> val) noexcept {
-    auto const all = simd<int>(_mm_set1_epi32(-1));
+inline vector<E>
+    DPL_VECTORCALL bwnot(vector<E> val) noexcept {
+    auto const all = vector<int>(_mm_set1_epi32(-1));
     return xmm::bwxor(val, xmm::reinterpret<E>(all));
 }
 
@@ -36,12 +36,12 @@ template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline mask<E>
     DPL_VECTORCALL bwnot(mask<E> val) noexcept {
-    return +xmm::bwnot(simd<E>(+val));
+    return +xmm::bwnot(vector<E>(+val));
 }
 
 template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-inline auto bwnot(abi_tag, simd<E> val) noexcept
+inline auto bwnot(abi_tag, vector<E> val) noexcept
 requires requires { xmm::bwnot(val); }
 {
     return xmm::bwnot(val);

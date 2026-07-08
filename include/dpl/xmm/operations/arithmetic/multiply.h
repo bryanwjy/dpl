@@ -10,13 +10,10 @@
 #  error "Unsupported platform"
 #endif
 
-#include "dpl/xmm/operations/arithmetic/fwd.h"
-
+#include "dpl/xmm/operations/arithmetic/cast.h"
 #include "dpl/xmm/operations/reinterpret.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/fwd.h"
-
 #  include "dpl/std/type_traits/type_identity.h"
 #  include "dpl/std/utility/template_barrier.h"
 #  include "dpl/xmm/basic/abi.h"
@@ -31,8 +28,8 @@ namespace datapar::xmm {
 DPL_EXPORT template <template_barrier_t = template_barrier, simd_element E>
 requires integral<E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<E>
-    DPL_VECTORCALL multiply(simd<E> lhs, simd<E> rhs) noexcept {
+inline vector<E>
+    DPL_VECTORCALL multiply(vector<E> lhs, vector<E> rhs) noexcept {
     if constexpr (sizeof(E) == sizeof(int64)) {
 #if DPL_SIMD_X86_AVX512DQ & DPL_SIMD_X86_AVX512VL
         return _mm_mullo_epi64(+lhs, +rhs);
@@ -86,14 +83,14 @@ inline simd<E>
 }
 
 DPL_EXPORT DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<float>
-    DPL_VECTORCALL multiply(simd<float> lhs, simd<float> rhs) noexcept {
+inline vector<float>
+    DPL_VECTORCALL multiply(vector<float> lhs, vector<float> rhs) noexcept {
     return _mm_mul_ps(+lhs, +rhs);
 }
 
 DPL_EXPORT DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<double>
-    DPL_VECTORCALL multiply(simd<double> lhs, simd<double> rhs) noexcept {
+inline vector<double>
+    DPL_VECTORCALL multiply(vector<double> lhs, vector<double> rhs) noexcept {
     return _mm_mul_pd(+lhs, +rhs);
 }
 
@@ -103,50 +100,50 @@ inline simd<double>
 DPL_EXPORT template <imask_t<int32> M, integral E>
 requires common_size_with<E, int32>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<E>
-    DPL_VECTORCALL multiply(type_identity_t<simd<E>> src, cmask_t<E, M>,
-        simd<E> lhs, simd<E> rhs) noexcept {
+inline vector<E>
+    DPL_VECTORCALL multiply(type_identity_t<vector<E>> src, cmask_t<E, M>,
+        vector<E> lhs, vector<E> rhs) noexcept {
     return _mm_mask_mullo_epi32(+src, M, +lhs, +rhs);
 }
 
 DPL_EXPORT template <imask_t<int32> M, integral E>
 requires common_size_with<E, int32>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<E>
+inline vector<E>
     DPL_VECTORCALL multiply(
-        dx::zero_t, cmask_t<E, M>, simd<E> lhs, simd<E> rhs) noexcept {
+        dx::zero_t, cmask_t<E, M>, vector<E> lhs, vector<E> rhs) noexcept {
     return _mm_maskz_mullo_epi32(M, +lhs, +rhs);
 }
 
 DPL_EXPORT template <imask_t<float> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<float>
-    DPL_VECTORCALL multiply(simd<float> src, cmask_t<float, M>, simd<float> lhs,
-        simd<float> rhs) noexcept {
+inline vector<float>
+    DPL_VECTORCALL multiply(vector<float> src, cmask_t<float, M>,
+        vector<float> lhs, vector<float> rhs) noexcept {
     return _mm_mask_mul_ps(+src, M, +lhs, +rhs);
 }
 
 DPL_EXPORT template <imask_t<double> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<double>
-    DPL_VECTORCALL multiply(simd<double> src, cmask_t<double, M>,
-        simd<double> lhs, simd<double> rhs) noexcept {
+inline vector<double>
+    DPL_VECTORCALL multiply(vector<double> src, cmask_t<double, M>,
+        vector<double> lhs, vector<double> rhs) noexcept {
     return _mm_mask_mul_pd(+src, M, +lhs, +rhs);
 }
 
 DPL_EXPORT template <imask_t<float> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<float>
-    DPL_VECTORCALL multiply(dx::zero_t, cmask_t<float, M>, simd<float> lhs,
-        simd<float> rhs) noexcept {
+inline vector<float>
+    DPL_VECTORCALL multiply(dx::zero_t, cmask_t<float, M>, vector<float> lhs,
+        vector<float> rhs) noexcept {
     return _mm_maskz_mul_ps(M, +lhs, +rhs);
 }
 
 DPL_EXPORT template <imask_t<double> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<double>
-    DPL_VECTORCALL multiply(dx::zero_t, cmask_t<double, M>, simd<double> lhs,
-        simd<double> rhs) noexcept {
+inline vector<double>
+    DPL_VECTORCALL multiply(dx::zero_t, cmask_t<double, M>, vector<double> lhs,
+        vector<double> rhs) noexcept {
     return _mm_maskz_mul_pd(M, +lhs, +rhs);
 }
 
@@ -157,18 +154,18 @@ inline simd<double>
 DPL_EXPORT template <imask_t<int64> M, integral E>
 requires common_size_with<E, int64>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<E>
-    DPL_VECTORCALL multiply(type_identity_t<simd<E>> src, cmask_t<E, M>,
-        simd<E> lhs, simd<E> rhs) noexcept {
+inline vector<E>
+    DPL_VECTORCALL multiply(type_identity_t<vector<E>> src, cmask_t<E, M>,
+        vector<E> lhs, vector<E> rhs) noexcept {
     return _mm_mask_mullo_epi64(+src, M, +lhs, +rhs);
 }
 
 DPL_EXPORT template <imask_t<int64> M, integral E>
 requires common_size_with<E, int64>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<E>
+inline vector<E>
     DPL_VECTORCALL multiply(
-        dx::zero_t, cmask_t<E, M>, simd<E> lhs, simd<E> rhs) noexcept {
+        dx::zero_t, cmask_t<E, M>, vector<E> lhs, vector<E> rhs) noexcept {
     return _mm_maskz_mullo_epi64(M, +lhs, +rhs);
 }
 #  endif
@@ -178,83 +175,74 @@ inline simd<E>
 DPL_EXPORT template <imask_t<int16> M, integral E>
 requires common_size_with<E, int16>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<E>
-    DPL_VECTORCALL multiply(type_identity_t<simd<E>> src, cmask_t<E, M>,
-        simd<E> lhs, simd<E> rhs) noexcept {
+inline vector<E>
+    DPL_VECTORCALL multiply(type_identity_t<vector<E>> src, cmask_t<E, M>,
+        vector<E> lhs, vector<E> rhs) noexcept {
     return _mm_mask_mullo_epi16(+src, M, +lhs, +rhs);
 }
 
 DPL_EXPORT template <imask_t<int16> M, integral E>
 requires common_size_with<E, int16>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<E>
+inline vector<E>
     DPL_VECTORCALL multiply(
-        dx::zero_t, cmask_t<E, M>, simd<E> lhs, simd<E> rhs) noexcept {
+        dx::zero_t, cmask_t<E, M>, vector<E> lhs, vector<E> rhs) noexcept {
     return _mm_maskz_mullo_epi16(M, +lhs, +rhs);
 }
 #  endif
 
 #  if DPL_SIMD_X86_AVX512FP16
 
-DPL_EXPORT template <simd_element E>
-requires float16_like<representation_t<E>>
-DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<E>
-    DPL_VECTORCALL multiply(simd<E> lhs, simd<E> rhs) noexcept {
+inline vector<ext::float16> DPL_VECTORCALL multiply(
+    vector<ext::float16> lhs, vector<ext::float16> rhs) noexcept {
     return _mm_mul_ph(+lhs, +rhs);
 }
 
-DPL_EXPORT template <imask_t<int16> M, simd_element E>
-requires float16_like<E>
+DPL_EXPORT template <imask_t<ext::float16> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<E>
-    DPL_VECTORCALL multiply(type_identity_t<simd<E>> src, cmask_t<E, M>,
-        simd<E> lhs, simd<E> rhs) noexcept {
+inline vector<ext::float16>
+    DPL_VECTORCALL multiply(vector<ext::float16> src, cmask_t<ext::float16, M>,
+        vector<ext::float16> lhs, vector<ext::float16> rhs) noexcept {
     return _mm_mask_mul_ph(src, M, +lhs, +rhs);
 }
 
-DPL_EXPORT template <imask_t<int16> M, simd_element E>
-requires float16_like<E>
+DPL_EXPORT template <imask_t<ext::float16> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<E>
-    DPL_VECTORCALL multiply(
-        dx::zero_t zero, cmask_t<E, M>, simd<E> lhs, simd<E> rhs) noexcept {
+inline vector<ext::float16>
+    DPL_VECTORCALL multiply(dx::zero_t zero, cmask_t<ext::float16, M>,
+        vector<ext::float16> lhs, vector<ext::float16> rhs) noexcept {
     return _mm_maskz_mul_ph(M, +lhs, +rhs);
 }
 
 #  endif
 #endif
 
-DPL_EXPORT template <simd_element E>
-requires bfloat16_like<E>
+DPL_EXPORT template <same_as<ext::bfloat16> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<E>
-    DPL_VECTORCALL multiply(simd<E> lhs, simd<E> rhs) noexcept {
-
-    auto const hlhs = simd<E>(__DPL bit_cast<__m128bh>(
+inline vector<ext::bfloat16>
+    DPL_VECTORCALL multiply(vector<E> lhs, vector<E> rhs) noexcept {
+    auto const hlhs = vector<ext::bfloat16>(__DPL bit_cast<__m128bh>(
         _mm_srli_si128(__DPL bit_cast<__m128i>(+lhs), 8)));
-    auto const hrhs = simd<E>(__DPL bit_cast<__m128bh>(
+    auto const hrhs = vector<ext::bfloat16>(__DPL bit_cast<__m128bh>(
         _mm_srli_si128(__DPL bit_cast<__m128i>(+rhs), 8)));
-    auto const lo = xmm::multiply(
-        xmm::element_cast<float>(lhs), xmm::element_cast<float>(rhs));
-    auto const hi = xmm::multiply(
-        xmm::element_cast<float>(hlhs), xmm::element_cast<float>(hrhs));
+    auto const lo = xmm::multiply(xmm::to_float(lhs), xmm::to_float(rhs));
+    auto const hi = xmm::multiply(xmm::to_float(hlhs), xmm::to_float(hrhs));
 
 #if DPL_SIMD_X86_AVX512BF16 & DPL_SIMD_X86_AVX512VL
-    return _mm_cvtne2ps_pbh(hi, lo);
+    return _mm_cvtne2ps_pbh(+hi, +lo);
 #else
-    using sbit = signed_representation_t<E>;
     auto const packed =
-        _mm_packus_epi32(__DPL bit_cast<__m128i>(+xmm::element_cast<E>(lo)),
-            __DPL bit_cast<__m128i>(+xmm::element_cast<E>(hi)));
+        _mm_packus_epi32( __DPL bit_cast<__m128i>(+element_cast<E>(lo)),
+            __DPL bit_cast<__m128i>(+element_cast<E>(hi)));
 
-    return xmm::reinterpret<E>(simd<sbit>(packed));
+    return xmm::reinterpret<ext::bfloat16>(vector<int16>(packed));
 #endif
 }
 
 DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-inline auto DPL_VECTORCALL multiply(abi_tag, simd<E> lhs, simd<E> rhs) noexcept
+inline auto DPL_VECTORCALL multiply(
+    abi_tag, vector<E> lhs, vector<E> rhs) noexcept
 requires requires { xmm::multiply(lhs, rhs); }
 {
     return xmm::multiply(lhs, rhs);
@@ -262,9 +250,9 @@ requires requires { xmm::multiply(lhs, rhs); }
 
 DPL_EXPORT template <simd_element E, imask_t<E> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-inline simd<E>
-    DPL_VECTORCALL multiply(abi_tag, type_identity_t<simd<E>> src,
-        cmask_t<E, M> mask, simd<E> lhs, simd<E> rhs) noexcept
+inline vector<E>
+    DPL_VECTORCALL multiply(abi_tag, type_identity_t<vector<E>> src,
+        cmask_t<E, M> mask, vector<E> lhs, vector<E> rhs) noexcept
 requires requires { xmm::multiply(src, mask, lhs, rhs); }
 {
     return xmm::multiply(src, mask, lhs, rhs);
@@ -272,9 +260,9 @@ requires requires { xmm::multiply(src, mask, lhs, rhs); }
 
 DPL_EXPORT template <simd_element E, imask_t<E> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-inline simd<E>
+inline vector<E>
     DPL_VECTORCALL multiply(abi_tag, dx::zero_t zero, cmask_t<E, M> mask,
-        simd<E> lhs, simd<E> rhs) noexcept
+        vector<E> lhs, vector<E> rhs) noexcept
 requires requires { xmm::multiply(zero, mask, lhs, rhs); }
 {
     return xmm::multiply(zero, mask, lhs, rhs);

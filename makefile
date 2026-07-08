@@ -12,6 +12,8 @@ MODULES_DIR := $(ROOT_DIR)/modules
 OUTPUT_DIR := $(ROOT_DIR)/build
 
 CXX := clang++-21
+SCAN_DEPS := clang-scan-deps-21
+
 # Hard-code for now
 CXX_FAMILY := clang
 
@@ -19,6 +21,8 @@ ifeq ($(filter -std=%,$(CXXFLAGS)),)
 CXXFLAGS += -std=c++23
 endif
 
+# When on clang >= 22; until someone fixed immintrin.h and issues with implicit function template instantiations
+# add -Wno-TU-local-entity-exposure -Wno-reference-tu-local-entity-in-other-tu to reduce noise
 CXXFLAGS += -mfma -mavx2 -fvisibility=hidden -fvisibility-inlines-hidden
 CPPFLAGS += -I$(INCLUDE_DIR)
 
@@ -144,7 +148,7 @@ $(OUTPUT_DIR)/scan_commands.json: $(JSCAN_TARGETS)
 	@jq -s '.' $^ > $@
 
 $(OUTPUT_DIR)/module_dependencies.json: $(OUTPUT_DIR)/scan_commands.json $(ALL_SOURCES)
-	@clang-scan-deps-21 -format=p1689 -compilation-database=$< -o $@
+	@$(SCAN_DEPS) -format=p1689 -compilation-database=$< -o $@
 
 $(OUTPUT_DIR)/module_implementations.txt: FORCE
 	@mkdir -p '$(@D)'

@@ -10,54 +10,60 @@
 #include "dpl/core/dispatch/operation/primitive.h"
 #include "dpl/core/dispatch/private/concepts.h"
 
+#if !DPL_MODULES
+#  include "dpl/std/type_traits/remove_cvref.h"
+#endif
+
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
 DPL_EXPORT template <auto D>
-concept simd_operation =
-    internal::inherits_from<decltype(D), internal::operation_base<decltype(D)>>;
+concept simd_operation = internal::inherits_from<remove_cvref_t<decltype(D)>,
+    internal::operation_base<remove_cvref_t<decltype(D)>>>;
 
 DPL_EXPORT template <auto D>
 concept simd_basic_operation = simd_operation<D> &&
-    internal::inherits_from<decltype(D),
-        internal::basic_operation_base<decltype(D)>>;
+    internal::inherits_from<remove_cvref_t<decltype(D)>,
+        internal::basic_operation_base<remove_cvref_t<decltype(D)>>>;
 
 DPL_EXPORT template <auto D>
 concept simd_primitive_operation = simd_operation<D> &&
-    internal::inherits_from<decltype(D),
-        internal::primitive_operation_base<decltype(D)>>;
+    internal::inherits_from<remove_cvref_t<decltype(D)>,
+        internal::primitive_operation_base<remove_cvref_t<decltype(D)>>>;
 
 DPL_EXPORT template <auto D>
 concept simd_algorithm_operation = simd_operation<D> &&
-    internal::inherits_from<decltype(D), internal::algorithm_base<decltype(D)>>;
+    internal::inherits_from<remove_cvref_t<decltype(D)>,
+        internal::algorithm_base<remove_cvref_t<decltype(D)>>>;
 
 DPL_EXPORT template <auto D>
 concept simd_math_operation = simd_operation<D> &&
-    internal::inherits_from<decltype(D),
-        internal::math_operation_base<decltype(D)>>;
+    internal::inherits_from<remove_cvref_t<decltype(D)>,
+        internal::math_operation_base<remove_cvref_t<decltype(D)>>>;
 
 DPL_EXPORT template <auto D>
 concept maskable_simd_operation = simd_operation<D> &&
-    internal::inherits_from<decltype(D),
-        internal::maskable_operation_base<decltype(D)>>;
+    internal::inherits_from<remove_cvref_t<decltype(D)>,
+        internal::maskable_operation_base<remove_cvref_t<decltype(D)>>>;
 
 DPL_EXPORT template <auto L, auto R>
 concept same_operation_as =
     simd_operation<L> && simd_operation<R> && same_as<decltype(L), decltype(R)>;
 
 DPL_EXPORT template <auto D, typename... Ts>
-concept simd_invocable =
-    simd_operation<D> && internal::cpo_invocable<decltype(D), Ts...>;
+concept simd_invocable = simd_operation<D> &&
+    internal::cpo_invocable<remove_cvref_t<decltype(D)>, Ts...>;
 
 DPL_EXPORT template <auto D, typename... Ts>
 concept simd_extension_invocable =
     (extended_simd_type<Ts> || ...) && simd_invocable<D, Ts...> &&
-    internal::extended_cpo_invocable<decltype(D), Ts...>;
+    internal::extended_cpo_invocable<remove_cvref_t<decltype(D)>, Ts...>;
 
 DPL_EXPORT template <auto D, typename... Ts>
 concept simd_canonical_invocable =
     ((!extended_simd_type<Ts>) && ...) && simd_invocable<D, Ts...> &&
-    internal::cpo_invocable<internal::canonical_impl<decltype(D)>, Ts...>;
+    internal::cpo_invocable<
+        internal::canonical_impl<remove_cvref_t<decltype(D)>>, Ts...>;
 
 } // namespace datapar
 DPL_DEFAULT_NAMESPACE_END

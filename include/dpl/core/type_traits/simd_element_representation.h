@@ -4,10 +4,10 @@
 #include "dpl/config.h"
 
 #include "dpl/core/type_traits/enable_simd_abi.h"
+#include "dpl/core/type_traits/floating_point_traits.h"
 
 #if !DPL_MODULES
 #  include "dpl/std/concepts/different_from.h"
-#  include "dpl/std/concepts/floating_point.h"
 #  include "dpl/std/concepts/integral.h"
 #endif
 
@@ -27,7 +27,7 @@ struct simd_element_representation<A, E> {
     using type = E;
 };
 
-DPL_EXPORT template <typename A, floating_point E>
+DPL_EXPORT template <typename A, floating_point_like E>
 requires enable_simd_abi<A>
 struct simd_element_representation<A, E> {
     using type = E;

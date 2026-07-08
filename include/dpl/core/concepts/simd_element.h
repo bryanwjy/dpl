@@ -6,6 +6,7 @@
 #include "dpl/core/concepts/simd_abi.h"
 
 #if !DPL_MODULES
+#  include "dpl/core/type_traits/floating_point_traits.h"
 #  include "dpl/core/type_traits/simd_element_representation.h"
 #endif
 
@@ -14,7 +15,8 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
 template <typename E>
-concept basic_element = !same_as<E, bool> && (integral<E> || floating_point<E>);
+concept basic_element =
+    !same_as<E, bool> && (integral<E> || floating_point_like<E>);
 
 DPL_EXPORT template <typename E, typename A>
 concept simd_element_for = simd_abi<A> && requires {

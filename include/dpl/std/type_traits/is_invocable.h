@@ -11,6 +11,7 @@
 #if !__DPL_SHOULD_USE_BUILTIN(builtin_invoke)
 #  include "dpl/std/type_traits/add_const.h"
 #  include "dpl/std/type_traits/is_base_of.h"
+#  include "dpl/std/type_traits/is_convertible.h"
 #  include "dpl/std/type_traits/is_function.h"
 #  include "dpl/std/type_traits/is_same.h"
 #  include "dpl/std/type_traits/remove_const.h"
@@ -171,7 +172,7 @@ inline constexpr bool is_invocable_r_v<R, F, Args...> =
 DPL_EXPORT template <typename R, typename F, typename... Args>
 requires is_invocable_v<F, Args...>
 inline constexpr bool is_invocable_r_v<R, F, Args...> =
-    requires { [](invoke_result_t<F, Args...> arg) -> R { return arg; }; };
+    is_core_convertible_v<invoke_result_t<F, Args...>, R>;
 
 DPL_EXPORT template <typename R, typename F, typename... Args>
 inline constexpr bool is_nothrow_invocable_r_v = false;

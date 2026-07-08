@@ -5,7 +5,6 @@ module;
 #include "dpl/config.h"
 
 #include <immintrin.h>
-
 export module dpl.xmm:operations;
 export import dpl;
 import :basic;

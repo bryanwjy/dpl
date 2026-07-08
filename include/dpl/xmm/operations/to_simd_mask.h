@@ -27,9 +27,9 @@ namespace datapar::xmm {
 DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr mask<E>
-    DPL_VECTORCALL to_simd_mask(abi_tag tag, simd<E> src) noexcept {
+    DPL_VECTORCALL to_simd_mask(abi_tag tag, vector<E> src) noexcept {
     if consteval {
-        []<size_t... Is>(abi_tag tag, simd<E> src, index_sequence<Is...>) {
+        []<size_t... Is>(abi_tag tag, vector<E> src, index_sequence<Is...>) {
             using bit = signed_representation_t<E>;
             constexpr auto width = abi_tag::size / sizeof(E);
             using bitset_t = bitset<width>;
@@ -38,32 +38,32 @@ constexpr mask<E>
             return xmm::initialize<E>(tag, bits);
         }(tag, src, iota<E>);
     } else {
-        auto const result = [](abi_tag tag, simd<E> src) {
-            if constexpr (same_as<representation_t<E>, float>) {
+        auto const result = [](abi_tag tag, vector<E> src) {
+            if constexpr (is_same_v<E, float>) {
                 return _mm_cmpneq_ps(+src, _mm_setzero_ps());
-            } else if constexpr (same_as<representation_t<E>, double>) {
+            } else if constexpr (is_same_v<E, double>) {
                 return _mm_cmpneq_pd(+src, _mm_setzero_pd());
-            } else if constexpr (float16_like<representation_t<E>> ||
-                bfloat16_like<representation_t<E>>) {
+            } else if constexpr (is_same_v<E, ext::float16> ||
+                is_same_v<E, ext::bfloat16>) {
                 auto const vsrc = __DPL bit_cast<__m128i>(+src);
                 auto const abs = _mm_and_si128(vsrc, _mm_set1_epi16(0x7fff));
                 using sbit = signed_representation_t<E>;
                 auto const mask = _mm_xor_si128(
                     _mm_cmpeq_epi16(zero, +src), _mm_set1_epi16(-1));
-                return +xmm::reinterpret<E>(tag, simd<sbit>(mask));
+                return +xmm::reinterpret<E>(tag, vector<sbit>(mask));
             } else {
                 auto const all = [](__m128i val) {
                     return _mm_cmpeq_epi32(val, val);
                 }(_mm_undefined_si128());
                 auto const zero = _mm_xor_si128(all, all);
-                if constexpr (common_size_with<E, int64>) {
+                if constexpr (sizeof(E) == sizeof(int64)) {
                     return _mm_xor_si128(_mm_cmpeq_epi64(zero, +src), all);
-                } else if constexpr (common_size_with<E, int32>) {
+                } else if constexpr (sizeof(E) == sizeof(int32)) {
                     return _mm_xor_si128(_mm_cmpeq_epi32(zero, +src), all);
-                } else if constexpr (common_size_with<E, int16>) {
+                } else if constexpr (sizeof(E) == sizeof(int16)) {
                     return _mm_xor_si128(_mm_cmpeq_epi16(zero, +src), all);
                 } else {
-                    static_assert(common_size_with<E, int8>);
+                    static_assert(sizeof(E) == sizeof(int8));
                     return _mm_xor_si128(_mm_cmpeq_epi8(zero, +src), all);
                 }
             }
@@ -76,14 +76,14 @@ DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr mask<E>
     DPL_VECTORCALL to_simd_mask(
-        abi_tag tag, assume_normalized_mask_t, simd<E> src) noexcept {
+        abi_tag tag, assume_normalized_mask_t, vector<E> src) noexcept {
     return +src;
 }
 
 DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr mask<E>
-    DPL_VECTORCALL to_simd_mask(simd<E> src) noexcept {
+    DPL_VECTORCALL to_simd_mask(vector<E> src) noexcept {
     return xmm::to_simd_mask(xmm::abi, src);
 }
 
@@ -91,7 +91,7 @@ DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr mask<E>
     DPL_VECTORCALL to_simd_mask(
-        assume_normalized_mask_t tag, simd<E> src) noexcept {
+        assume_normalized_mask_t tag, vector<E> src) noexcept {
     return xmm::to_simd_mask(xmm::abi, tag, src);
 }
 

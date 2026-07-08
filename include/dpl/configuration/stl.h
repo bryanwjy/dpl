@@ -9,7 +9,7 @@
 #  define DPL_DISABLE_HOST_STL_SUPPORT 0
 #endif
 
-#if DPL_DISABLE_HOST_STL_SUPPORT
+#if !DPL_DISABLE_HOST_STL_SUPPORT
 #  if __has_include(<bits/c++config>) // libstdc++
 #    include <bits/c++config>         // IWYU pragma: keep
 // BREAK

@@ -28,8 +28,8 @@ namespace datapar::xmm {
 
 template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<E>
-    DPL_VECTORCALL bwandnot(simd<E> lhs, simd<E> rhs) noexcept {
+inline vector<E>
+    DPL_VECTORCALL bwandnot(vector<E> lhs, vector<E> rhs) noexcept {
     if constexpr (is_same_v<__m128i, native_vector_t<E>>) {
         return _mm_andnot_si128(+rhs, +lhs);
     } else if constexpr (is_same_v<__m128, native_vector_t<E>>) {
@@ -40,7 +40,7 @@ inline simd<E>
         using rep = unsigned_representation_t<E>;
         auto const result = _mm_andnot_si128(
             +xmm::reinterpret<rep>(rhs), +xmm::reinterpret<rep>(lhs));
-        return xmm::reinterpret<E>(simd<rep>(result));
+        return xmm::reinterpret<E>(vector<rep>(result));
     }
 }
 
@@ -48,12 +48,12 @@ template <simd_element L, simd_element R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline mask<common_size_type_t<L, R>>
     DPL_VECTORCALL bwandnot(mask<L> lhs, mask<R> rhs) noexcept {
-    return +xmm::bwandnot(simd<L>(+lhs), simd<R>(+rhs));
+    return +xmm::bwandnot(vector<L>(+lhs), vector<R>(+rhs));
 }
 
 template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-inline simd<E> bwandnot(abi_tag, simd<E> lhs, simd<E> rhs) noexcept
+inline vector<E> bwandnot(abi_tag, vector<E> lhs, vector<E> rhs) noexcept
 requires requires { xmm::bwandnot(lhs, rhs); }
 {
     return xmm::bwandnot(lhs, rhs);

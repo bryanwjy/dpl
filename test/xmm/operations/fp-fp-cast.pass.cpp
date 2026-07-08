@@ -1,7 +1,5 @@
 // Copyright 2025-2026 Bryan Wong
-#include "dpl/config.h"
-
-#include <cassert>
+#include "../common.h"
 
 import dpl.xmm;
 

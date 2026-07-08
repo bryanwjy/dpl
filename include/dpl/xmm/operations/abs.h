@@ -27,16 +27,16 @@ namespace datapar::xmm {
 DPL_EXPORT template <simd_element E>
 requires unsigned_integral<E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<E>
-    DPL_VECTORCALL abs(simd<E> val) noexcept {
+inline vector<E>
+    DPL_VECTORCALL abs(vector<E> val) noexcept {
     return val;
 }
 
 DPL_EXPORT template <simd_element E>
 requires signed_integral<E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<E>
-    DPL_VECTORCALL abs(simd<E> val) noexcept {
+inline vector<E>
+    DPL_VECTORCALL abs(vector<E> val) noexcept {
     if constexpr (sizeof(E) == sizeof(int64)) {
 #if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
         return _mm_abs_epi64(+val);
@@ -57,8 +57,8 @@ inline simd<E>
 }
 
 DPL_EXPORT DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-constexpr simd<float>
-    DPL_VECTORCALL abs(simd<float> val) noexcept {
+constexpr vector<float>
+    DPL_VECTORCALL abs(vector<float> val) noexcept {
     if consteval {
         alignas(16) uint32 data[4]{};
         xmm::store(xmm::reinterpret<uint32>(val), data);
@@ -73,8 +73,8 @@ constexpr simd<float>
 }
 
 DPL_EXPORT DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-constexpr simd<double>
-    DPL_VECTORCALL abs(simd<double> val) noexcept {
+constexpr vector<double>
+    DPL_VECTORCALL abs(vector<double> val) noexcept {
     if consteval {
         alignas(16) uint64 data[2]{};
         xmm::store(xmm::reinterpret<uint64>(val), data);
@@ -88,11 +88,9 @@ constexpr simd<double>
     }
 }
 
-DPL_EXPORT template <simd_element E>
-requires bfloat16_like<E> || float16_like<E>
-DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-constexpr simd<E>
-    DPL_VECTORCALL abs(simd<E> val) noexcept {
+DPL_EXPORT DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+constexpr vector<ext::float16>
+    DPL_VECTORCALL abs(vector<ext::float16> val) noexcept {
     if consteval {
         alignas(16) uint16 data[8]{};
         xmm::store(xmm::reinterpret<uint16>(val), data);
@@ -100,28 +98,40 @@ constexpr simd<E>
             constexpr auto mask = ~static_cast<uint16>(0x8000u);
             lane &= mask;
         }
-        return xmm::reinterpret<E>(xmm::load<uint16>(data));
+        return xmm::reinterpret<ext::float16>(xmm::load<uint16>(data));
     } else {
-        if constexpr (bfloat16_like<E>) {
-            auto const vval = +xmm::reinterpret<int16>(val);
-            return __DPL bit_cast<native_vector_t<E>>(
-                _mm_andnot_si128(_mm_set1_epi16(0x8000), vval));
-        } else {
 #if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
-            return _mm_abs_ph(+val);
+        return _mm_abs_ph(+val);
 #else
-            auto const vval = +xmm::reinterpret<int16>(val);
-            return __DPL bit_cast<native_vector_t<E>>(
-                _mm_andnot_si128(_mm_set1_epi16(0x8000), vval));
+        auto const vval = +xmm::reinterpret<int16>(val);
+        return __DPL bit_cast<__m128h>(
+            _mm_andnot_si128(_mm_set1_epi16(0x8000), vval));
 #endif
+    }
+}
+
+DPL_EXPORT DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+constexpr vector<ext::bfloat16>
+    DPL_VECTORCALL abs(vector<ext::bfloat16> val) noexcept {
+    if consteval {
+        alignas(16) uint16 data[8]{};
+        xmm::store(xmm::reinterpret<uint16>(val), data);
+        for (auto& lane : data) {
+            constexpr auto mask = ~static_cast<uint16>(0x8000u);
+            lane &= mask;
         }
+        return xmm::reinterpret<ext::bfloat16>(xmm::load<uint16>(data));
+    } else {
+        auto const vval = +xmm::reinterpret<int16>(val);
+        return __DPL bit_cast<__m128bh>(
+            _mm_andnot_si128(_mm_set1_epi16(0x8000), vval));
     }
 }
 
 DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-constexpr simd<E>
-    DPL_VECTORCALL abs(abi_tag, simd<E> val) noexcept
+constexpr vector<E>
+    DPL_VECTORCALL abs(abi_tag, vector<E> val) noexcept
 requires requires { xmm::abs(val); }
 {
     return xmm::abs(val);
@@ -131,33 +141,33 @@ requires requires { xmm::abs(val); }
 #  if DPL_SIMD_X86_AVX512F
 DPL_EXPORT template <imask_t<int32> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<int32>
+inline vector<int32>
     DPL_VECTORCALL abs(
-        simd<int32> src, cmask_t<int32, M> mask, simd<int32> val) noexcept {
+        vector<int32> src, cmask_t<int32, M> mask, vector<int32> val) noexcept {
     return _mm_mask_abs_epi32(+src, M, +val);
 }
 
 DPL_EXPORT template <imask_t<int64> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<int64>
+inline vector<int64>
     DPL_VECTORCALL abs(
-        simd<int64> src, cmask_t<int64, M> mask, simd<int64> val) noexcept {
+        vector<int64> src, cmask_t<int64, M> mask, vector<int64> val) noexcept {
     return _mm_mask_abs_epi64(+src, M, +val);
 }
 
 DPL_EXPORT template <imask_t<int32> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<int32>
+inline vector<int32>
     DPL_VECTORCALL abs(
-        dx::zero_t, cmask_t<int32, M> mask, simd<int32> val) noexcept {
+        dx::zero_t, cmask_t<int32, M> mask, vector<int32> val) noexcept {
     return _mm_maskz_abs_epi32(M, +val);
 }
 
 DPL_EXPORT template <imask_t<int64> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<int64>
+inline vector<int64>
     DPL_VECTORCALL abs(
-        dx::zero_t, cmask_t<int64, M> mask, simd<int64> val) noexcept {
+        dx::zero_t, cmask_t<int64, M> mask, vector<int64> val) noexcept {
     return _mm_maskz_abs_epi64(M, +val);
 }
 #  endif
@@ -165,33 +175,33 @@ inline simd<int64>
 #  if DPL_SIMD_X86_AVX512BW
 DPL_EXPORT template <imask_t<int8> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<int8>
+inline vector<int8>
     DPL_VECTORCALL abs(
-        simd<int8> src, cmask_t<int8, M> mask, simd<int8> val) noexcept {
+        vector<int8> src, cmask_t<int8, M> mask, vector<int8> val) noexcept {
     return _mm_mask_abs_epi32(+src, M, +val);
 }
 
 DPL_EXPORT template <imask_t<int16> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<int16>
+inline vector<int16>
     DPL_VECTORCALL abs(
-        simd<int16> src, cmask_t<int16, M> mask, simd<int16> val) noexcept {
+        vector<int16> src, cmask_t<int16, M> mask, vector<int16> val) noexcept {
     return _mm_mask_abs_epi64(+src, M, +val);
 }
 
 DPL_EXPORT template <imask_t<int8> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<int8>
+inline vector<int8>
     DPL_VECTORCALL abs(
-        dx::zero_t, cmask_t<int8, M> mask, simd<int8> val) noexcept {
+        dx::zero_t, cmask_t<int8, M> mask, vector<int8> val) noexcept {
     return _mm_maskz_abs_epi32(M, +val);
 }
 
 DPL_EXPORT template <imask_t<int16> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline simd<int16>
+inline vector<int16>
     DPL_VECTORCALL abs(
-        dx::zero_t, cmask_t<int16, M> mask, simd<int16> val) noexcept {
+        dx::zero_t, cmask_t<int16, M> mask, vector<int16> val) noexcept {
     return _mm_maskz_abs_epi64(M, +val);
 }
 #  endif
@@ -199,9 +209,9 @@ inline simd<int16>
 
 DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-inline simd<E>
-    DPL_VECTORCALL abs(abi_tag, type_identity_t<simd<E>> src,
-        type_identity_t<mask<E>> mask, simd<E> val) noexcept
+inline vector<E>
+    DPL_VECTORCALL abs(abi_tag, type_identity_t<vector<E>> src,
+        type_identity_t<mask<E>> mask, vector<E> val) noexcept
 requires requires { xmm::abs(src, mask, val); }
 {
     return xmm::abs(src, mask, val);
@@ -209,9 +219,9 @@ requires requires { xmm::abs(src, mask, val); }
 
 DPL_EXPORT template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-inline simd<E>
+inline vector<E>
     DPL_VECTORCALL abs(abi_tag, dx::zero_t zero, type_identity_t<mask<E>> mask,
-        simd<E> val) noexcept
+        vector<E> val) noexcept
 requires requires { xmm::abs(zero, mask, val); }
 {
     return xmm::abs(zero, mask, val);

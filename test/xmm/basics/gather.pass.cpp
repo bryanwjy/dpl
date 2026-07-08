@@ -1,7 +1,5 @@
 // Generated with Claude
-#include "dpl/config.h"
-
-#include <cassert>
+#include "../common.h"
 
 import dpl.xmm;
 
@@ -15,7 +13,7 @@ namespace xmm = dpl::datapar::xmm;
 using abi_t = xmm::abi_tag;
 
 template <typename E>
-using vec_t = xmm::simd<E>;
+using vec_t = xmm::vector<E>;
 
 template <typename E>
 using mask_t = dpp::basic_mask<E, abi_t>;
@@ -50,12 +48,17 @@ constexpr mask_t<E> make_simd_mask(dpl::uint8 bits) {
 template <typename E, typename I, dpl::size_t... Is, dpl::size_t... Js>
 constexpr void test_gather(
     dpl::index_sequence<Is...>, dpl::index_sequence<Js...>) {
+    static_assert(
+        dpp::simd_canonical_invocable<dpp::gather, E const*, vec_t<I>>);
+}
+
+template <typename E, typename I, dpl::size_t... Is, dpl::size_t... Js>
+requires dpp::simd_canonical_invocable<dpp::gather, E const*, vec_t<I>>
+constexpr void test_gather(
+    dpl::index_sequence<Is...>, dpl::index_sequence<Js...>) {
     constexpr auto elem_lanes = sizeof...(Is);
     constexpr auto idx_lanes = sizeof...(Js);
     constexpr auto active = elem_lanes < idx_lanes ? elem_lanes : idx_lanes;
-
-    static_assert(
-        dpp::simd_canonical_invocable<dpp::gather, E const*, vec_t<I>>);
 
     constexpr auto src_size = elem_lanes * 4zu;
     E mem[src_size]{};

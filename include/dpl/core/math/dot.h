@@ -3,6 +3,8 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/math/ext.h"
+
 #if !DPL_MODULES
 #  include "dpl/core/basic/broadcast.h"
 #  include "dpl/core/basic/lane_index.h"
@@ -238,16 +240,18 @@ public:
 
 template <>
 struct fallback_impl<dot_product_t> {
-    template <brain_float E, simd_abi A>
+    template <simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr basic_vector<float, A>
         DPL_VECTORCALL operator()(basic_vector<float, A> src,
-            basic_vector<E, A> lhs, basic_vector<E, A> rhs) noexcept {
-        auto const idx = dx::lane_index<E, A>();
+            basic_vector<ext::bfloat16, A> lhs,
+            basic_vector<ext::bfloat16, A> rhs) noexcept {
+        auto const idx = dx::lane_index<ext::bfloat16, A>();
         auto const lower_half = idx < basic_vector<float, A>::size();
         auto const even = dx::bwshift_left(lower_half, idx, imm<1zu>);
         auto const odd = dx::add(lower_half, even,
-            dx::broadcast<decltype(dx::lane_index<E, A>())>(dx::one));
+            dx::broadcast<decltype(dx::lane_index<ext::bfloat16, A>())>(
+                dx::one));
         auto const odd_vals =
             dx::multiply(dx::element_cast<float>(dx::permute(lhs, odd)),
                 dx::element_cast<float>(dx::permute(rhs, odd)));
