@@ -41,6 +41,7 @@ concept comparison_common_with_impl =
 
 template <typename T, typename U>
 concept comparison_common_with =
+    common_reference_with<remove_cvref_t<T> const&, remove_cvref_t<U> const&> &&
     comparison_common_with_impl<remove_cvref_t<T>, remove_cvref_t<U>>;
 } // namespace details::concepts
 

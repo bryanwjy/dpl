@@ -160,7 +160,7 @@ $(OUTPUT_DIR)/scan_barrier.mk: $(OUTPUT_DIR)/jmap.json $(OUTPUT_DIR)/module_depe
 -include $(OUTPUT_DIR)/scan_barrier.mk
 
 $(MODULE_ALIAS):%: $(OUTPUT_DIR)/%.cppm.pcm
-$(TEST_ALIAS):%.pass: $(OUTPUT_DIR)/%.pass
+$(TEST_ALIAS):%.pass: $(OUTPUT_DIR)/%.pass.crc
 $(BUILD_JSON_ALIAS):%: $(OUTPUT_DIR)/%.json
 $(BUILD_TXT_ALIAS):%: $(OUTPUT_DIR)/%.txt
 .SECONDEXPANSION:

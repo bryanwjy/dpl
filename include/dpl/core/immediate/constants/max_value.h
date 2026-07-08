@@ -9,6 +9,7 @@
 #include "dpl/core/immediate/constants/min_value.h"
 
 #if !DPL_MODULES
+#  include "dpl/core/type_traits/floating_point_traits.h"
 #  include "dpl/std/bit/bit_cast.h"
 #  include "dpl/std/bit/bit_type.h"
 #  include "dpl/std/concepts/convertible_to.h"
@@ -27,13 +28,22 @@ DPL_EXPORT struct max_value_t : broadcastable_base<max_value_t> {
         return ~static_cast<T>(min_value);
     }
 
-    template <floating_point T>
+    template <floating_point_like T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     constexpr operator T(this max_value_t) noexcept {
-        using bit_type = bit_type_t<sizeof(T) * char_bit_v>;
-        auto const mantissa = __DPL bit_cast<bit_type>(mantissa_bits_v<T>);
-        auto const exponent = __DPL bit_cast<bit_type>(exponent_bits_v<T>) - 1;
-        return __DPL bit_cast<T>(static_cast<bit_type>(mantissa | exponent));
+        constexpr auto digits = floating_point_traits<T>::digits;
+        constexpr auto exp = floating_point_traits<T>::exponent_mask;
+        constexpr auto mantissa = floating_point_traits<T>::mantissa_mask;
+        constexpr auto width = floating_point_traits<T>::width;
+        constexpr auto exp_width = __DPL popcount(exp);
+        constexpr auto expv = __DPL to_underlying(
+            __DPL truncate<exp_width>(exp >> (digits - 1)));
+        constexpr auto result_exp = bitset<width>(bitset<exp_width>(expv - 1u));
+        if constexpr (floating_point_traits<T>::has_hidden_bit) {
+            return __DPL bit_cast<T>(result_exp | mantissa);
+        } else {
+            return __DPL bit_cast<T>(result_exp | mantissa | (mantissa << 1));
+        }
     }
 };
 

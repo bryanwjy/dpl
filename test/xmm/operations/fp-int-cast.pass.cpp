@@ -16,14 +16,7 @@ namespace dpp = dpl::datapar;
 template <typename... Ts>
 constexpr auto element_count = dpp::simd_abi_traits<Ts...>::size;
 
-#if DPL_SUPPORTS_EXT_BFLOAT16 & !defined(__BFLT16_MAX__)
-consteval dpl::bfloat16 operator""_bf16(long double val) noexcept {
-    return static_cast<dpl::bfloat16>(val);
-}
-#  define BF16(X) X##_bf16
-#elif defined(__BFLT16_MAX__)
-#  define BF16(X) X##bf16
-#endif
+using dpl::ext_literals::operator""_bf16;
 
 constexpr auto min(auto lhs, auto rhs) noexcept {
     return lhs < rhs ? lhs : rhs;
@@ -46,13 +39,13 @@ template <typename... Args>
 array(Args...)
     -> array<dpl::decay_t<dpl::common_type_t<Args...>>, sizeof...(Args)>;
 
-template <dpl::floating_point T>
+template <dpl::floating_point_like T>
 constexpr bool bit_equality(xmm::simd<T> lhs, xmm::simd<T> rhs) noexcept {
     return dpp::all_of(
         dpp::reinterpret<dpl::int32>(lhs) == dpp::reinterpret<dpl::int32>(rhs));
 }
 
-template <dpl::integral I, dpl::floating_point F>
+template <dpl::integral I, dpl::floating_point_like F>
 constexpr void general_int_to_fp() noexcept {
     auto const inputs = [](auto... vals) {
         constexpr I zero = 0;
@@ -82,7 +75,7 @@ constexpr void general_int_to_fp() noexcept {
     }
 }
 
-template <dpl::integral I, dpl::floating_point F>
+template <dpl::integral I, dpl::floating_point_like F>
 constexpr void parallel_int_to_fp() noexcept {
     auto const inputs = [](auto... vals) {
         constexpr I zero = 0;
@@ -337,8 +330,8 @@ constexpr void large_fp_to_long() noexcept {
                 } else {
                     return array{vals..., -vals...};
                 }
-            }(BF16(0x1.p24), BF16(0x1.p24) + BF16(1.0), BF16(0x1.p40),
-                       BF16(0x1.p40) + BF16(1.0), BF16(0x1.p56));
+            }(0x1.p24_bf16, 0x1.p24_bf16 + 1.0_bf16, 0x1.p40_bf16,
+                       0x1.p40_bf16 + 1.0_bf16, 0x1.p56_bf16);
         } else {
             static_assert(dpl::same_as<F, double>);
             return [](auto... vals) {

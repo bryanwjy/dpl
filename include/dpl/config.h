@@ -1,6 +1,7 @@
 // Copyright 2025 Bryan Wong
 
-#pragma once
+#ifndef DPL_CONFIG_H
+#define DPL_CONFIG_H
 
 // IWYU pragma: always_keep
 
@@ -112,5 +113,7 @@ template <decltype(sizeof(0)) N, typename T>
 using tuple_element_t = typename tuple_element<N, T>::type;
 
 DPL_STD_NAMESPACE_END
+
+#endif
 
 #endif

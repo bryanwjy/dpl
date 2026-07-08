@@ -247,7 +247,7 @@ struct convert_t<To> {
     static inline simd<To>
         DPL_VECTORCALL operator()(simd<E> src) noexcept {
 #if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
-        if constexpr (unsigned_integral<representation_t<To>>) {
+        if constexpr (unsigned_integral<To>) {
             return _mm_cvttph_epu64(+src);
         } else {
             return _mm_cvttph_epi64(+src);

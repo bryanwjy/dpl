@@ -32,7 +32,7 @@ inline constexpr bool is_brain_float<T> = DPL_BUILTIN_bit_cast(
 } // namespace internal
 
 DPL_EXPORT template <typename T>
-concept brain_float = sizeof(T) == sizeof(int16) &&
+concept brain_float = sizeof(T) == sizeof(int16) && convertible_to<float, T> &&
     internal::is_brain_float<T> && convertible_to<T, float>;
 
 DPL_DEFAULT_NAMESPACE_END

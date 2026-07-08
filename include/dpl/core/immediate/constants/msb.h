@@ -27,10 +27,10 @@ DPL_EXPORT struct msb_t : broadcastable_base<msb_t> {
         return static_cast<T>(result);
     }
 
-    template <floating_point T>
+    template <floating_point_like T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     constexpr operator T(this msb_t) noexcept {
-        return -0.0;
+        return __DPL bit_cast<T>(floating_point_traits<T>::signbit);
     }
 };
 

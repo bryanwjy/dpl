@@ -21,6 +21,7 @@ import :std.utility;
 #include "dpl/core/type_traits/enable_simd_abi.h"
 #include "dpl/core/type_traits/enable_simd_mask.h"
 #include "dpl/core/type_traits/enable_simd_vector.h"
+#include "dpl/core/type_traits/floating_point_traits.h"
 #include "dpl/core/type_traits/is_canonical_type.h"
 #include "dpl/core/type_traits/rebind_simd.h"
 #include "dpl/core/type_traits/representation.h"

@@ -12,29 +12,19 @@ using abi = xmm::abi_tag;
 template <typename... Ts>
 constexpr auto element_count = dpp::simd_abi_traits<Ts...>::size;
 
-#if DPL_SUPPORTS_EXT_BFLOAT16 & !defined(__BFLT16_MAX__)
-consteval dpl::bfloat16 operator""_bf16(long double val) noexcept {
-    return static_cast<dpl::bfloat16>(val);
-}
-#  define BF16(X) X##_bf16
-#elif defined(__BFLT16_MAX__)
-#  define BF16(X) X##bf16
-#endif
+using dpl::ext_literals::operator""_bf16;
 
 constexpr auto min(auto lhs, auto rhs) noexcept {
     return lhs < rhs ? lhs : rhs;
 }
 
-template <dpl::floating_point To, dpl::floating_point From>
+template <dpl::floating_point_like To, dpl::floating_point_like From>
 constexpr To float_cast(From val) noexcept {
-    if constexpr (dpl::convertible_to<From, To>) {
-        return static_cast<To>(val);
-    } else {
-        return static_cast<To>(static_cast<float>(val));
-    }
+    static_assert(dpl::explicitly_convertible_to<From, To>);
+    return static_cast<To>(val);
 }
 
-template <dpl::floating_point To, dpl::floating_point From,
+template <dpl::floating_point_like To, dpl::floating_point_like From,
     typename Pred = decltype(dpp::cmpeq)>
 requires dpl::different_from<From, To>
 constexpr bool round_trip(From val, Pred pred = dpp::cmpeq) noexcept {
@@ -80,7 +70,7 @@ inline constexpr struct bitcmp_t {
     }
 } bitcmp{};
 
-template <dpl::floating_point To, dpl::floating_point From,
+template <dpl::floating_point_like To, dpl::floating_point_like From,
     typename Pred = decltype(dpp::cmpeq)>
 requires (dpp::digits_v<To> != dpp::digits_v<From>)
 constexpr bool one_way(From val, Pred pred = dpp::cmpeq) noexcept {

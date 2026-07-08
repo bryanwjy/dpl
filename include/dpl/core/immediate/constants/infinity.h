@@ -7,21 +7,28 @@
 #include "dpl/core/immediate/constants/exponent_bits.h"
 
 #if !DPL_MODULES
+#  include "dpl/core/type_traits/floating_point_traits.h"
 #  include "dpl/std/concepts/convertible_to.h"
-#  include "dpl/std/concepts/floating_point.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
 DPL_EXPORT struct ninfinity_t;
+
 DPL_EXPORT struct infinity_t : broadcastable_base<infinity_t> {
     __DPL_HIDE_FROM_ABI explicit constexpr infinity_t() noexcept = default;
 
-    template <floating_point T>
+    template <floating_point_like T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     constexpr operator T(this infinity_t) noexcept {
-        return static_cast<T>(exponent_bits);
+        if constexpr (floating_point_traits<T>::has_hidden_bit) {
+            return __DPL bit_cast<T>(floating_point_traits<T>::exponent_mask);
+        } else {
+            return __DPL bit_cast<T>(
+                (floating_point_traits<T>::exponent_mask >> 1) |
+                floating_point_traits<T>::exponent_mask);
+        }
     }
 
     consteval auto operator-(this infinity_t) noexcept;

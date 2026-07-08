@@ -69,7 +69,7 @@ DPL_EXPORT template <typename T, typename U>
 struct common_type<T, U> : details::common_type::impl<T, U> {};
 
 DPL_EXPORT template <typename T, typename U, typename... Vs>
-requires requires { typename details::common_type::impl<T, U>::type; }
+requires requires { typename common_type<T, U>::type; }
 struct common_type<T, U, Vs...> : common_type<common_type_t<T, U>, Vs...> {};
 
 DPL_DEFAULT_NAMESPACE_END

@@ -17,7 +17,7 @@ namespace datapar {
 DPL_EXPORT struct nan_t : broadcastable_base<nan_t> {
     __DPL_HIDE_FROM_ABI explicit constexpr nan_t() noexcept = default;
 
-    template <floating_point T>
+    template <floating_point_like T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     constexpr operator T(this nan_t) noexcept {
         return all_bits_v<T>;

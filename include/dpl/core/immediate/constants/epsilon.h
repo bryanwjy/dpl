@@ -7,10 +7,10 @@
 #include "dpl/core/immediate/constants/one.h"
 
 #if !DPL_MODULES
+#  include "dpl/core/type_traits/floating_point_traits.h"
 #  include "dpl/std/bit/bit_cast.h"
 #  include "dpl/std/bit/bit_type.h"
 #  include "dpl/std/concepts/convertible_to.h"
-#  include "dpl/std/concepts/floating_point.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -19,11 +19,12 @@ namespace datapar {
 inline constexpr struct epsilon_t : broadcastable_base<epsilon_t> {
     __DPL_HIDE_FROM_ABI explicit constexpr epsilon_t() noexcept = default;
 
-    template <floating_point T>
+    template <floating_point_like T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     constexpr operator T(this epsilon_t) noexcept {
-        using bit_type = bit_type_t<char_bit_v * sizeof(T)>;
-        auto const next = __DPL bit_cast<bit_type>(one_v<T>) | one_v<bit_type>;
+        using bit_type = bitset<char_bit_v * sizeof(T)>;
+        constexpr auto one = ~bit_type() >> (bit_type::size() - 1);
+        constexpr auto next = __DPL bit_cast<bit_type>(one_v<T>) | one;
         return __DPL bit_cast<T>(next) - one_v<T>;
     }
 } epsilon{};

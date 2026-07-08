@@ -9,15 +9,15 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/simd_element.h"
+#  include "dpl/core/type_traits/floating_point_traits.h"
 #  include "dpl/std/bit/bit_cast.h"
 #  include "dpl/std/bit/bit_type.h"
-#  include "dpl/std/concepts/floating_point.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
-DPL_EXPORT template <floating_point T>
+DPL_EXPORT template <floating_point_like T>
 struct exponent_bias_t : broadcastable_base<exponent_bias_t<T>> {
     __DPL_HIDE_FROM_ABI explicit constexpr exponent_bias_t() noexcept = default;
 
@@ -25,8 +25,10 @@ struct exponent_bias_t : broadcastable_base<exponent_bias_t<T>> {
     constexpr operator int(this exponent_bias_t) noexcept {
         using bit_type = bit_type_t<char_bit_v * sizeof(T)>;
         constexpr auto exp =
-            __DPL bit_cast<bit_type>(exponent_bits_v<T>) >> digits_v<T>;
-        return static_cast<int>(exp);
+            floating_point_traits<T>::exponent_mask >> digits_v<T>;
+        constexpr auto width =
+            __DPL popcount(floating_point_traits<T>::exponent_mask);
+        return __DPL to_underlying(__DPL truncate<width>(exp));
     }
 };
 

@@ -8,6 +8,7 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/simd_element.h"
+#  include "dpl/core/type_traits/floating_point_traits.h"
 #  include "dpl/std/bit/bit_cast.h"
 #  include "dpl/std/bit/bit_type.h"
 #  include "dpl/std/bit/countr.h"
@@ -17,17 +18,18 @@
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
-template <basic_element T>
+template <integral T>
 consteval int digits_of() noexcept {
     if constexpr (signed_integral<T>) {
         return sizeof(T) * char_bit_v - 1;
-    } else if constexpr (unsigned_integral<T>) {
-        return sizeof(T) * char_bit_v;
     } else {
-        static_assert(floating_point<T>);
-        using bit_type = bit_type_t<char_bit_v * sizeof(T)>;
-        return __DPL countr_zero( __DPL bit_cast<bit_type>(one_v<T>)) + 1;
+        return sizeof(T) * char_bit_v;
     }
+}
+
+template <floating_point_like T>
+consteval int digits_of() noexcept {
+    return static_cast<int>(floating_point_traits<T>::digits);
 }
 
 DPL_EXPORT template <basic_element T>

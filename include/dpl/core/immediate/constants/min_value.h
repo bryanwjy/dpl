@@ -7,10 +7,10 @@
 #include "dpl/core/immediate/constants/mantissa_width.h"
 
 #if !DPL_MODULES
+#  include "dpl/core/type_traits/floating_point_traits.h"
 #  include "dpl/std/bit/bit_cast.h"
 #  include "dpl/std/bit/bit_type.h"
 #  include "dpl/std/concepts/convertible_to.h"
-#  include "dpl/std/concepts/floating_point.h"
 #  include "dpl/std/concepts/integral.h"
 #endif
 
@@ -31,7 +31,7 @@ DPL_EXPORT struct min_value_t : broadcastable_base<min_value_t> {
         }
     }
 
-    template <floating_point T>
+    template <floating_point_like T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     constexpr operator T(this min_value_t) noexcept {
         using bit_type = bit_type_t<sizeof(T) * char_bit_v>;
