@@ -10,9 +10,9 @@
 #  include "dpl/std/concepts/integral.h"
 #  include "dpl/std/type_traits/is_empty.h"
 #  include "dpl/std/type_traits/is_trivially_copyable.h"
+#  include "dpl/std/type_traits/sequence.h"
 #  include "dpl/std/utility/apply.h"
 #  include "dpl/std/utility/ignore.h"
-#  include "dpl/std/utility/sequence.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN

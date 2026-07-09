@@ -7,7 +7,6 @@
 
 #include "dpl/std/utility/bitset/bitset_traits.h"
 #include "dpl/std/utility/bitset/countl.h"
-#include "dpl/std/utility/structured_bindings.h"
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 

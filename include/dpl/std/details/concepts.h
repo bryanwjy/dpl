@@ -6,7 +6,10 @@
 // IWYU pragma: always_keep
 
 #if !DPL_MODULES
+#  include "dpl/std/type_traits/add_add_lvalue_reference.h"
+#  include "dpl/std/type_traits/add_rvalue_reference.h"
 #  include "dpl/std/type_traits/common_reference.h"
+#  include "dpl/std/type_traits/declval.h"
 #  include "dpl/std/type_traits/is_assignable.h"
 #  include "dpl/std/type_traits/is_constructible.h"
 #  include "dpl/std/type_traits/is_convertible.h"
@@ -15,6 +18,8 @@
 #  include "dpl/std/type_traits/remove_const.h"
 #  include "dpl/std/type_traits/remove_cvref.h"
 #  include "dpl/std/type_traits/remove_reference.h"
+#  include "dpl/std/type_traits/sequence.h"
+#  include "dpl/std/type_traits/structured_bindings.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -180,5 +185,169 @@ concept partially_ordered_with =
         { u <= t } -> boolean_testable;
         { u >= t } -> boolean_testable;
     };
+
+template <size_t>
+void get(...) noexcept = delete;
+
+template <typename T>
+concept has_tuple_size = requires {
+    typename __DPL size_constant<std::tuple_size_v<remove_cvref_t<T>>>;
+};
+
+template <typename T, size_t I>
+concept has_tuple_element = has_tuple_size<T> && requires {
+    requires I < std::tuple_size_v<remove_cvref_t<T>>;
+    typename std::tuple_element_t<I, remove_cvref_t<T>>;
+};
+
+template <typename T, size_t I>
+concept has_member_get = has_tuple_size<T> && has_tuple_element<T, I> &&
+    requires { __DPL declval<T>().template get<I>(); };
+
+template <typename T, size_t I>
+concept has_adl_get = has_tuple_size<T> && has_tuple_element<T, I> &&
+    !has_member_get<T, I> && requires { get<I>(__DPL declval<T>()); };
+
+template <size_t I>
+struct get_element_t {
+private:
+    template <typename T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static consteval auto nothrow_member_get() noexcept {
+        return false;
+    }
+
+    template <has_member_get<I> T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static consteval auto nothrow_member_get() noexcept {
+        return noexcept(__DPL declval<T>().template get<I>());
+    }
+
+    template <typename T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static consteval auto nothrow_adl_get() noexcept {
+        return false;
+    }
+    template <has_adl_get<I> T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static consteval auto nothrow_adl_get() noexcept {
+        return noexcept(get<I>(__DPL declval<T>()));
+    }
+
+public:
+    __DPL_HIDE_FROM_ABI constexpr explicit get_element_t() noexcept = default;
+
+    template <has_adl_get<I> T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr decltype(auto) operator()(
+        T&& val DPL_LIFETIMEBOUND) noexcept(nothrow_adl_get<T>()) {
+        return get<I>(static_cast<T&&>(val));
+    }
+
+    template <has_member_get<I> T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr decltype(auto) operator()(
+        T&& val DPL_LIFETIMEBOUND) noexcept(nothrow_member_get<T>()) {
+        return static_cast<T&&>(val).template get<I>();
+    }
+
+    template <typename T, size_t N>
+    requires (I < N) && (!has_adl_get<add_lvalue_reference_t<T[N]>, I>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr add_lvalue_reference_t<T> operator()(
+        T (&array)[N]) noexcept {
+        return array[I];
+    }
+
+    template <typename T, size_t N>
+    requires (I < N) && (!has_adl_get<add_rvalue_reference_t<T[N]>, I>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr add_rvalue_reference_t<T> operator()(
+        T (&&array)[N]) noexcept {
+        return static_cast<add_rvalue_reference_t<T>>(array[I]);
+    }
+};
+
+template <typename T>
+struct sequence_for {};
+
+template <has_tuple_size T>
+struct sequence_for<T> {
+    using type DPL_NODEBUG =
+        __DPL make_index_sequence<std::tuple_size_v<remove_cvref_t<T>>>;
+};
+template <typename T, size_t N>
+struct sequence_for<T[N]> {
+    using type DPL_NODEBUG = __DPL make_index_sequence<N>;
+};
+template <typename T>
+using sequence_for_t DPL_NODEBUG = typename sequence_for<T>::type;
+
+template <typename T, size_t I>
+concept gettable_from =
+    requires(get_element_t<I> op) { op(__DPL declval<T>()); };
+
+template <typename T, typename S = sequence_for_t<T>>
+inline constexpr bool is_tuple_like = false;
+template <typename T, size_t... Is>
+inline constexpr bool is_tuple_like<T, index_sequence<Is...>> =
+    (... && gettable_from<T, Is>);
+
+template <typename T>
+concept tuple_like = requires { typename sequence_for_t<remove_cvref_t<T>>; } &&
+    is_tuple_like<T>;
+
+template <typename T, typename E>
+concept integer_sequence_like =
+    integral<E> && requires { typename size_constant<T::size()>; } &&
+    tuple_like<T> && (T::size() == std::tuple_size_v<T>) &&
+    []<size_t I>(this auto self, size_constant<I>) consteval {
+        if constexpr (I == T::size()) {
+            return true;
+        } else {
+            return integral_constant_like<std::tuple_element_t<I, T>> &&
+                is_convertible_v<std::tuple_element_t<I, T>, E> &&
+                self(size_constant<I + 1>{});
+        }
+    }(size_constant<0zu>{});
+
+template <typename E, typename T, size_t I, E... Vs>
+consteval auto to_integer_sequence(
+    size_constant<I>, integral_constant<E, Vs>... args) noexcept {
+    if constexpr (I == T::size()) {
+        return integer_sequence<E, Vs...>{};
+    } else {
+        constexpr get_element_t<I> get_element{};
+        constexpr auto V = get_element(T{});
+        constexpr integral_constant<E, V> next{};
+        return to_integer_sequence<E, T>(size_constant<I + 1>{}, args..., next);
+    }
+}
+
+template <typename E, typename T>
+inline constexpr bool is_integer_sequence = false;
+
+template <typename E, E... Vs>
+inline constexpr bool is_integer_sequence<E, integer_sequence<E, Vs...>> = true;
+
+template <typename T, typename E>
+concept integer_sequence_of = is_integer_sequence<E, T>;
+
+template <integral E, integer_sequence_of<E> T>
+consteval auto to_integer_sequence(T seq = T{}) noexcept {
+    return seq;
+}
+
+template <integral E, typename T>
+requires (!integer_sequence_of<T, E> && integer_sequence_like<T, E>)
+consteval auto to_integer_sequence(T = T{}) noexcept {
+    if constexpr (T::size() == 0) {
+        return integer_sequence<E>{};
+    } else {
+        return details::concepts::to_integer_sequence<E, T>(
+            size_constant<0zu>{});
+    }
+}
+
 } // namespace details::concepts
 DPL_DEFAULT_NAMESPACE_END

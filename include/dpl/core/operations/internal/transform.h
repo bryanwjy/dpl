@@ -11,8 +11,8 @@
 #  include "dpl/core/type_traits/declarg.h"
 #  include "dpl/core/type_traits/simd_value_type.h"
 #  include "dpl/std/type_traits/is_invocable.h"
+#  include "dpl/std/type_traits/sequence.h"
 #  include "dpl/std/utility/bitset.h"
-#  include "dpl/std/utility/sequence.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN

@@ -9,11 +9,11 @@
 #  include "dpl/std/type_traits/is_aggregate.h"
 #  include "dpl/std/type_traits/is_constructible.h"
 #  include "dpl/std/type_traits/is_explicitly_constructible.h"
+#  include "dpl/std/type_traits/structured_bindings.h"
+#  include "dpl/std/type_traits/tuple_like.h"
 #  include "dpl/std/utility/forward.h"
 #  include "dpl/std/utility/forward_like.h"
 #  include "dpl/std/utility/move.h"
-#  include "dpl/std/utility/structured_bindings.h"
-#  include "dpl/std/utility/tuple_like.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN

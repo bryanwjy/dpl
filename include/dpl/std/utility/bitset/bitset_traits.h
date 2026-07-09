@@ -5,11 +5,11 @@
 #include "dpl/config.h"
 // IWYU pragma: private, include "dpl/std/utility/bitset.h"
 
-#include "dpl/std/utility/structured_bindings.h"
-
 #if !DPL_MODULES
 #  include "dpl/std/bit/char_bit.h"
+#  include "dpl/std/details/bitset.h"
 #  include "dpl/std/type_traits/is_scalar.h"
+#  include "dpl/std/type_traits/structured_bindings.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -30,16 +30,5 @@ DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) constexpr auto get(
     bitset<W> const& value) noexcept {
     return value[I];
 }
-
-template <typename T>
-inline constexpr bool is_bitset_v = false;
-template <typename T>
-inline constexpr bool is_bitset_v<T const> = is_bitset_v<T>;
-template <typename T>
-inline constexpr bool is_bitset_v<T volatile> = is_bitset_v<T>;
-template <typename T>
-inline constexpr bool is_bitset_v<T const volatile> = is_bitset_v<T>;
-template <size_t W>
-inline constexpr bool is_bitset_v<bitset<W>> = true;
 
 DPL_DEFAULT_NAMESPACE_END

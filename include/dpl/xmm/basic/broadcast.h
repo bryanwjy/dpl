@@ -15,8 +15,8 @@
 #  include "dpl/core/immediate/constants/all_bits.h"
 #  include "dpl/core/immediate/constants/zero.h"
 #  include "dpl/std/bit/bit_cast.h"
+#  include "dpl/std/type_traits/sequence.h"
 #  include "dpl/std/type_traits/type_identity.h"
-#  include "dpl/std/utility/sequence.h"
 
 #  include <immintrin.h>
 #endif

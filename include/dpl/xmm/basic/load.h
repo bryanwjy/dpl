@@ -14,7 +14,7 @@
 #if !DPL_MODULES
 #  include "dpl/core/basic/aligned.h"
 #  include "dpl/std/bit/bit_cast.h"
-#  include "dpl/std/utility/sequence.h"
+#  include "dpl/std/type_traits/sequence.h"
 
 #  include <immintrin.h>
 #endif

@@ -15,8 +15,8 @@
 #  include "dpl/core/immediate/immediate.h"
 #  include "dpl/core/type_traits/simd_abi_type.h"
 #  include "dpl/core/type_traits/simd_element_type.h"
-#  include "dpl/std/utility/integer_sequence_like.h"
-#  include "dpl/std/utility/sequence.h"
+#  include "dpl/std/concepts/integer_sequence_like.h"
+#  include "dpl/std/type_traits/sequence.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN

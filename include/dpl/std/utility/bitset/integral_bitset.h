@@ -5,9 +5,6 @@
 #include "dpl/config.h"
 // IWYU pragma: private, include "dpl/std/utility/bitset.h"
 
-#include "dpl/std/utility/bitset/storage.h"
-#include "dpl/std/utility/sequence.h"
-#include "dpl/std/utility/structured_bindings.h"
 #include "dpl/std/utility/to_unsigned.h"
 
 #if !DPL_MODULES
@@ -16,7 +13,9 @@
 #  include "dpl/std/bit/char_bit.h"
 #  include "dpl/std/bit/has_single_bit.h"
 #  include "dpl/std/concepts/integral_constant_like.h"
+#  include "dpl/std/details/bitset.h"
 #  include "dpl/std/type_traits/is_scalar.h"
+#  include "dpl/std/type_traits/sequence.h"
 #endif
 
 #if DPL_HAS_CXX26_EXTENSIONS
@@ -30,10 +29,10 @@ DPL_EXPORT template <size_t W>
 class alignas(W / __DPL char_bit_v) bitset;
 
 DPL_EXPORT template <size_t W>
-requires requires { typename bit_type_t<details::bitset::ceil_pow2(W)>; }
-class bitset<W> : public details::bitset::storage<W> {
+requires requires { typename bit_type_t<details::utility::ceil_pow2(W)>; }
+class bitset<W> : public details::utility::bitset_storage<W> {
     // TODO iterators?
-    using base_type DPL_NODEBUG = details::bitset::storage<W>;
+    using base_type DPL_NODEBUG = details::utility::bitset_storage<W>;
     using base_type::value_;
 
 public:
@@ -293,10 +292,10 @@ public:
     }
 };
 
-template <integral T>
+DPL_EXPORT template <integral T>
 bitset(T val) -> bitset<sizeof(T) * char_bit_v>;
 
-template <integral_constant_like T>
+DPL_EXPORT template <integral_constant_like T>
 explicit bitset(T val)
     -> bitset<__DPL bit_width(__DPL to_unsigned(T::value))>;
 

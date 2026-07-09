@@ -14,7 +14,7 @@
 #  include "dpl/core/dispatch/maskable/transform.h"
 #  include "dpl/core/dispatch/operation/primitive.h"
 #  include "dpl/core/type_traits/representation.h"
-#  include "dpl/std/utility/sequence.h"
+#  include "dpl/std/type_traits/sequence.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN

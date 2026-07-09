@@ -14,8 +14,8 @@
 #  include "dpl/std/concepts/integral_constant_like.h"
 #  include "dpl/std/concepts/invocable.h"
 #  include "dpl/std/type_traits/is_invocable.h"
+#  include "dpl/std/type_traits/sequence.h"
 #  include "dpl/std/utility/forward.h"
-#  include "dpl/std/utility/sequence.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN

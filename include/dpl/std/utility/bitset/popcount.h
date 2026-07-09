@@ -7,9 +7,7 @@
 
 #include "dpl/std/utility/bitset/bitset_traits.h"
 #include "dpl/std/utility/bitset/concepts.h"
-#include "dpl/std/utility/bitset/storage.h"
 #include "dpl/std/utility/bitset/to_underlying.h"
-#include "dpl/std/utility/structured_bindings.h"
 
 #if !DPL_MODULES
 #  include "dpl/std/bit/popcount.h"
@@ -24,8 +22,7 @@ constexpr int popcount(bitset<W> const& val) noexcept {
     if constexpr (integral_bitset_type<bitset<W>>) {
         return __DPL popcount(__DPL to_underlying(val));
     } else {
-        static_assert(is_base_of_v<details::bitset::storage<W>, bitset<W>>);
-        auto const& base = (details::bitset::storage<W> const&)val;
+        details::utility::bitset_storage<W> const& base = val;
         auto sum = 0zu;
         for (auto const val : base.storage_) {
             sum += __DPL popcount(val);

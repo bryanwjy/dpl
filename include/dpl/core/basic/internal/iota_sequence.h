@@ -5,8 +5,8 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/type_traits/simd_abi_traits.h"
+#  include "dpl/std/type_traits/sequence.h"
 #  include "dpl/std/utility/ignore.h"
-#  include "dpl/std/utility/sequence.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN

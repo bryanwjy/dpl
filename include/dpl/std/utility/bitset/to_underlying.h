@@ -7,7 +7,6 @@
 
 #include "dpl/std/utility/bitset/bitset_traits.h"
 #include "dpl/std/utility/bitset/concepts.h"
-#include "dpl/std/utility/structured_bindings.h"
 
 #if !DPL_MODULES
 #  include "dpl/std/bit/bit_cast.h"

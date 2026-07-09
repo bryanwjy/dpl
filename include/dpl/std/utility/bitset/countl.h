@@ -7,9 +7,7 @@
 
 #include "dpl/std/utility/bitset/bitset_traits.h"
 #include "dpl/std/utility/bitset/concepts.h"
-#include "dpl/std/utility/bitset/storage.h"
 #include "dpl/std/utility/bitset/to_underlying.h"
-#include "dpl/std/utility/structured_bindings.h"
 #include "dpl/std/utility/to_unsigned.h"
 
 #if !DPL_MODULES
@@ -32,13 +30,12 @@ constexpr int countl_one(bitset<W> const& val) noexcept {
             return __DPL countl_one(__DPL to_underlying(val));
         }
     } else {
-        static_assert(is_base_of_v<details::bitset::storage<W>, bitset<W>>);
         using type DPL_NODEBUG = typename bitset<W>::underlying_type;
         constexpr auto chunk = sizeof(size_t) * __DPL char_bit_v;
         constexpr auto tail_size = W % chunk;
         constexpr auto padding = tail_size > 0 ? chunk - tail_size : 0zu;
 
-        auto const& base = (details::bitset::storage<W> const&)val;
+        details::utility::bitset_storage<W> const& base = val;
         auto const* ptr = base.storage_ + extent_v<type>;
 
         auto result = 0zu;
@@ -72,13 +69,12 @@ constexpr int countl_zero(bitset<W> const& val) noexcept {
             return __DPL countl_zero(__DPL to_underlying(val));
         }
     } else {
-        static_assert(is_base_of_v<details::bitset::storage<W>, bitset<W>>);
         using type DPL_NODEBUG = typename bitset<W>::underlying_type;
         constexpr auto chunk = sizeof(size_t) * __DPL char_bit_v;
         constexpr auto tail_size = W % chunk;
         constexpr auto padding = tail_size > 0 ? chunk - tail_size : 0zu;
 
-        auto const& base = (details::bitset::storage<W> const&)val;
+        details::utility::bitset_storage<W> const& base = val;
         auto const* ptr = base.storage_ + extent_v<type>;
 
         auto result = 0zu;

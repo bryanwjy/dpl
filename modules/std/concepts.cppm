@@ -28,6 +28,7 @@ import :std.details.concepts;
 #include "dpl/std/concepts/equality_comparable.h"
 #include "dpl/std/concepts/floating_point.h"
 #include "dpl/std/concepts/forwardable_as.h"
+#include "dpl/std/concepts/integer_sequence_like.h"
 #include "dpl/std/concepts/integral.h"
 #include "dpl/std/concepts/integral_constant_like.h"
 #include "dpl/std/concepts/invocable.h"
@@ -38,4 +39,5 @@ import :std.details.concepts;
 #include "dpl/std/concepts/semiregular.h"
 #include "dpl/std/concepts/swappable.h"
 #include "dpl/std/concepts/totally_ordered.h"
+#include "dpl/std/concepts/tuple_like.h"
 // IWYU pragma: end_exports

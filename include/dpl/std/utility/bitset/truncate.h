@@ -6,7 +6,6 @@
 // IWYU pragma: private, include "dpl/std/utility/bitset.h"
 
 #include "dpl/std/utility/bitset/bitset_traits.h"
-#include "dpl/std/utility/structured_bindings.h"
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 DPL_EXPORT template <size_t W, size_t W2>

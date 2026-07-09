@@ -17,10 +17,12 @@ DPL_DISABLE_WARNING("-Wc++26-extensions")
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 
-template <auto... Vs>
+DPL_EXPORT template <auto... Vs>
 struct value_pack {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto size() noexcept { return sizeof...(Vs); }
+    static constexpr auto size() noexcept {
+        return sizeof...(Vs);
+    }
 };
 
 DPL_EXPORT template <auto... Vs>
@@ -49,7 +51,7 @@ public:
 #endif
 };
 
-template <size_t I, auto... Vs>
+DPL_EXPORT template <size_t I, auto... Vs>
 consteval auto get(value_pack<Vs...>) noexcept {
 #if (DPL_HAS_CXX26_EXTENSIONS || DPL_CXX26) && __cpp_pack_indexing >= 202311L
     return Vs...[I];

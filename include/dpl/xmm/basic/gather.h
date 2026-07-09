@@ -16,7 +16,7 @@
 #  include "dpl/core/immediate/immediate.h"
 #  include "dpl/core/type_traits/representation.h"
 #  include "dpl/std/bit/bit_cast.h"
-#  include "dpl/std/utility/sequence.h"
+#  include "dpl/std/type_traits/sequence.h"
 
 #  include <immintrin.h>
 #endif

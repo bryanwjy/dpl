@@ -19,7 +19,7 @@
 #  include "dpl/core/type_traits/enable_simd_abi.h"
 #  include "dpl/core/type_traits/simd_element_representation.h"
 #  include "dpl/std/concepts/same_as.h"
-#  include "dpl/std/utility/sequence.h"
+#  include "dpl/std/type_traits/sequence.h"
 
 #  include <immintrin.h>
 #endif

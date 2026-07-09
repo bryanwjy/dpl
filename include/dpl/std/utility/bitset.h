@@ -15,7 +15,6 @@
 #include "dpl/std/utility/bitset/literal.h"
 #include "dpl/std/utility/bitset/popcount.h"
 #include "dpl/std/utility/bitset/rotate.h"
-#include "dpl/std/utility/bitset/storage.h"
 #include "dpl/std/utility/bitset/to_underlying.h"
 #include "dpl/std/utility/bitset/truncate.h"
 // IWYU pragma: end_exports

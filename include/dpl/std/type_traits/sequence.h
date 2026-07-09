@@ -4,7 +4,7 @@
 
 #include "dpl/config.h"
 
-#include "dpl/std/utility/structured_bindings.h"
+#include "dpl/std/type_traits/structured_bindings.h"
 
 #if !DPL_MODULES
 #  include "dpl/std/stddef/types.h"
@@ -20,7 +20,9 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 DPL_EXPORT template <typename T, T... Is>
 struct integer_sequence {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto size() noexcept { return sizeof...(Is); }
+    static constexpr auto size() noexcept {
+        return sizeof...(Is);
+    }
 };
 
 DPL_EXPORT template <typename T, T... Is>
@@ -44,7 +46,7 @@ public:
 #endif
 };
 
-template <size_t I, typename T, T... Is>
+DPL_EXPORT template <size_t I, typename T, T... Is>
 consteval auto get(integer_sequence<T, Is...>) noexcept {
     return tuple_element_t<I, integer_sequence<T, Is...>>{};
 }
@@ -63,45 +65,46 @@ using make_integer_sequence DPL_NODEBUG =
 
 #else
 
-namespace details {
+DPL_EXPORT namespace details::type_traits {
 
 template <typename, typename>
-struct combine;
+struct combine_seq;
 
 template <typename T, T... Is, T... Js>
-struct combine<integer_sequence<T, Is...>, integer_sequence<T, Js...>> {
+struct combine_seq<integer_sequence<T, Is...>, integer_sequence<T, Js...>> {
     using type DPL_NODEBUG =
         integer_sequence<T, Is..., (sizeof...(Is) + Js)...>;
 };
 
 template <typename T>
-struct combine<integer_sequence<T>, integer_sequence<T>> {
+struct combine_seq<integer_sequence<T>, integer_sequence<T>> {
     using type DPL_NODEBUG = integer_sequence<T>;
 };
 
 template <typename T, size_t N>
-struct generate;
+struct generate_seq;
 
 template <typename T>
-struct generate<T, 0> {
+struct generate_seq<T, 0> {
     using type DPL_NODEBUG = integer_sequence<T>;
 };
 
 template <typename T>
-struct generate<T, 1> {
+struct generate_seq<T, 1> {
     using type DPL_NODEBUG = integer_sequence<T, 0>;
 };
 
 template <typename T, size_t N>
-struct generate :
-    combine<typename generate<T, N / 2>::type,
-        typename generate<T, N - N / 2>::type> {};
+struct generate_seq :
+    combine_seq<typename generate_seq<T, N / 2>::type,
+        typename generate_seq<T, N - N / 2>::type> {};
 
-} // namespace details
+} // namespace details::type_traits
 
 DPL_EXPORT template <typename T, T N>
-using make_integer_sequence DPL_NODEBUG = typename details::generate < T,
-                            (N < 0) ? 0 : N > ::type;
+using make_integer_sequence
+    DPL_NODEBUG = typename details::type_traits::generate_seq < T,
+    (N < 0) ? 0 : N > ::type;
 #endif
 
 DPL_EXPORT template <size_t... Is>

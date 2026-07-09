@@ -17,10 +17,12 @@ DPL_DISABLE_WARNING("-Wc++26-extensions")
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 
-template <typename... Ts>
+DPL_EXPORT template <typename... Ts>
 struct type_pack {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto size() noexcept { return sizeof...(Ts); }
+    static constexpr auto size() noexcept {
+        return sizeof...(Ts);
+    }
 };
 
 DPL_EXPORT template <typename... Ts>
@@ -49,7 +51,7 @@ public:
 #endif
 };
 
-template <size_t I, typename... Ts>
+DPL_EXPORT template <size_t I, typename... Ts>
 consteval auto get(type_pack<Ts...>) noexcept {
     return tuple_element_t<I, type_pack<Ts...>>{};
 }

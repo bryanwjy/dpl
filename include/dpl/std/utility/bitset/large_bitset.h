@@ -6,13 +6,12 @@
 // IWYU pragma: private, include "dpl/std/utility/bitset.h"
 
 #include "dpl/std/utility/bitset/integral_bitset.h"
-#include "dpl/std/utility/bitset/storage.h"
-#include "dpl/std/utility/sequence.h"
-#include "dpl/std/utility/structured_bindings.h"
 
 #if !DPL_MODULES
 #  include "dpl/std/bit/char_bit.h"
+#  include "dpl/std/details/bitset.h"
 #  include "dpl/std/type_traits/extent.h"
+#  include "dpl/std/type_traits/sequence.h"
 #endif
 
 #if DPL_HAS_CXX26_EXTENSIONS
@@ -23,9 +22,9 @@ DPL_DISABLE_WARNING("-Wc++26-extensions")
 DPL_DEFAULT_NAMESPACE_BEGIN
 
 DPL_EXPORT template <size_t W>
-class bitset : public details::bitset::storage<W> {
+class bitset : public details::utility::bitset_storage<W> {
     static_assert(W > 0);
-    using base_type DPL_NODEBUG = details::bitset::storage<W>;
+    using base_type DPL_NODEBUG = details::utility::bitset_storage<W>;
     using base_type::storage_;
 
     static constexpr auto chunk_size = sizeof(size_t) * char_bit_v;
@@ -383,11 +382,11 @@ public:
     }
 };
 
-template <same_as<bool>... Bs>
+DPL_EXPORT template <same_as<bool>... Bs>
 requires (sizeof...(Bs) > 0)
 bitset(Bs... vals) -> bitset<sizeof...(Bs)>;
 
-template <size_t... Ws>
+DPL_EXPORT template <size_t... Ws>
 bitset(bitset<Ws> const&... vals) -> bitset<(... + Ws)>;
 
 DPL_DEFAULT_NAMESPACE_END
