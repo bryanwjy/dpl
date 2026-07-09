@@ -4,10 +4,12 @@
 
 #include "dpl/config.h"
 
+#include "dpl/std/concepts/convertible_to.h"
 #include "dpl/std/concepts/derived_from.h"
 
 #if !DPL_MODULES
 #  include "dpl/std/type_traits/copy_cvref.h"
+#  include "dpl/std/type_traits/remove_cvref.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN

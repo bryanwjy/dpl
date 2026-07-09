@@ -12,7 +12,7 @@
 DPL_DEFAULT_NAMESPACE_BEGIN
 
 DPL_EXPORT template <typename T>
-concept integral = is_integral_v<T>;
+concept integral = details::concepts::integral<T>;
 
 DPL_EXPORT template <typename T>
 concept signed_integral = integral<T> && is_signed_v<T>;

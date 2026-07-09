@@ -15,19 +15,21 @@ DPL_EXPORT template <typename T, typename R>
 inline constexpr bool is_assignable_v = __is_assignable(T, R);
 DPL_EXPORT template <typename T>
 inline constexpr bool is_copy_assignable_v =
-    __is_assignable(T, add_lvalue_reference_t<T const>);
+    __is_assignable(add_lvalue_reference_t<T>, add_lvalue_reference_t<T const>);
 DPL_EXPORT template <typename T>
 inline constexpr bool is_move_assignable_v =
-    __is_assignable(T, add_rvalue_reference_t<T>);
+    __is_assignable(add_lvalue_reference_t<T>, add_rvalue_reference_t<T>);
 
 DPL_EXPORT template <typename T, typename... Args>
 struct is_assignable : bool_constant<__is_assignable(T, Args...)> {};
 DPL_EXPORT template <typename T>
 struct is_copy_assignable :
-    bool_constant<__is_assignable(T, add_lvalue_reference_t<T const>)> {};
+    bool_constant<__is_assignable(
+        add_lvalue_reference_t<T>, add_lvalue_reference_t<T const>)> {};
 DPL_EXPORT template <typename T>
 struct is_move_assignable :
-    bool_constant<__is_assignable(T, add_rvalue_reference_t<T>)> {};
+    bool_constant<__is_assignable(
+        add_lvalue_reference_t<T>, add_rvalue_reference_t<T>)> {};
 
 #else  // if __DPL_SHOULD_USE_BUILTIN(is_assignable)
 DPL_EXPORT template <typename T, typename R>
@@ -36,10 +38,10 @@ inline constexpr bool is_assignable_v =
 
 DPL_EXPORT template <typename T>
 inline constexpr bool is_copy_assignable_v =
-    is_assignable_v<T, add_lvalue_reference_t<T const>>;
+    is_assignable_v<add_lvalue_reference_t<T>, add_lvalue_reference_t<T const>>;
 DPL_EXPORT template <typename T>
 inline constexpr bool is_move_assignable_v =
-    is_assignable_v<T, add_rvalue_reference_t<T>>;
+    is_assignable_v<add_lvalue_reference_t<T>, add_rvalue_reference_t<T>>;
 
 DPL_EXPORT template <typename T, typename R>
 struct is_assignable : bool_constant<is_assignable_v<T, R>> {};

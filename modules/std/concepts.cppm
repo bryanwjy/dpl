@@ -8,6 +8,7 @@ module;
 export module dpl:std.concepts;
 export import :std.stddef;
 import :std.type_traits;
+import :std.details.concepts;
 
 // IWYU pragma: begin_exports
 #include "dpl/std/concepts/array_initializable.h"

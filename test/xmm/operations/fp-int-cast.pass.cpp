@@ -246,7 +246,7 @@ constexpr auto nextbefore(auto val) noexcept {
     return dpl::bit_cast<type>(static_cast<rep>(dpl::bit_cast<rep>(val) - 1));
 }
 
-template <dpl::floating_point F, dpl::integral I>
+template <dpl::floating_point_like F, dpl::integral I>
 constexpr void general_fp_to_int() noexcept {
     auto const inputs = [](auto... vals) {
         if constexpr (dpl::unsigned_integral<I>) {
@@ -271,7 +271,7 @@ constexpr void general_fp_to_int() noexcept {
     }
 }
 
-template <dpl::floating_point F, dpl::integral I>
+template <dpl::floating_point_like F, dpl::integral I>
 constexpr void large_sp_to_int() noexcept {
     static_assert(sizeof(I) == sizeof(float));
     using rep_t = dpp::signed_representation_t<F>;
@@ -309,7 +309,7 @@ constexpr void large_sp_to_int() noexcept {
     }
 }
 
-template <dpl::floating_point F, dpl::integral I>
+template <dpl::floating_point_like F, dpl::integral I>
 constexpr void large_fp_to_long() noexcept {
     static_assert(sizeof(I) == sizeof(double));
     auto const inputs = []() {
@@ -321,7 +321,7 @@ constexpr void large_fp_to_long() noexcept {
                     return array{vals..., -vals...};
                 }
             }(0x1.p24f, 0x1.p24f + 1.0f, 0x1.p40f, 0x1.p40f + 1.0f, 0x1.p56f);
-        } else if constexpr (dpl::brain_float<F>) {
+        } else if constexpr (dpl::same_as<F, dpl::ext::bfloat16>) {
             return [](auto... vals) {
                 if constexpr (dpl::unsigned_integral<I>) {
                     return array{vals...};
@@ -354,7 +354,7 @@ constexpr void large_fp_to_long() noexcept {
     }
 }
 
-template <dpl::floating_point F, dpl::integral I>
+template <dpl::floating_point_like F, dpl::integral I>
 constexpr void parallel_fp_to_int() noexcept {
     auto const inputs =
         [](auto... vals) {
