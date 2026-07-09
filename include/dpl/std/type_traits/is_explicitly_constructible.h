@@ -8,11 +8,6 @@
 #include "dpl/std/type_traits/is_constructible.h"
 
 DPL_DEFAULT_NAMESPACE_BEGIN
-namespace details::explicitly_constructible {
-template <typename T>
-__DPL_HIDE_FROM_ABI void implicit_conv(T) noexcept;
-
-} // namespace details::explicitly_constructible
 
 DPL_EXPORT template <typename T, typename... Ts>
 inline constexpr bool is_explicitly_constructible_v = false;
@@ -20,10 +15,9 @@ inline constexpr bool is_explicitly_constructible_v = false;
 DPL_EXPORT template <typename T, typename Head, typename Mid, typename... Tail>
 requires __DPL is_constructible_v<T, Head, Mid, Tail...>
 inline constexpr bool is_explicitly_constructible_v<T, Head, Mid, Tail...> =
-    !requires {
-        details::explicitly_constructible::implicit_conv<T>(
-            {__DPL declval<Head>(), __DPL declval<Mid>(),
-                __DPL declval<Tail>()...});
+    !requires(void (*func)(T)) {
+        func({__DPL declval<Head>(), __DPL declval<Mid>(),
+            __DPL declval<Tail>()...});
     };
 
 DPL_EXPORT template <typename T, typename Head>
@@ -34,7 +28,7 @@ inline constexpr bool is_explicitly_constructible_v<T, Head> =
 DPL_EXPORT template <typename T>
 requires __DPL is_default_constructible_v<T>
 inline constexpr bool is_explicitly_constructible_v<T> =
-    !requires { details::explicitly_constructible::implicit_conv<T>({}); };
+    !requires(void (*func)(T)) { func({}); };
 
 DPL_EXPORT template <typename T, typename... Args>
 struct is_explicitly_constructible :

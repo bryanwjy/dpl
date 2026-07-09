@@ -15,9 +15,10 @@ DPL_EXPORT template <typename T>
 struct is_aggregate : bool_constant<__is_aggregate(T)> {};
 #else  // if __DPL_SHOULD_USE_BUILTIN(is_aggregate)
 DPL_EXPORT template <typename T>
-inline constexpr bool is_aggregate_v = unsupported_trait_v<T>;
+inline constexpr bool is_aggregate_v =
+    details::type_traits::unsupported_trait_v<T>;
 DPL_EXPORT template <typename T>
-struct is_aggregate : unsupported_trait<T> {};
+struct is_aggregate : details::type_traits::unsupported_trait<T> {};
 #endif // if __DPL_SHOULD_USE_BUILTIN(is_aggregate)
 
 DPL_DEFAULT_NAMESPACE_END

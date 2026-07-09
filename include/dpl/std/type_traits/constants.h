@@ -40,6 +40,7 @@ DPL_EXPORT using false_type = bool_constant<false>;
 DPL_EXPORT template <typename T, T N>
 inline constexpr T integral_constant_v = N;
 
+DPL_EXPORT namespace details::type_traits {
 template <typename...>
 inline constexpr bool always_false_v = false;
 
@@ -49,7 +50,7 @@ private:
     static_assert(always_false_v<T, Ts...>, "Unsupported type trait");
 
 public:
-    using type = void;
+    using type DPL_NODEBUG = void;
     static constexpr bool value = false;
 };
 
@@ -59,5 +60,6 @@ inline constexpr bool unsupported_trait_v = unsupported_trait<T, Ts...>::value;
 template <typename T, typename... Ts>
 using unsupported_trait_t DPL_NODEBUG =
     typename unsupported_trait<T, Ts...>::type;
+} // namespace details::type_traits
 
 DPL_DEFAULT_NAMESPACE_END

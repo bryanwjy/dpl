@@ -19,12 +19,12 @@ struct make_unsigned {
 };
 #else // if __DPL_SHOULD_USE_BUILTIN(make_unsigned)
 
-namespace details {
+DPL_EXPORT namespace details::type_traits {
 struct no_unsigned_type {};
 
 template <typename T>
 consteval auto find_unsigned_entry() noexcept {
-    return no_unsigned_entry{};
+    return no_unsigned_type{};
 }
 
 template <typename T>
@@ -50,10 +50,14 @@ consteval auto find_unsigned_entry() noexcept {
         return no_unsigned_type{};
     }
 }
-} // namespace details
+
+template <typename T>
+using make_unsigned DPL_NODEBUG =
+    decltype(details::type_traits::find_unsigned_entry<T>());
+} // namespace details::type_traits
 
 DPL_EXPORT template <typename T>
-struct make_unsigned : decltype(details::find_unsigned_entry<T>()) {};
+struct make_unsigned : details::type_traits::make_unsigned<T> {};
 
 DPL_EXPORT template <typename T>
 using make_unsigned_t = typename make_unsigned<T>::type;

@@ -16,27 +16,35 @@ DPL_EXPORT template <typename T>
 struct add_pointer {
     using type DPL_NODEBUG = __add_pointer(T);
 };
-#else // if __DPL_SHOULD_USE_BUILTIN(is_aggregate)
+#else // if __DPL_SHOULD_USE_BUILTIN(add_pointer)
 
-namespace details {
-template <typename T, typename = T&>
-__DPL_HIDE_FROM_ABI remove_reference_t<T>* add_ptr(int) noexcept;
-template <typename T> // T is void
-__DPL_HIDE_FROM_ABI auto add_ptr(float) noexcept
-    -> decltype(static_cast<T* (*)(T const volatile*)>(0)(
-        (void const volatile*)0));
-template <typename T>
-__DPL_HIDE_FROM_ABI T add_ptr(...) noexcept;
-} // namespace details
+DPL_EXPORT namespace details::type_traits {
+class add_pointer {
+    add_pointer() = delete;
+    ~add_pointer() = delete;
+    template <typename T>
+    friend struct __DPL add_pointer;
+
+    template <typename T, typename = T&>
+    __DPL_HIDE_FROM_ABI static remove_reference_t<T>* make_result(int) noexcept;
+    template <typename T> // T is void
+    __DPL_HIDE_FROM_ABI static auto make_result(float) noexcept
+        -> decltype(static_cast<T* (*)(T const volatile*)>(0)(
+            (void const volatile*)0));
+    template <typename T>
+    __DPL_HIDE_FROM_ABI static T make_result(...) noexcept;
+};
+} // namespace details::type_traits
 
 DPL_EXPORT template <typename T>
 struct add_pointer {
-    using type DPL_NODEBUG = decltype(details::add_ptr(0));
+    using type DPL_NODEBUG =
+        decltype(details::type_traits::add_pointer::make_result<T>(0));
 };
 
 DPL_EXPORT template <typename T>
-using add_pointer_t = decltype(details::add_ptr(0));
+using add_pointer_t = typename add_pointer<T>::type;
 
-#endif // if __DPL_SHOULD_USE_BUILTIN(is_aggregate)
+#endif // if __DPL_SHOULD_USE_BUILTIN(add_pointer)
 
 DPL_DEFAULT_NAMESPACE_END

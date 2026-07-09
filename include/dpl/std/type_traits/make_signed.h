@@ -19,13 +19,13 @@ struct make_signed {
 };
 #else // if __DPL_SHOULD_USE_BUILTIN(make_signed)
 
-namespace details {
+DPL_EXPORT namespace details::type_traits {
 
 struct no_signed_type {};
 
 template <typename T>
 consteval auto find_signed_entry() noexcept {
-    return no_signed_entry{};
+    return no_signed_type{};
 }
 
 template <typename T>
@@ -51,10 +51,14 @@ consteval auto find_signed_entry() noexcept {
         return no_signed_type{};
     }
 }
-} // namespace details
+
+template <typename T>
+using make_signed DPL_NODEBUG =
+    decltype(details::type_traits::find_signed_entry<T>());
+} // namespace details::type_traits
 
 DPL_EXPORT template <typename T>
-struct make_signed : decltype(details::find_signed_entry<T>()) {};
+struct make_signed : details::type_traits::make_signed<T> {};
 
 DPL_EXPORT template <typename T>
 using make_signed_t = typename make_signed<T>::type;

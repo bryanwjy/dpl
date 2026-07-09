@@ -18,9 +18,10 @@ struct has_unique_object_representations :
 #else  // if __DPL_SHOULD_USE_BUILTIN(has_unique_object_representations)
 DPL_EXPORT template <typename T>
 inline constexpr bool has_unique_object_representations_v =
-    unsupported_trait_v<T>;
+    details::type_traits::unsupported_trait_v<T>;
 DPL_EXPORT template <typename T>
-struct has_unique_object_representations : unsupported_trait<T> {};
+struct has_unique_object_representations :
+    details::type_traits::unsupported_trait<T> {};
 #endif // if __DPL_SHOULD_USE_BUILTIN(has_unique_object_representations)
 
 DPL_DEFAULT_NAMESPACE_END

@@ -30,6 +30,6 @@ struct add_const<T const> {
 DPL_EXPORT template <typename T>
 using add_const_t = typename add_const<T>::type;
 
-#endif // if __DPL_SHOULD_USE_BUILTIN(is_aggregate)
+#endif // if __DPL_SHOULD_USE_BUILTIN(add_const)
 
 DPL_DEFAULT_NAMESPACE_END

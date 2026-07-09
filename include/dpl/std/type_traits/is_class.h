@@ -15,9 +15,9 @@ DPL_EXPORT template <typename T>
 struct is_class : bool_constant<__is_class(T)> {};
 #else  // if __DPL_SHOULD_USE_BUILTIN(is_class)
 DPL_EXPORT template <typename T>
-inline constexpr bool is_class_v = unsupported_trait_v<T>;
+inline constexpr bool is_class_v = details::type_traits::unsupported_trait_v<T>;
 DPL_EXPORT template <typename T>
-struct is_class : unsupported_trait<T> {};
+struct is_class : details::type_traits::unsupported_trait<T> {};
 #endif // if __DPL_SHOULD_USE_BUILTIN(is_class)
 
 DPL_DEFAULT_NAMESPACE_END

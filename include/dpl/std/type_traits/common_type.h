@@ -8,6 +8,7 @@
 #include "dpl/std/type_traits/declval.h"
 #include "dpl/std/type_traits/is_same.h"
 #include "dpl/std/type_traits/remove_reference.h"
+#include "dpl/std/type_traits/ternary_result.h"
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 
@@ -27,26 +28,22 @@ struct common_type<T, T> {
 DPL_EXPORT template <typename... Ts>
 using common_type_t DPL_NODEBUG = typename common_type<Ts...>::type;
 
-namespace details::common_type {
-template <typename T, typename U>
-using ternary_result_t DPL_NODEBUG = decltype([]() {
-    return false ? __DPL declval<T>() : __DPL declval<U>();
-}());
+DPL_EXPORT namespace details::type_traits {
 
 template <typename T, typename U>
-struct impl2 {};
+struct common_type2 {};
 template <typename T, typename U>
-struct impl1 : impl2<T, U> {};
+struct common_type1 : common_type2<T, U> {};
 template <typename T, typename U>
-struct impl0 : impl1<T, U> {};
+struct common_type0 : common_type1<T, U> {};
 
 template <typename T, typename U>
 requires (!is_same_v<T, decay_t<T>> || !is_same_v<U, decay_t<U>>)
-struct impl0<T, U> : __DPL common_type<decay_t<T>, decay_t<U>> {};
+struct common_type0<T, U> : __DPL common_type<decay_t<T>, decay_t<U>> {};
 
 template <typename T, typename U>
 requires requires { typename ternary_result_t<T, U>; }
-struct impl1<T, U> {
+struct common_type1<T, U> {
     using type DPL_NODEBUG = ternary_result_t<T, U>;
 };
 
@@ -55,18 +52,18 @@ requires requires {
     typename ternary_result_t<remove_reference_t<T> const&,
         remove_reference_t<U> const&>;
 }
-struct impl2<T, U> {
+struct common_type2<T, U> {
     using type DPL_NODEBUG = ternary_result_t<remove_reference_t<T> const&,
         remove_reference_t<U> const&>;
 };
 
 template <typename T, typename U>
-struct impl : impl0<T, U> {};
+struct common_type : common_type0<T, U> {};
 
-} // namespace details::common_type
+} // namespace details::type_traits
 
 DPL_EXPORT template <typename T, typename U>
-struct common_type<T, U> : details::common_type::impl<T, U> {};
+struct common_type<T, U> : details::type_traits::common_type<T, U> {};
 
 DPL_EXPORT template <typename T, typename U, typename... Vs>
 requires requires { typename common_type<T, U>::type; }

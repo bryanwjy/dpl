@@ -18,7 +18,8 @@ struct is_trivially_destructible :
 #else  // if __DPL_SHOULD_USE_BUILTIN(is_trivially_destructible)
 
 DPL_EXPORT template <typename T>
-inline constexpr bool is_trivially_destructible_v = unsupported_trait_v<T>;
+inline constexpr bool is_trivially_destructible_v =
+    details::type_traits::unsupported_trait_v<T>;
 DPL_EXPORT template <typename T>
 inline constexpr bool is_trivially_destructible_v<T const> =
     is_trivially_destructible_v<T>;

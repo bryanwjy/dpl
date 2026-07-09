@@ -3,6 +3,7 @@
 #pragma once
 
 #include "dpl/config.h"
+// IWYU pragma: always_keep
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 

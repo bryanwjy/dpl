@@ -3,6 +3,7 @@
 #pragma once
 
 #include "dpl/config.h"
+// IWYU pragma: always_keep
 
 #if !DPL_MODULES
 #  include "dpl/std/type_traits/common_reference.h"

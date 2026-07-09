@@ -42,7 +42,7 @@ struct is_trivially_move_constructible :
 #else  // if __DPL_SHOULD_USE_BUILTIN(is_trivially_constructible)
 DPL_EXPORT template <typename T, typename... Args>
 inline constexpr bool is_trivially_constructible_v =
-    unsupported_trait_v<T, Args...>;
+    details::type_traits::unsupported_trait_v<T, Args...>;
 
 DPL_EXPORT template <typename T>
 inline constexpr bool is_trivially_default_constructible_v =

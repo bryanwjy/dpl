@@ -26,7 +26,7 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 
 #else
 
-namespace details {
+DPL_EXPORT namespace details::type_traits {
 template <typename>
 inline constexpr bool is_wrapped = false;
 __DPL_HIDE_FROM_ABI void ref(...) noexcept = delete;
@@ -129,9 +129,10 @@ struct invoke_t {
 
 inline constexpr invoke_t invoke{};
 
-} // namespace details
+} // namespace details::type_traits
 
-#  define __DPL_BUILTIN_invoke(...) __DPL details::invoke(__VA_ARGS__)
+#  define __DPL_BUILTIN_invoke(...) \
+      __DPL details::type_traits::invoke(__VA_ARGS__)
 
 #endif // if __DPL_SHOULD_USE_BUILTIN(is_invocable)
 

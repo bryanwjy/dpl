@@ -15,9 +15,9 @@ struct underlying_type {
 };
 #else  // if __DPL_SHOULD_USE_BUILTIN(underlying_type)
 DPL_EXPORT template <typename T>
-using underlying_type_t = unsupported_trait_t<T>;
+using underlying_type_t = details::type_traits::unsupported_trait_t<T>;
 DPL_EXPORT template <typename T>
-struct underlying_type : unsupported_trait<T> {};
+struct underlying_type : details::type_traits::unsupported_trait<T> {};
 #endif // if __DPL_SHOULD_USE_BUILTIN(underlying_type)
 
 DPL_DEFAULT_NAMESPACE_END
