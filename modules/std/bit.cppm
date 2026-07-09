@@ -7,6 +7,7 @@ module;
 
 export module dpl:std.bit;
 export import :std.stddef;
+import :std.details.bit;
 import :std.concepts;
 import :std.type_traits;
 

@@ -11,8 +11,4 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 DPL_EXPORT inline constexpr size_t char_bit_v =
     __DPL popcount(static_cast<unsigned char>(-1));
 
-template <typename T>
-inline constexpr int unsigned_width_diff_v =
-    char_bit_v * ((int)sizeof(unsigned) - (int)sizeof(T));
-
 DPL_DEFAULT_NAMESPACE_END
