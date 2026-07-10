@@ -148,11 +148,13 @@ $(OUTPUT_DIR)/scan_commands.json: $(JSCAN_TARGETS)
 	@jq -s '.' $^ > $@
 
 $(OUTPUT_DIR)/module_dependencies.json: $(OUTPUT_DIR)/scan_commands.json $(ALL_SOURCES)
-	@$(SCAN_DEPS) -format=p1689 -compilation-database=$< -o $@
+	@mkdir -p '$(@D)'
+	@$(SCAN_DEPS) -format=p1689 -compilation-database=$< -o $@.tmp
+	@cmp -s $@.tmp $@ 2>/dev/null && rm $@.tmp || mv $@.tmp $@
 
 $(OUTPUT_DIR)/module_implementations.txt: FORCE
 	@mkdir -p '$(@D)'
-	@$(file >$@.tmp,$(subst $(space),$(newline),$(strip $(MOBJ_TARGETS))))
+	@$(file >$@.tmp,$(subst $(space),$(newline),$(sort $(MOBJ_TARGETS))))
 	@cmp -s $@.tmp $@ 2>/dev/null && rm $@.tmp || mv $@.tmp $@
 
 $(OUTPUT_DIR)/candidate_flags.txt: $(JDIR_TARGETS)

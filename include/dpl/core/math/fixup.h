@@ -3,6 +3,7 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/math/fpfix.h"
 #include "dpl/core/math/isfinite.h"
 #include "dpl/core/math/isinf.h"
 #include "dpl/core/math/isnan.h"
@@ -22,7 +23,6 @@
 #  include "dpl/core/operations/bitwise.h"    // IWYU pragma: keep
 #  include "dpl/core/operations/compare.h"    // IWYU pragma: keep
 #  include "dpl/core/operations/select.h"
-#  include "dpl/core/utility/fpfix.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN

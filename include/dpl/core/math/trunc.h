@@ -5,6 +5,7 @@
 
 #include "dpl/core/math/internal/compliance.h"
 #include "dpl/core/math/internal/ilogb.h"
+#include "dpl/core/math/rounding.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/extended.h"
@@ -19,7 +20,6 @@
 #  include "dpl/core/operations/compare.h"
 #  include "dpl/core/operations/select.h"
 #  include "dpl/core/type_traits/representation.h"
-#  include "dpl/core/utility/rounding.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN

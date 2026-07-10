@@ -8,6 +8,7 @@
 #include "dpl/core/math/floor.h"
 #include "dpl/core/math/internal/constants.h"
 #include "dpl/core/math/isfinite.h"
+#include "dpl/core/math/rounding.h"
 #include "dpl/core/math/trunc.h"
 
 #if !DPL_MODULES
@@ -20,7 +21,6 @@
 #  include "dpl/core/operations/compare.h"
 #  include "dpl/core/operations/select.h"
 #  include "dpl/core/type_traits/representation.h"
-#  include "dpl/core/utility/rounding.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN

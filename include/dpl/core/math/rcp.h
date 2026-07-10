@@ -5,6 +5,7 @@
 
 #include "dpl/core/math/fixup.h"
 #include "dpl/core/math/fma.h"
+#include "dpl/core/math/fpfix.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/extended.h"
@@ -16,7 +17,6 @@
 #  include "dpl/core/numbers/ext.h"
 #  include "dpl/core/operations/arithmetic.h"
 #  include "dpl/core/type_traits/representation.h"
-#  include "dpl/core/utility/fpfix.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
