@@ -45,7 +45,8 @@ struct alignas(uint16) storage16 {
       static_assert(true)
 
 template <typename T>
-struct extended_floating_point_operations : public extended_floating_point<T> {
+struct extended_floating_point_operations :
+    public internal::extended_floating_point<T> {
     __DPL_FP_SELF_ARITHMETIC(+);
     __DPL_FP_SELF_ARITHMETIC(-);
     __DPL_FP_SELF_ARITHMETIC(*);

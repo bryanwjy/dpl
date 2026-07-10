@@ -37,7 +37,9 @@ concept member_evaluatable = requires(T&& expr) {
 
 template <typename T>
 concept unqualified_evaluatable = requires(T&& expr) {
-    { evaluate(__DPL forward<T>(expr)) } -> same_as<expression_result_t<T>>;
+    {
+        evaluate(__DPL forward<T>(expr))
+    } -> same_as<simd_expression_result_t<T>>;
 };
 
 } // namespace internal

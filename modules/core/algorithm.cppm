@@ -7,6 +7,7 @@ module;
 export module dpl:core.algorithm;
 export import :core.fwd;
 export import :core.operations;
+import :core.details.type_traits;
 import :std.concepts;
 import :std.bit;
 import :std.type_traits;

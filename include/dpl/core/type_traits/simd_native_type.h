@@ -3,9 +3,12 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/type_traits/enable_simd_mask.h"
-#include "dpl/core/type_traits/enable_simd_vector.h"
 #include "dpl/core/type_traits/simd_abi_traits.h"
+
+#if !DPL_MODULES
+#  include "dpl/core/type_interface/enable_simd_mask.h"
+#  include "dpl/core/type_interface/enable_simd_vector.h"
+#endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {

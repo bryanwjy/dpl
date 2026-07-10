@@ -7,6 +7,7 @@ module;
 
 export module dpl:core.math;
 export import :core.fwd;
+import :core.details.type_traits;
 import :std.concepts;
 import :std.bit;
 import :std.type_traits;

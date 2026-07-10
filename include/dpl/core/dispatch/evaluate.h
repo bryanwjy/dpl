@@ -18,7 +18,7 @@ struct evaluate_t {
     template <simd_expression T>
     requires member_evaluatable<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr expression_result_t<T>
+    static constexpr simd_expression_result_t<T>
         DPL_VECTORCALL operator()(T&& expr) noexcept(
             noexcept(__DPL forward<T>(expr).evaluate())) {
         return __DPL forward<T>(expr).evaluate();
@@ -27,7 +27,7 @@ struct evaluate_t {
     template <simd_expression T>
     requires (!member_evaluatable<T>) && unqualified_evaluatable<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr expression_result_t<T>
+    static constexpr simd_expression_result_t<T>
         DPL_VECTORCALL operator()(T&& expr) noexcept(
             noexcept(evaluate(__DPL forward<T>(expr)))) {
         return evaluate(__DPL forward<T>(expr));

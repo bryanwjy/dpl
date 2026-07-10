@@ -9,8 +9,7 @@
 #if !DPL_MODULES
 #  include "dpl/core/concepts/cpo_invocable.h"
 #  include "dpl/core/concepts/simd_type.h"
-#  include "dpl/core/type_traits/cpo_result.h"
-#  include "dpl/core/type_traits/declarg.h"
+#  include "dpl/core/details/type_traits.h"
 #  include "dpl/core/type_traits/enable_const_mask.h"
 #  include "dpl/core/type_traits/simd_abi_traits.h"
 #  include "dpl/std/bit/bit_type.h"
@@ -21,6 +20,7 @@
 #  include "dpl/std/concepts/convertible_to.h"
 #  include "dpl/std/concepts/integral.h"
 #  include "dpl/std/utility/bitset.h"
+#  include "dpl/std/utility/template_barrier.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
@@ -346,5 +346,21 @@ using cmask_t DPL_NODEBUG =
 template <auto V>
 requires requires { typename cmask_t<V>; }
 inline constexpr cmask_t<V> cmask_v{};
+
+DPL_EXPORT template <template_barrier_t = template_barrier, const_mask_like M>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+consteval auto to_const_mask(M) noexcept {
+    constexpr auto W = internal::auto_width(M::value);
+    constexpr auto V = internal::launder_auto(M::value);
+    return const_mask<W, V>{};
+}
+
+DPL_EXPORT template <template_barrier_t = template_barrier, size_t W,
+    internal::mask_value_t<W> V>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+consteval auto to_const_mask(const_mask<W, V> mask) noexcept {
+    return mask;
+}
+
 } // namespace datapar
 DPL_DEFAULT_NAMESPACE_END

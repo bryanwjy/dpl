@@ -31,6 +31,7 @@ class basic_vector {
 
 public:
     using value_type = typename abi_traits::element_type;
+    using mask_type = basic_mask<E, A>;
     using abi_type = A;
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)

@@ -6,6 +6,7 @@ module;
 
 export module dpl:core.basic;
 export import :core.fwd;
+import :core.details.type_traits;
 import :core.concepts;
 import :core.type_traits;
 import :core.immediate;

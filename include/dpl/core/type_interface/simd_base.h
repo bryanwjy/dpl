@@ -4,19 +4,16 @@
 #include "dpl/config.h"
 
 #if !DPL_MODULES
+#  include "dpl/core/fwd/basic.h"
 #  include "dpl/std/concepts/derived_from.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
-DPL_EXPORT template <typename T>
-struct const_mask_base {
-    __DPL_HIDE_FROM_ABI constexpr ~const_mask_base() = default;
+DPL_EXPORT struct simd_base {
+    __DPL_HIDE_FROM_ABI constexpr ~simd_base() = default;
 };
-
-DPL_EXPORT template <typename T>
-inline constexpr bool enable_const_mask = derived_from<T, const_mask_base<T>>;
 
 } // namespace datapar
 

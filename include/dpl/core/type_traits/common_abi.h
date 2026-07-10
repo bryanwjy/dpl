@@ -3,8 +3,12 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/type_traits/enable_simd_abi.h"
 #include "dpl/core/type_traits/simd_abi_type.h"
+
+#if !DPL_MODULES
+#  include "dpl/core/details/type_traits.h"
+#  include "dpl/core/type_interface/enable_simd_abi.h"
+#endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
@@ -99,12 +103,6 @@ namespace datapar {
  */
 DPL_EXPORT template <typename... T>
 struct common_abi {};
-
-namespace internal {
-template <typename T>
-concept none_abi_type =
-    requires { typename simd_abi_type_t<T>; } && !enable_simd_abi<T>;
-} // namespace internal
 
 DPL_EXPORT template <typename... Ts>
 using common_abi_t = typename common_abi<Ts...>::type;

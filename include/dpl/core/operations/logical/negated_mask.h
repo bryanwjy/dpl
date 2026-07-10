@@ -11,7 +11,6 @@
 #  include "dpl/core/concepts/simd_mask.h"
 #  include "dpl/core/type_traits/canonical_type.h"
 #  include "dpl/core/type_traits/rebind_simd.h"
-#  include "dpl/core/type_traits/simd_traits.h"
 #  include "dpl/std/utility/forward.h"
 #endif
 
@@ -60,7 +59,6 @@ public:
     using abi_type = typename T::abi_type;
     using value_type = bool;
     using result_type = T;
-    static constexpr auto decay_policy = simd_traits<T>::decay_policy;
 
 private:
     using mask_type DPL_NODEBUG =

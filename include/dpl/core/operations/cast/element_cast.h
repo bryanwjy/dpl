@@ -41,33 +41,6 @@ struct operation_signature<element_cast_t<ToE>> {
 
 template <typename ToE>
 struct fallback_impl<element_cast_t<ToE>> {
-private:
-    template <typename FromE>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr ToE safe_cast(FromE val) noexcept {
-        if consteval {
-            // Do we need this?
-            if constexpr (floating_point<FromE> && integral<ToE>) {
-                auto const min = static_cast<FromE>(min_value_v<ToE>);
-                auto const max = static_cast<FromE>(max_value_v<ToE>);
-                auto const lt = val < min;
-                auto const gt = val > max;
-                if (lt || gt || !(val <= max && val >= min)) {
-                    return dx::msb;
-                }
-            }
-        }
-
-        if constexpr (convertible_to<FromE, ToE>) {
-            return static_cast<ToE>(val);
-        } else {
-            // TODO: Remove this and put it in the backend
-            static_assert(floating_point<ToE> && floating_point<FromE>);
-            static_assert(dx::digits_v<float> >= dx::digits_v<FromE>);
-            return static_cast<ToE>(static_cast<float>(val));
-        }
-    }
-
 public:
     template <fixed_width_abi A>
     requires simd_element_for<ToE, A>
@@ -89,7 +62,7 @@ public:
                 ? simd_abi_traits<From>::size
                 : simd_abi_traits<To>::size;
             array_for<To> buffer{
-                (Is < extent ? safe_cast(val[Is]) : dx::zero_v<ToE>)...};
+                (Is < extent ? static_cast<ToE>(val[Is]) : dx::zero_v<ToE>)...};
             return dx::load<A>(aligned, buffer.data);
         }(val, iota_sequence<To>);
     }

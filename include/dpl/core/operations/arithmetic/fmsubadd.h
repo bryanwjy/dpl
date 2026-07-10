@@ -11,12 +11,12 @@
 #  include "dpl/core/basic/internal/abi.h"
 #  include "dpl/core/concepts/cpo_invocable.h"
 #  include "dpl/core/concepts/equivalence.h"
+#  include "dpl/core/details/type_traits.h"
 #  include "dpl/core/dispatch/broadcastable/ternary.h"
 #  include "dpl/core/dispatch/interface.h"
 #  include "dpl/core/dispatch/maskable/transform.h"
 #  include "dpl/core/dispatch/operation/primitive.h"
 #  include "dpl/core/immediate/const_mask.h"
-#  include "dpl/core/type_traits/cpo_result.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN

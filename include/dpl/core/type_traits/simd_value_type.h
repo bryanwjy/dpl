@@ -3,8 +3,10 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/type_traits/enable_simd_mask.h"
-#include "dpl/core/type_traits/enable_simd_vector.h"
+#if !DPL_MODULES
+#  include "dpl/core/type_interface/enable_simd_mask.h"
+#  include "dpl/core/type_interface/enable_simd_vector.h"
+#endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
@@ -26,7 +28,8 @@ DPL_EXPORT template <typename T>
 using simd_value_type_t = typename simd_value_type<T>::type;
 
 DPL_EXPORT template <typename T>
-requires enable_simd_vector<T> || enable_simd_mask<T>
+requires (enable_simd_vector<T> || enable_simd_mask<T>) &&
+    requires { typename T::value_type; }
 struct simd_value_type<T> {
     using type DPL_NODEBUG = typename T::value_type;
 };
