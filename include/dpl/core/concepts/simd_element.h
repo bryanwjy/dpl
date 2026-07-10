@@ -6,7 +6,6 @@
 #include "dpl/core/concepts/simd_abi.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/type_traits/floating_point_traits.h"
 #  include "dpl/core/type_traits/simd_element_representation.h"
 #endif
 

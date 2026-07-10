@@ -3,24 +3,19 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/math/ext/common.h" // IWYU pragma: export
-#include "dpl/core/math/ext/float16.h"
+#include "dpl/core/numbers/ext/common.h" // IWYU pragma: export
+#include "dpl/core/numbers/ext/float16.h"
+#include "dpl/core/numbers/floating_point_like.h"
 
 #if !DPL_SUPPORTS_BFLOAT16
+
 #  if !DPL_MODULES
-#    include "dpl/core/immediate/constants/infinity.h"
-#    include "dpl/core/immediate/constants/mantissa_bits.h"
-#    include "dpl/core/immediate/constants/max_value.h"
-#    include "dpl/core/immediate/constants/min_value.h"
-#    include "dpl/core/immediate/constants/msb.h"
-#    include "dpl/core/immediate/constants/nan.h"
-#    include "dpl/core/immediate/constants/value_bits.h"
-#    include "dpl/core/immediate/constants/zero.h"
+#    include "dpl/core/details/numbers.h"
 #  endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 
-namespace datapar::ext {
+DPL_EXPORT namespace ext {
 
 #  if DPL_SUPPORTS_STORAGE_BFLOAT16
 #    define _DPL_BF16_STORAGE_TYPE __bf16
@@ -29,31 +24,31 @@ namespace datapar::ext {
 #  endif
 
 class DPL_EMPTY_BASES bfloat16_t :
-    public storage16<bfloat16_t, _DPL_BF16_STORAGE_TYPE>,
+    public details::numbers::storage16<bfloat16_t, _DPL_BF16_STORAGE_TYPE>,
 #  if DPL_SUPPORTS_FLOAT32
-    public promotable<bfloat16_t, __DPL float32>,
+    public details::numbers::promotable<bfloat16_t, __DPL float32>,
 #  endif
 #  if DPL_SUPPORTS_FLOAT64
-    public promotable<bfloat16_t, __DPL float64>,
+    public details::numbers::promotable<bfloat16_t, __DPL float64>,
 #  endif
 #  if DPL_SUPPORTS_FLOAT128
-    public promotable<bfloat16_t, __DPL float128>,
+    public details::numbers::promotable<bfloat16_t, __DPL float128>,
 #  endif
-    public promotable<bfloat16_t, float>,
-    public promotable<bfloat16_t, double>,
-    public promotable<bfloat16_t, long double>,
-    public promotable<char, bfloat16_t>,
-    public promotable<signed char, bfloat16_t>,
-    public promotable<unsigned char, bfloat16_t>,
-    public promotable<short, bfloat16_t>,
-    public promotable<unsigned short, bfloat16_t>,
-    public promotable<int, bfloat16_t>,
-    public promotable<unsigned int, bfloat16_t>,
-    public promotable<long, bfloat16_t>,
-    public promotable<unsigned long, bfloat16_t>,
-    public promotable<long long, bfloat16_t>,
-    public promotable<unsigned long long, bfloat16_t>,
-    public extended_floating_point_operations<bfloat16_t> {
+    public details::numbers::promotable<bfloat16_t, float>,
+    public details::numbers::promotable<bfloat16_t, double>,
+    public details::numbers::promotable<bfloat16_t, long double>,
+    public details::numbers::promotable<char, bfloat16_t>,
+    public details::numbers::promotable<signed char, bfloat16_t>,
+    public details::numbers::promotable<unsigned char, bfloat16_t>,
+    public details::numbers::promotable<short, bfloat16_t>,
+    public details::numbers::promotable<unsigned short, bfloat16_t>,
+    public details::numbers::promotable<int, bfloat16_t>,
+    public details::numbers::promotable<unsigned int, bfloat16_t>,
+    public details::numbers::promotable<long, bfloat16_t>,
+    public details::numbers::promotable<unsigned long, bfloat16_t>,
+    public details::numbers::promotable<long long, bfloat16_t>,
+    public details::numbers::promotable<unsigned long long, bfloat16_t>,
+    public details::numbers::extended_floating_point_operations<bfloat16_t> {
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD) static constexpr storage16
     bits_to_storage(integral auto val) noexcept {
@@ -230,19 +225,18 @@ public:
 
 #  undef _DPL_BF16_STORAGE_TYPE
 
-} // namespace datapar::ext
+} // namespace ext
 
 DPL_DEFAULT_NAMESPACE_END
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
-namespace datapar::ext {
-inline namespace ext_literals {
-DPL_EXPORT consteval __DPL ext::bfloat16 operator""_bf16(
-    long double val) noexcept {
+DPL_EXPORT namespace ext {
+inline namespace literals {
+consteval __DPL ext::bfloat16 operator""_bf16(long double val) noexcept {
     return static_cast<__DPL ext::bfloat16>(val);
 }
-} // namespace ext_literals
-} // namespace datapar::ext
+} // namespace literals
+} // namespace ext
 
 DPL_DEFAULT_NAMESPACE_END

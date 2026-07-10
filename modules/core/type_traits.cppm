@@ -8,6 +8,7 @@ export module dpl:core.type_traits;
 export import :core.fwd;
 export import :core.type_interface;
 import :core.details.type_traits;
+import :core.numbers;
 import :std.concepts;
 import :std.bit;
 import :std.type_traits;
@@ -17,7 +18,6 @@ import :std.utility;
 #include "dpl/core/type_traits/canonical_type.h"
 #include "dpl/core/type_traits/common_abi.h"
 #include "dpl/core/type_traits/common_size_type.h"
-#include "dpl/core/type_traits/floating_point_traits.h"
 #include "dpl/core/type_traits/rebind_simd.h"
 #include "dpl/core/type_traits/representation.h"
 #include "dpl/core/type_traits/simd_abi_traits.h"

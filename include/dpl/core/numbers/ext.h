@@ -4,6 +4,6 @@
 #include "dpl/config.h"
 
 // IWYU pragma: begin_exports
-#include "dpl/core/math/ext/bfloat16.h"
-#include "dpl/core/math/ext/float16.h"
+#include "dpl/core/numbers/ext/bfloat16.h"
+#include "dpl/core/numbers/ext/float16.h"
 // IWYU pragma: end_exports

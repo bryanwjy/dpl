@@ -7,7 +7,7 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/simd_element.h"
-#  include "dpl/core/type_traits/floating_point_traits.h"
+#  include "dpl/core/numbers/floating_point_traits.h"
 #  include "dpl/std/concepts/integral.h"
 #endif
 

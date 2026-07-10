@@ -16,7 +16,7 @@ import dpl;
 // float16 → float / double is always exact.
 
 namespace dpp = dpl::datapar;
-using float16 = dpp::ext::float16;
+using float16 = dpl::ext::float16;
 
 namespace {
 

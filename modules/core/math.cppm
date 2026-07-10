@@ -15,6 +15,7 @@ import :std.utility;
 import :core.basic;
 import :core.concepts;
 import :core.immediate;
+import :core.numbers;
 import :core.operations;
 import :core.type_traits;
 import :core.utility;
@@ -25,7 +26,6 @@ import :core.utility;
 #include "dpl/core/math/copysign.h"
 #include "dpl/core/math/dot.h"
 #include "dpl/core/math/exp.h"
-#include "dpl/core/math/ext.h"
 #include "dpl/core/math/fixup.h"
 #include "dpl/core/math/floor.h"
 #include "dpl/core/math/fma.h"

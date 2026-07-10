@@ -13,7 +13,7 @@
 // IWYU pragma: begin_exports
 #  include "dpl/core/basic/basic_mask.h"
 #  include "dpl/core/basic/basic_vector.h"
-#  include "dpl/core/math/ext.h"
+#  include "dpl/core/numbers/ext.h"
 // IWYU pragma: end_exports
 #  include "dpl/core/concepts/simd_element.h"
 #  include "dpl/core/type_traits/enable_simd_abi.h"

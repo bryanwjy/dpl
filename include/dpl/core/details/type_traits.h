@@ -53,8 +53,6 @@ struct simd_mask_type;
 template <typename A, typename E>
 struct simd_element_representation;
 template <typename>
-struct floating_point_traits;
-template <typename>
 struct canonical_type;
 template <typename, typename = __DPL ignore_t>
 struct simd_abi_traits;
@@ -87,46 +85,6 @@ concept has_expression_result =
 
 template <typename T>
 concept none_abi_type = has_simd_abi<T> && !enable_simd_abi<T>;
-
-template <size_t N>
-struct xfp {
-    static_assert(80 % __DPL char_bit_v == 0);
-    static constexpr auto bytes = 80zu / __DPL char_bit_v;
-    struct val_t {
-        unsigned char data[bytes];
-    } val;
-    struct padding_t {
-        unsigned char data[N - bytes];
-    } padding;
-    consteval bitset<80> to_bitset() const {
-        xfp copy{};
-        copy.val = this->val;
-        return __DPL bit_cast<bitset<80>>(copy);
-    }
-};
-
-template <typename T>
-class extended_floating_point {};
-
-template <typename T>
-concept has_floating_point_traits = requires {
-    typename floating_point_traits<T>::type;
-    floating_point_traits<T>::width;
-    floating_point_traits<T>::digits;
-    floating_point_traits<T>::signbit;
-    floating_point_traits<T>::mantissa_mask;
-    floating_point_traits<T>::exponent_mask;
-    floating_point_traits<T>::has_hidden_bit;
-    typename size_constant<floating_point_traits<T>::width>;
-    typename size_constant<floating_point_traits<T>::digits>;
-    typename integral_constant<bitset<floating_point_traits<T>::width>,
-        floating_point_traits<T>::signbit>;
-    typename integral_constant<bitset<floating_point_traits<T>::width>,
-        floating_point_traits<T>::mantissa_mask>;
-    typename integral_constant<bitset<floating_point_traits<T>::width>,
-        floating_point_traits<T>::exponent_mask>;
-    typename bool_constant<floating_point_traits<T>::has_hidden_bit>;
-};
 
 template <typename, typename>
 struct simd_abi_size {};

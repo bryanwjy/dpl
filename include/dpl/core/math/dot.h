@@ -3,8 +3,6 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/math/ext.h"
-
 #if !DPL_MODULES
 #  include "dpl/core/basic/broadcast.h"
 #  include "dpl/core/basic/lane_index.h"
@@ -12,6 +10,7 @@
 #  include "dpl/core/dispatch/interface.h"
 #  include "dpl/core/dispatch/maskable/accumulation.h"
 #  include "dpl/core/dispatch/operation/math.h"
+#  include "dpl/core/numbers/ext.h"
 #  include "dpl/core/operations/arithmetic.h"
 #  include "dpl/core/operations/bitwise.h"
 #  include "dpl/core/operations/cast.h"

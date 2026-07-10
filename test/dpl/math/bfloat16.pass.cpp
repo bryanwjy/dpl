@@ -16,7 +16,7 @@ import dpl;
 // Integers 0..256 are exactly representable (8 effective mantissa bits).
 
 namespace dpp = dpl::datapar;
-using bfloat16 = dpp::ext::bfloat16;
+using bfloat16 = dpl::ext::bfloat16;
 
 namespace {
 

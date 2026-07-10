@@ -9,7 +9,7 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/simd_element.h"
-#  include "dpl/core/type_traits/floating_point_traits.h"
+#  include "dpl/core/numbers/floating_point_traits.h"
 #  include "dpl/std/bit/bit_cast.h"
 #  include "dpl/std/bit/bit_type.h"
 #endif

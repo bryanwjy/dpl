@@ -3,7 +3,6 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/math/ext.h" // IWYU pragma: keep
 #include "dpl/core/math/fma.h"
 #include "dpl/core/math/internal/constants.h"
 #include "dpl/core/math/internal/ldexp.h"
@@ -18,6 +17,7 @@
 #  include "dpl/core/dispatch/interface.h"
 #  include "dpl/core/dispatch/maskable/transform.h"
 #  include "dpl/core/dispatch/operation/math.h"
+#  include "dpl/core/numbers/ext.h"           // IWYU pragma: keep
 #  include "dpl/core/operations/arithmetic.h" // IWYU pragma: keep
 #  include "dpl/core/operations/bitwise.h"    // IWYU pragma: keep
 #  include "dpl/core/operations/cast.h"

@@ -9,7 +9,7 @@
 #include "dpl/core/immediate/constants/min_value.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/type_traits/floating_point_traits.h"
+#  include "dpl/core/numbers/floating_point_traits.h"
 #  include "dpl/std/bit/bit_cast.h"
 #  include "dpl/std/bit/bit_type.h"
 #  include "dpl/std/concepts/convertible_to.h"

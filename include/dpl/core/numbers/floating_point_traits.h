@@ -14,12 +14,10 @@
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 
-namespace datapar {
-// Assumes IEEE floats, may need to change depending on platform
-// TODO: Maybe move to math?
 DPL_EXPORT template <typename>
 struct floating_point_traits {};
 
+// Assumes IEEE floats, may need to change depending on platform
 DPL_EXPORT template <floating_point T>
 struct floating_point_traits<T> {
 
@@ -37,13 +35,26 @@ struct floating_point_traits<T> {
 
     static constexpr auto exponent_mask = ~mantissa_mask ^ signbit;
 
+    static constexpr auto exponent_bias =
+        static_cast<int>(__DPL to_underlying(exponent_mask >> digits));
+
     static constexpr auto has_hidden_bit = true;
+
+    static constexpr auto has_denormal = true;
+
+    static constexpr auto has_infinity = true;
+
+    static constexpr auto has_quiet_nan = true;
+
+    static constexpr auto has_signaling_nan = true;
+
+    static constexpr auto radix = 2zu;
 };
 
 DPL_EXPORT template <floating_point T>
 requires (sizeof(T) == sizeof(bitset<80>) &&
     __DPL countr_zero(
-        __DPL bit_cast<internal::xfp<sizeof(T)>>(static_cast<T>(1))
+        __DPL bit_cast<details::numbers::xfp<sizeof(T)>>(static_cast<T>(1))
             .to_bitset()) == 63)
 struct floating_point_traits<T> {
     using type = T;
@@ -56,21 +67,22 @@ struct floating_point_traits<T> {
 
     static constexpr auto mantissa_mask = bitset<80>(~bitset<63>());
 
-    static constexpr auto exponent_mask =
-        ~mantissa_mask ^ bitset<80>(~bitset<64>());
+    static constexpr auto exponent_mask = ~signbit & ~bitset<80>(~bitset<64>());
+
+    static constexpr auto exponent_bias =
+        ((1 << __DPL popcount(exponent_mask)) - 1);
 
     static constexpr auto has_hidden_bit = false;
+
+    static constexpr auto has_denormal = true;
+
+    static constexpr auto has_infinity = true;
+
+    static constexpr auto has_quiet_nan = true;
+
+    static constexpr auto has_signaling_nan = true;
+
+    static constexpr auto radix = 2zu;
 };
-
-DPL_EXPORT template <typename T>
-concept floating_point_like =
-    (floating_point<T> ||
-        derived_from<T, internal::extended_floating_point<T>>) &&
-    internal::has_floating_point_traits<T>;
-
-} // namespace datapar
-
-DPL_EXPORT using datapar::floating_point_like;
-DPL_EXPORT using datapar::floating_point_traits;
 
 DPL_DEFAULT_NAMESPACE_END

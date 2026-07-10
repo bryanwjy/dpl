@@ -4,18 +4,77 @@
 #include "dpl/config.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/type_traits/floating_point_traits.h"
-#  include "dpl/std/concepts/floating_point.h"
-#  include "dpl/std/concepts/integral.h"
-#  include "dpl/std/concepts/same_as.h"
-#  include "dpl/std/stddef/types.h"
-#  include "dpl/std/type_traits/common_type.h"
+#  include "dpl/std/bit/bit_cast.h"
+#  include "dpl/std/bit/char_bit.h"
+#  include "dpl/std/concepts/different_from.h"
+#  include "dpl/std/type_traits/constants.h"
+#  include "dpl/std/utility/bitset.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
 
-namespace datapar::ext {
-#if (!DPL_SUPPORTS_FLOAT16) | (!DPL_SUPPORTS_BFLOAT16)
+DPL_EXPORT template <typename>
+struct floating_point_traits;
+
+DPL_EXPORT namespace details::numbers {
+template <size_t N>
+struct xfp {
+    static_assert(80 % __DPL char_bit_v == 0);
+    static constexpr auto bytes = 80zu / __DPL char_bit_v;
+    struct val_t {
+        unsigned char data[bytes];
+    } val;
+    struct padding_t {
+        unsigned char data[N - bytes];
+    } padding;
+    consteval bitset<80> to_bitset() const {
+        xfp copy{};
+        copy.val = this->val;
+        return __DPL bit_cast<bitset<80>>(copy);
+    }
+};
+
+template <typename T>
+class extended_floating_point {};
+
+template <typename T>
+concept floating_point_like =
+    (floating_point<T> ||
+        derived_from<remove_cv_t<T>,
+            extended_floating_point<remove_cv_t<T>>>) &&
+    requires { typename floating_point_traits<T>::type; };
+
+template <typename T>
+concept binary_layout_floating_point = floating_point_like<T> && requires {
+    floating_point_traits<T>::width;
+    floating_point_traits<T>::digits;
+    floating_point_traits<T>::signbit;
+    floating_point_traits<T>::mantissa_mask;
+    floating_point_traits<T>::exponent_mask;
+    floating_point_traits<T>::exponent_bias;
+    floating_point_traits<T>::has_hidden_bit;
+    floating_point_traits<T>::has_signaling_nan;
+    floating_point_traits<T>::has_denormal;
+    floating_point_traits<T>::has_infinity;
+    floating_point_traits<T>::radix;
+    requires (floating_point_traits<T>::radix == 2);
+    typename size_constant<floating_point_traits<T>::width>;
+    typename size_constant<floating_point_traits<T>::exponent_bias>;
+    typename size_constant<floating_point_traits<T>::digits>;
+    typename integral_constant<bitset<floating_point_traits<T>::width>,
+        floating_point_traits<T>::signbit>;
+    typename integral_constant<bitset<floating_point_traits<T>::width>,
+        floating_point_traits<T>::mantissa_mask>;
+    typename integral_constant<bitset<floating_point_traits<T>::width>,
+        floating_point_traits<T>::exponent_mask>;
+    typename bool_constant<floating_point_traits<T>::has_hidden_bit>;
+    typename bool_constant<floating_point_traits<T>::has_signaling_nan>;
+    typename bool_constant<floating_point_traits<T>::has_quiet_nan>;
+    typename bool_constant<floating_point_traits<T>::has_denormal>;
+    typename bool_constant<floating_point_traits<T>::has_infinity>;
+};
+
+#if !DPL_SUPPORTS_FLOAT16 | !DPL_SUPPORTS_BFLOAT16
 // Template to prevent common base between float16 and bfloat16
 template <typename T, typename V>
 struct alignas(uint16) storage16 {
@@ -45,8 +104,7 @@ struct alignas(uint16) storage16 {
       static_assert(true)
 
 template <typename T>
-struct extended_floating_point_operations :
-    public internal::extended_floating_point<T> {
+struct extended_floating_point_operations : public extended_floating_point<T> {
     __DPL_FP_SELF_ARITHMETIC(+);
     __DPL_FP_SELF_ARITHMETIC(-);
     __DPL_FP_SELF_ARITHMETIC(*);
@@ -129,92 +187,10 @@ struct promotable {
 #  undef __DPL_FP_OPERATOR_L
 #endif
 
-#if !DPL_SUPPORTS_BFLOAT16
-class bfloat16_t;
-DPL_EXPORT using bfloat16 = bfloat16_t;
-#else
-DPL_EXPORT using bfloat16 = __DPL bfloat16;
-#endif
-#if !DPL_SUPPORTS_FLOAT16
-class float16_t;
-DPL_EXPORT using float16 = float16_t;
-#else
-DPL_EXPORT using float16 = __DPL float16;
-#endif
+template <typename T>
+consteval T invalid_number() noexcept {
+    DPL_BUILTIN_unreachable();
+}
 
-namespace dx = __DPL datapar; // NOLINT
-inline namespace ext_literals {}
-} // namespace datapar::ext
-
-DPL_EXPORT namespace ext = datapar::ext; // NOLINT
-
-namespace datapar {
-DPL_EXPORT namespace ext_literals = ext::ext_literals;          // NOLINT
-} // namespace datapar
-
-DPL_EXPORT namespace ext_literals = datapar::ext::ext_literals; // NOLINT
-
-#if !DPL_SUPPORTS_BFLOAT16
-DPL_EXPORT template <floating_point T>
-struct common_type<ext::bfloat16, T> {
-    using type = T;
-};
-DPL_EXPORT template <floating_point T>
-struct common_type<T, ext::bfloat16> {
-    using type = T;
-};
-DPL_EXPORT template <integral T>
-struct common_type<T, ext::bfloat16> {
-    using type = ext::bfloat16;
-};
-DPL_EXPORT template <integral T>
-struct common_type<ext::bfloat16, T> {
-    using type = ext::bfloat16;
-};
-
-DPL_EXPORT template <>
-struct floating_point_traits<ext::bfloat16> {
-    using type = ext::bfloat16;
-
-    static constexpr auto width = 16zu;
-    static constexpr auto digits = 8zu;
-    static constexpr auto signbit = bitset<16>(1u << 15);
-    static constexpr auto mantissa_mask =
-        __DPL truncate<16>(floating_point_traits<float>::mantissa_mask >> 16);
-    static constexpr auto exponent_mask =
-        __DPL truncate<16>(floating_point_traits<float>::exponent_mask >> 16);
-    static constexpr auto has_hidden_bit = true;
-};
-#endif
-
-#if !DPL_SUPPORTS_FLOAT16
-DPL_EXPORT template <floating_point T>
-struct common_type<ext::float16, T> {
-    using type = T;
-};
-DPL_EXPORT template <floating_point T>
-struct common_type<T, ext::float16> {
-    using type = T;
-};
-DPL_EXPORT template <integral T>
-struct common_type<T, ext::float16> {
-    using type = ext::float16;
-};
-DPL_EXPORT template <integral T>
-struct common_type<ext::float16, T> {
-    using type = ext::float16;
-};
-
-DPL_EXPORT template <>
-struct floating_point_traits<ext::float16> {
-    using type = ext::float16;
-
-    static constexpr auto width = 16zu;
-    static constexpr auto digits = 11zu;
-    static constexpr auto signbit = bitset<16>(1u << 15);
-    static constexpr auto mantissa_mask = bitset<16>((1u << (digits - 1)) - 1);
-    static constexpr auto exponent_mask = ~mantissa_mask ^ signbit;
-    static constexpr auto has_hidden_bit = true;
-};
-#endif
+} // namespace details::numbers
 DPL_DEFAULT_NAMESPACE_END

@@ -11,6 +11,7 @@ export import :core.concepts;
 export import :core.dispatch;
 export import :core.immediate;
 export import :core.math;
+export import :core.numbers;
 export import :core.operations;
 export import :core.type_traits;
 export import :core.utility;

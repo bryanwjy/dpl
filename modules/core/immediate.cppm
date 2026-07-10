@@ -12,6 +12,7 @@ import :std.bit;
 import :std.type_traits;
 import :std.utility;
 import :core.concepts;
+import :core.numbers;
 import :core.type_traits;
 
 // IWYU pragma: begin_exports

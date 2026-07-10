@@ -3,7 +3,6 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/math/ext.h"
 #include "dpl/core/math/fixup.h"
 #include "dpl/core/math/fma.h"
 
@@ -14,6 +13,7 @@
 #  include "dpl/core/dispatch/interface.h"
 #  include "dpl/core/dispatch/maskable/transform.h"
 #  include "dpl/core/dispatch/operation/math.h"
+#  include "dpl/core/numbers/ext.h"
 #  include "dpl/core/operations/arithmetic.h"
 #  include "dpl/core/type_traits/representation.h"
 #  include "dpl/core/utility/fpfix.h"
