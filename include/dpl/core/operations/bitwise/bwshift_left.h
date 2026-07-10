@@ -73,7 +73,7 @@ struct fallback_impl<bwshift_left_t> {
     }
 
     template <fixed_width_abi A, simd_element_for<A> E>
-    requires regular_invocable<to_bitset_t, basic_mask<E, A>>
+    requires cpo_invocable<to_bitset_t, basic_mask<E, A>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(
         basic_mask<E, A> val, size_t shift) noexcept {
@@ -485,7 +485,7 @@ public:
 template <size_t N>
 struct bwshift_lefti_t {
     template <typename... Ts>
-    requires invocable<bwshift_left_t, Ts..., size_constant<N>>
+    requires cpo_invocable<bwshift_left_t, Ts..., size_constant<N>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(Ts&&... val) noexcept(
         (... && (!simd_type<Ts> || canonical_simd_type<Ts>))) {

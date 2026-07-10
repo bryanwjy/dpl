@@ -6,12 +6,12 @@
 #if !DPL_MODULES
 #  include "dpl/core/concepts/cpo_invocable.h"
 #  include "dpl/core/concepts/equivalence.h"
-#  include "dpl/core/details/type_traits.h"
 #  include "dpl/core/dispatch/broadcastable/ternary.h"
 #  include "dpl/core/dispatch/interface.h"
 #  include "dpl/core/dispatch/maskable/transform.h"
 #  include "dpl/core/dispatch/operation/math.h"
 #  include "dpl/core/operations/arithmetic.h"
+#  include "dpl/core/type_traits/details/cpo_result.h"
 #  include "dpl/std/concepts/floating_point.h"
 #endif
 

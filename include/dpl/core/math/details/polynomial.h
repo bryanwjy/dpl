@@ -3,7 +3,7 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/math/internal/fwd.h" // IWYU pragma: export
+#include "dpl/core/math/details/fwd.h" // IWYU pragma: export
 
 #include "dpl/core/math/fma.h"
 #if !DPL_MODULES
@@ -21,14 +21,14 @@ DPL_DISABLE_WARNING("-Wc++26-extensions")
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
-namespace datapar::fmath {
+DPL_EXPORT namespace datapar::fmath {
 namespace estrin {
 struct unintialized_t {};
 
 /**
  * Use a union for easier debugging at constexpr
  */
-template <floating_point E, simd_abi A>
+template <floating_point_like E, simd_abi A>
 union optional {
     unintialized_t none;
     basic_vector<E, A> val;
@@ -38,7 +38,7 @@ union optional {
  * Union based storage used to reduce register pressure
  * on estrin evalutaions.
  */
-template <size_t S, floating_point E, simd_abi A>
+template <size_t S, floating_point_like E, simd_abi A>
 class vpowers : protected vpowers<S - 1, E, A> {
     using base_type DPL_NODEBUG = vpowers<S - 1, E, A>;
 
@@ -92,16 +92,16 @@ protected:
     optional<E, A> data;
 };
 
-template <floating_point E, simd_abi A>
+template <floating_point_like E, simd_abi A>
 class vpowers<static_cast<size_t>(-1), E, A> {};
 
 } // namespace estrin
 
-template <floating_point auto V0, floating_point auto... Vs>
+template <floating_point_like auto V0, floating_point_like auto... Vs>
 class polynomial {
 private:
     static_assert(sizeof...(Vs) >= 1);
-    template <floating_point T>
+    template <floating_point_like T>
     struct coeffs_t {
         template <integral auto I>
         requires (I == 0)
@@ -130,14 +130,14 @@ private:
         consteval T front(this coeffs_t self) noexcept { return V0; }
     };
 
-    template <floating_point T>
+    template <floating_point_like T>
     static constexpr coeffs_t<T> coeffs{};
 
     static constexpr auto degree = sizeof...(Vs);
     static constexpr size_t depth = __DPL bit_width(degree) - 1;
 
-    template <floating_point E, simd_abi A, typename Powers, size_t B = 0zu,
-        size_t L = depth>
+    template <floating_point_like E, simd_abi A, typename Powers,
+        size_t B = 0zu, size_t L = depth>
     requires same_as<decay_t<Powers>, fmath::estrin::vpowers<depth, E, A>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto eval_estrin(
@@ -173,7 +173,7 @@ private:
         }
     }
 
-    template <floating_point E, simd_abi A>
+    template <floating_point_like E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL eval_estrin(
         basic_vector<E, A> x) noexcept {
@@ -187,7 +187,7 @@ private:
         return eval_estrin<E, A>(estrin::vpowers<depth, E, A>(x));
     }
 
-    template <floating_point E, simd_abi A>
+    template <floating_point_like E, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL eval_horner(
         basic_vector<E, A> x) noexcept {
@@ -205,7 +205,7 @@ private:
     }
 
 public:
-    template <floating_point T, simd_abi A>
+    template <floating_point_like T, simd_abi A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(basic_vector<T, A> x) noexcept {
         if constexpr (degree < 6) {

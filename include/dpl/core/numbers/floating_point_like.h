@@ -3,11 +3,8 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/numbers/ext/common.h"
-#include "dpl/core/numbers/floating_point_traits.h"
-
 #if !DPL_MODULES
-#  include "dpl/core/details/numbers.h"
+#  include "dpl/core/numbers/details/floating_point_like.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN

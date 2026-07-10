@@ -8,7 +8,7 @@
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
-namespace datapar::fmath {
+DPL_EXPORT namespace datapar::fmath {
 template <floating_point T>
 inline constexpr T rempi_table[] = {};
 

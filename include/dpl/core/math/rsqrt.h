@@ -5,9 +5,6 @@
 
 #include "dpl/core/math/fixup.h"
 #include "dpl/core/math/frexp.h"
-#include "dpl/core/math/internal/accuracy.h"
-#include "dpl/core/math/internal/ldexp.h"
-#include "dpl/core/math/internal/rsqrt2.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/extended.h"
@@ -16,6 +13,9 @@
 #  include "dpl/core/dispatch/interface.h"
 #  include "dpl/core/dispatch/maskable/transform.h"
 #  include "dpl/core/dispatch/operation/math.h"
+#  include "dpl/core/math/details/accuracy.h"
+#  include "dpl/core/math/details/ldexp.h"
+#  include "dpl/core/math/details/rsqrt2.h"
 #  include "dpl/core/operations/arithmetic.h" // IWYU pragma: keep
 #  include "dpl/core/operations/bitwise.h"    // IWYU pragma: keep
 #  include "dpl/core/operations/compare.h"    // IWYU pragma: keep

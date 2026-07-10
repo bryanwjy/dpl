@@ -3,9 +3,6 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/math/internal/ldexp.h"
-#include "dpl/core/math/internal/pair.h"
-#include "dpl/core/math/internal/polynomial.h"
 #include "dpl/core/math/round.h"
 
 #if !DPL_MODULES
@@ -13,6 +10,9 @@
 #  include "dpl/core/dispatch/interface.h"
 #  include "dpl/core/dispatch/maskable/transform.h"
 #  include "dpl/core/dispatch/operation/math.h"
+#  include "dpl/core/math/details/ldexp.h"
+#  include "dpl/core/math/details/pair.h"
+#  include "dpl/core/math/details/polynomial.h"
 #  include "dpl/core/operations/bitwise.h" // IWYU pragma: keep
 #  include "dpl/core/operations/compare.h"
 #  include "dpl/core/operations/logical.h"

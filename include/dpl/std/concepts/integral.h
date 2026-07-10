@@ -5,7 +5,7 @@
 #include "dpl/config.h"
 
 #if !DPL_MODULES
-#  include "dpl/std/type_traits/is_integral.h"
+#  include "dpl/std/details/concepts.h"
 #  include "dpl/std/type_traits/is_signed.h"
 #endif
 

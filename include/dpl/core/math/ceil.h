@@ -4,7 +4,6 @@
 #include "dpl/config.h"
 
 #include "dpl/core/math/copysign.h"
-#include "dpl/core/math/internal/constants.h"
 #include "dpl/core/math/isfinite.h"
 #include "dpl/core/math/rounding.h"
 #include "dpl/core/math/trunc.h"
@@ -16,6 +15,7 @@
 #  include "dpl/core/dispatch/maskable/transform.h"
 #  include "dpl/core/dispatch/operation/math.h"
 #  include "dpl/core/immediate/constants/one.h"
+#  include "dpl/core/math/details/constants.h"
 #  include "dpl/core/operations/arithmetic.h"
 #  include "dpl/core/operations/compare.h"
 #  include "dpl/core/operations/select.h"

@@ -15,7 +15,6 @@
 
 #  include "dpl/core/concepts/cpo_invocable.h"
 #  include "dpl/core/concepts/mask_compatibility.h"
-#  include "dpl/core/details/type_traits.h"
 #  include "dpl/core/immediate/const_mask.h"
 #  include "dpl/core/immediate/constants/zero.h"
 #  include "dpl/core/type_traits/simd_abi_type.h"

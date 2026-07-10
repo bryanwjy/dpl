@@ -3,11 +3,6 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/math/internal/gather.h"
-#include "dpl/core/math/internal/ilogb.h"
-#include "dpl/core/math/internal/pair.h"
-#include "dpl/core/math/internal/polynomial.h"
-#include "dpl/core/math/internal/rempi_table.h"
 #include "dpl/core/math/round.h"
 #include "dpl/core/math/sign.h"
 #include "dpl/core/math/trunc.h"
@@ -19,6 +14,11 @@
 #  include "dpl/core/dispatch/operation/math.h"
 #  include "dpl/core/immediate/constants/inv_pi.h"
 #  include "dpl/core/immediate/constants/zero.h"
+#  include "dpl/core/math/details/gather.h"
+#  include "dpl/core/math/details/ilogb.h"
+#  include "dpl/core/math/details/pair.h"
+#  include "dpl/core/math/details/polynomial.h"
+#  include "dpl/core/math/details/rempi_table.h"
 #  include "dpl/core/operations/bitwise.h" // IWYU pragma: keep
 #  include "dpl/core/operations/compare.h"
 #  include "dpl/core/operations/logical.h"

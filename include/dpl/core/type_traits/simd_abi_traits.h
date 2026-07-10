@@ -11,8 +11,8 @@
 #  include "dpl/core/fwd.h"
 
 #  include "dpl/core/type_interface/enable_simd_abi.h"
-#  include "dpl/core/type_interface/enable_simd_mask.h"
-#  include "dpl/core/type_interface/enable_simd_vector.h"
+#  include "dpl/core/type_traits/details/has_simd_members.h"
+#  include "dpl/core/type_traits/details/simd_abi_size.h"
 #  include "dpl/std/type_traits/conditional.h"
 #  include "dpl/std/type_traits/is_function.h"
 #  include "dpl/std/utility/ignore.h"

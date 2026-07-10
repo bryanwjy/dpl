@@ -15,7 +15,6 @@
 
 #  include "dpl/core/concepts/cpo_invocable.h"
 #  include "dpl/core/concepts/simd_mask.h"
-#  include "dpl/core/details/type_traits.h"
 #  include "dpl/core/immediate/const_mask.h"
 #  include "dpl/std/utility/forward.h"
 #endif

@@ -9,7 +9,10 @@
 #  include "dpl/std/bit/bit_type.h"
 #  include "dpl/std/bit/bit_width.h"
 #  include "dpl/std/bit/char_bit.h"
+#  include "dpl/std/bit/countr.h"
 #  include "dpl/std/bit/has_single_bit.h"
+#  include "dpl/std/concepts/convertible_to.h"
+#  include "dpl/std/concepts/equality_comparable.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN

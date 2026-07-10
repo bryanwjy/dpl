@@ -11,7 +11,6 @@
 #  include "dpl/core/dispatch/interface.h"
 #  include "dpl/core/dispatch/maskable/transform.h"
 #  include "dpl/core/dispatch/operation/algorithm.h"
-#  include "dpl/core/type_traits/simd_abi_type.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN

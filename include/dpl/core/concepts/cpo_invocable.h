@@ -4,7 +4,7 @@
 #include "dpl/config.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/details/type_traits.h"
+#  include "dpl/core/type_traits/details/declarg.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN

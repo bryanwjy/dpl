@@ -7,8 +7,13 @@
 
 #if !DPL_SUPPORTS_FLOAT16
 
+#  include "dpl/core/numbers/floating_point_like.h"
+
 #  if !DPL_MODULES
-#    include "dpl/core/details/numbers.h"
+#    include "dpl/core/numbers/details/extended_floating_point_operations.h"
+#    include "dpl/core/numbers/details/promotable.h"
+#    include "dpl/core/numbers/details/storage16.h"
+#    include "dpl/std/concepts/same_as.h"
 #  endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN

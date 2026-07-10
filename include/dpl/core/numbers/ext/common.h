@@ -8,7 +8,6 @@
 #if !DPL_MODULES
 #  include "dpl/std/concepts/floating_point.h"
 #  include "dpl/std/concepts/integral.h"
-#  include "dpl/std/concepts/same_as.h"
 #  include "dpl/std/stddef/types.h"
 #  include "dpl/std/type_traits/common_type.h"
 #  include "dpl/std/utility/bitset.h" // IWYU pragma: keep

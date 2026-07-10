@@ -18,6 +18,7 @@
 #  include "dpl/core/dispatch/maskable/accumulation.h"
 #  include "dpl/core/dispatch/operation/math.h"
 #  include "dpl/core/immediate/constants/nan.h"
+#  include "dpl/core/immediate/constants/one.h"
 #  include "dpl/core/immediate/constants/zero.h"
 #  include "dpl/core/operations/arithmetic.h" // IWYU pragma: keep
 #  include "dpl/core/operations/bitwise.h"    // IWYU pragma: keep

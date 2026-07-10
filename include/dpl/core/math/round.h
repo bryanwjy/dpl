@@ -6,7 +6,6 @@
 #include "dpl/core/math/ceil.h"
 #include "dpl/core/math/copysign.h"
 #include "dpl/core/math/floor.h"
-#include "dpl/core/math/internal/constants.h"
 #include "dpl/core/math/isfinite.h"
 #include "dpl/core/math/rounding.h"
 #include "dpl/core/math/trunc.h"
@@ -15,6 +14,7 @@
 #  include "dpl/core/concepts/extended.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/immediate/constants/one.h"
+#  include "dpl/core/math/details/constants.h"
 #  include "dpl/core/operations/arithmetic.h"
 #  include "dpl/core/operations/bitwise/bwandnot.h"
 #  include "dpl/core/operations/cast.h"
@@ -37,9 +37,9 @@ template <>
 struct operation_signature<round_t> {
     static consteval void operator()(simd_vector auto&&) noexcept {}
 
-    template <rounding_flags R>
+    template <mx::rounding_flags R>
     static consteval void operator()(
-        simd_vector auto&&, rounding_t<R>) noexcept {}
+        simd_vector auto&&, mx::rounding_t<R>) noexcept {}
 };
 
 template <typename S, typename M, typename T>
@@ -65,16 +65,17 @@ concept unqualified_canonical_mcroundne =
         } -> same_as<cpo_result_t<round_t, T, rounding::no_exc_t>>;
     };
 
-template <typename S, typename M, typename T, rounding_flags R>
+template <typename S, typename M, typename T, mx::rounding_flags R>
 concept unqualified_canonical_mround =
-    cpo_invocable<round_t, T, rounding_t<R>> &&
-    (!simd_type<S> || same_as<S, cpo_result_t<round_t, T, rounding_t<R>>>) &&
+    cpo_invocable<round_t, T, mx::rounding_t<R>> &&
+    (!simd_type<S> ||
+        same_as<S, cpo_result_t<round_t, T, mx::rounding_t<R>>>) &&
     requires {
         {
-            round(internal::abi<cpo_result_t<round_t, T, rounding_t<R>>>,
+            round(internal::abi<cpo_result_t<round_t, T, mx::rounding_t<R>>>,
                 internal::declarg<S>(), internal::declarg<M>(),
-                internal::declarg<T>(), rounding_v<R>)
-        } -> same_as<cpo_result_t<round_t, T, rounding_t<R>>>;
+                internal::declarg<T>(), mx::rounding_v<R>)
+        } -> same_as<cpo_result_t<round_t, T, mx::rounding_t<R>>>;
     };
 
 template <>
@@ -173,47 +174,47 @@ public:
     }
 
     ///
-    template <simd_abi A, simd_element_for<A> E, rounding_flags R>
+    template <simd_abi A, simd_element_for<A> E, mx::rounding_flags R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A> operator()(
-        basic_vector<E, A> val, rounding_t<R> flags) noexcept
+        basic_vector<E, A> val, mx::rounding_t<R> flags) noexcept
     requires requires { round(internal::abi<A>, val, flags); }
     {
         return round(internal::abi<A>, val, flags);
     }
 
-    template <canonical_vector T, rounding_flags R>
+    template <canonical_vector T, mx::rounding_flags R>
     requires unqualified_canonical_mround<type_identity_t<T>, mask_t<T>, T, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(type_identity_t<T> src, mask_t<T> mask, T val,
-        rounding_t<R> flags) noexcept {
+        mx::rounding_t<R> flags) noexcept {
         return round(internal::abi<T>, src, mask, val, flags);
     }
 
-    template <canonical_vector T, const_mask_for<T> M, rounding_flags R>
+    template <canonical_vector T, const_mask_for<T> M, mx::rounding_flags R>
     requires unqualified_canonical_mround<type_identity_t<T>,
         launder_cmask_t<T, M>, T, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(
-        type_identity_t<T> src, M cmask, T val, rounding_t<R> flags) noexcept {
+    static constexpr T operator()(type_identity_t<T> src, M cmask, T val,
+        mx::rounding_t<R> flags) noexcept {
         return round(
             internal::abi<T>, src, dx::to_const_mask<T>(cmask), val, flags);
     }
 
-    template <canonical_vector T, rounding_flags R>
+    template <canonical_vector T, mx::rounding_flags R>
     requires unqualified_canonical_mround<dx::zero_t, mask_t<T>, T, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(
-        dx::zero_t zero, mask_t<T> mask, T val, rounding_t<R> flags) noexcept {
+    static constexpr T operator()(dx::zero_t zero, mask_t<T> mask, T val,
+        mx::rounding_t<R> flags) noexcept {
         return round(internal::abi<T>, zero, mask, val, flags);
     }
 
-    template <canonical_vector T, const_mask_for<T> M, rounding_flags R>
+    template <canonical_vector T, const_mask_for<T> M, mx::rounding_flags R>
     requires unqualified_canonical_mround<dx::zero_t, launder_cmask_t<T, M>, T,
         R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
-        dx::zero_t zero, M cmask, T val, rounding_t<R> flags) noexcept {
+        dx::zero_t zero, M cmask, T val, mx::rounding_t<R> flags) noexcept {
         return round(
             internal::abi<T>, zero, dx::to_const_mask<T>(cmask), val, flags);
     }
@@ -230,9 +231,11 @@ concept unqualified_extended_croundne = requires(T val) {
         round(val, rounding::no_exc)
     } -> vector_with_common_abi<simd_abi_type_t<T>>;
 };
-template <typename T, rounding_flags R>
+template <typename T, mx::rounding_flags R>
 concept unqualified_extended_round = requires(T val) {
-    { round(val, rounding_v<R>) } -> vector_with_common_abi<simd_abi_type_t<T>>;
+    {
+        round(val, mx::rounding_v<R>)
+    } -> vector_with_common_abi<simd_abi_type_t<T>>;
 };
 
 template <typename S, typename M, typename T>
@@ -259,16 +262,18 @@ concept unqualified_extended_mcroundne =
         -> equivalent_vector_with<cpo_result_t<round_t, T, rounding::no_exc_t>>;
     };
 
-template <typename S, typename M, typename T, rounding_flags R>
+template <typename S, typename M, typename T, mx::rounding_flags R>
 concept unqualified_extended_mround =
-    cpo_invocable<round_t, T, rounding_t<R>> &&
+    cpo_invocable<round_t, T, mx::rounding_t<R>> &&
     (!simd_type<S> ||
-        equivalent_vector_with<S, cpo_result_t<round_t, T, rounding_t<R>>>) &&
+        equivalent_vector_with<S,
+            cpo_result_t<round_t, T, mx::rounding_t<R>>>) &&
     requires {
         {
             round(internal::declarg<S>(), internal::declarg<M>(),
-                internal::declarg<T>(), rounding_v<R>)
-        } -> equivalent_vector_with<cpo_result_t<round_t, T, rounding_t<R>>>;
+                internal::declarg<T>(), mx::rounding_v<R>)
+        }
+        -> equivalent_vector_with<cpo_result_t<round_t, T, mx::rounding_t<R>>>;
     };
 
 template <>
@@ -366,55 +371,56 @@ public:
     }
 
     ///
-    template <extended_vector T, rounding_flags R>
+    template <extended_vector T, mx::rounding_flags R>
     requires unqualified_extended_round<T, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T&& val, rounding_t<R> flags) {
+    static constexpr auto operator()(T&& val, mx::rounding_t<R> flags) {
         return round( __DPL forward<T>(val), flags);
     }
 
     template <simd_vector S, exact_mask_for<S> M, common_vector_with<S> T,
-        rounding_flags R>
+        mx::rounding_flags R>
     requires (extended_vector<S> || extended_mask<M> || extended_vector<T>) &&
         unqualified_extended_mround<S, M, T, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
-        S&& src, M&& mask, T&& val, rounding_t<R> flags) {
+        S&& src, M&& mask, T&& val, mx::rounding_t<R> flags) {
         return round( __DPL forward<S>(src), __DPL forward<M>(mask),
             __DPL forward<T>(val), flags);
     }
 
     template <fixed_width_vector S, const_mask_for<S> M,
-        common_vector_with<S> T, rounding_flags R>
+        common_vector_with<S> T, mx::rounding_flags R>
     requires (extended_vector<S> || extended_vector<T>) &&
         unqualified_extended_mround<S, launder_cmask_t<S, M>, T, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
-        S&& src, M cmask, T&& val, rounding_t<R> flags) {
+        S&& src, M cmask, T&& val, mx::rounding_t<R> flags) {
         return round( __DPL forward<S>(src), dx::to_const_mask<S>(cmask),
             __DPL forward<T>(val), flags);
     }
 
-    template <simd_vector T, rounding_flags R,
-        result_mask_for<round_t, T, rounding_t<R>> M>
+    template <simd_vector T, mx::rounding_flags R,
+        result_mask_for<round_t, T, mx::rounding_t<R>> M>
     requires (extended_mask<M> || extended_vector<T>) &&
         unqualified_extended_mround<dx::zero_t, M, T, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
-        dx::zero_t zero, M&& mask, T&& val, rounding_t<R> flags) {
+        dx::zero_t zero, M&& mask, T&& val, mx::rounding_t<R> flags) {
         return round(
             zero, __DPL forward<M>(mask), __DPL forward<T>(val), flags);
     }
 
-    template <extended_vector T, rounding_flags R,
-        result_cmask_for<round_t, T, rounding_t<R>> M>
+    template <extended_vector T, mx::rounding_flags R,
+        result_cmask_for<round_t, T, mx::rounding_t<R>> M>
     requires unqualified_extended_mround<dx::zero_t,
-        launder_cmask_t<cpo_result_t<round_t, T, rounding_t<R>>, M>, T, R>
+        launder_cmask_t<cpo_result_t<round_t, T, mx::rounding_t<R>>, M>, T, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
-        dx::zero_t zero, M cmask, T&& val, rounding_t<R> flags) {
+        dx::zero_t zero, M cmask, T&& val, mx::rounding_t<R> flags) {
         return round(zero,
-            dx::to_const_mask<cpo_result_t<round_t, T, rounding_t<R>>>(cmask),
+            dx::to_const_mask<cpo_result_t<round_t, T, mx::rounding_t<R>>>(
+                cmask),
             __DPL forward<T>(val), flags);
     }
 };
@@ -447,11 +453,12 @@ struct fallback_impl<round_t> {
         return operator()(val);
     }
 
-    template <simd_abi A, simd_element_for<A> E, rounding_flags R>
+    template <simd_abi A, simd_element_for<A> E, mx::rounding_flags R>
     requires floating_point<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(basic_vector<E, A> val, rounding_t<R>) {
-        constexpr auto opt = rounding_v<R>;
+    static constexpr auto operator()(
+        basic_vector<E, A> val, mx::rounding_t<R>) {
+        constexpr auto opt = mx::rounding_v<R>;
         static_assert(opt);
         if constexpr (opt.has(rounding::to_zero | rounding::no_exc)) {
             return dx::trunc(val, rounding::no_exc);

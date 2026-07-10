@@ -8,7 +8,7 @@
 #include "dpl/core/concepts/cpo_invocable.h"
 #include "dpl/core/concepts/simd_mask.h"
 #if !DPL_MODULES
-#  include "dpl/core/details/type_traits.h"
+#  include "dpl/core/type_traits/details/cpo_result.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN

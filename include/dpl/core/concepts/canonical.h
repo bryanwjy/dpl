@@ -8,6 +8,7 @@
 #include "dpl/core/concepts/simd_vector.h"
 
 #if !DPL_MODULES
+#  include "dpl/core/type_traits/canonical_type.h"
 #  include "dpl/core/type_traits/simd_abi_type.h"
 #  include "dpl/core/type_traits/simd_element_representation.h"
 #  include "dpl/core/type_traits/simd_element_type.h"

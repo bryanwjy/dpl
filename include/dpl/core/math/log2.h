@@ -5,8 +5,6 @@
 
 #include "dpl/core/math/fixup.h"
 #include "dpl/core/math/frexp.h"
-#include "dpl/core/math/internal/pair.h"
-#include "dpl/core/math/internal/polynomial.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/extended.h"
@@ -17,6 +15,8 @@
 #  include "dpl/core/dispatch/operation/math.h"
 #  include "dpl/core/immediate/constants/infinity.h"
 #  include "dpl/core/immediate/constants/nan.h"
+#  include "dpl/core/math/details/pair.h"
+#  include "dpl/core/math/details/polynomial.h"
 #  include "dpl/core/numbers/ext.h"           // IWYU pragma: keep
 #  include "dpl/core/operations/arithmetic.h" // IWYU pragma: keep
 #  include "dpl/core/operations/bitwise.h"    // IWYU pragma: keep

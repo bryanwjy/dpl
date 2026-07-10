@@ -3,9 +3,6 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/math/internal/floating_point_simd.h"
-#include "dpl/core/math/internal/ilogb.h"
-#include "dpl/core/math/internal/ldexp.h"
 #include "dpl/core/math/ldexp.h"
 
 #if !DPL_MODULES
@@ -15,6 +12,9 @@
 #  include "dpl/core/immediate/constants/exponent_bias.h"
 #  include "dpl/core/immediate/constants/mantissa_width.h"
 #  include "dpl/core/immediate/constants/min_value.h"
+#  include "dpl/core/math/details/floating_point_simd.h"
+#  include "dpl/core/math/details/ilogb.h"
+#  include "dpl/core/math/details/ldexp.h"
 #  include "dpl/core/operations/arithmetic.h"
 #  include "dpl/core/operations/cast.h"
 #  include "dpl/core/operations/compare.h"
@@ -190,14 +190,14 @@ template <typename T>
 concept is_frexp_type = same_as<T, internal::frexp_integral_t> ||
     same_as<T, internal::frexp_floating_point_t>;
 
-DPL_EXPORT template <internal::floating_point_simd T,
+DPL_EXPORT template <fmath::floating_point_simd T,
     is_frexp_type auto E = frexp_integral>
 struct frexp_result {
     T fr;
     T exp;
 };
 
-DPL_EXPORT template <internal::floating_point_simd T>
+DPL_EXPORT template <fmath::floating_point_simd T>
 requires requires {
     typename signed_representation_t<typename T::value_type>;
     typename rebind_simd_t<T, signed_representation_t<typename T::value_type>>;
@@ -407,7 +407,7 @@ public:
 
 namespace datapar {
 
-DPL_EXPORT template <internal::floating_point_simd Fr, simd_vector Exp,
+DPL_EXPORT template <fmath::floating_point_simd Fr, simd_vector Exp,
     frexp_options Opt = decltype(frexp_default)>
 requires (Opt::has(frexp_integral) && integral<simd_element_type_t<Exp>> &&
              common_size_with<simd_element_type_t<Fr>,

@@ -12,7 +12,6 @@
 #  include "dpl/core/concepts/cpo_invocable.h"
 #  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/concepts/mask_compatibility.h"
-#  include "dpl/core/details/type_traits.h"
 #  include "dpl/core/dispatch/broadcastable/binary.h"
 #  include "dpl/core/dispatch/interface.h"
 #  include "dpl/core/dispatch/maskable/transform.h"

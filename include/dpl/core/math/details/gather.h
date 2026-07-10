@@ -3,7 +3,7 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/math/internal/fwd.h" // IWYU pragma: export
+#include "dpl/core/math/details/fwd.h" // IWYU pragma: export
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/basic_vector.h" // IWYU pragma: keep

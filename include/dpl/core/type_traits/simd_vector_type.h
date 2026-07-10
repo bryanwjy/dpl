@@ -3,11 +3,7 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/type_traits/simd_abi_type.h"
-#include "dpl/core/type_traits/simd_element_type.h"
-
 #if !DPL_MODULES
-#  include "dpl/core/details/type_traits.h"
 #  include "dpl/core/type_interface/enable_simd_mask.h"
 #  include "dpl/core/type_interface/enable_simd_vector.h"
 #endif

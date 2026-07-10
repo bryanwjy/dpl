@@ -3,8 +3,6 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/math/internal/compliance.h"
-#include "dpl/core/math/internal/ilogb.h"
 #include "dpl/core/math/rounding.h"
 
 #if !DPL_MODULES
@@ -15,6 +13,8 @@
 #  include "dpl/core/dispatch/maskable/transform.h"
 #  include "dpl/core/dispatch/operation/math.h"
 #  include "dpl/core/immediate/constants/one.h"
+#  include "dpl/core/math/details/compliance.h"
+#  include "dpl/core/math/details/ilogb.h"
 #  include "dpl/core/operations/arithmetic.h"
 #  include "dpl/core/operations/bitwise/bwandnot.h"
 #  include "dpl/core/operations/compare.h"

@@ -4,8 +4,7 @@
 #include "dpl/config.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/details/type_traits.h"
-#  include "dpl/core/numbers/floating_point_traits.h"
+#  include "dpl/core/numbers/floating_point_like.h"
 #  include "dpl/core/type_interface/enable_simd_abi.h"
 #  include "dpl/std/concepts/different_from.h"
 #  include "dpl/std/concepts/integral.h"

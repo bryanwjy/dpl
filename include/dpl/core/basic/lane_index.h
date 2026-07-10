@@ -73,7 +73,7 @@ public:
     {
         return []<size_t... Is>(index_sequence<Is...>) {
             return dx::load<I, A>(
-                dx::aligned, array<A, I, static_cast<I>(Is)...>.data);
+                dx::aligned, array<A, I, static_cast<I>(Is)...>);
         }(iota_sequence<A, E>);
     }
 };

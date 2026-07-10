@@ -3,7 +3,7 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/math/internal/fwd.h" // IWYU pragma: export
+#include "dpl/core/math/details/fwd.h" // IWYU pragma: export
 
 #if !DPL_MODULES
 #  include "dpl/core/immediate/broadcastable_base.h"
@@ -15,8 +15,7 @@
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
-namespace datapar::fmath {
-namespace dx = __DPL datapar;
+DPL_EXPORT namespace datapar::fmath {
 
 struct toint_t : broadcastable_base<toint_t> {
     __DPL_HIDE_FROM_ABI explicit constexpr toint_t() noexcept = default;

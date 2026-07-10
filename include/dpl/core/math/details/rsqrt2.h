@@ -3,12 +3,12 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/math/internal/fwd.h" // IWYU pragma: export
+#include "dpl/core/math/details/fwd.h" // IWYU pragma: export
 
+#include "dpl/core/math/details/accuracy.h" // IWYU pragma: export
+#include "dpl/core/math/details/floating_point_simd.h"
+#include "dpl/core/math/details/polynomial.h"
 #include "dpl/core/math/fma.h"
-#include "dpl/core/math/internal/accuracy.h" // IWYU pragma: export
-#include "dpl/core/math/internal/floating_point_simd.h"
-#include "dpl/core/math/internal/polynomial.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/basic_vector.h" // IWYU pragma: keep
@@ -18,7 +18,7 @@
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
-namespace datapar::fmath {
+DPL_EXPORT namespace datapar::fmath {
 
 /**
  * Approximates 1 / sqrt( 2x ) where x is in the interval [0.5,1)
@@ -84,7 +84,7 @@ public:
     }
 };
 
-inline constexpr fmath::rsqrt2_t rsqrt2{};
+inline constexpr rsqrt2_t rsqrt2{};
 
 } // namespace datapar::fmath
 DPL_DEFAULT_NAMESPACE_END

@@ -13,5 +13,12 @@ import :std.type_traits;
 import :std.utility;
 
 // IWYU pragma: begin_exports
-#include "dpl/core/details/type_traits.h"
+#include "dpl/core/type_traits/details/fwd.h"
+
+#include "dpl/core/type_traits/details/cpo_result.h"
+#include "dpl/core/type_traits/details/declarg.h"
+#include "dpl/core/type_traits/details/has_expression_result.h"
+#include "dpl/core/type_traits/details/has_simd_members.h"
+#include "dpl/core/type_traits/details/none_abi_type.h"
+#include "dpl/core/type_traits/details/simd_abi_size.h"
 // IWYU pragma: end_exports

@@ -3,30 +3,33 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/math/internal/fwd.h" // IWYU pragma: export
+#include "dpl/core/math/details/fwd.h" // IWYU pragma: export
 
+#include "dpl/core/math/details/floating_point_simd.h"
 #include "dpl/core/math/fma.h"
-#include "dpl/core/math/internal/floating_point_simd.h"
-#include "dpl/core/math/rsqrt.h"
-#include "dpl/core/math/sqrt.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/basic_vector.h" // IWYU pragma: export
 #  include "dpl/core/basic/broadcast.h"
 #  include "dpl/core/concepts/simd_abi.h"
+#  include "dpl/core/concepts/simd_element.h"
 #  include "dpl/core/immediate/constants/ln2.h"
 #  include "dpl/core/immediate/constants/one.h"
 #  include "dpl/core/immediate/constants/zero.h"
 #  include "dpl/core/operations/arithmetic/abs.h"
 #  include "dpl/core/operations/select.h"
 #  include "dpl/std/concepts/convertible_to.h"
-#  include "dpl/std/concepts/floating_point.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
-namespace datapar::fmath {
+DPL_EXPORT namespace datapar::internal {
+struct rsqrt_t;
+struct sqrt_t;
+} // namespace datapar::internal
 
-template <floating_point T, simd_abi A>
+DPL_EXPORT namespace datapar::fmath {
+
+template <floating_point_like T, simd_abi A>
 requires simd_floating_point_for<T, A>
 struct pair {
     using value_type = T;
@@ -161,11 +164,11 @@ struct pair {
 };
 
 template <canonical_vector T>
-using pair_of = pair<typename T::value_type, typename T::abi_type>;
+using pair_of = pair<simd_element_type_t<T>, simd_abi_type_t<T>>;
 
 template <typename T>
 inline constexpr bool is_pair = false;
-template <simd_abi A, simd_floating_point_for<A> E>
+template <simd_abi A, simd_element_for<A> E>
 inline constexpr bool is_pair<pair<E, A>> = true;
 
 template <typename T>
@@ -298,12 +301,19 @@ constexpr pair<E, A>
     };
 }
 
+struct frsqrt_t : public dx::internal::operation_base<dx::internal::rsqrt_t> {
+    using operation_base<dx::internal::rsqrt_t>::operator();
+};
+
 template <simd_abi A, simd_floating_point_for<A> E>
+requires internal::cpo_invocable<dx::internal::rsqrt_t,
+    typename pair<E, A>::element_type>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 constexpr pair<E, A>
     DPL_VECTORCALL sqrt(pair<E, A> arg) noexcept {
+    constexpr frsqrt_t rsqrt;
     using simd = typename pair<E, A>::element_type;
-    auto x = dx::rsqrt(arg.upper + arg.lower);
+    auto x = rsqrt(arg.upper + arg.lower);
     auto r = arg * x;
     constexpr auto n3 = dx::broadcast<simd>(-3.0);
     return fmath::scale(r * (r * x + n3), -0.5);
@@ -314,7 +324,7 @@ struct fast;
 template <typename T>
 struct single;
 
-template <floating_point E, simd_abi A>
+template <floating_point_like E, simd_abi A>
 requires simd_floating_point_for<E, A> &&
     requires { typename basic_vector<E, A>; }
 struct single<basic_vector<E, A>> {
@@ -401,16 +411,22 @@ constexpr pair_of<T>
     };
 }
 
+struct fsqrt_t : public dx::internal::operation_base<dx::internal::sqrt_t> {
+    using operation_base<dx::internal::sqrt_t>::operator();
+};
+
 template <simd_vector T>
+requires dx::internal::cpo_invocable<dx::internal::sqrt_t, T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 constexpr pair_of<T>
     DPL_VECTORCALL sqrt(single<T> arg) noexcept {
-    auto t = dx::sqrt(arg.value);
+    constexpr fsqrt_t sqrt;
+    auto t = sqrt(arg.value);
     return fmath::scale(
         arg + (single(t) * t) * fmath::rcp(single(t)), dx::broadcast<T>(0.5));
 }
 
-template <floating_point E, simd_abi A>
+template <floating_point_like E, simd_abi A>
 requires pair_type<pair<E, A>>
 struct single<pair<E, A>> {
     using element_type = pair<E, A>;
@@ -425,9 +441,9 @@ struct single<pair<E, A>> {
     }
 };
 
-template <floating_point E, simd_abi A>
+template <floating_point_like E, simd_abi A>
 explicit single(pair<E, A>) -> single<pair<E, A>>;
-template <floating_point E, simd_abi A>
+template <floating_point_like E, simd_abi A>
 explicit single(basic_vector<E, A>) -> single<basic_vector<E, A>>;
 
 template <pair_type T>
@@ -450,7 +466,7 @@ struct element_type_if<T> {
     using type = typename T::element_type;
 };
 
-template <floating_point E, simd_abi A>
+template <floating_point_like E, simd_abi A>
 requires simd_floating_point_for<E, A> &&
     requires { typename basic_vector<E, A>; }
 struct fast<basic_vector<E, A>> {

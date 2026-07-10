@@ -16,16 +16,16 @@ struct select_t;
 
 namespace fwd {
 
-struct fbwand_t : private operation_base<bwand_t> {
+struct fbwand_t : public operation_base<bwand_t> {
     using operation_base<bwand_t>::operator();
 };
 
-struct fselect_t : private operation_base<select_t> {
+struct fselect_t : public operation_base<select_t> {
     using operation_base<select_t>::operator();
 };
 
 template <typename T, typename U = ignore_t>
-struct fbroadcast_t : private operation_base<broadcast_t<T, U>> {
+struct fbroadcast_t : public operation_base<broadcast_t<T, U>> {
     using operation_base<broadcast_t<T, U>>::operator();
 };
 

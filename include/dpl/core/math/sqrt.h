@@ -4,9 +4,6 @@
 #include "dpl/config.h"
 
 #include "dpl/core/math/frexp.h"
-#include "dpl/core/math/internal/accuracy.h"
-#include "dpl/core/math/internal/ldexp.h"
-#include "dpl/core/math/internal/rsqrt2.h"
 #include "dpl/core/math/isfinite.h"
 
 #if !DPL_MODULES
@@ -14,6 +11,9 @@
 #  include "dpl/core/concepts/extended.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_vector.h"
+#  include "dpl/core/math/details/accuracy.h"
+#  include "dpl/core/math/details/ldexp.h"
+#  include "dpl/core/math/details/rsqrt2.h"
 #  include "dpl/core/operations/arithmetic.h"
 #  include "dpl/core/operations/bitwise.h" // IWYU pragma: keep
 #  include "dpl/core/operations/compare.h"

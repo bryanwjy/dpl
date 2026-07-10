@@ -4,6 +4,8 @@
 
 #include "dpl/config.h"
 
+#include "dpl/std/bit/char_bit.h"
+
 #if !DPL_MODULES
 #  include "dpl/std/concepts/integral.h"
 #  include "dpl/std/concepts/same_as.h"

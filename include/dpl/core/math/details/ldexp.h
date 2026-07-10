@@ -3,9 +3,9 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/math/internal/fwd.h" // IWYU pragma: export
+#include "dpl/core/math/details/fwd.h" // IWYU pragma: export
 
-#include "dpl/core/math/internal/compliance.h" // IWYU pragma: export
+#include "dpl/core/math/details/compliance.h" // IWYU pragma: export
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/basic_vector.h" // IWYU pragma: keep
@@ -19,7 +19,7 @@
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
-namespace datapar::fmath {
+DPL_EXPORT namespace datapar::fmath {
 
 template <floating_point T, simd_abi A>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)

@@ -9,7 +9,7 @@
 #if !DPL_MODULES
 #  include "dpl/core/concepts/cpo_invocable.h"
 #  include "dpl/core/concepts/equivalence.h"
-#  include "dpl/core/details/type_traits.h"
+#  include "dpl/core/type_traits/details/cpo_result.h"
 #  include "dpl/std/type_traits/is_base_of.h"
 #endif
 

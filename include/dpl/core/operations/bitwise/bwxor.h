@@ -64,8 +64,8 @@ struct fallback_impl<bwxor_t> : binary_broadcasting_fallback<bwxor_t> {
 
     template <fixed_width_abi A, simd_element_for<A> LE, simd_element_for<A> RE>
     requires common_size_with<LE, RE> &&
-        invocable<to_bitset_t, basic_mask<LE, A>> &&
-        invocable<to_bitset_t, basic_mask<RE, A>>
+        cpo_invocable<to_bitset_t, basic_mask<LE, A>> &&
+        cpo_invocable<to_bitset_t, basic_mask<RE, A>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(
         basic_mask<LE, A> lhs, basic_mask<RE, A> rhs) noexcept {

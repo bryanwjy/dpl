@@ -3,14 +3,14 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/math/internal/fwd.h" // IWYU pragma: export
+#include "dpl/core/math/details/fwd.h" // IWYU pragma: export
 
 #if !DPL_MODULES
 #  include "dpl/std/type_traits/is_base_of.h"
 #endif
 
 DPL_DEFAULT_NAMESPACE_BEGIN
-namespace datapar::fmath {
+DPL_EXPORT namespace datapar::fmath {
 struct compliance_t {
     __DPL_HIDE_FROM_ABI constexpr ~compliance_t() = default;
 };

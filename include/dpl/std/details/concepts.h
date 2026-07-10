@@ -6,14 +6,17 @@
 // IWYU pragma: always_keep
 
 #if !DPL_MODULES
-#  include "dpl/std/type_traits/add_add_lvalue_reference.h"
+#  include "dpl/std/type_traits/add_lvalue_reference.h"
 #  include "dpl/std/type_traits/add_rvalue_reference.h"
 #  include "dpl/std/type_traits/common_reference.h"
 #  include "dpl/std/type_traits/declval.h"
+#  include "dpl/std/type_traits/extent.h"
 #  include "dpl/std/type_traits/is_assignable.h"
 #  include "dpl/std/type_traits/is_constructible.h"
 #  include "dpl/std/type_traits/is_convertible.h"
 #  include "dpl/std/type_traits/is_integral.h"
+#  include "dpl/std/type_traits/is_nothrow_assignable.h"
+#  include "dpl/std/type_traits/is_nothrow_constructible.h"
 #  include "dpl/std/type_traits/is_scalar.h"
 #  include "dpl/std/type_traits/remove_const.h"
 #  include "dpl/std/type_traits/remove_cvref.h"
