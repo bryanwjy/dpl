@@ -108,7 +108,7 @@ all: $(TEST_CRC) $(ALL_TARGETS) $(BUILD_FILES)
 	@
 
 clean:
-	@rm -f $(TEST_CRC) $(ALL_TARGETS) $(BUILD_FILES)
+	@rm -f $(TEST_CRC) $(ALL_TARGETS) $(BUILD_FILES) $(DEP_FILES) $(OUTPUT_DIR)/scan_barrier.d
 
 $(OUTPUT_DIR)/env.stamp: FORCE
 	$(call replace_if_different, printf "%s\n" \
@@ -152,6 +152,14 @@ $(OUTPUT_DIR)/module_dependencies.json: $(OUTPUT_DIR)/scan_commands.json $(ALL_S
 	@$(SCAN_DEPS) -format=p1689 -compilation-database=$< -o $@.tmp
 	@cmp -s $@.tmp $@ 2>/dev/null && rm $@.tmp || mv $@.tmp $@
 
+empty :=
+space := $(empty) $(empty)
+# newline requiures two empty lines so that dereferencing it results in a single newline
+define newline
+
+
+endef
+
 $(OUTPUT_DIR)/module_implementations.txt: FORCE
 	@mkdir -p '$(@D)'
 	@$(file >$@.tmp,$(subst $(space),$(newline),$(sort $(MOBJ_TARGETS))))
@@ -160,10 +168,10 @@ $(OUTPUT_DIR)/module_implementations.txt: FORCE
 $(OUTPUT_DIR)/candidate_flags.txt: $(JDIR_TARGETS)
 	@jq -r '.[] | .["compile-flags"] // [] | .[]' $^ | sort -u > $@
 
-$(OUTPUT_DIR)/scan_barrier.mk: $(OUTPUT_DIR)/jmap.json $(OUTPUT_DIR)/module_dependencies.json $(TOOLS_DIR)/jdep-to-d.jq
-	@jq -f $(TOOLS_DIR)/jdep-to-d.jq --slurpfile jmap $(OUTPUT_DIR)/jmap.json -r $(OUTPUT_DIR)/module_dependencies.json > $(OUTPUT_DIR)/scan_barrier.mk
+$(OUTPUT_DIR)/scan_barrier.d: $(OUTPUT_DIR)/jmap.json $(OUTPUT_DIR)/module_dependencies.json $(TOOLS_DIR)/jdep-to-d.jq
+	@jq -f $(TOOLS_DIR)/jdep-to-d.jq --slurpfile jmap $(OUTPUT_DIR)/jmap.json -r $(OUTPUT_DIR)/module_dependencies.json > $(OUTPUT_DIR)/scan_barrier.d
 
--include $(OUTPUT_DIR)/scan_barrier.mk
+-include $(OUTPUT_DIR)/scan_barrier.d
 
 $(MODULE_ALIAS):%: $(OUTPUT_DIR)/%.cppm.pcm
 $(TEST_ALIAS):%.pass: $(OUTPUT_DIR)/%.pass.crc
@@ -173,9 +181,9 @@ $(BUILD_TXT_ALIAS):%: $(OUTPUT_DIR)/%.txt
 $(TEST_SUBDIRS):%: $$(call subdir_to_crc,%)
 $(MOBJ_TARGETS):%.o: %.pcm
 $(filter %.pass.cpp.o,$(OBJ_TARGETS)):%.o: %.trsp
-$(filter %.pass.cpp.o,$(JCMD_TARGETS)):%.jcmd: %.trsp
+$(filter %.pass.cpp.jcmd,$(JCMD_TARGETS)):%.jcmd: %.trsp
 
-$(PCM_TARGETS):$(OUTPUT_DIR)/%.cppm.pcm: $(ROOT_DIR)/%.cppm $(OUTPUT_DIR)/%.cppm.mrsp $(OUTPUT_DIR)/compile.command | $(OUTPUT_DIR)/scan_barrier.mk
+$(PCM_TARGETS):$(OUTPUT_DIR)/%.cppm.pcm: $(ROOT_DIR)/%.cppm $(OUTPUT_DIR)/%.cppm.mrsp $(OUTPUT_DIR)/compile.command | $(OUTPUT_DIR)/scan_barrier.d
 	@tmpfile=$$(mktemp); \
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -MMD -MP -MF '$(@:.pcm=.d)' -MT '$@' \
 	  -fmodule-output="$$tmpfile" -fmodules-reduced-bmi -c $< -o '$(@:.pcm=.o)' @$(@:.pcm=.mrsp); \
@@ -185,7 +193,7 @@ $(PCM_TARGETS):$(OUTPUT_DIR)/%.cppm.pcm: $(ROOT_DIR)/%.cppm $(OUTPUT_DIR)/%.cppm
 	    mv "$$tmpfile" '$@'; \
 	fi
 
-$(OBJ_TARGETS):$(OUTPUT_DIR)/%.cpp.o: $(ROOT_DIR)/%.cpp $(OUTPUT_DIR)/%.cpp.mrsp $(OUTPUT_DIR)/compile.command | $(OUTPUT_DIR)/scan_barrier.mk
+$(OBJ_TARGETS):$(OUTPUT_DIR)/%.cpp.o: $(ROOT_DIR)/%.cpp $(OUTPUT_DIR)/%.cpp.mrsp $(OUTPUT_DIR)/compile.command | $(OUTPUT_DIR)/scan_barrier.d
 	@mkdir -p '$(@D)'
 	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) -MMD -MP -MF '$(@:.o=.d)' -MT '$@' -c $< -o '$@' @$(@:.o=.mrsp) $(if $(filter %.pass,$*),@$(@:.o=.trsp))
 
@@ -214,14 +222,14 @@ $(MRSP_TARGETS):%.mrsp: $(OUTPUT_DIR)/jgraph.json $(OUTPUT_DIR)/jmap.json $(TOOL
 	$(call replace_if_different, $(TOOLS_DIR)/module-response.jq \
 	--arg module $(if $(filter %.cppm,$*),$*.pcm,$*.o) \
 	--slurpfile jmap $(OUTPUT_DIR)/jmap.json \
-    -r $(OUTPUT_DIR)/jgraph.json)
+	-r $(OUTPUT_DIR)/jgraph.json)
 
 $(LRSP_TARGETS):%.lrsp: $(OUTPUT_DIR)/jgraph.json $(OUTPUT_DIR)/jmap.json $(OUTPUT_DIR)/module_implementations.txt $(TOOLS_DIR)/link-response.jq
-	$(call replace_if_different, jq -f $(TOOLS_DIR)/link-response.jq \
+	$(call replace_if_different, $(TOOLS_DIR)/link-response.jq \
 	--arg module '$*.o' \
 	--slurpfile jmap $(OUTPUT_DIR)/jmap.json \
 	--rawfile impl $(OUTPUT_DIR)/module_implementations.txt \
-	-r $(OUTPUT_DIR)/jgraph.json)
+    -r $(OUTPUT_DIR)/jgraph.json)
 
 $(TRSP_TARGETS):%.trsp: %.jdir $(OUTPUT_DIR)/supported_flags.txt
 	@$(call replace_if_different, (jq -r '.[] | .["compile-flags"] // [] | .[]' $< | grep -Fxf $(OUTPUT_DIR)/supported_flags.txt - || true))
