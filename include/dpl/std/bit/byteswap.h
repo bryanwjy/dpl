@@ -36,7 +36,7 @@ constexpr T byteswap(T val) noexcept {
             return _byteswap_ushort(val);
         }
     } else {
-        return __VDPL details::bit::byteswap(static_cast<unsigned short>(val));
+        return __DPL details::bit::byteswap(static_cast<unsigned short>(val));
     }
 }
 
@@ -52,7 +52,7 @@ constexpr auto byteswap(T val) noexcept {
             return _byteswap_ulong(val);
         }
     } else {
-        return __VDPL details::bit::byteswap(static_cast<unsigned long>(val));
+        return __DPL details::bit::byteswap(static_cast<unsigned long>(val));
     }
 }
 
@@ -72,7 +72,7 @@ constexpr auto byteswap(T val) noexcept {
             return _byteswap_uint64(val);
         }
     } else {
-        return __VDPL details::bit::byteswap(
+        return __DPL details::bit::byteswap(
             static_cast<unsigned __int64>(val));
     }
 }
@@ -121,10 +121,10 @@ constexpr T byteswap(T val) noexcept {
 #    if DPL_HAS_BUILTIN(__builtin_bswap128)
     return __builtin_bswap128(val);
 #    else
-    return (static_cast<T>(
-                __VDPL details::bit::byteswap(static_cast<bit_type_t<64>>(val)))
+    return (static_cast<T>( __DPL details::bit::byteswap(
+                static_cast<bit_type_t<64>>(val)))
                << 64) |
-        static_cast<T>(__VDPL details::bit::byteswap(
+        static_cast<T>(__DPL details::bit::byteswap(
             static_cast<bit_type_t<64>>(val >> 64)));
 #    endif
 }
@@ -135,10 +135,10 @@ constexpr T byteswap(T val) noexcept {
 } // namespace details::bit
 
 template <integral T>
-requires requires(T val) { __VDPL details::bit::byteswap(val); }
+requires requires(T val) { __DPL details::bit::byteswap(val); }
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr T byteswap(T val) noexcept {
-    return __VDPL details::bit::byteswap(val);
+    return __DPL details::bit::byteswap(val);
 }
 
 __DPL_DEFAULT_NAMESPACE_END

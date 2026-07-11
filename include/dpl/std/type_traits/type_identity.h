@@ -4,14 +4,14 @@
 
 #include "dpl/config.h"
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
-DPL_EXPORT template <typename T>
+template <typename T>
 struct type_identity {
     using type DPL_NODEBUG = T;
 };
 
-DPL_EXPORT template <typename T>
+template <typename T>
 using type_identity_t = typename type_identity<T>::type;
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

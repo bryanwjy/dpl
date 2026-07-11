@@ -16,7 +16,7 @@ template <size_t W>
 struct bit_type {};
 
 template <size_t W>
-requires (W <= char_bit_v && __VDPL has_single_bit(W))
+requires (W <= char_bit_v && __DPL has_single_bit(W))
 struct bit_type<W> {
     using type = uint8;
 };

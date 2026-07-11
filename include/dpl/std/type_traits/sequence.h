@@ -15,9 +15,9 @@ DPL_DISABLE_WARNING_PUSH()
 DPL_DISABLE_WARNING("-Wc++26-extensions")
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
-DPL_EXPORT template <typename T, T... Is>
+template <typename T, T... Is>
 struct integer_sequence {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto size() noexcept {
@@ -25,10 +25,10 @@ struct integer_sequence {
     }
 };
 
-DPL_EXPORT template <typename T, T... Is>
+template <typename T, T... Is>
 struct tuple_size<integer_sequence<T, Is...>> : size_constant<sizeof...(Is)> {};
 
-DPL_EXPORT template <size_t I, typename T, T... Is>
+template <size_t I, typename T, T... Is>
 requires (I < sizeof...(Is))
 struct tuple_element<I, integer_sequence<T, Is...>> {
 #if (DPL_HAS_CXX26_EXTENSIONS || DPL_CXX26) && __cpp_pack_indexing >= 202311L
@@ -46,26 +46,27 @@ public:
 #endif
 };
 
-DPL_EXPORT template <size_t I, typename T, T... Is>
-consteval auto get(integer_sequence<T, Is...>) noexcept {
+template <size_t I, typename T, T... Is>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) constexpr auto get(
+    integer_sequence<T, Is...>) noexcept {
     return tuple_element_t<I, integer_sequence<T, Is...>>{};
 }
 
 #if DPL_HAS_BUILTIN(__make_integer_seq)
 
-DPL_EXPORT template <typename T, T N>
+template <typename T, T N>
 using make_integer_sequence DPL_NODEBUG =
     __make_integer_seq<__DPL integer_sequence, T, N>;
 
 #elif DPL_HAS_BUILTIN(__integer_pack)
 
-DPL_EXPORT template <typename T, T N>
+template <typename T, T N>
 using make_integer_sequence DPL_NODEBUG =
-    __DPL integer_sequence<T, __integer_pack(N)...>;
+    integer_sequence<T, __integer_pack(N)...>;
 
 #else
 
-DPL_EXPORT namespace details::type_traits {
+namespace details::type_traits {
 
 template <typename, typename>
 struct combine_seq;
@@ -101,22 +102,21 @@ struct generate_seq :
 
 } // namespace details::type_traits
 
-DPL_EXPORT template <typename T, T N>
-using make_integer_sequence
-    DPL_NODEBUG = typename details::type_traits::generate_seq < T,
-    (N < 0) ? 0 : N > ::type;
+template <typename T, T N>
+using make_integer_sequence DPL_NODEBUG =
+    typename details::type_traits::generate_seq<T, (N < 0) ? 0 : N>::type;
 #endif
 
-DPL_EXPORT template <size_t... Is>
+template <size_t... Is>
 using index_sequence = integer_sequence<size_t, Is...>;
 
-DPL_EXPORT template <size_t N>
+template <size_t N>
 using make_index_sequence = make_integer_sequence<size_t, N>;
 
-DPL_EXPORT template <typename... Ts>
+template <typename... Ts>
 using index_sequence_for = make_index_sequence<sizeof...(Ts)>;
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END
 
 #if DPL_HAS_CXX26_EXTENSIONS
 DPL_DISABLE_WARNING_POP()

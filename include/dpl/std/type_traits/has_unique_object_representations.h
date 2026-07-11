@@ -6,22 +6,22 @@
 
 #include "dpl/std/type_traits/constants.h"
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 #if __DPL_SHOULD_USE_BUILTIN(has_unique_object_representations)
-DPL_EXPORT template <typename T>
+template <typename T>
 inline constexpr bool has_unique_object_representations_v =
     __has_unique_object_representations(T);
-DPL_EXPORT template <typename T>
+template <typename T>
 struct has_unique_object_representations :
     bool_constant<__has_unique_object_representations(T)> {};
 #else  // if __DPL_SHOULD_USE_BUILTIN(has_unique_object_representations)
-DPL_EXPORT template <typename T>
+template <typename T>
 inline constexpr bool has_unique_object_representations_v =
     details::type_traits::unsupported_trait_v<T>;
-DPL_EXPORT template <typename T>
+template <typename T>
 struct has_unique_object_representations :
     details::type_traits::unsupported_trait<T> {};
 #endif // if __DPL_SHOULD_USE_BUILTIN(has_unique_object_representations)
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

@@ -9,7 +9,7 @@
 __DPL_DEFAULT_NAMESPACE_BEGIN
 
 inline constexpr size_t char_bit_v =
-    __VDPL popcount(static_cast<unsigned char>(-1));
+    __DPL popcount(static_cast<unsigned char>(-1));
 
 template <typename T>
 inline constexpr int unsigned_width_diff_v =

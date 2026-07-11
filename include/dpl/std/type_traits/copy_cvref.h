@@ -5,7 +5,7 @@
 
 #include "dpl/std/type_traits/copy_cv.h"
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 template <typename From, typename To>
 struct copy_cvref {
@@ -24,4 +24,4 @@ struct copy_cvref<From&&, To> {
 template <typename F, typename T>
 using copy_cvref_t = typename copy_cvref<F, T>::type;
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

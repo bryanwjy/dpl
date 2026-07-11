@@ -6,83 +6,215 @@ module;
 
 export module dpl:std.type_traits;
 export import :std.stddef;
+export import :std.details.type_traits;
 
+__DPL_DEFAULT_NAMESPACE_BEGIN
 // IWYU pragma: begin_exports
-#include "dpl/std/type_traits/add_const.h"
-#include "dpl/std/type_traits/add_lvalue_reference.h"
-#include "dpl/std/type_traits/add_pointer.h"
-#include "dpl/std/type_traits/add_rvalue_reference.h"
-#include "dpl/std/type_traits/add_volatile.h"
-#include "dpl/std/type_traits/common_reference.h"
-#include "dpl/std/type_traits/common_type.h"
-#include "dpl/std/type_traits/conditional.h"
-#include "dpl/std/type_traits/constants.h"
-#include "dpl/std/type_traits/copy_cv.h"
-#include "dpl/std/type_traits/copy_cvref.h"
-#include "dpl/std/type_traits/decay.h"
-#include "dpl/std/type_traits/declval.h"
-#include "dpl/std/type_traits/enable_if.h"
-#include "dpl/std/type_traits/extent.h"
-#include "dpl/std/type_traits/has_unique_object_representations.h"
-#include "dpl/std/type_traits/is_aggregate.h"
-#include "dpl/std/type_traits/is_arithmetic.h"
-#include "dpl/std/type_traits/is_array.h"
-#include "dpl/std/type_traits/is_assignable.h"
-#include "dpl/std/type_traits/is_base_of.h"
-#include "dpl/std/type_traits/is_bounded_array.h"
-#include "dpl/std/type_traits/is_class.h"
-#include "dpl/std/type_traits/is_const.h"
-#include "dpl/std/type_traits/is_constructible.h"
-#include "dpl/std/type_traits/is_convertible.h"
-#include "dpl/std/type_traits/is_destructible.h"
-#include "dpl/std/type_traits/is_empty.h"
-#include "dpl/std/type_traits/is_enum.h"
-#include "dpl/std/type_traits/is_explicitly_constructible.h"
-#include "dpl/std/type_traits/is_final.h"
-#include "dpl/std/type_traits/is_floating_point.h"
-#include "dpl/std/type_traits/is_function.h"
-#include "dpl/std/type_traits/is_implicit_lifetime.h"
-#include "dpl/std/type_traits/is_integral.h"
-#include "dpl/std/type_traits/is_invocable.h"
-#include "dpl/std/type_traits/is_lvalue_reference.h"
-#include "dpl/std/type_traits/is_member_function_pointer.h"
-#include "dpl/std/type_traits/is_member_object_pointer.h"
-#include "dpl/std/type_traits/is_member_pointer.h"
-#include "dpl/std/type_traits/is_nothrow_assignable.h"
-#include "dpl/std/type_traits/is_nothrow_constructible.h"
-#include "dpl/std/type_traits/is_nothrow_convertible.h"
-#include "dpl/std/type_traits/is_nothrow_destructible.h"
-#include "dpl/std/type_traits/is_null_pointer.h"
-#include "dpl/std/type_traits/is_object.h"
-#include "dpl/std/type_traits/is_pointer.h"
-#include "dpl/std/type_traits/is_reference.h"
-#include "dpl/std/type_traits/is_rvalue_reference.h"
-#include "dpl/std/type_traits/is_same.h"
-#include "dpl/std/type_traits/is_scalar.h"
-#include "dpl/std/type_traits/is_scoped_enum.h"
-#include "dpl/std/type_traits/is_signed.h"
-#include "dpl/std/type_traits/is_standard_layout.h"
-#include "dpl/std/type_traits/is_trivially_assignable.h"
-#include "dpl/std/type_traits/is_trivially_constructible.h"
-#include "dpl/std/type_traits/is_trivially_copyable.h"
-#include "dpl/std/type_traits/is_trivially_destructible.h"
-#include "dpl/std/type_traits/is_unbounded_array.h"
-#include "dpl/std/type_traits/is_union.h"
-#include "dpl/std/type_traits/is_unsigned.h"
-#include "dpl/std/type_traits/is_void.h"
-#include "dpl/std/type_traits/is_volatile.h"
-#include "dpl/std/type_traits/make_signed.h"
-#include "dpl/std/type_traits/make_unsigned.h"
-#include "dpl/std/type_traits/remove_all_extents.h"
-#include "dpl/std/type_traits/remove_const.h"
-#include "dpl/std/type_traits/remove_cv.h"
-#include "dpl/std/type_traits/remove_cvref.h"
-#include "dpl/std/type_traits/remove_extent.h"
-#include "dpl/std/type_traits/remove_reference.h"
-#include "dpl/std/type_traits/remove_volatile.h"
-#include "dpl/std/type_traits/sequence.h"
-#include "dpl/std/type_traits/structured_bindings.h"
-#include "dpl/std/type_traits/type_identity.h"
-#include "dpl/std/type_traits/underlying_type.h"
-#include "dpl/std/type_traits/void_t.h"
+using __DPL bool_constant;
+using __DPL declval;
+using __DPL false_type;
+using __DPL index_constant;
+using __DPL index_sequence;
+using __DPL index_sequence_for;
+using __DPL integer_sequence;
+using __DPL integral_constant;
+using __DPL make_index_sequence;
+using __DPL make_integer_sequence;
+using __DPL npos_type;
+using __DPL size_constant;
+using __DPL true_type;
+using __DPL tuple_element;
+using __DPL tuple_element_t;
+using __DPL tuple_size;
+using __DPL tuple_size_v;
+using __DPL void_t;
+//
+using __DPL add_const;
+using __DPL add_const_t;
+using __DPL add_lvalue_reference;
+using __DPL add_lvalue_reference_t;
+using __DPL add_pointer;
+using __DPL add_pointer_t;
+using __DPL add_rvalue_reference;
+using __DPL add_rvalue_reference_t;
+using __DPL add_volatile;
+using __DPL add_volatile_t;
+using __DPL common_reference;
+using __DPL common_reference_t;
+using __DPL common_type;
+using __DPL common_type_t;
+using __DPL conditional;
+using __DPL conditional_t;
+using __DPL copy_cv;
+using __DPL copy_cv_t;
+using __DPL copy_cvref;
+using __DPL copy_cvref_t;
+using __DPL decay;
+using __DPL decay_t;
+using __DPL enable_if;
+using __DPL enable_if_t;
+using __DPL make_signed;
+using __DPL make_signed_t;
+using __DPL make_unsigned;
+using __DPL make_unsigned_t;
+using __DPL remove_all_extents;
+using __DPL remove_all_extents_t;
+using __DPL remove_const;
+using __DPL remove_const_t;
+using __DPL remove_cv;
+using __DPL remove_cv_t;
+using __DPL remove_cvref;
+using __DPL remove_cvref_t;
+using __DPL remove_extent;
+using __DPL remove_extent_t;
+using __DPL remove_reference;
+using __DPL remove_reference_t;
+using __DPL remove_volatile;
+using __DPL remove_volatile_t;
+using __DPL type_identity;
+using __DPL type_identity_t;
+using __DPL underlying_type;
+using __DPL underlying_type_t;
+//
+using __DPL extent;
+using __DPL extent_v;
+using __DPL has_unique_object_representations;
+using __DPL has_unique_object_representations_v;
+using __DPL invoke;
+using __DPL invoke_r;
+using __DPL invoke_result_t;
+using __DPL is_aggregate;
+using __DPL is_aggregate_v;
+using __DPL is_arithmetic;
+using __DPL is_arithmetic_v;
+using __DPL is_array;
+using __DPL is_array_v;
+using __DPL is_assignable;
+using __DPL is_assignable_v;
+using __DPL is_base_of;
+using __DPL is_base_of_v;
+using __DPL is_bounded_array;
+using __DPL is_bounded_array_v;
+using __DPL is_class;
+using __DPL is_class_v;
+using __DPL is_const;
+using __DPL is_const_v;
+using __DPL is_constructible;
+using __DPL is_constructible_v;
+using __DPL is_convertible;
+using __DPL is_convertible_v;
+using __DPL is_copy_assignable;
+using __DPL is_copy_assignable_v;
+using __DPL is_copy_constructible;
+using __DPL is_copy_constructible_v;
+using __DPL is_core_convertible;
+using __DPL is_core_convertible_v;
+using __DPL is_default_constructible;
+using __DPL is_default_constructible_v;
+using __DPL is_destructible;
+using __DPL is_destructible_v;
+using __DPL is_empty;
+using __DPL is_empty_v;
+using __DPL is_enum;
+using __DPL is_enum_v;
+using __DPL is_explicitly_constructible;
+using __DPL is_explicitly_constructible_v;
+using __DPL is_final;
+using __DPL is_final_v;
+using __DPL is_floating_point;
+using __DPL is_floating_point_v;
+using __DPL is_function;
+using __DPL is_function_v;
+using __DPL is_implicit_lifetime;
+using __DPL is_implicit_lifetime_v;
+using __DPL is_integral;
+using __DPL is_integral_v;
+using __DPL is_invocable;
+using __DPL is_invocable_r;
+using __DPL is_invocable_r_v;
+using __DPL is_invocable_v;
+using __DPL is_lvalue_reference;
+using __DPL is_lvalue_reference_v;
+using __DPL is_member_function_pointer;
+using __DPL is_member_function_pointer_v;
+using __DPL is_member_object_pointer;
+using __DPL is_member_object_pointer_v;
+using __DPL is_member_pointer;
+using __DPL is_member_pointer_v;
+using __DPL is_move_assignable;
+using __DPL is_move_assignable_v;
+using __DPL is_move_constructible;
+using __DPL is_move_constructible_v;
+using __DPL is_nothrow_assignable;
+using __DPL is_nothrow_assignable_v;
+using __DPL is_nothrow_constructible;
+using __DPL is_nothrow_constructible_v;
+using __DPL is_nothrow_convertible;
+using __DPL is_nothrow_convertible_v;
+using __DPL is_nothrow_copy_assignable;
+using __DPL is_nothrow_copy_assignable_v;
+using __DPL is_nothrow_copy_constructible;
+using __DPL is_nothrow_copy_constructible_v;
+using __DPL is_nothrow_destructible;
+using __DPL is_nothrow_destructible_v;
+using __DPL is_nothrow_invocable;
+using __DPL is_nothrow_invocable_r;
+using __DPL is_nothrow_invocable_r_v;
+using __DPL is_nothrow_invocable_v;
+using __DPL is_nothrow_move_assignable;
+using __DPL is_nothrow_move_assignable_v;
+using __DPL is_nothrow_move_constructible;
+using __DPL is_nothrow_move_constructible_v;
+using __DPL is_null_pointer;
+using __DPL is_null_pointer_v;
+using __DPL is_object;
+using __DPL is_object_v;
+using __DPL is_pointer;
+using __DPL is_pointer_v;
+using __DPL is_reference;
+using __DPL is_reference_v;
+using __DPL is_rvalue_reference;
+using __DPL is_rvalue_reference_v;
+using __DPL is_same;
+using __DPL is_same_v;
+using __DPL is_scalar;
+using __DPL is_scalar_v;
+using __DPL is_scoped_enum;
+using __DPL is_scoped_enum_v;
+using __DPL is_signed;
+using __DPL is_signed_v;
+using __DPL is_standard_layout;
+using __DPL is_standard_layout_v;
+using __DPL is_trivially_assignable;
+using __DPL is_trivially_assignable_v;
+using __DPL is_trivially_constructible;
+using __DPL is_trivially_constructible_v;
+using __DPL is_trivially_copy_assignable;
+using __DPL is_trivially_copy_assignable_v;
+using __DPL is_trivially_copy_constructible;
+using __DPL is_trivially_copy_constructible_v;
+using __DPL is_trivially_copyable;
+using __DPL is_trivially_copyable_v;
+using __DPL is_trivially_default_constructible;
+using __DPL is_trivially_default_constructible_v;
+using __DPL is_trivially_destructible;
+using __DPL is_trivially_destructible_v;
+using __DPL is_trivially_move_assignable;
+using __DPL is_trivially_move_assignable_v;
+using __DPL is_trivially_move_constructible;
+using __DPL is_trivially_move_constructible_v;
+using __DPL is_unbounded_array;
+using __DPL is_unbounded_array_v;
+using __DPL is_union;
+using __DPL is_union_v;
+using __DPL is_unsigned;
+using __DPL is_unsigned_v;
+using __DPL is_void;
+using __DPL is_void_v;
+using __DPL is_volatile;
+using __DPL is_volatile_v;
 // IWYU pragma: end_exports
+
+// clang can't find ADL functions otherwise
+using __DPL get;
+__DPL_DEFAULT_NAMESPACE_END

@@ -61,7 +61,7 @@ constexpr int clz(__uint128_t x) noexcept {
     return hi + lo_bits;
 }
 
-#    define __DPL_clz(...) __VDPL details::bit::clz(__VA_ARGS__)
+#    define __DPL_clz(...) __DPL details::bit::clz(__VA_ARGS__)
 #  endif
 
 #elif DPL_COMPILER_MSVC
@@ -121,7 +121,7 @@ constexpr int clz(T x) noexcept {
     }
 }
 
-#  define __DPL_clz(...) __VDPL details::bit::clz(__VA_ARGS__)
+#  define __DPL_clz(...) __DPL details::bit::clz(__VA_ARGS__)
 #endif
 } // namespace details::bit
 

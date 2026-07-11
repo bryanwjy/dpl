@@ -36,12 +36,12 @@ constexpr int popcount(unsigned int x) noexcept {
 
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr int popcount(unsigned short x) noexcept {
-    return __VDPL details::bit::popcount(static_cast<unsigned int>(x));
+    return __DPL details::bit::popcount(static_cast<unsigned int>(x));
 }
 
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr int popcount(unsigned char x) noexcept {
-    return __VDPL details::bit::popcount(static_cast<unsigned int>(x));
+    return __DPL details::bit::popcount(static_cast<unsigned int>(x));
 }
 
 #  if DPL_SUPPORTS_INT128
@@ -50,11 +50,11 @@ constexpr int popcount(__uint128_t x) noexcept {
     static_assert(sizeof(unsigned long) * 2 == sizeof(__uint128_t));
     constexpr auto shift = (char_bit_v * sizeof(__uint128_t)) / 2;
     constexpr auto mask = (__uint128_t(1) << shift) - 1;
-    return __VDPL details::bit::popcount(static_cast<unsigned long>(x & mask)) +
-        __VDPL details::bit::popcount(static_cast<unsigned long>(x >> shift));
+    return __DPL details::bit::popcount(static_cast<unsigned long>(x & mask)) +
+        __DPL details::bit::popcount(static_cast<unsigned long>(x >> shift));
 }
 
-#    define __DPL_popcount(...) __VDPL details::bit::popcount(__VA_ARGS__)
+#    define __DPL_popcount(...) __DPL details::bit::popcount(__VA_ARGS__)
 #  endif
 
 #elif DPL_COMPILER_MSVC
@@ -75,7 +75,7 @@ constexpr int cpopcount(T x, int c = 0) noexcept {
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr int popcount(unsigned long long x) noexcept {
     if consteval {
-        return __VDPL details::bit::cpopcount(x);
+        return __DPL details::bit::cpopcount(x);
     }
 
     return __popcnt64(x);
@@ -85,7 +85,7 @@ DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr int popcount(unsigned long x) noexcept {
     static_assert(sizeof(x) == 4, "MSVC");
     if consteval {
-        return __VDPL details::bit::cpopcount(x);
+        return __DPL details::bit::cpopcount(x);
     }
 
     return __popcnt(x);
@@ -94,7 +94,7 @@ constexpr int popcount(unsigned long x) noexcept {
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr int popcount(unsigned int x) noexcept {
     if consteval {
-        return __VDPL details::bit::cpopcount(x);
+        return __DPL details::bit::cpopcount(x);
     }
 
     return __popcnt(x);
@@ -103,7 +103,7 @@ constexpr int popcount(unsigned int x) noexcept {
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr int popcount(unsigned short x) noexcept {
     if consteval {
-        return __VDPL details::bit::cpopcount(x);
+        return __DPL details::bit::cpopcount(x);
     }
 
     return __popcnt16(x);
@@ -114,7 +114,7 @@ constexpr int popcount(unsigned char x) noexcept {
     return popcount(static_cast<unsigned int>(x));
 }
 
-#  define __DPL_popcount(...) __VDPL details::bit::popcount(__VA_ARGS__)
+#  define __DPL_popcount(...) __DPL details::bit::popcount(__VA_ARGS__)
 #endif
 } // namespace details::bit
 

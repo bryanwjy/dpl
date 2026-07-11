@@ -8,20 +8,20 @@
 #include "dpl/std/type_traits/is_const.h"
 #include "dpl/std/type_traits/is_reference.h"
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 #if __DPL_SHOULD_USE_BUILTIN(is_function)
-DPL_EXPORT template <typename T>
+template <typename T>
 inline constexpr bool is_function_v = __is_function(T);
-DPL_EXPORT template <typename T>
+template <typename T>
 struct is_function : bool_constant<__is_function(T)> {};
 #else  // if __DPL_SHOULD_USE_BUILTIN(is_function)
-DPL_EXPORT template <typename T>
+template <typename T>
 inline constexpr bool is_function_v =
     !is_const_v<T const> && !is_reference_v<T>;
 
-DPL_EXPORT template <typename T>
+template <typename T>
 struct is_function : bool_constant<is_function_v<T>> {};
 #endif // if __DPL_SHOULD_USE_BUILTIN(is_function)
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

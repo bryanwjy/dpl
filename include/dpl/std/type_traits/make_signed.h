@@ -8,18 +8,18 @@
 #include "dpl/std/type_traits/is_enum.h"
 #include "dpl/std/type_traits/is_integral.h"
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 #if __DPL_SHOULD_USE_BUILTIN(make_signed)
-DPL_EXPORT template <typename T>
+template <typename T>
 using make_signed_t = __make_signed(T);
-DPL_EXPORT template <typename T>
+template <typename T>
 struct make_signed {
     using type DPL_NODEBUG = __make_signed(T);
 };
 #else // if __DPL_SHOULD_USE_BUILTIN(make_signed)
 
-DPL_EXPORT namespace details::type_traits {
+namespace details::type_traits {
 
 struct no_signed_type {};
 
@@ -57,65 +57,65 @@ using make_signed DPL_NODEBUG =
     decltype(details::type_traits::find_signed_entry<T>());
 } // namespace details::type_traits
 
-DPL_EXPORT template <typename T>
+template <typename T>
 struct make_signed : details::type_traits::make_signed<T> {};
 
-DPL_EXPORT template <typename T>
+template <typename T>
 using make_signed_t = typename make_signed<T>::type;
 
-DPL_EXPORT template <typename T>
+template <typename T>
 struct make_signed<T const> {
     using type DPL_NODEBUG = typename make_signed<T>::type const;
 };
-DPL_EXPORT template <typename T>
+template <typename T>
 struct make_signed<T volatile> {
     using type DPL_NODEBUG = typename make_signed<T>::type volatile;
 };
-DPL_EXPORT template <typename T>
+template <typename T>
 struct make_signed<T const volatile> {
     using type DPL_NODEBUG = typename make_signed<T>::type const volatile;
 };
-DPL_EXPORT template <>
+template <>
 struct make_signed<bool> {};
-DPL_EXPORT template <>
+template <>
 struct make_signed<unsigned char> {
     using type DPL_NODEBUG = signed char;
 };
-DPL_EXPORT template <>
+template <>
 struct make_signed<signed char> {
     using type DPL_NODEBUG = signed char;
 };
-DPL_EXPORT template <>
+template <>
 struct make_signed<unsigned short> {
     using type DPL_NODEBUG = signed short;
 };
-DPL_EXPORT template <>
+template <>
 struct make_signed<signed short> {
     using type DPL_NODEBUG = signed short;
 };
-DPL_EXPORT template <>
+template <>
 struct make_signed<unsigned int> {
     using type DPL_NODEBUG = signed int;
 };
-DPL_EXPORT template <>
+template <>
 struct make_signed<signed int> {
     using type DPL_NODEBUG = signed int;
 };
-DPL_EXPORT template <>
+template <>
 struct make_signed<unsigned long> {
     using type DPL_NODEBUG = signed long;
 };
-DPL_EXPORT template <>
+template <>
 struct make_signed<signed long> {
     using type DPL_NODEBUG = signed long;
 };
 
 #  ifdef UTL_SUPPORTS_INT128
-DPL_EXPORT template <>
+template <>
 struct make_signed<__uint128_t> {
     using type DPL_NODEBUG = __int128_t;
 };
-DPL_EXPORT template <>
+template <>
 struct make_signed<__int128_t> {
     using type DPL_NODEBUG = __int128_t;
 };
@@ -123,4 +123,4 @@ struct make_signed<__int128_t> {
 
 #endif // if __DPL_SHOULD_USE_BUILTIN(make_signed)
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

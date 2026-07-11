@@ -7,18 +7,18 @@
 #include "dpl/std/type_traits/is_same.h"
 #include "dpl/std/type_traits/remove_reference.h"
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 #if __DPL_SHOULD_USE_BUILTIN(add_pointer)
-DPL_EXPORT template <typename T>
+template <typename T>
 using add_pointer_t = __add_pointer(T);
-DPL_EXPORT template <typename T>
+template <typename T>
 struct add_pointer {
     using type DPL_NODEBUG = __add_pointer(T);
 };
 #else // if __DPL_SHOULD_USE_BUILTIN(add_pointer)
 
-DPL_EXPORT namespace details::type_traits {
+namespace details::type_traits {
 class add_pointer {
     add_pointer() = delete;
     ~add_pointer() = delete;
@@ -36,15 +36,15 @@ class add_pointer {
 };
 } // namespace details::type_traits
 
-DPL_EXPORT template <typename T>
+template <typename T>
 struct add_pointer {
     using type DPL_NODEBUG =
         decltype(details::type_traits::add_pointer::make_result<T>(0));
 };
 
-DPL_EXPORT template <typename T>
+template <typename T>
 using add_pointer_t = typename add_pointer<T>::type;
 
 #endif // if __DPL_SHOULD_USE_BUILTIN(add_pointer)
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

@@ -6,19 +6,19 @@
 
 #include "dpl/std/type_traits/constants.h"
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 #if __DPL_SHOULD_USE_BUILTIN(is_standard_layout)
-DPL_EXPORT template <typename T>
+template <typename T>
 inline constexpr bool is_standard_layout_v = __is_standard_layout(T);
-DPL_EXPORT template <typename T>
+template <typename T>
 struct is_standard_layout : bool_constant<__is_standard_layout(T)> {};
 #else  // if __DPL_SHOULD_USE_BUILTIN(is_standard_layout)
-DPL_EXPORT template <typename T>
+template <typename T>
 inline constexpr bool is_standard_layout_v =
     details::type_traits::unsupported_trait_v<T>;
-DPL_EXPORT template <typename T>
+template <typename T>
 struct is_standard_layout : details::type_traits::unsupported_trait<T> {};
 #endif // if __DPL_SHOULD_USE_BUILTIN(is_volatile)
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

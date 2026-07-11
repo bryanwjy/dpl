@@ -4,18 +4,18 @@
 
 #include "dpl/config.h"
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 #if __DPL_SHOULD_USE_BUILTIN(add_lvalue_reference)
-DPL_EXPORT template <typename T>
+template <typename T>
 using add_lvalue_reference_t = __add_lvalue_reference(T);
-DPL_EXPORT template <typename T>
+template <typename T>
 struct add_lvalue_reference {
     using type DPL_NODEBUG = __add_lvalue_reference(T);
 };
 #else  // if __DPL_SHOULD_USE_BUILTIN(add_lvalue_reference)
 
-DPL_EXPORT namespace details::type_traits {
+namespace details::type_traits {
 class add_lvalue_reference {
     add_lvalue_reference() = delete;
     ~add_lvalue_reference() = delete;
@@ -29,14 +29,14 @@ class add_lvalue_reference {
 };
 } // namespace details::type_traits
 
-DPL_EXPORT template <typename T>
+template <typename T>
 struct add_lvalue_reference {
     using type DPL_NODEBUG =
         decltype(details::type_traits::add_lvalue_reference::make_result<T>(0));
 };
 
-DPL_EXPORT template <typename T>
+template <typename T>
 using add_lvalue_reference_t = typename add_lvalue_reference<T>::type;
 #endif // if __DPL_SHOULD_USE_BUILTIN(add_lvalue_reference)
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

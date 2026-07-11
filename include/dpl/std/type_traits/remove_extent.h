@@ -4,12 +4,12 @@
 
 #include "dpl/config.h"
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 #if __DPL_SHOULD_USE_BUILTIN(remove_extent)
-DPL_EXPORT template <typename T>
+template <typename T>
 using remove_extent_t = __remove_extent(T);
-DPL_EXPORT template <typename T>
+template <typename T>
 struct remove_extent {
     using type DPL_NODEBUG = __remove_extent(T);
 };
@@ -31,4 +31,4 @@ template <typename T>
 using remove_extent_t = typename remove_extent<T>::type;
 #endif // if __DPL_SHOULD_USE_BUILTIN(is_aggregate)
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

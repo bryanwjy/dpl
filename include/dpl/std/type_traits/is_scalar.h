@@ -13,63 +13,63 @@
 #include "dpl/std/type_traits/is_pointer.h"
 // IWYU pragma: end_exports
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 #if __DPL_SHOULD_USE_BUILTIN(is_scalar)
-DPL_EXPORT template <typename T>
+template <typename T>
 inline constexpr bool is_scalar_v = __is_scalar(T);
-DPL_EXPORT template <typename T>
+template <typename T>
 struct is_scalar : bool_constant<is_scalar_v<T>> {};
 
 #  if DPL_SUPPORTS_EXT_FLOAT16
-DPL_EXPORT template <>
+template <>
 inline constexpr bool is_scalar_v<float16> = true;
-DPL_EXPORT template <>
+template <>
 inline constexpr bool is_scalar_v<float16 const> = true;
-DPL_EXPORT template <>
+template <>
 inline constexpr bool is_scalar_v<float16 volatile> = true;
-DPL_EXPORT template <>
+template <>
 inline constexpr bool is_scalar_v<float16 const volatile> = true;
 #  endif
 
 #  if DPL_SUPPORTS_EXT_BFLOAT16
-DPL_EXPORT template <>
+template <>
 inline constexpr bool is_scalar_v<bfloat16> = true;
-DPL_EXPORT template <>
+template <>
 inline constexpr bool is_scalar_v<bfloat16 const> = true;
-DPL_EXPORT template <>
+template <>
 inline constexpr bool is_scalar_v<bfloat16 volatile> = true;
-DPL_EXPORT template <>
+template <>
 inline constexpr bool is_scalar_v<bfloat16 const volatile> = true;
 #  endif
 
 #  if DPL_SUPPORTS_INT128
-DPL_EXPORT template <>
+template <>
 inline constexpr bool is_scalar_v<int128> = true;
-DPL_EXPORT template <>
+template <>
 inline constexpr bool is_scalar_v<int128 const> = true;
-DPL_EXPORT template <>
+template <>
 inline constexpr bool is_scalar_v<int128 volatile> = true;
-DPL_EXPORT template <>
+template <>
 inline constexpr bool is_scalar_v<int128 const volatile> = true;
 
-DPL_EXPORT template <>
+template <>
 inline constexpr bool is_scalar_v<uint128> = true;
-DPL_EXPORT template <>
+template <>
 inline constexpr bool is_scalar_v<uint128 const> = true;
-DPL_EXPORT template <>
+template <>
 inline constexpr bool is_scalar_v<uint128 volatile> = true;
-DPL_EXPORT template <>
+template <>
 inline constexpr bool is_scalar_v<uint128 const volatile> = true;
 #  endif
 
 #else  // if __DPL_SHOULD_USE_BUILTIN(is_scalar)
-DPL_EXPORT template <typename T>
+template <typename T>
 inline constexpr bool is_scalar_v = is_arithmetic_v<T> || is_enum_v<T> ||
     is_member_pointer_v<T> || is_null_pointer_v<T> || is_pointer_v<T>;
 
-DPL_EXPORT template <typename T>
+template <typename T>
 struct is_scalar : bool_constant<is_scalar_v<T>> {};
 #endif // if __DPL_SHOULD_USE_BUILTIN(is_scalar)
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

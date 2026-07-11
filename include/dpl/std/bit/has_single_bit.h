@@ -17,7 +17,7 @@ template <unsigned_integral T>
 requires (!same_as<bool, T>)
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr bool has_single_bit(T val) noexcept {
-    return __VDPL popcount(val) == 1;
+    return __DPL popcount(val) == 1;
 }
 
 __DPL_DEFAULT_NAMESPACE_END

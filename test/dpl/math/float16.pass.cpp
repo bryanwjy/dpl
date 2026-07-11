@@ -17,7 +17,10 @@ import dpl;
 
 namespace dpp = dpl::datapar;
 using float16 = dpl::ext::float16;
-
+static_assert(sizeof(decltype(get<0zu>(dpl::index_sequence<0, 1>{}))));
+// static_assert(
+//     dpl::details::concepts::has_adl_get<dpl::index_sequence<0, 1>, 0> &&
+//     dpl::details::concepts::has_adl_get<dpl::index_sequence<0, 1>, 1>);
 namespace {
 
 using dpl::ext_literals::operator""_f16;

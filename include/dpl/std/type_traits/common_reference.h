@@ -18,27 +18,27 @@
 #include "dpl/std/type_traits/remove_reference.h"
 #include "dpl/std/type_traits/ternary_result.h"
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
-DPL_EXPORT template <typename T, typename U, template <typename> class TQual,
+template <typename T, typename U, template <typename> class TQual,
     template <typename> class UQual>
 struct basic_common_reference {};
-DPL_EXPORT template <typename T, typename U, template <typename> class TQual,
+template <typename T, typename U, template <typename> class TQual,
     template <typename> class UQual>
 using basic_common_reference_t =
     typename basic_common_reference<T, U, TQual, UQual>::type;
-DPL_EXPORT template <typename...>
+template <typename...>
 struct common_reference {};
-DPL_EXPORT template <typename... Ts>
+template <typename... Ts>
 using common_reference_t = typename common_reference<Ts...>::type;
-DPL_EXPORT template <>
+template <>
 struct common_reference<> {};
-DPL_EXPORT template <typename T>
+template <typename T>
 struct common_reference<T> {
     using type = T;
 };
 
-DPL_EXPORT namespace details::type_traits {
+namespace details::type_traits {
 
 template <typename T>
 struct copy_cvref_from {
@@ -128,12 +128,12 @@ using common_reference DPL_NODEBUG = first_type<simple_common_ref<T, U>,
 
 } // namespace details::type_traits
 
-DPL_EXPORT template <typename T, typename U>
+template <typename T, typename U>
 struct common_reference<T, U> : details::type_traits::common_reference<T, U> {};
 
-DPL_EXPORT template <typename T, typename U, typename... Vs>
+template <typename T, typename U, typename... Vs>
 requires requires { typename common_reference_t<T, U>; }
 struct common_reference<T, U, Vs...> :
     common_reference<common_reference_t<T, U>, Vs...> {};
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

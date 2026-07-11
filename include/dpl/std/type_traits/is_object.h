@@ -10,20 +10,20 @@
 #include "dpl/std/type_traits/is_scalar.h"
 #include "dpl/std/type_traits/is_union.h"
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 #if __DPL_SHOULD_USE_BUILTIN(is_object)
-DPL_EXPORT template <typename T>
+template <typename T>
 inline constexpr bool is_object_v = __is_object(T);
-DPL_EXPORT template <typename T>
+template <typename T>
 struct is_object : bool_constant<__is_object(T)> {};
 #else  // if __DPL_SHOULD_USE_BUILTIN(is_object)
-DPL_EXPORT template <typename T>
+template <typename T>
 inline constexpr bool is_object_v =
     is_scalar_v<T> || is_array_v<T> || is_union_v<T> || is_class_v<T>;
 
-DPL_EXPORT template <typename T>
+template <typename T>
 struct is_object : bool_constant<is_object_v<T>> {};
 #endif // if __DPL_SHOULD_USE_BUILTIN(is_object)
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

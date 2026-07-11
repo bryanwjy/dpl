@@ -19,14 +19,14 @@ requires requires(T val) {
 }
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr T bit_ceil(T val) noexcept {
-    return static_cast<T>(1) << __VDPL bit_width(static_cast<T>(val - 1));
+    return static_cast<T>(1) << __DPL bit_width(static_cast<T>(val - 1));
 }
 
 template <typename T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr T bit_ceil(T val) noexcept {
     auto const lhs =
-        static_cast<T>(1u << (__VDPL bit_width(static_cast<T>(val - 1)) +
+        static_cast<T>(1u << (__DPL bit_width(static_cast<T>(val - 1)) +
                            unsigned_width_diff_v<T>));
     return lhs >> unsigned_width_diff_v<T>;
 }

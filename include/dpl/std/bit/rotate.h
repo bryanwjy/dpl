@@ -32,7 +32,7 @@ template <unsigned_integral T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr T rotl(T val, int count) noexcept {
     if consteval {
-        constexpr auto digits = sizeof(T) * __VDPL char_bit_v;
+        constexpr auto digits = sizeof(T) * __DPL char_bit_v;
         count %= digits;
         if (count == 0)
             return val;
@@ -60,7 +60,7 @@ template <unsigned_integral T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr T rotr(T val, int count) noexcept {
     if consteval {
-        constexpr auto digits = sizeof(T) * __VDPL char_bit_v;
+        constexpr auto digits = sizeof(T) * __DPL char_bit_v;
         count %= digits;
         if (count == 0)
             return val;
@@ -88,7 +88,7 @@ constexpr T rotr(T val, int count) noexcept {
 template <unsigned_integral T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr T rotl(T val, int count) noexcept {
-    constexpr auto digits = sizeof(T) * __VDPL char_bit_v;
+    constexpr auto digits = sizeof(T) * __DPL char_bit_v;
     count %= digits;
     if (count == 0)
         return val;
@@ -103,7 +103,7 @@ constexpr T rotl(T val, int count) noexcept {
 template <unsigned_integral T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr T rotr(T val, int count) noexcept {
-    constexpr auto digits = sizeof(T) * __VDPL char_bit_v;
+    constexpr auto digits = sizeof(T) * __DPL char_bit_v;
     count %= digits;
     if (count == 0)
         return val;

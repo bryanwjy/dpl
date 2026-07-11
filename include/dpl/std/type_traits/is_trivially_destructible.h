@@ -6,33 +6,33 @@
 
 #include "dpl/std/type_traits/constants.h"
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 #if __DPL_SHOULD_USE_BUILTIN(is_trivially_destructible)
-DPL_EXPORT template <typename T>
+template <typename T>
 inline constexpr bool is_trivially_destructible_v =
     __is_trivially_destructible(T);
-DPL_EXPORT template <typename T>
+template <typename T>
 struct is_trivially_destructible :
     bool_constant<__is_trivially_destructible(T)> {};
 #else  // if __DPL_SHOULD_USE_BUILTIN(is_trivially_destructible)
 
-DPL_EXPORT template <typename T>
+template <typename T>
 inline constexpr bool is_trivially_destructible_v =
     details::type_traits::unsupported_trait_v<T>;
-DPL_EXPORT template <typename T>
+template <typename T>
 inline constexpr bool is_trivially_destructible_v<T const> =
     is_trivially_destructible_v<T>;
-DPL_EXPORT template <typename T>
+template <typename T>
 inline constexpr bool is_trivially_destructible_v<T volatile> =
     is_trivially_destructible_v<T>;
-DPL_EXPORT template <typename T>
+template <typename T>
 inline constexpr bool is_trivially_destructible_v<T const volatile> =
     is_trivially_destructible_v<T>;
 
-DPL_EXPORT template <typename T, typename... Args>
+template <typename T, typename... Args>
 struct is_trivially_destructible :
     bool_constant<is_trivially_destructible_v<T, Args...>> {};
 #endif // if __DPL_SHOULD_USE_BUILTIN(is_trivially_destructible)
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

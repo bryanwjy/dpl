@@ -8,47 +8,47 @@
 #include "dpl/std/type_traits/add_rvalue_reference.h"
 #include "dpl/std/type_traits/constants.h"
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 #if __DPL_SHOULD_USE_BUILTIN(is_assignable)
-DPL_EXPORT template <typename T, typename R>
+template <typename T, typename R>
 inline constexpr bool is_assignable_v = __is_assignable(T, R);
-DPL_EXPORT template <typename T>
+template <typename T>
 inline constexpr bool is_copy_assignable_v =
     __is_assignable(add_lvalue_reference_t<T>, add_lvalue_reference_t<T const>);
-DPL_EXPORT template <typename T>
+template <typename T>
 inline constexpr bool is_move_assignable_v =
     __is_assignable(add_lvalue_reference_t<T>, add_rvalue_reference_t<T>);
 
-DPL_EXPORT template <typename T, typename... Args>
+template <typename T, typename... Args>
 struct is_assignable : bool_constant<__is_assignable(T, Args...)> {};
-DPL_EXPORT template <typename T>
+template <typename T>
 struct is_copy_assignable :
     bool_constant<__is_assignable(
         add_lvalue_reference_t<T>, add_lvalue_reference_t<T const>)> {};
-DPL_EXPORT template <typename T>
+template <typename T>
 struct is_move_assignable :
     bool_constant<__is_assignable(
         add_lvalue_reference_t<T>, add_rvalue_reference_t<T>)> {};
 
 #else  // if __DPL_SHOULD_USE_BUILTIN(is_assignable)
-DPL_EXPORT template <typename T, typename R>
+template <typename T, typename R>
 inline constexpr bool is_assignable_v =
     requires(R&& arg) { T(static_cast<R&&>(arg)); };
 
-DPL_EXPORT template <typename T>
+template <typename T>
 inline constexpr bool is_copy_assignable_v =
     is_assignable_v<add_lvalue_reference_t<T>, add_lvalue_reference_t<T const>>;
-DPL_EXPORT template <typename T>
+template <typename T>
 inline constexpr bool is_move_assignable_v =
     is_assignable_v<add_lvalue_reference_t<T>, add_rvalue_reference_t<T>>;
 
-DPL_EXPORT template <typename T, typename R>
+template <typename T, typename R>
 struct is_assignable : bool_constant<is_assignable_v<T, R>> {};
-DPL_EXPORT template <typename T>
+template <typename T>
 struct is_copy_assignable : bool_constant<is_copy_assignable_v<T>> {};
-DPL_EXPORT template <typename T>
+template <typename T>
 struct is_move_assignable : bool_constant<is_move_assignable_v<T>> {};
 #endif // if __DPL_SHOULD_USE_BUILTIN(is_assignable)
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

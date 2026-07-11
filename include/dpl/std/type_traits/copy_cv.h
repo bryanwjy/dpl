@@ -3,7 +3,7 @@
 
 #include "dpl/config.h"
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 template <typename From, typename To>
 struct copy_cv {
@@ -25,4 +25,4 @@ struct copy_cv<From const volatile, To> {
 template <typename F, typename T>
 using copy_cv_t = typename copy_cv<F, T>::type;
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

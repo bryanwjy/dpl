@@ -10,25 +10,25 @@
 #include "dpl/std/type_traits/remove_reference.h"
 #include "dpl/std/type_traits/ternary_result.h"
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
-DPL_EXPORT template <typename...>
+template <typename...>
 struct common_type {};
-DPL_EXPORT template <>
+template <>
 struct common_type<> {};
-DPL_EXPORT template <typename T>
+template <typename T>
 struct common_type<T> {
     using type = T;
 };
-DPL_EXPORT template <typename T>
+template <typename T>
 struct common_type<T, T> {
     using type = T;
 };
 
-DPL_EXPORT template <typename... Ts>
+template <typename... Ts>
 using common_type_t DPL_NODEBUG = typename common_type<Ts...>::type;
 
-DPL_EXPORT namespace details::type_traits {
+namespace details::type_traits {
 
 template <typename T, typename U>
 struct common_type2 {};
@@ -62,11 +62,11 @@ struct common_type : common_type0<T, U> {};
 
 } // namespace details::type_traits
 
-DPL_EXPORT template <typename T, typename U>
+template <typename T, typename U>
 struct common_type<T, U> : details::type_traits::common_type<T, U> {};
 
-DPL_EXPORT template <typename T, typename U, typename... Vs>
+template <typename T, typename U, typename... Vs>
 requires requires { typename common_type<T, U>::type; }
 struct common_type<T, U, Vs...> : common_type<common_type_t<T, U>, Vs...> {};
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

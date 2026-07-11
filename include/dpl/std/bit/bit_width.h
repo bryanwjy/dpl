@@ -12,7 +12,7 @@ namespace details::bit {
 template <typename T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD, CONST)
 constexpr T bit_log2(T x) noexcept {
-    return char_bit_v * sizeof(T) - 1 - __VDPL countl_zero(x);
+    return char_bit_v * sizeof(T) - 1 - __DPL countl_zero(x);
 }
 } // namespace details::bit
 

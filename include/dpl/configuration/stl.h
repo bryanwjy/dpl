@@ -2,7 +2,6 @@
 
 #pragma once
 
-#include "dpl/configuration/standard.h" // IWYU pragma: keep
 #include "dpl/preprocessor/concatenation.h"
 
 #ifndef DPL_DISABLE_HOST_STL_SUPPORT

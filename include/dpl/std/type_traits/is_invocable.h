@@ -18,7 +18,7 @@
 #  include "dpl/std/type_traits/remove_cvref.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 #if __DPL_SHOULD_USE_BUILTIN(builtin_invoke)
 
@@ -26,7 +26,7 @@ DPL_DEFAULT_NAMESPACE_BEGIN
 
 #else
 
-DPL_EXPORT namespace details::type_traits {
+namespace details::type_traits {
 template <typename>
 inline constexpr bool is_wrapped = false;
 __DPL_HIDE_FROM_ABI void ref(...) noexcept = delete;
@@ -71,7 +71,7 @@ template <typename T>
 concept not_ref_wrapper = !is_wrapped<remove_cvref_t<T>>;
 
 struct invoke_t {
-    DPL_EXPORT template <typename F, typename... Args>
+    template <typename F, typename... Args>
     __DPL_HIDE_FROM_ABI constexpr auto
     operator()(F&& func, Args&&... args) noexcept(
         noexcept(__DPL declval<F>()(__DPL declval<Args>()...)))
@@ -136,80 +136,80 @@ inline constexpr invoke_t invoke{};
 
 #endif // if __DPL_SHOULD_USE_BUILTIN(is_invocable)
 
-DPL_EXPORT template <typename F, typename... Args>
+template <typename F, typename... Args>
 using invoke_result_t = decltype(__DPL_BUILTIN_invoke(
     __DPL declval<F>(), __DPL declval<Args>()...));
 
-DPL_EXPORT template <typename F, typename... Args>
+template <typename F, typename... Args>
 struct invoke_result {};
 
-DPL_EXPORT template <typename F, typename... Args>
+template <typename F, typename... Args>
 requires requires { typename invoke_result_t<F, Args...>; }
 struct invoke_result<F, Args...> {
     using type DPL_NODEBUG = invoke_result_t<F, Args...>;
 };
 
-DPL_EXPORT template <typename F, typename... Args>
+template <typename F, typename... Args>
 inline constexpr bool is_invocable_v =
     requires { typename invoke_result_t<F, Args...>; };
 
-DPL_EXPORT template <typename F, typename... Args>
+template <typename F, typename... Args>
 inline constexpr bool is_nothrow_invocable_v = false;
 
-DPL_EXPORT template <typename F, typename... Args>
+template <typename F, typename... Args>
 requires is_invocable_v<F, Args...>
 inline constexpr bool is_nothrow_invocable_v<F, Args...> = noexcept(
-    __DPL_BUILTIN_invoke( __DPL declval<F>(), __DPL declval<Args>()...));
+    __DPL_BUILTIN_invoke(__DPL declval<F>(), __DPL declval<Args>()...));
 
-DPL_EXPORT template <typename R, typename F, typename... Args>
+template <typename R, typename F, typename... Args>
 inline constexpr bool is_invocable_r_v = false;
 
-DPL_EXPORT template <typename R, typename F, typename... Args>
+template <typename R, typename F, typename... Args>
 requires is_invocable_v<F, Args...> &&
     (is_void_v<R> || is_void_v<invoke_result_t<F, Args...>>)
 inline constexpr bool is_invocable_r_v<R, F, Args...> =
     !is_void_v<invoke_result_t<F, Args...>> || is_void_v<R>;
 
-DPL_EXPORT template <typename R, typename F, typename... Args>
+template <typename R, typename F, typename... Args>
 requires is_invocable_v<F, Args...>
 inline constexpr bool is_invocable_r_v<R, F, Args...> =
     is_core_convertible_v<invoke_result_t<F, Args...>, R>;
 
-DPL_EXPORT template <typename R, typename F, typename... Args>
+template <typename R, typename F, typename... Args>
 inline constexpr bool is_nothrow_invocable_r_v = false;
 
-DPL_EXPORT template <typename R, typename F, typename... Args>
+template <typename R, typename F, typename... Args>
 requires is_nothrow_invocable_v<F, Args...> &&
     is_invocable_r_v<R, F, Args...> &&
     (is_void_v<R> || is_void_v<invoke_result_t<F, Args...>>)
 inline constexpr bool is_nothrow_invocable_r_v<R, F, Args...> = true;
 
-DPL_EXPORT template <typename R, typename F, typename... Args>
+template <typename R, typename F, typename... Args>
 requires is_nothrow_invocable_v<F, Args...> && is_invocable_r_v<R, F, Args...>
 inline constexpr bool is_nothrow_invocable_r_v<R, F, Args...> =
     requires(invoke_result_t<F, Args...> result) {
         { static_cast<R>(result) } noexcept;
     };
 
-DPL_EXPORT template <typename F, typename... Args>
+template <typename F, typename... Args>
 struct is_invocable : bool_constant<is_invocable_v<F, Args...>> {};
-DPL_EXPORT template <typename R, typename F, typename... Args>
+template <typename R, typename F, typename... Args>
 struct is_invocable_r : bool_constant<is_invocable_r_v<R, F, Args...>> {};
-DPL_EXPORT template <typename F, typename... Args>
+template <typename F, typename... Args>
 struct is_nothrow_invocable :
     bool_constant<is_nothrow_invocable_v<F, Args...>> {};
-DPL_EXPORT template <typename R, typename F, typename... Args>
+template <typename R, typename F, typename... Args>
 struct is_nothrow_invocable_r :
     bool_constant<is_nothrow_invocable_r_v<R, F, Args...>> {};
 
-DPL_EXPORT template <typename F, typename... Args>
+template <typename F, typename... Args>
 __DPL_HIDE_FROM_ABI constexpr invoke_result_t<F, Args...> invoke(
     F&& func, Args&&... args) noexcept(is_nothrow_invocable_v<F, Args...>) {
     return __DPL_BUILTIN_invoke(
         static_cast<F&&>(func), static_cast<Args&&>(args)...);
 }
 
-DPL_EXPORT template <typename R, typename F, typename... Args>
+template <typename R, typename F, typename... Args>
 requires is_invocable_r_v<R, F, Args...>
 __DPL_HIDE_FROM_ABI constexpr R invoke_r(F&& func, Args&&... args) noexcept(
     is_nothrow_invocable_r_v<R, F, Args...>) {
@@ -224,4 +224,4 @@ __DPL_HIDE_FROM_ABI constexpr R invoke_r(F&& func, Args&&... args) noexcept(
 
 #undef __DPL_BUILTIN_invoke
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END
