@@ -3,27 +3,28 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/type_interface/simd_base.h"
+#include "dpl/core/type_traits/details/simd_base.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/fwd/basic.h"
 #  include "dpl/std/concepts/derived_from.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
-DPL_EXPORT template <typename T>
-struct simd_vector_base : simd_base {
+template <typename T>
+struct simd_vector_base : internal::simd_base {
     __DPL_HIDE_FROM_ABI constexpr ~simd_vector_base() = default;
 };
 
-DPL_EXPORT template <typename T>
+template <typename T>
 inline constexpr bool enable_simd_vector =
-    (derived_from<T, simd_vector_base<T>> && derived_from<T, simd_base>);
-DPL_EXPORT template <typename E, typename A>
+    (derived_from<T, simd_vector_base<T>> &&
+        derived_from<T, internal::simd_base>);
+template <typename E, typename A>
 inline constexpr bool enable_simd_vector<basic_vector<E, A>> = true;
 
 } // namespace datapar
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

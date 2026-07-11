@@ -9,9 +9,9 @@
 #  include "dpl/std/utility/bitset.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
-DPL_EXPORT namespace details::numbers {
+namespace details::numbers {
 template <size_t N>
 struct xfp {
     static_assert(80 % __DPL char_bit_v == 0);
@@ -29,4 +29,4 @@ struct xfp {
     }
 };
 } // namespace details::numbers
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

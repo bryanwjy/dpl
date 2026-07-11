@@ -3,24 +3,24 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/type_interface/simd_base.h"
+#include "dpl/core/type_traits/details/simd_base.h"
 
 #if !DPL_MODULES
 #  include "dpl/std/concepts/derived_from.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
-DPL_EXPORT template <typename T>
-struct simd_abi_base : simd_base {
+template <typename T>
+struct simd_abi_base : internal::simd_base {
     __DPL_HIDE_FROM_ABI constexpr ~simd_abi_base() = default;
 };
 
-DPL_EXPORT template <typename T>
+template <typename T>
 inline constexpr bool enable_simd_abi =
-    (derived_from<T, simd_abi_base<T>> && derived_from<T, simd_base>);
+    (derived_from<T, simd_abi_base<T>> && derived_from<T, internal::simd_base>);
 
 } // namespace datapar
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

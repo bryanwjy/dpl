@@ -8,13 +8,13 @@
 #  include "dpl/std/concepts/derived_from.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
-namespace datapar {
+__DPL_DEFAULT_NAMESPACE_BEGIN
+namespace datapar::internal {
 
-DPL_EXPORT struct simd_base {
+struct simd_base {
     __DPL_HIDE_FROM_ABI constexpr ~simd_base() = default;
 };
 
-} // namespace datapar
+} // namespace datapar::internal
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

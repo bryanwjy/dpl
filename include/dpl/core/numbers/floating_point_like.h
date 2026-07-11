@@ -3,13 +3,20 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/numbers/details/extended_floating_point.h"
+#include "dpl/core/numbers/floating_point_traits.h"
+
 #if !DPL_MODULES
-#  include "dpl/core/numbers/details/floating_point_like.h"
+#  include "dpl/std/concepts/derived_from.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
-DPL_EXPORT template <typename T>
-concept floating_point_like = details::numbers::floating_point_like<T>;
+template <typename T>
+concept floating_point_like =
+    (floating_point<T> ||
+        derived_from<remove_cv_t<T>,
+            details::numbers::extended_floating_point<remove_cv_t<T>>>) &&
+    requires { typename floating_point_traits<T>::type; };
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

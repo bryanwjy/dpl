@@ -3,35 +3,32 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/type_traits/details/has_simd_members.h"
+#include "dpl/core/type_traits/enable_simd_mask.h"
+#include "dpl/core/type_traits/enable_simd_vector.h"
 #include "dpl/core/type_traits/simd_abi_type.h"
 #include "dpl/core/type_traits/simd_element_type.h"
 
-#if !DPL_MODULES
-#  include "dpl/core/type_interface/enable_simd_mask.h"
-#  include "dpl/core/type_interface/enable_simd_vector.h"
-#  include "dpl/core/type_traits/details/has_simd_members.h"
-#endif
-
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
-DPL_EXPORT template <typename T>
+template <typename T>
 struct simd_mask_type {};
-DPL_EXPORT template <typename T>
+template <typename T>
 struct simd_mask_type<T const> : simd_mask_type<T> {};
-DPL_EXPORT template <typename T>
+template <typename T>
 struct simd_mask_type<T volatile> : simd_mask_type<T> {};
-DPL_EXPORT template <typename T>
+template <typename T>
 struct simd_mask_type<T const volatile> : simd_mask_type<T> {};
-DPL_EXPORT template <typename T>
+template <typename T>
 struct simd_mask_type<T&> : simd_mask_type<T> {};
-DPL_EXPORT template <typename T>
+template <typename T>
 struct simd_mask_type<T&&> : simd_mask_type<T> {};
 
-DPL_EXPORT template <typename T>
+template <typename T>
 using simd_mask_type_t = typename simd_mask_type<T>::type;
 
-DPL_EXPORT template <typename T>
+template <typename T>
 requires enable_simd_vector<T> && requires {
     typename T::mask_type;
     requires enable_simd_mask<typename T::mask_type>;
@@ -40,14 +37,14 @@ struct simd_mask_type<T> {
     using type DPL_NODEBUG = typename T::mask_type;
 };
 
-DPL_EXPORT template <typename T>
+template <typename T>
 requires enable_simd_vector<T> && internal::has_simd_members<T>
 struct simd_mask_type<T> {
     using type DPL_NODEBUG =
         basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
 };
 
-DPL_EXPORT template <typename T>
+template <typename T>
 requires enable_simd_mask<T>
 struct simd_mask_type<T> {
     using type DPL_NODEBUG = T;
@@ -55,4 +52,4 @@ struct simd_mask_type<T> {
 
 } // namespace datapar
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

@@ -15,25 +15,25 @@
 #  include "dpl/std/type_traits/underlying_type.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
-DPL_EXPORT template <typename... T>
+template <typename... T>
 struct common_size_type {};
-DPL_EXPORT template <typename... Ts>
+template <typename... Ts>
 using common_size_type_t = typename common_size_type<Ts...>::type;
 
-DPL_EXPORT template <typename T>
+template <typename T>
 struct common_size_type<T> {
     using type DPL_NODEBUG = T;
 };
 
-DPL_EXPORT template <typename T>
+template <typename T>
 struct common_size_type<T, T> {
     using type DPL_NODEBUG = T;
 };
 
-DPL_EXPORT template <typename A, typename B>
+template <typename A, typename B>
 requires (sizeof(A) == sizeof(B))
 struct common_size_type<A, B> {
 private:
@@ -65,4 +65,4 @@ public:
 };
 } // namespace datapar
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

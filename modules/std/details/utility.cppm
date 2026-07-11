@@ -10,6 +10,11 @@ import :std.bit;
 import :std.type_traits;
 import :std.concepts;
 
+DPL_DISABLE_WARNING_PUSH()
+#if DPL_COMPILER_MSVC
+DPL_DISABLE_WARNING(5244)
+#endif
+
 // IWYU pragma: begin_exports
 #include "dpl/std/utility/apply.h"
 #include "dpl/std/utility/as_const.h"
@@ -27,3 +32,5 @@ import :std.concepts;
 #include "dpl/std/utility/unreachable.h"
 #include "dpl/std/utility/value_pack.h"
 // IWYU pragma: end_exports
+
+DPL_DISABLE_WARNING_POP()

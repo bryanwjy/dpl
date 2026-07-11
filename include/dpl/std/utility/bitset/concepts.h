@@ -8,9 +8,6 @@
 #include "dpl/std/utility/bitset/bitset_traits.h"
 
 #if !DPL_MODULES
-#  include "dpl/std/concepts/convertible_to.h"
-#  include "dpl/std/concepts/equality_comparable.h"
-#  include "dpl/std/details/bitset.h"
 #  include "dpl/std/type_traits/remove_cv.h"
 #endif
 

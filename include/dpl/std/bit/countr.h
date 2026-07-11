@@ -63,9 +63,9 @@ constexpr int ctz(__uint128_t x) noexcept {
     auto const hi_bits = lo == shift ? hi : 0;
     return hi_bits + lo;
 }
-
-#    define __DPL_ctz(...) __DPL details::bit::ctz(__VA_ARGS__)
 #  endif
+
+#  define __DPL_ctz(...) __DPL details::bit::ctz(__VA_ARGS__)
 
 #elif DPL_COMPILER_MSVC
 

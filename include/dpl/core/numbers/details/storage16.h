@@ -7,9 +7,9 @@
 #  include "dpl/std/stddef/types.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
-DPL_EXPORT namespace details::numbers {
+namespace details::numbers {
 
 // Template to prevent common base between float16 and bfloat16
 template <typename T, typename V>
@@ -19,4 +19,4 @@ struct alignas(uint16) storage16 {
 };
 
 } // namespace details::numbers
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

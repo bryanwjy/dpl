@@ -14,7 +14,6 @@
 #  include "dpl/std/bit/char_bit.h"
 #  include "dpl/std/bit/has_single_bit.h"
 #  include "dpl/std/concepts/integral_constant_like.h"
-#  include "dpl/std/details/bitset.h"
 #  include "dpl/std/type_traits/extent.h"
 #  include "dpl/std/type_traits/is_scalar.h"
 #  include "dpl/std/type_traits/sequence.h"

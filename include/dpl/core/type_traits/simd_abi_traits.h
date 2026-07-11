@@ -3,6 +3,9 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/type_traits/details/has_simd_members.h"
+#include "dpl/core/type_traits/details/simd_abi_size.h"
+#include "dpl/core/type_traits/enable_simd_abi.h"
 #include "dpl/core/type_traits/simd_abi_type.h"
 #include "dpl/core/type_traits/simd_element_representation.h"
 #include "dpl/core/type_traits/simd_element_type.h"
@@ -10,21 +13,18 @@
 #if !DPL_MODULES
 #  include "dpl/core/fwd.h"
 
-#  include "dpl/core/type_interface/enable_simd_abi.h"
-#  include "dpl/core/type_traits/details/has_simd_members.h"
-#  include "dpl/core/type_traits/details/simd_abi_size.h"
 #  include "dpl/std/type_traits/conditional.h"
 #  include "dpl/std/type_traits/is_function.h"
 #  include "dpl/std/utility/ignore.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
-DPL_EXPORT template <typename, typename>
+template <typename, typename>
 struct simd_abi_traits {};
 
-DPL_EXPORT template <internal::has_simd_abi A>
+template <internal::has_simd_abi A>
 requires (!internal::has_simd_element<A>)
 struct simd_abi_traits<A> {
 
@@ -60,11 +60,11 @@ struct simd_abi_traits<A> {
     }
 };
 
-DPL_EXPORT template <internal::has_simd_members T>
+template <internal::has_simd_members T>
 struct simd_abi_traits<T> :
     simd_abi_traits<simd_element_type_t<T>, simd_abi_type_t<T>> {};
 
-DPL_EXPORT template <typename T, different_from<ignore_t> U>
+template <typename T, different_from<ignore_t> U>
 requires internal::has_representation_for<U, T> ||
     internal::has_representation_for<T, U>
 struct simd_abi_traits<T, U> : private internal::simd_abi_size<T, U> {
@@ -93,4 +93,4 @@ public:
 };
 } // namespace datapar
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

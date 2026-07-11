@@ -8,8 +8,8 @@ export module dpl:std.utility;
 export import :std.stddef;
 import :std.details.utility;
 
-// IWYU pragma: begin_exports
 __DPL_DEFAULT_NAMESPACE_BEGIN
+// NOLINTBEGIN(misc-unused-using-decls)
 inline namespace bit_literals {
 using __DPL bit_literals::operator""_bits;
 }
@@ -47,6 +47,5 @@ using __DPL to_unsigned;
 using __DPL type_pack;
 using __DPL unreachable;
 using __DPL value_pack;
-
+// NOLINTEND(misc-unused-using-decls)
 __DPL_DEFAULT_NAMESPACE_END
-// IWYU pragma: end_exports

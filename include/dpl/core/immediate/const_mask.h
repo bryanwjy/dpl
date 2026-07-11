@@ -8,7 +8,7 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/simd_type.h"
-#  include "dpl/core/type_interface/enable_const_mask.h"
+#  include "dpl/core/type_traits/enable_const_mask.h"
 #  include "dpl/core/type_traits/simd_abi_traits.h"
 #  include "dpl/std/bit/bit_type.h"
 #  include "dpl/std/bit/bit_width.h"

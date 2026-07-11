@@ -10,7 +10,7 @@
 #include "dpl/std/utility/bitset/large_bitset.h"
 
 #if !DPL_MODULES
-#  include "dpl/std/details/bitset.h"
+#  include "dpl/std/bit/countr.h"
 #endif
 
 __DPL_DEFAULT_NAMESPACE_BEGIN

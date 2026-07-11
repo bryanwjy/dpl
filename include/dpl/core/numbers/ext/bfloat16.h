@@ -7,20 +7,20 @@
 
 #if !DPL_SUPPORTS_BFLOAT16
 
+#  include "dpl/core/numbers/details/extended_floating_point_operations.h"
+#  include "dpl/core/numbers/details/promotable.h"
+#  include "dpl/core/numbers/details/storage16.h"
 #  include "dpl/core/numbers/ext/float16.h"
 #  include "dpl/core/numbers/floating_point_like.h"
 
 #  if !DPL_MODULES
-#    include "dpl/core/numbers/details/extended_floating_point_operations.h"
-#    include "dpl/core/numbers/details/promotable.h"
-#    include "dpl/core/numbers/details/storage16.h"
 #    include "dpl/std/concepts/different_from.h"
 #    include "dpl/std/concepts/same_as.h"
 #  endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
-DPL_EXPORT namespace ext {
+namespace ext {
 
 #  if DPL_SUPPORTS_STORAGE_BFLOAT16
 #    define _DPL_BF16_STORAGE_TYPE __bf16
@@ -232,11 +232,11 @@ public:
 
 } // namespace ext
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
-DPL_EXPORT namespace ext {
+__DPL_DEFAULT_NAMESPACE_BEGIN
+namespace ext {
 inline namespace literals {
 consteval __DPL ext::bfloat16 operator""_bf16(long double val) noexcept {
     return static_cast<__DPL ext::bfloat16>(val);
@@ -244,4 +244,4 @@ consteval __DPL ext::bfloat16 operator""_bf16(long double val) noexcept {
 } // namespace literals
 } // namespace ext
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

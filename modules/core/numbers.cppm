@@ -6,13 +6,19 @@ module;
 
 export module dpl:core.numbers;
 import :core.details.numbers;
-import :std.concepts;
-import :std.bit;
-import :std.type_traits;
-import :std.utility;
 
-// IWYU pragma: begin_exports
-#include "dpl/core/numbers/ext.h"
-#include "dpl/core/numbers/floating_point_like.h"
-#include "dpl/core/numbers/floating_point_traits.h"
-// IWYU pragma: end_exports
+__DPL_DEFAULT_NAMESPACE_BEGIN
+// NOLINTBEGIN(misc-unused-using-decls,misc-unused-alias-decls)
+using __DPL floating_point_like;
+namespace ext {
+using __DPL ext::bfloat16;
+using __DPL ext::float16;
+inline namespace literals {
+using __DPL ext::literals::operator""_bf16;
+using __DPL ext::literals::operator""_f16;
+} // namespace literals
+} // namespace ext
+
+namespace ext_literals = ext::literals;
+// NOLINTEND(misc-unused-using-decls,misc-unused-alias-decls)
+__DPL_DEFAULT_NAMESPACE_END

@@ -10,7 +10,6 @@
 
 #if !DPL_MODULES
 #  include "dpl/std/bit/char_bit.h"
-#  include "dpl/std/details/bitset.h"
 #  include "dpl/std/type_traits/extent.h"
 #  include "dpl/std/type_traits/sequence.h"
 #endif

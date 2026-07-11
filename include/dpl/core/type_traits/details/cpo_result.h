@@ -5,8 +5,8 @@
 
 #include "dpl/core/type_traits/details/declarg.h"
 
-DPL_DEFAULT_NAMESPACE_BEGIN
-DPL_EXPORT namespace datapar::internal {
+__DPL_DEFAULT_NAMESPACE_BEGIN
+namespace datapar::internal {
 
 // Cheaper than invoke_result_t, avoids instantiating __DPL invoke & friends
 template <typename D, typename... Ts>
@@ -20,4 +20,4 @@ struct cpo_result {
 
 } // namespace datapar::internal
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

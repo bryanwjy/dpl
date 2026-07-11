@@ -3,39 +3,36 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/type_traits/enable_simd_mask.h"
+#include "dpl/core/type_traits/enable_simd_vector.h"
 #include "dpl/core/type_traits/simd_abi_traits.h"
 
-#if !DPL_MODULES
-#  include "dpl/core/type_interface/enable_simd_mask.h"
-#  include "dpl/core/type_interface/enable_simd_vector.h"
-#endif
-
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
-DPL_EXPORT template <typename T>
+template <typename T>
 struct simd_native_type {};
-DPL_EXPORT template <typename T>
+template <typename T>
 struct simd_native_type<T const> : simd_native_type<T> {};
-DPL_EXPORT template <typename T>
+template <typename T>
 struct simd_native_type<T volatile> : simd_native_type<T> {};
-DPL_EXPORT template <typename T>
+template <typename T>
 struct simd_native_type<T const volatile> : simd_native_type<T> {};
-DPL_EXPORT template <typename T>
+template <typename T>
 struct simd_native_type<T&> : simd_native_type<T> {};
-DPL_EXPORT template <typename T>
+template <typename T>
 struct simd_native_type<T&&> : simd_native_type<T> {};
 
-DPL_EXPORT template <typename T>
+template <typename T>
 using simd_native_type_t = typename simd_native_type<T>::type;
 
-DPL_EXPORT template <typename T>
+template <typename T>
 requires enable_simd_vector<T>
 struct simd_native_type<T> {
     using type DPL_NODEBUG = typename simd_abi_traits<T>::native_vector;
 };
 
-DPL_EXPORT template <typename T>
+template <typename T>
 requires enable_simd_mask<T>
 struct simd_native_type<T> {
     using type DPL_NODEBUG = typename simd_abi_traits<T>::native_mask;
@@ -43,4 +40,4 @@ struct simd_native_type<T> {
 
 } // namespace datapar
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

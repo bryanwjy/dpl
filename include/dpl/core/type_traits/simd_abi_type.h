@@ -3,38 +3,36 @@
 
 #include "dpl/config.h"
 
-#if !DPL_MODULES
-#  include "dpl/core/type_interface/enable_simd_abi.h"
-#  include "dpl/core/type_interface/enable_simd_mask.h"
-#  include "dpl/core/type_interface/enable_simd_vector.h"
-#endif
+#include "dpl/core/type_traits/enable_simd_abi.h"
+#include "dpl/core/type_traits/enable_simd_mask.h"
+#include "dpl/core/type_traits/enable_simd_vector.h"
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
-DPL_EXPORT template <typename T>
+template <typename T>
 struct simd_abi_type {};
-DPL_EXPORT template <typename T>
+template <typename T>
 struct simd_abi_type<T const> : simd_abi_type<T> {};
-DPL_EXPORT template <typename T>
+template <typename T>
 struct simd_abi_type<T volatile> : simd_abi_type<T> {};
-DPL_EXPORT template <typename T>
+template <typename T>
 struct simd_abi_type<T const volatile> : simd_abi_type<T> {};
-DPL_EXPORT template <typename T>
+template <typename T>
 struct simd_abi_type<T&> : simd_abi_type<T> {};
-DPL_EXPORT template <typename T>
+template <typename T>
 struct simd_abi_type<T&&> : simd_abi_type<T> {};
 
-DPL_EXPORT template <typename T>
+template <typename T>
 using simd_abi_type_t = typename simd_abi_type<T>::type;
 
-DPL_EXPORT template <typename T>
+template <typename T>
 requires (enable_simd_vector<T> || enable_simd_mask<T>) && (!enable_simd_abi<T>)
 struct simd_abi_type<T> {
     using type DPL_NODEBUG = typename T::abi_type;
 };
 
-DPL_EXPORT template <typename T>
+template <typename T>
 requires enable_simd_abi<T>
 struct simd_abi_type<T> {
     using type DPL_NODEBUG = T;
@@ -42,4 +40,4 @@ struct simd_abi_type<T> {
 
 } // namespace datapar
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

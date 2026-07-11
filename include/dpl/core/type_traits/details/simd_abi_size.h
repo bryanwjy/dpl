@@ -7,13 +7,13 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/fwd/basic.h"
-#  include "dpl/core/type_interface/enable_simd_abi.h"
+#  include "dpl/core/type_traits/enable_simd_abi.h"
 #  include "dpl/std/type_traits/conditional.h"
 #  include "dpl/std/type_traits/is_function.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
-DPL_EXPORT namespace datapar::internal {
+__DPL_DEFAULT_NAMESPACE_BEGIN
+namespace datapar::internal {
 
 template <typename E, typename A>
 concept has_representation_for = requires {
@@ -58,4 +58,4 @@ struct simd_abi_size<T, U> {
 };
 } // namespace datapar::internal
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

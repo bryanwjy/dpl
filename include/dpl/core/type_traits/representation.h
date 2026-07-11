@@ -16,24 +16,24 @@
 #  include "dpl/std/type_traits/underlying_type.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
-DPL_EXPORT template <typename T>
+template <typename T>
 struct signed_representation {};
 
-DPL_EXPORT template <typename T>
+template <typename T>
 using signed_representation_t = typename signed_representation<T>::type;
 
-DPL_EXPORT template <integral T>
+template <integral T>
 struct signed_representation<T> {
     using type DPL_NODEBUG = make_signed_t<T>;
 };
-DPL_EXPORT template <enumeration T>
+template <enumeration T>
 struct signed_representation<T> {
     using type DPL_NODEBUG = make_signed_t<underlying_type_t<T>>;
 };
-DPL_EXPORT template <typename T>
+template <typename T>
 requires (!integral<T> && !enumeration<T>) && is_object_v<T> &&
     is_trivially_copyable_v<T> &&
     requires { typename bit_type_t<sizeof(T) * char_bit_v>; }
@@ -41,20 +41,20 @@ struct signed_representation<T> {
     using type DPL_NODEBUG = make_signed_t<bit_type_t<sizeof(T) * char_bit_v>>;
 };
 
-DPL_EXPORT template <typename T>
+template <typename T>
 struct unsigned_representation {};
-DPL_EXPORT template <typename T>
+template <typename T>
 using unsigned_representation_t = typename unsigned_representation<T>::type;
 
-DPL_EXPORT template <integral T>
+template <integral T>
 struct unsigned_representation<T> {
     using type DPL_NODEBUG = make_unsigned_t<T>;
 };
-DPL_EXPORT template <enumeration T>
+template <enumeration T>
 struct unsigned_representation<T> {
     using type DPL_NODEBUG = make_unsigned_t<underlying_type_t<T>>;
 };
-DPL_EXPORT template <typename T>
+template <typename T>
 requires (!integral<T> && !enumeration<T>) && is_object_v<T> &&
     is_trivially_copyable_v<T> &&
     requires { typename bit_type_t<sizeof(T) * char_bit_v>; }
@@ -64,4 +64,4 @@ struct unsigned_representation<T> {
 };
 } // namespace datapar
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

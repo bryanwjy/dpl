@@ -5,9 +5,9 @@
 
 #include "dpl/core/numbers/details/extended_floating_point.h"
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
-DPL_EXPORT namespace details::numbers {
+namespace details::numbers {
 #define __DPL_FP_SELF_ARITHMETIC(OP)                                     \
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)                     \
     friend constexpr T operator OP(                                      \
@@ -54,4 +54,4 @@ struct extended_floating_point_operations : public extended_floating_point<T> {
 #undef __DPL_FP_SELF_ARITHMETIC
 
 } // namespace details::numbers
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

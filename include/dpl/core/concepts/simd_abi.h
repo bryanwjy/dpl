@@ -4,7 +4,7 @@
 #include "dpl/config.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/type_interface/enable_simd_abi.h"
+#  include "dpl/core/type_traits/enable_simd_abi.h"
 #  include "dpl/std/concepts/convertible_to.h"
 #  include "dpl/std/concepts/semiregular.h"
 #  include "dpl/std/type_traits/is_empty.h"

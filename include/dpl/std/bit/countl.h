@@ -4,6 +4,8 @@
 
 #include "dpl/config.h"
 
+#include "dpl/std/bit/char_bit.h"
+
 #if !DPL_MODULES
 #  include "dpl/std/concepts/integral.h"
 #  include "dpl/std/concepts/same_as.h"
@@ -60,9 +62,9 @@ constexpr int clz(__uint128_t x) noexcept {
     auto const lo_bits = hi == shift ? lo : 0;
     return hi + lo_bits;
 }
-
-#    define __DPL_clz(...) __DPL details::bit::clz(__VA_ARGS__)
 #  endif
+
+#  define __DPL_clz(...) __DPL details::bit::clz(__VA_ARGS__)
 
 #elif DPL_COMPILER_MSVC
 

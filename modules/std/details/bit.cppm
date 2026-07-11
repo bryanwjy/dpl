@@ -10,6 +10,11 @@ export import :std.stddef;
 import :std.concepts;
 import :std.type_traits;
 
+DPL_DISABLE_WARNING_PUSH()
+#if DPL_COMPILER_MSVC
+DPL_DISABLE_WARNING(5244)
+#endif
+
 // IWYU pragma: begin_exports
 #include "dpl/std/bit/bit_cast.h"
 #include "dpl/std/bit/bit_ceil.h"
@@ -23,3 +28,5 @@ import :std.type_traits;
 #include "dpl/std/bit/popcount.h"
 #include "dpl/std/bit/rotate.h"
 // IWYU pragma: end_exports
+
+DPL_DISABLE_WARNING_POP()

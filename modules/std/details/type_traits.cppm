@@ -7,6 +7,11 @@ module;
 export module dpl:std.details.type_traits;
 export import :std.stddef;
 
+DPL_DISABLE_WARNING_PUSH()
+#if DPL_COMPILER_MSVC
+DPL_DISABLE_WARNING(5244)
+#endif
+
 // IWYU pragma: begin_exports
 #include "dpl/std/type_traits/add_const.h"
 #include "dpl/std/type_traits/add_lvalue_reference.h"
@@ -86,3 +91,5 @@ export import :std.stddef;
 #include "dpl/std/type_traits/underlying_type.h"
 #include "dpl/std/type_traits/void_t.h"
 // IWYU pragma: end_exports
+
+DPL_DISABLE_WARNING_POP()

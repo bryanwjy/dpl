@@ -3,13 +3,10 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/type_traits/details/none_abi_type.h"
 #include "dpl/core/type_traits/simd_abi_type.h"
 
-#if !DPL_MODULES
-#  include "dpl/core/type_traits/details/none_abi_type.h"
-#endif
-
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 /**
  * @brief Variadic SIMD ABI compatibility and selection trait.
@@ -100,28 +97,28 @@ namespace datapar {
  * @see common_abi_t
  * @see promote_abi
  */
-DPL_EXPORT template <typename... T>
+template <typename... T>
 struct common_abi {};
 
-DPL_EXPORT template <typename... Ts>
+template <typename... Ts>
 using common_abi_t = typename common_abi<Ts...>::type;
 
-DPL_EXPORT template <typename T>
+template <typename T>
 struct common_abi<T> : simd_abi_type<T> {};
 
-DPL_EXPORT template <typename T>
+template <typename T>
 struct common_abi<T, T> : common_abi<T> {};
-DPL_EXPORT template <internal::none_abi_type A, internal::none_abi_type B>
+template <internal::none_abi_type A, internal::none_abi_type B>
 struct common_abi<A, B> : common_abi<simd_abi_type_t<A>, simd_abi_type_t<B>> {};
-DPL_EXPORT template <typename A, internal::none_abi_type B>
+template <typename A, internal::none_abi_type B>
 struct common_abi<A, B> : common_abi<A, simd_abi_type_t<B>> {};
-DPL_EXPORT template <internal::none_abi_type A, typename B>
+template <internal::none_abi_type A, typename B>
 struct common_abi<A, B> : common_abi<simd_abi_type_t<A>, B> {};
 
-DPL_EXPORT template <typename T, typename U, typename... Ts>
+template <typename T, typename U, typename... Ts>
 requires requires { typename common_abi_t<T, U>; }
 struct common_abi<T, U, Ts...> : common_abi<common_abi_t<T, U>, Ts...> {};
 
 } // namespace datapar
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

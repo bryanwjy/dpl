@@ -3,9 +3,9 @@
 
 #include "dpl/config.h"
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
-DPL_EXPORT namespace details::numbers {
+namespace details::numbers {
 
 #define __DPL_FP_OPERATOR_L(RET, LT, OP)                       \
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)           \
@@ -67,4 +67,4 @@ struct promotable {
 #undef __DPL_FP_OPERATOR_L
 
 } // namespace details::numbers
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

@@ -8,8 +8,8 @@
 #endif
 
 // IWYU pragma: begin_exports
-DPL_DEFAULT_NAMESPACE_BEGIN
-DPL_EXPORT namespace datapar {
+__DPL_DEFAULT_NAMESPACE_BEGIN
+namespace datapar {
 template <typename T>
 struct simd_abi_type;
 template <typename T>
@@ -25,6 +25,6 @@ struct canonical_type;
 template <typename, typename = __DPL ignore_t>
 struct simd_abi_traits;
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END
 
 // IWYU pragma: end_exports

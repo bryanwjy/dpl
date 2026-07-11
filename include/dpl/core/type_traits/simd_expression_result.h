@@ -3,33 +3,31 @@
 
 #include "dpl/config.h"
 
-#if !DPL_MODULES
-#  include "dpl/core/type_traits/details/has_expression_result.h"
-#endif
+#include "dpl/core/type_traits/details/has_expression_result.h"
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
-DPL_EXPORT template <typename T>
+template <typename T>
 struct simd_expression_result {};
-DPL_EXPORT template <typename T>
+template <typename T>
 using simd_expression_result_t = typename simd_expression_result<T>::type;
 
-DPL_EXPORT template <typename T>
+template <typename T>
 struct simd_expression_result<T&> : simd_expression_result<T> {};
-DPL_EXPORT template <typename T>
+template <typename T>
 struct simd_expression_result<T&&> : simd_expression_result<T> {};
-DPL_EXPORT template <typename T>
+template <typename T>
 struct simd_expression_result<T const> : simd_expression_result<T> {};
-DPL_EXPORT template <typename T>
+template <typename T>
 struct simd_expression_result<T volatile> : simd_expression_result<T> {};
-DPL_EXPORT template <typename T>
+template <typename T>
 struct simd_expression_result<T const volatile> : simd_expression_result<T> {};
-DPL_EXPORT template <internal::has_expression_result T>
+template <internal::has_expression_result T>
 struct simd_expression_result<T> {
     using type DPL_NODEBUG = typename T::result_type;
 };
 
 } // namespace datapar
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

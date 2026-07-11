@@ -6,13 +6,13 @@
 #include "dpl/core/type_traits/details/fwd.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/type_interface/enable_simd_mask.h"
-#  include "dpl/core/type_interface/enable_simd_vector.h"
+#  include "dpl/core/type_traits/enable_simd_mask.h"
+#  include "dpl/core/type_traits/enable_simd_vector.h"
 #  include "dpl/std/concepts/different_from.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
-DPL_EXPORT namespace datapar::internal {
+__DPL_DEFAULT_NAMESPACE_BEGIN
+namespace datapar::internal {
 template <typename T>
 concept has_expression_result =
     (enable_simd_mask<T> || enable_simd_vector<T>) &&
@@ -22,4 +22,4 @@ concept has_expression_result =
     (enable_simd_mask<typename T::result_type> ||
         enable_simd_vector<typename T::result_type>);
 } // namespace datapar::internal
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

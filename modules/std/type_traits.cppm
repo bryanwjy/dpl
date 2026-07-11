@@ -9,7 +9,6 @@ export import :std.stddef;
 export import :std.details.type_traits;
 
 __DPL_DEFAULT_NAMESPACE_BEGIN
-// IWYU pragma: begin_exports
 // NOLINTBEGIN(misc-unused-using-decls)
 using __DPL bool_constant;
 using __DPL declval;
@@ -214,7 +213,6 @@ using __DPL is_void;
 using __DPL is_void_v;
 using __DPL is_volatile;
 using __DPL is_volatile_v;
-// IWYU pragma: end_exports
 
 // clang can't find ADL functions otherwise
 using __DPL get;

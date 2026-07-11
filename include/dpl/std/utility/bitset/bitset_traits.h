@@ -12,7 +12,6 @@
 #  include "dpl/std/bit/has_single_bit.h"
 #  include "dpl/std/concepts/convertible_to.h"
 #  include "dpl/std/concepts/equality_comparable.h"
-#  include "dpl/std/details/bitset.h"
 #  include "dpl/std/type_traits/structured_bindings.h"
 #endif
 

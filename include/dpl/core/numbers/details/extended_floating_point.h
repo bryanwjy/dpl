@@ -3,9 +3,9 @@
 
 #include "dpl/config.h"
 
-DPL_DEFAULT_NAMESPACE_BEGIN
-DPL_EXPORT namespace details::numbers {
+__DPL_DEFAULT_NAMESPACE_BEGIN
+namespace details::numbers {
 template <typename T>
 class extended_floating_point {};
 } // namespace details::numbers
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

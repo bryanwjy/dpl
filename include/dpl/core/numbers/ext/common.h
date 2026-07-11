@@ -13,47 +13,47 @@
 #  include "dpl/std/utility/bitset.h" // IWYU pragma: keep
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace ext {
 
 #if !DPL_SUPPORTS_BFLOAT16
-DPL_EXPORT class bfloat16_t;
-DPL_EXPORT using bfloat16 = bfloat16_t;
+class bfloat16_t;
+using bfloat16 = bfloat16_t;
 #else
-DPL_EXPORT using bfloat16 = __DPL bfloat16;
+using bfloat16 = __DPL bfloat16;
 #endif
 #if !DPL_SUPPORTS_FLOAT16
-DPL_EXPORT class float16_t;
-DPL_EXPORT using float16 = float16_t;
+class float16_t;
+using float16 = float16_t;
 #else
-DPL_EXPORT using float16 = __DPL float16;
+using float16 = __DPL float16;
 #endif
 
 inline namespace literals {}
 } // namespace ext
 
-DPL_EXPORT namespace ext_literals = ext::literals; // NOLINT
+namespace ext_literals = ext::literals; // NOLINT(misc-unused-alias-decls)
 
 #if !DPL_SUPPORTS_BFLOAT16
-DPL_EXPORT template <floating_point T>
+template <floating_point T>
 struct common_type<ext::bfloat16, T> {
     using type = T;
 };
-DPL_EXPORT template <floating_point T>
+template <floating_point T>
 struct common_type<T, ext::bfloat16> {
     using type = T;
 };
-DPL_EXPORT template <integral T>
+template <integral T>
 struct common_type<T, ext::bfloat16> {
     using type = ext::bfloat16;
 };
-DPL_EXPORT template <integral T>
+template <integral T>
 struct common_type<ext::bfloat16, T> {
     using type = ext::bfloat16;
 };
 
-DPL_EXPORT template <>
+template <>
 struct floating_point_traits<ext::bfloat16> {
     using type = ext::bfloat16;
 
@@ -75,24 +75,24 @@ struct floating_point_traits<ext::bfloat16> {
 #endif
 
 #if !DPL_SUPPORTS_FLOAT16
-DPL_EXPORT template <floating_point T>
+template <floating_point T>
 struct common_type<ext::float16, T> {
     using type = T;
 };
-DPL_EXPORT template <floating_point T>
+template <floating_point T>
 struct common_type<T, ext::float16> {
     using type = T;
 };
-DPL_EXPORT template <integral T>
+template <integral T>
 struct common_type<T, ext::float16> {
     using type = ext::float16;
 };
-DPL_EXPORT template <integral T>
+template <integral T>
 struct common_type<ext::float16, T> {
     using type = ext::float16;
 };
 
-DPL_EXPORT template <>
+template <>
 struct floating_point_traits<ext::float16> {
     using type = ext::float16;
 
@@ -110,4 +110,4 @@ struct floating_point_traits<ext::float16> {
     static constexpr auto has_signaling_nan = true;
 };
 #endif
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

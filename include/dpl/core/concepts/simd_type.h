@@ -7,8 +7,8 @@
 #include "dpl/core/concepts/simd_element.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/type_interface/enable_simd_mask.h"
-#  include "dpl/core/type_interface/enable_simd_vector.h"
+#  include "dpl/core/type_traits/enable_simd_mask.h"
+#  include "dpl/core/type_traits/enable_simd_vector.h"
 #  include "dpl/core/type_traits/simd_abi_type.h"
 #  include "dpl/core/type_traits/simd_element_type.h"
 #  include "dpl/core/type_traits/simd_vector_type.h"

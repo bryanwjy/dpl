@@ -3,8 +3,9 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/numbers/details/xfp.h"
+
 #if !DPL_MODULES
-#  include "dpl/core/numbers/details/xfp.h"
 #  include "dpl/std/bit/bit_cast.h"
 #  include "dpl/std/bit/char_bit.h"
 #  include "dpl/std/bit/countr.h"
@@ -12,13 +13,13 @@
 #  include "dpl/std/utility/bitset.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
-DPL_EXPORT template <typename>
+template <typename>
 struct floating_point_traits {};
 
 // Assumes IEEE floats, may need to change depending on platform
-DPL_EXPORT template <floating_point T>
+template <floating_point T>
 struct floating_point_traits<T> {
 
     using type = T;
@@ -51,7 +52,7 @@ struct floating_point_traits<T> {
     static constexpr auto radix = 2zu;
 };
 
-DPL_EXPORT template <floating_point T>
+template <floating_point T>
 requires (sizeof(T) == sizeof(bitset<80>) &&
     __DPL countr_zero(
         __DPL bit_cast<details::numbers::xfp<sizeof(T)>>(static_cast<T>(1))
@@ -85,4 +86,4 @@ struct floating_point_traits<T> {
     static constexpr auto radix = 2zu;
 };
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

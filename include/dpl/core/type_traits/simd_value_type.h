@@ -3,31 +3,29 @@
 
 #include "dpl/config.h"
 
-#if !DPL_MODULES
-#  include "dpl/core/type_interface/enable_simd_mask.h"
-#  include "dpl/core/type_interface/enable_simd_vector.h"
-#endif
+#include "dpl/core/type_traits/enable_simd_mask.h"
+#include "dpl/core/type_traits/enable_simd_vector.h"
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
-DPL_EXPORT template <typename T>
+template <typename T>
 struct simd_value_type {};
-DPL_EXPORT template <typename T>
+template <typename T>
 struct simd_value_type<T const> : simd_value_type<T> {};
-DPL_EXPORT template <typename T>
+template <typename T>
 struct simd_value_type<T volatile> : simd_value_type<T> {};
-DPL_EXPORT template <typename T>
+template <typename T>
 struct simd_value_type<T const volatile> : simd_value_type<T> {};
-DPL_EXPORT template <typename T>
+template <typename T>
 struct simd_value_type<T&> : simd_value_type<T> {};
-DPL_EXPORT template <typename T>
+template <typename T>
 struct simd_value_type<T&&> : simd_value_type<T> {};
 
-DPL_EXPORT template <typename T>
+template <typename T>
 using simd_value_type_t = typename simd_value_type<T>::type;
 
-DPL_EXPORT template <typename T>
+template <typename T>
 requires (enable_simd_vector<T> || enable_simd_mask<T>) &&
     requires { typename T::value_type; }
 struct simd_value_type<T> {
@@ -35,4 +33,4 @@ struct simd_value_type<T> {
 };
 } // namespace datapar
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

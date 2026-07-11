@@ -3,18 +3,17 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/numbers/details/fwd.h"
-
-#include "dpl/core/numbers/details/floating_point_like.h"
+#include "dpl/core/numbers/floating_point_like.h"
+#include "dpl/core/numbers/floating_point_traits.h"
 
 #if !DPL_MODULES
 #  include "dpl/std/type_traits/constants.h"
 #  include "dpl/std/utility/bitset.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
-DPL_EXPORT namespace details::numbers {
+namespace details::numbers {
 
 template <typename T>
 concept binary_layout_floating_point = floating_point_like<T> && requires {
@@ -47,4 +46,4 @@ concept binary_layout_floating_point = floating_point_like<T> && requires {
 };
 
 } // namespace details::numbers
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END
