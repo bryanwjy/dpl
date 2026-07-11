@@ -9,12 +9,12 @@
 #  include "dpl/std/type_traits/make_unsigned.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
-DPL_EXPORT template <integral T>
+template <integral T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr make_unsigned_t<T> to_unsigned(T val) noexcept {
     return static_cast<make_unsigned_t<T>>(val);
 }
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

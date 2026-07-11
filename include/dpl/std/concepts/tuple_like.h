@@ -8,6 +8,7 @@
 #  include "dpl/std/type_traits/add_lvalue_reference.h"
 #  include "dpl/std/type_traits/add_rvalue_reference.h"
 #  include "dpl/std/type_traits/remove_cvref.h"
+#  include "dpl/std/type_traits/remove_reference.h"
 #  include "dpl/std/type_traits/sequence.h"
 #  include "dpl/std/type_traits/structured_bindings.h"
 #endif
@@ -42,27 +43,23 @@ template <size_t I>
 struct get_element_t {
 private:
     template <typename T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static consteval auto nothrow_member_get() noexcept {
+    DPL_NODISCARD static consteval auto nothrow_member_get() noexcept {
         return false;
     }
 
     template <has_tuple_member_get<I> T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static consteval auto nothrow_member_get() noexcept {
+    DPL_NODISCARD static consteval auto nothrow_member_get() noexcept {
         using ref_t = T&&;
         using func_t = ref_t (*)();
         return noexcept(static_cast<func_t>(0)().template get<I>());
     }
 
     template <typename T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static consteval auto nothrow_adl_get() noexcept {
+    DPL_NODISCARD static consteval auto nothrow_adl_get() noexcept {
         return false;
     }
     template <has_tuple_adl_get<I> T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static consteval auto nothrow_adl_get() noexcept {
+    DPL_NODISCARD static consteval auto nothrow_adl_get() noexcept {
         using ref_t = T&&;
         using func_t = ref_t (*)();
         return noexcept(get<I>(static_cast<func_t>(0)()));
@@ -98,7 +95,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr add_rvalue_reference_t<T> operator()(
         T (&&array)[N]) noexcept {
-        return static_cast<T&&>(array[I]);
+        return static_cast<remove_reference_t<T>&&>(array[I]);
     }
 };
 

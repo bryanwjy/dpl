@@ -4,13 +4,13 @@
 
 #include "dpl/config.h"
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
-DPL_EXPORT struct template_barrier_t {
+struct template_barrier_t {
     __DPL_HIDE_FROM_ABI explicit constexpr template_barrier_t() noexcept =
         default;
 };
 
-DPL_EXPORT inline constexpr template_barrier_t template_barrier{};
+inline constexpr template_barrier_t template_barrier{};
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

@@ -14,9 +14,9 @@
 #  include "dpl/std/type_traits/is_nothrow_constructible.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
-DPL_EXPORT template <move_constructible T, typename U = T>
+template <move_constructible T, typename U = T>
 requires assignable_from<T&, U>
 __DPL_HIDE_FROM_ABI constexpr T exchange(T& obj, U&& new_value) noexcept(
     is_nothrow_move_constructible_v<T> && is_nothrow_assignable_v<T&, U>) {
@@ -25,4 +25,4 @@ __DPL_HIDE_FROM_ABI constexpr T exchange(T& obj, U&& new_value) noexcept(
     return previous;
 }
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

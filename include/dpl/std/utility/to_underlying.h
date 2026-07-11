@@ -9,12 +9,12 @@
 #  include "dpl/std/type_traits/underlying_type.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
-DPL_EXPORT template <enumeration T>
+template <enumeration T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr underlying_type_t<T> to_underlying(T val) noexcept {
     return static_cast<underlying_type_t<T>>(val);
 }
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

@@ -9,9 +9,9 @@
 #  include "dpl/std/type_traits/remove_cvref.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
-DPL_EXPORT struct ignore_t {
+struct ignore_t {
     explicit consteval ignore_t() noexcept = default;
 
     template <typename T>
@@ -19,6 +19,6 @@ DPL_EXPORT struct ignore_t {
     __DPL_HIDE_FROM_ABI constexpr void operator=(this ignore_t, T&&) noexcept {}
 };
 
-DPL_EXPORT inline constexpr ignore_t ignore{};
+inline constexpr ignore_t ignore{};
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

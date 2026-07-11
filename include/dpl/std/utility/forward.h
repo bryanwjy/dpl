@@ -9,16 +9,16 @@
 #  include "dpl/std/type_traits/remove_reference.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
-DPL_EXPORT template <typename T>
+template <typename T>
 DPL_ATTRIBUTES(NODISCARD, ALWAYS_INLINE, _HIDE_FROM_ABI)
 constexpr T&& forward(
     remove_reference_t<T>& ref DPL_LIFETIMEBOUND) noexcept {
     return static_cast<T&&>(ref);
 }
 
-DPL_EXPORT template <typename T>
+template <typename T>
 DPL_ATTRIBUTES(NODISCARD, ALWAYS_INLINE, _HIDE_FROM_ABI)
 constexpr T&& forward(
     remove_reference_t<T>&& ref DPL_LIFETIMEBOUND) noexcept {
@@ -27,4 +27,4 @@ constexpr T&& forward(
     return static_cast<T&&>(ref);
 }
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

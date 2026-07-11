@@ -5,6 +5,7 @@
 #include "dpl/config.h"
 // IWYU pragma: private, include "dpl/std/utility/bitset.h"
 
+#include "dpl/std/utility/bitset/bitset_traits.h"
 #include "dpl/std/utility/to_unsigned.h"
 
 #if !DPL_MODULES
@@ -14,6 +15,7 @@
 #  include "dpl/std/bit/has_single_bit.h"
 #  include "dpl/std/concepts/integral_constant_like.h"
 #  include "dpl/std/details/bitset.h"
+#  include "dpl/std/type_traits/extent.h"
 #  include "dpl/std/type_traits/is_scalar.h"
 #  include "dpl/std/type_traits/sequence.h"
 #endif
@@ -23,12 +25,12 @@ DPL_DISABLE_WARNING_PUSH()
 DPL_DISABLE_WARNING("-Wc++26-extensions")
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
-DPL_EXPORT template <size_t W>
+template <size_t W>
 class alignas(W / __DPL char_bit_v) bitset;
 
-DPL_EXPORT template <size_t W>
+template <size_t W>
 requires requires { typename bit_type_t<details::utility::ceil_pow2(W)>; }
 class bitset<W> : public details::utility::bitset_storage<W> {
     // TODO iterators?
@@ -292,14 +294,14 @@ public:
     }
 };
 
-DPL_EXPORT template <integral T>
+template <integral T>
 bitset(T val) -> bitset<sizeof(T) * char_bit_v>;
 
-DPL_EXPORT template <integral_constant_like T>
+template <integral_constant_like T>
 explicit bitset(T val)
     -> bitset<__DPL bit_width(__DPL to_unsigned(T::value))>;
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END
 
 #if DPL_HAS_CXX26_EXTENSIONS
 DPL_DISABLE_WARNING_POP()

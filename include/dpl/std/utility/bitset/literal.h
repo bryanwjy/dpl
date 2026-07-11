@@ -13,11 +13,65 @@
 #  include "dpl/std/details/bitset.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
+
+namespace details::utility {
+
+class digit_ptr {
+public:
+    consteval digit_ptr() noexcept : ptr{} {}
+    consteval digit_ptr(char const* ptr) noexcept : ptr{ptr} {}
+    consteval bool operator==(digit_ptr const&) const noexcept = default;
+    consteval bool operator!=(digit_ptr const&) const noexcept = default;
+    consteval bool operator<(digit_ptr const& other) const noexcept {
+        return ptr > other.ptr;
+    }
+
+    consteval digit_ptr& operator++() noexcept { return --ptr, *this; }
+
+    consteval digit_ptr operator++(int) noexcept { return ptr--; }
+
+    consteval char operator*() const noexcept { return *ptr; }
+    consteval char const* operator->() const noexcept { return ptr; }
+
+    consteval decltype(static_cast<char*>(0) - static_cast<char*>(0)) operator-(
+        digit_ptr const& other) const noexcept {
+        return other.ptr - ptr;
+    }
+
+private:
+    char const* ptr;
+};
+
+template <size_t W>
+struct bitstr {
+    char data[W];
+
+    consteval digit_ptr begin() const noexcept { return data + W - 2; }
+    consteval digit_ptr end() const noexcept { return data + (radix() != 8); }
+    consteval unsigned radix() const {
+        char prefix = data[1];
+        bool is_bin = (prefix == 'b' || prefix == 'B');
+        bool is_hex = (prefix == 'x' || prefix == 'X');
+        return is_bin ? 2 : is_hex ? 16 : 8;
+    }
+
+    consteval bitstr(char const (&str)[W]) noexcept {
+        for (auto i = 0zu; i < W; ++i) {
+            data[i] = str[i];
+        }
+    }
+
+    consteval size_t size() const noexcept {
+        return (end() - begin()) * __DPL countr_zero(radix());
+    }
+};
+
+} // namespace details::utility
 
 inline namespace bit_literals {
 
-DPL_EXPORT template <details::utility::bitstr S>
+template <details::utility::bitstr S>
 DPL_NODISCARD consteval auto operator""_bits() noexcept {
     static_assert(S.data[0] == '0');
     static_assert(S.radix() == 2 || S.radix() == 16 || S.radix() == 8);
@@ -76,4 +130,4 @@ DPL_NODISCARD consteval auto operator""_bits() noexcept {
 
 } // namespace bit_literals
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

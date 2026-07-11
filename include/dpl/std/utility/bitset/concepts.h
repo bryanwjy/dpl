@@ -14,17 +14,17 @@
 #  include "dpl/std/type_traits/remove_cv.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
-DPL_EXPORT template <typename T>
+template <typename T>
 concept bitset_type = details::utility::bitset_type<T>;
 
-DPL_EXPORT template <typename T>
+template <typename T>
 concept integral_bitset_type =
     bitset_type<T> && integral<typename remove_cv_t<T>::underlying_type>;
 
-DPL_EXPORT template <typename T>
+template <typename T>
 concept bitset_constant_like =
     details::utility::bitset_constant_like<remove_cv_t<T>>;
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

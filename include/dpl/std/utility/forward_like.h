@@ -13,9 +13,9 @@
 #  include "dpl/std/type_traits/remove_reference.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
-DPL_EXPORT template <typename T, typename U>
+template <typename T, typename U>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr auto&& forward_like(U&& x DPL_LIFETIMEBOUND) noexcept {
     constexpr bool is_adding_const = is_const_v<remove_reference_t<T>>;
@@ -30,4 +30,4 @@ constexpr auto&& forward_like(U&& x DPL_LIFETIMEBOUND) noexcept {
         return __DPL move(x);
 }
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

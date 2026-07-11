@@ -5,6 +5,7 @@
 #include "dpl/config.h"
 // IWYU pragma: private, include "dpl/std/utility/bitset.h"
 
+#include "dpl/std/utility/bitset/concepts.h"
 #include "dpl/std/utility/bitset/integral_bitset.h"
 
 #if !DPL_MODULES
@@ -19,9 +20,9 @@ DPL_DISABLE_WARNING_PUSH()
 DPL_DISABLE_WARNING("-Wc++26-extensions")
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
-DPL_EXPORT template <size_t W>
+template <size_t W>
 class bitset : public details::utility::bitset_storage<W> {
     static_assert(W > 0);
     using base_type DPL_NODEBUG = details::utility::bitset_storage<W>;
@@ -382,14 +383,14 @@ public:
     }
 };
 
-DPL_EXPORT template <same_as<bool>... Bs>
+template <same_as<bool>... Bs>
 requires (sizeof...(Bs) > 0)
 bitset(Bs... vals) -> bitset<sizeof...(Bs)>;
 
-DPL_EXPORT template <size_t... Ws>
+template <size_t... Ws>
 bitset(bitset<Ws> const&... vals) -> bitset<(... + Ws)>;
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END
 
 #if DPL_HAS_CXX26_EXTENSIONS
 DPL_DISABLE_WARNING_POP()

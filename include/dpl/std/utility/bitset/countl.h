@@ -16,9 +16,9 @@
 #  include "dpl/std/type_traits/is_base_of.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
-DPL_EXPORT template <size_t W>
+template <size_t W>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr int countl_one(bitset<W> const& val) noexcept {
     if constexpr (integral_bitset_type<bitset<W>>) {
@@ -56,7 +56,7 @@ constexpr int countl_one(bitset<W> const& val) noexcept {
     }
 }
 
-DPL_EXPORT template <size_t W>
+template <size_t W>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr int countl_zero(bitset<W> const& val) noexcept {
     if constexpr (integral_bitset_type<bitset<W>>) {
@@ -95,4 +95,4 @@ constexpr int countl_zero(bitset<W> const& val) noexcept {
     }
 }
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

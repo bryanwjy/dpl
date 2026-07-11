@@ -4,10 +4,9 @@
 
 #include "dpl/config.h"
 
-#include "dpl/std/utility/as_const.h"
-
 #if !DPL_MODULES
-#  include "dpl/std/type_traits/type_identity.h"
+#  include "dpl/std/type_traits/constants.h"
+#  include "dpl/std/type_traits/structured_bindings.h"
 #endif
 
 #if DPL_HAS_CXX26_EXTENSIONS
@@ -15,9 +14,9 @@ DPL_DISABLE_WARNING_PUSH()
 DPL_DISABLE_WARNING("-Wc++26-extensions")
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
-DPL_EXPORT template <auto... Vs>
+template <auto... Vs>
 struct value_pack {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto size() noexcept {
@@ -25,10 +24,10 @@ struct value_pack {
     }
 };
 
-DPL_EXPORT template <auto... Vs>
+template <auto... Vs>
 struct tuple_size<value_pack<Vs...>> : size_constant<sizeof...(Vs)> {};
 
-DPL_EXPORT template <size_t I, auto... Vs>
+template <size_t I, auto... Vs>
 requires (I < sizeof...(Vs))
 struct tuple_element<I, value_pack<Vs...>> {
 #if (DPL_HAS_CXX26_EXTENSIONS || DPL_CXX26) && __cpp_pack_indexing >= 202311L
@@ -51,7 +50,7 @@ public:
 #endif
 };
 
-DPL_EXPORT template <size_t I, auto... Vs>
+template <size_t I, auto... Vs>
 consteval auto get(value_pack<Vs...>) noexcept {
 #if (DPL_HAS_CXX26_EXTENSIONS || DPL_CXX26) && __cpp_pack_indexing >= 202311L
     return Vs...[I];
@@ -67,7 +66,7 @@ consteval auto get(value_pack<Vs...>) noexcept {
 #endif
 }
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END
 
 #if DPL_HAS_CXX26_EXTENSIONS
 DPL_DISABLE_WARNING_POP()

@@ -6,26 +6,47 @@ module;
 
 export module dpl:std.utility;
 export import :std.stddef;
-import :std.bit;
-import :std.type_traits;
-import :std.concepts;
-import :std.details.bitset;
-import :std.details.apply;
+import :std.details.utility;
 
 // IWYU pragma: begin_exports
-#include "dpl/std/utility/apply.h"
-#include "dpl/std/utility/as_const.h"
-#include "dpl/std/utility/bitset.h"
-#include "dpl/std/utility/exchange.h"
-#include "dpl/std/utility/forward.h"
-#include "dpl/std/utility/forward_like.h"
-#include "dpl/std/utility/ignore.h"
-#include "dpl/std/utility/move.h"
-#include "dpl/std/utility/template_barrier.h"
-#include "dpl/std/utility/to_signed.h"
-#include "dpl/std/utility/to_underlying.h"
-#include "dpl/std/utility/to_unsigned.h"
-#include "dpl/std/utility/type_pack.h"
-#include "dpl/std/utility/unreachable.h"
-#include "dpl/std/utility/value_pack.h"
+__DPL_DEFAULT_NAMESPACE_BEGIN
+inline namespace bit_literals {
+using __DPL bit_literals::operator""_bits;
+}
+
+using __DPL bit_width;
+using __DPL bitset;
+using __DPL bitset_constant_like;
+using __DPL bitset_type;
+using __DPL countl_one;
+using __DPL countl_zero;
+using __DPL countr_one;
+using __DPL countr_zero;
+using __DPL get;
+using __DPL integral_bitset_type;
+using __DPL popcount;
+using __DPL rotl;
+using __DPL rotr;
+// using __DPL to_underlying; // Exported below
+using __DPL truncate;
+//
+using __DPL apply;
+using __DPL as_const;
+using __DPL exchange;
+using __DPL forward;
+using __DPL forward_like;
+using __DPL ignore;
+using __DPL ignore_t;
+using __DPL move;
+using __DPL move_if_noexcept;
+using __DPL template_barrier;
+using __DPL template_barrier_t;
+using __DPL to_signed;
+using __DPL to_underlying;
+using __DPL to_unsigned;
+using __DPL type_pack;
+using __DPL unreachable;
+using __DPL value_pack;
+
+__DPL_DEFAULT_NAMESPACE_END
 // IWYU pragma: end_exports
