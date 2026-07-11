@@ -201,28 +201,32 @@ constexpr invoke_result_t<internal::divide_t, L, R> operator/(
 DPL_EXPORT template <typename L, typename R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
 constexpr auto operator+=(L& lhs, R rhs) noexcept
-    -> enable_if_t<equivalent_simd_type_with<L, decltype(lhs + rhs)>, L&> {
+    -> enable_if_t<internal::equivalent_simd_type_with<L, decltype(lhs + rhs)>,
+        L&> {
     return lhs = datapar::reinterpret<L>(lhs + rhs);
 }
 
 DPL_EXPORT template <typename L, typename R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
 constexpr auto operator-=(L& lhs, R rhs) noexcept
-    -> enable_if_t<equivalent_simd_type_with<L, decltype(lhs - rhs)>, L&> {
+    -> enable_if_t<internal::equivalent_simd_type_with<L, decltype(lhs - rhs)>,
+        L&> {
     return lhs = datapar::reinterpret<L>(lhs - rhs);
 }
 
 DPL_EXPORT template <typename L, typename R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
 constexpr auto operator*=(L& lhs, R rhs) noexcept
-    -> enable_if_t<equivalent_simd_type_with<L, decltype(lhs * rhs)>, L&> {
+    -> enable_if_t<internal::equivalent_simd_type_with<L, decltype(lhs * rhs)>,
+        L&> {
     return lhs = datapar::reinterpret<L>(lhs * rhs);
 }
 
 DPL_EXPORT template <typename L, typename R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
 constexpr auto operator/=(L& lhs, R rhs) noexcept
-    -> enable_if_t<equivalent_simd_type_with<L, decltype(lhs / rhs)>, L&> {
+    -> enable_if_t<internal::equivalent_simd_type_with<L, decltype(lhs / rhs)>,
+        L&> {
     return lhs = datapar::reinterpret<L>(lhs / rhs);
 }
 

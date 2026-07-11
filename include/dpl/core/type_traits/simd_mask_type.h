@@ -3,7 +3,6 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/type_traits/details/has_simd_members.h"
 #include "dpl/core/type_traits/enable_simd_mask.h"
 #include "dpl/core/type_traits/enable_simd_vector.h"
 #include "dpl/core/type_traits/simd_abi_type.h"
@@ -28,17 +27,23 @@ struct simd_mask_type<T&&> : simd_mask_type<T> {};
 template <typename T>
 using simd_mask_type_t = typename simd_mask_type<T>::type;
 
+namespace details::type_traits {
 template <typename T>
-requires enable_simd_vector<T> && requires {
+concept has_mask_type_member = requires {
     typename T::mask_type;
     requires enable_simd_mask<typename T::mask_type>;
-}
+};
+} // namespace details::type_traits
+
+template <typename T>
+requires enable_simd_vector<T> && details::type_traits::has_mask_type_member<T>
 struct simd_mask_type<T> {
     using type DPL_NODEBUG = typename T::mask_type;
 };
 
 template <typename T>
-requires enable_simd_vector<T> && internal::has_simd_members<T>
+requires enable_simd_vector<T> &&
+    (!details::type_traits::has_mask_type_member<T>)
 struct simd_mask_type<T> {
     using type DPL_NODEBUG =
         basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;

@@ -5,27 +5,33 @@ module;
 #include "dpl/config.h"
 
 export module dpl:core.concepts;
-export import :core.fwd;
-import :core.details.type_traits;
-import :std.concepts;
-import :std.bit;
-import :std.type_traits;
-import :std.utility;
-import :core.type_traits;
+import :core.details.concepts;
 
 // IWYU pragma: begin_exports
-#include "dpl/core/concepts/broadcastable_to.h"
-#include "dpl/core/concepts/canonical.h"
-#include "dpl/core/concepts/common_abi_with.h"
-#include "dpl/core/concepts/common_simd_type_with.h"
-#include "dpl/core/concepts/common_size_with.h"
-#include "dpl/core/concepts/equivalence.h"
-#include "dpl/core/concepts/extended.h"
-#include "dpl/core/concepts/mask_compatibility.h"
-#include "dpl/core/concepts/simd_abi.h"
-#include "dpl/core/concepts/simd_element.h"
-#include "dpl/core/concepts/simd_expression.h"
-#include "dpl/core/concepts/simd_mask.h"
-#include "dpl/core/concepts/simd_type.h"
-#include "dpl/core/concepts/simd_vector.h"
+__DPL_DEFAULT_NAMESPACE_BEGIN
+namespace datapar {
+// NOLINTBEGIN(misc-unused-using-decls)
+using __DPL datapar::broadcastable_to;
+using __DPL datapar::canonical_mask;
+using __DPL datapar::canonical_simd_type;
+using __DPL datapar::canonical_vector;
+using __DPL datapar::common_abi_with;
+using __DPL datapar::common_simd_type_with;
+using __DPL datapar::common_size_with;
+using __DPL datapar::extended_mask;
+using __DPL datapar::extended_simd_type;
+using __DPL datapar::extended_vector;
+using __DPL datapar::fixed_width_abi;
+using __DPL datapar::scalable_abi;
+using __DPL datapar::simd_abi;
+using __DPL datapar::simd_element_for;
+using __DPL datapar::simd_expression;
+using __DPL datapar::simd_mask;
+using __DPL datapar::simd_type;
+using __DPL datapar::simd_vector;
+
+// NOLINTEND(misc-unused-using-decls)
+} // namespace datapar
+__DPL_DEFAULT_NAMESPACE_END
+
 // IWYU pragma: end_exports

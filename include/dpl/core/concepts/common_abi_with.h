@@ -12,13 +12,14 @@
 #  include "dpl/std/concepts/same_as.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
 namespace atom {
 template <typename A, typename B>
 concept monotonic_common_abi =
-    (scalable_abi<common_abi_t<A, B>> || scalable_abi<A> || scalable_abi<B>) ||
+    (datapar::scalable_abi<common_abi_t<A, B>> || datapar::scalable_abi<A> ||
+        datapar::scalable_abi<B>) ||
     (common_abi_t<A, B>::size >= A::size &&
         common_abi_t<A, B>::size >= B::size);
 
@@ -28,11 +29,12 @@ concept common_abi_with =
         typename common_abi_t<A, B>;
         typename common_abi_t<B, A>;
     } && same_as<common_abi_t<A, B>, common_abi_t<B, A>> &&
-    simd_abi<common_abi_t<A, B>> && simd_abi<common_abi_t<B, A>> &&
-    monotonic_common_abi<A, B> && monotonic_common_abi<B, A>;
+    datapar::simd_abi<common_abi_t<A, B>> &&
+    datapar::simd_abi<common_abi_t<B, A>> && monotonic_common_abi<A, B> &&
+    monotonic_common_abi<B, A>;
 } // namespace atom
 
-DPL_EXPORT template <typename A, typename B>
+template <typename A, typename B>
 concept common_abi_with = simd_abi<A> && simd_abi<B> &&
     atom::common_abi_with<remove_cvref_t<A>, remove_cvref_t<B>>;
 
@@ -63,4 +65,4 @@ concept all_common_abi = internal::is_common_abi_with<Ts...>;
 
 } // namespace datapar
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

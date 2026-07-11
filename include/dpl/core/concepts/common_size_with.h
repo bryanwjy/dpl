@@ -7,7 +7,7 @@
 #  include "dpl/core/type_traits/common_size_type.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar {
 namespace atom {
@@ -17,7 +17,7 @@ concept common_size_with =
     sizeof(common_size_type_t<T, U>) == sizeof(U);
 }
 
-DPL_EXPORT template <typename T, typename U>
+template <typename T, typename U>
 concept common_size_with =
     requires {
         typename common_size_type_t<T, U>;
@@ -27,4 +27,4 @@ concept common_size_with =
 
 } // namespace datapar
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

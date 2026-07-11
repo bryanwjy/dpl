@@ -78,8 +78,10 @@ public:
     using type = A;
     using element_type = E;
     using representation_type = simd_element_representation_t<A, E>;
-    using native_vector = typename base_type::template native_vector<E>;
-    using native_mask = typename base_type::template native_mask<E>;
+    using native_vector =
+        typename base_type::template native_vector<representation_type>;
+    using native_mask =
+        typename base_type::template native_mask<representation_type>;
 
     consteval operator simd_abi_traits<A>(this simd_abi_traits) noexcept {
         return {};

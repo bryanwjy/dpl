@@ -9,7 +9,7 @@
 #  include "dpl/core/type_traits/simd_element_representation.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar {
 
@@ -17,7 +17,7 @@ template <typename E>
 concept basic_element =
     !same_as<E, bool> && (integral<E> || floating_point_like<E>);
 
-DPL_EXPORT template <typename E, typename A>
+template <typename E, typename A>
 concept simd_element_for = simd_abi<A> && requires {
     // required by ABI to determine what vector type to use
     typename simd_element_representation_t<A, E>;
@@ -37,4 +37,4 @@ concept simd_element_for = simd_abi<A> && requires {
 
 } // namespace datapar
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

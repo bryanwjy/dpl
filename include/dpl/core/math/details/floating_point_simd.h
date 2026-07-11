@@ -22,7 +22,7 @@ concept floating_point_simd =
     simd_vector<T> && floating_point_like<simd_element_type_t<T>>;
 template <typename T, typename A>
 concept floating_point_simd_type_with_abi =
-    simd_type_with_abi<T, A> && floating_point_simd<T>;
+    internal::simd_type_with_abi<T, A> && floating_point_simd<T>;
 } // namespace datapar::fmath
 
 DPL_DEFAULT_NAMESPACE_END

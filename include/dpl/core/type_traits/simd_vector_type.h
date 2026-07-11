@@ -32,10 +32,7 @@ struct simd_vector_type<T> {
 };
 
 template <typename T>
-requires enable_simd_mask<T> && requires {
-    typename T::vector_type;
-    requires enable_simd_vector<typename T::vector_type>;
-}
+requires enable_simd_mask<T> && requires { typename T::vector_type; }
 struct simd_vector_type<T> {
     using type DPL_NODEBUG = typename T::vector_type;
 };

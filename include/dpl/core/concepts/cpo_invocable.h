@@ -7,7 +7,7 @@
 #  include "dpl/core/type_traits/details/declarg.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 
 // Cheaper than invocable, avoids instantiating __DPL invoke & friends
@@ -16,4 +16,4 @@ concept cpo_invocable =
     requires(Cpo const op) { op(internal::declarg<Ts>()...); };
 
 } // namespace datapar::internal
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

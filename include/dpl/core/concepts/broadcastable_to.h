@@ -12,17 +12,17 @@
 #  include "dpl/std/utility/ignore.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 namespace internal {
 template <typename, typename = ignore_t>
 struct broadcast_t;
 }
 
-DPL_EXPORT template <typename T, typename U>
+template <typename T, typename U>
 concept broadcastable_to = !simd_type<T> && (simd_type<U> || simd_abi<U>) &&
     internal::cpo_invocable<internal::broadcast_t<U>, T>;
 
 } // namespace datapar
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

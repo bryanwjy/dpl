@@ -9,19 +9,19 @@
 #  include "dpl/std/type_traits/remove_cvref.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar {
 
-DPL_EXPORT template <typename T>
+template <typename T>
 concept simd_mask = simd_type<T> && atom::simd_mask<remove_cvref_t<T>>;
 
-DPL_EXPORT template <typename T>
+template <typename T>
 concept scalable_mask = simd_mask<T> && scalable_simd_type<T>;
 
-DPL_EXPORT template <typename T>
+template <typename T>
 concept fixed_width_mask = simd_mask<T> && fixed_width_simd_type<T>;
 
 } // namespace datapar
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

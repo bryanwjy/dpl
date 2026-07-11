@@ -9,8 +9,8 @@
 #include "dpl/core/concepts/simd_mask.h"
 #include "dpl/core/concepts/simd_vector.h"
 
-DPL_DEFAULT_NAMESPACE_BEGIN
-namespace datapar {
+__DPL_DEFAULT_NAMESPACE_BEGIN
+namespace datapar::internal {
 
 template <typename T, typename A>
 concept simd_type_with_common_abi =
@@ -76,6 +76,6 @@ template <typename T, typename U>
 concept equivalent_mask_with =
     equivalent_simd_type_with<T, U> && atom::equivalent_mask_elements<T, U>;
 
-} // namespace datapar
+} // namespace datapar::internal
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

@@ -11,7 +11,7 @@
 #  include "dpl/std/type_traits/remove_cv.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
 namespace atom {
@@ -38,17 +38,20 @@ concept scalable_abi = !fixed_width_abi<T> && requires {
 };
 } // namespace atom
 
-DPL_EXPORT template <typename T>
+template <typename T>
 concept simd_abi = atom::simd_abi<remove_cv_t<T>> &&
     (atom::fixed_width_abi<remove_cv_t<T>> ||
         atom::scalable_abi<remove_cv_t<T>>);
 
-DPL_EXPORT template <typename T>
+template <typename T>
 concept fixed_width_abi = simd_abi<T> && atom::fixed_width_abi<remove_cv_t<T>>;
 
-DPL_EXPORT template <typename T>
+// Unfortunately, compilers currently (2026) disallows encapsulating sizeless
+// types References to scalable types are only here for completeness and not
+// supported
+template <typename T>
 concept scalable_abi = simd_abi<T> && atom::scalable_abi<remove_cv_t<T>>;
 
 } // namespace datapar
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END
