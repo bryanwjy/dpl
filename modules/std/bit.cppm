@@ -8,18 +8,23 @@ module;
 export module dpl:std.bit;
 export import :std.stddef;
 import :std.details.bit;
-import :std.concepts;
-import :std.type_traits;
 
-// IWYU pragma: begin_exports
-#include "dpl/std/bit/bit_cast.h"
-#include "dpl/std/bit/bit_ceil.h"
-#include "dpl/std/bit/bit_type.h"
-#include "dpl/std/bit/bit_width.h"
-#include "dpl/std/bit/byteswap.h"
-#include "dpl/std/bit/char_bit.h"
-#include "dpl/std/bit/countl.h"
-#include "dpl/std/bit/countr.h"
-#include "dpl/std/bit/has_single_bit.h"
-#include "dpl/std/bit/popcount.h"
-// IWYU pragma: end_exports
+export DPL_DEFAULT_NAMESPACE_BEGIN
+
+using __VDPL bit_cast;
+using __VDPL bit_ceil;
+using __VDPL bit_type;
+using __VDPL bit_type_t;
+using __VDPL bit_width;
+using __VDPL byteswap;
+using __VDPL char_bit_v;
+using __VDPL countl_one;
+using __VDPL countl_zero;
+using __VDPL countr_one;
+using __VDPL countr_zero;
+using __VDPL has_single_bit;
+using __VDPL popcount;
+using __VDPL rotl;
+using __VDPL rotr;
+
+DPL_DEFAULT_NAMESPACE_END

@@ -6,9 +6,13 @@
 
 #include "dpl/std/bit/popcount.h"
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
-DPL_EXPORT inline constexpr size_t char_bit_v =
-    __DPL popcount(static_cast<unsigned char>(-1));
+inline constexpr size_t char_bit_v =
+    __VDPL popcount(static_cast<unsigned char>(-1));
 
-DPL_DEFAULT_NAMESPACE_END
+template <typename T>
+inline constexpr int unsigned_width_diff_v =
+    char_bit_v * ((int)sizeof(unsigned) - (int)sizeof(T));
+
+__DPL_DEFAULT_NAMESPACE_END

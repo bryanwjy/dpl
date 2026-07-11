@@ -8,13 +8,13 @@
 #  include "dpl/std/type_traits/is_trivially_copyable.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 #ifndef DPL_BUILTIN_bit_cast
 #  error "Unsupported compiler"
 #endif
 
-DPL_EXPORT template <typename To, typename From>
+template <typename To, typename From>
 requires (sizeof(To) == sizeof(From) && is_trivially_copyable_v<To> &&
     is_trivially_copyable_v<From>)
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
@@ -22,4 +22,4 @@ constexpr To bit_cast(From const& from) noexcept {
     return DPL_BUILTIN_bit_cast(To, from);
 }
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

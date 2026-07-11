@@ -11,13 +11,13 @@
 
 #include "dpl/std/bit/popcount.h"
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
-DPL_EXPORT template <unsigned_integral T>
+template <unsigned_integral T>
 requires (!same_as<bool, T>)
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr bool has_single_bit(T val) noexcept {
-    return __DPL popcount(val) == 1;
+    return __VDPL popcount(val) == 1;
 }
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END
