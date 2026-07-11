@@ -12,9 +12,9 @@
 #  include "dpl/std/type_traits/declval.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
-DPL_EXPORT template <typename T, typename U>
+template <typename T, typename U>
 concept common_with = same_as<common_type_t<T, U>, common_type_t<U, T>> &&
     requires {
         static_cast<common_type_t<T, U>>(__DPL declval<T>());
@@ -26,4 +26,4 @@ concept common_with = same_as<common_type_t<T, U>, common_type_t<U, T>> &&
         common_reference_t<add_lvalue_reference_t<T const>,
             add_lvalue_reference_t<U const>>>;
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

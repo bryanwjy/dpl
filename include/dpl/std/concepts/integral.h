@@ -5,19 +5,19 @@
 #include "dpl/config.h"
 
 #if !DPL_MODULES
-#  include "dpl/std/details/concepts.h"
+#  include "dpl/std/type_traits/is_integral.h"
 #  include "dpl/std/type_traits/is_signed.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
-DPL_EXPORT template <typename T>
-concept integral = details::concepts::integral<T>;
+template <typename T>
+concept integral = is_integral_v<T>;
 
-DPL_EXPORT template <typename T>
+template <typename T>
 concept signed_integral = integral<T> && is_signed_v<T>;
 
-DPL_EXPORT template <typename T>
+template <typename T>
 concept unsigned_integral = integral<T> && !signed_integral<T>;
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

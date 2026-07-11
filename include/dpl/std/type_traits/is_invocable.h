@@ -6,6 +6,7 @@
 
 #include "dpl/std/type_traits/constants.h"
 #include "dpl/std/type_traits/declval.h"
+#include "dpl/std/type_traits/is_convertible.h"
 #include "dpl/std/type_traits/is_void.h"
 
 #if !__DPL_SHOULD_USE_BUILTIN(builtin_invoke)

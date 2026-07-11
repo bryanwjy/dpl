@@ -11,7 +11,6 @@
 #  include "dpl/std/type_traits/is_invocable.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
-DPL_EXPORT template <typename T>
+__DPL_DEFAULT_NAMESPACE_BEGIN template <typename T>
 concept regular = semiregular<T> && equality_comparable<T>;
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

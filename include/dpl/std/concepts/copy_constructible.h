@@ -8,12 +8,12 @@
 #include "dpl/std/concepts/convertible_to.h"
 #include "dpl/std/concepts/move_constructible.h"
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
-DPL_EXPORT template <typename T>
+template <typename T>
 concept copy_constructible = move_constructible<T> &&
     constructible_from<T, T&> && convertible_to<T&, T> &&
     constructible_from<T, T const&> && convertible_to<T const&, T> &&
     constructible_from<T, T const> && convertible_to<T const, T>;
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

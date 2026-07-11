@@ -14,10 +14,21 @@
 #  include "dpl/std/type_traits/remove_cv.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
-DPL_EXPORT template <typename T>
+namespace details::concepts {
+template <typename T>
+concept integral_constant_like =
+    requires { T::value; } && integral<decltype(T::value)> &&
+    !same_as<bool, remove_const_t<decltype(T::value)>> &&
+    convertible_to<T, decltype(T::value)> &&
+    equality_comparable_with<T, decltype(T::value)> &&
+    bool_constant<T() == T::value>::value &&
+    bool_constant<static_cast<decltype(T::value)>(T()) == T::value>::value;
+} // namespace details::concepts
+
+template <typename T>
 concept integral_constant_like =
     details::concepts::integral_constant_like<remove_cv_t<T>>;
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

@@ -62,7 +62,7 @@ DPL_DISABLE_WARNING_POP()
 #define DPL_DEFAULT_NAMESPACE_BEGIN DPL_NAMESPACE_BEGIN(DPL_NS)
 
 #define DPL_DEFAULT_NAMESPACE_END DPL_NAMESPACE_END(DPL_NS)
-#define __DPL_DEFAULT_NAMESPACE_BEGIN export DPL_NAMESPACE_BEGIN(DPL_NS)
+#define __DPL_DEFAULT_NAMESPACE_BEGIN DPL_EXPORT DPL_NAMESPACE_BEGIN(DPL_NS)
 #define __DPL_DEFAULT_NAMESPACE_END DPL_NAMESPACE_END(DPL_NS)
 
 #if DPL_WITH_EXCEPTIONS
@@ -72,7 +72,7 @@ DPL_DISABLE_WARNING_POP()
 #  define DPL_TRY try
 #  define DPL_CATCH(...) catch (__VA_ARGS__)
 #else
-#  include <cassert>
+#  include <assert.h>
 
 #  define DPL_THROW(...)                        \
       []() {                                    \

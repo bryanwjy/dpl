@@ -10,9 +10,9 @@
 #  include "dpl/std/type_traits/is_constructible.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
-DPL_EXPORT template <typename T, typename... Args>
+template <typename T, typename... Args>
 concept constructible_from = destructible<T> && is_constructible_v<T, Args...>;
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

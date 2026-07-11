@@ -11,9 +11,9 @@
 #  include "dpl/std/type_traits/remove_reference.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
-DPL_EXPORT template <typename L, typename R>
+template <typename L, typename R>
 concept assignable_from = is_lvalue_reference_v<L> &&
     common_reference_with<remove_reference_t<L> const&,
         remove_reference_t<R> const&> &&
@@ -21,4 +21,4 @@ concept assignable_from = is_lvalue_reference_v<L> &&
         { lhs = rhs() } -> same_as<L>;
     };
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

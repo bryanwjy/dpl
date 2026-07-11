@@ -12,10 +12,10 @@
 #  include "dpl/std/type_traits/is_object.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
-DPL_EXPORT template <typename T>
+template <typename T>
 concept movable = is_object_v<T> && move_constructible<T> &&
     assignable_from<T&, T> && swappable<T>;
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

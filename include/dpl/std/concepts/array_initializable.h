@@ -12,13 +12,13 @@
 #  include "dpl/std/type_traits/remove_extent.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
-DPL_EXPORT template <typename T, typename... Args>
+template <typename T, typename... Args>
 concept array_initializable = is_array_v<T> && extent_v<T> == sizeof...(Args) &&
     (... && core_convertible_to<Args, remove_extent_t<T>>) &&
     requires(Args&&... args) {
         { T{static_cast<Args&&>(args)...} };
     };
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

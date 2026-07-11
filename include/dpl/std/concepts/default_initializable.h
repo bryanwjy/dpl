@@ -6,12 +6,12 @@
 
 #include "dpl/std/concepts/constructible_from.h"
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
-DPL_EXPORT template <typename T>
+template <typename T>
 concept default_initializable = constructible_from<T> && requires {
     T{};
     ::new T;
 };
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

@@ -18,7 +18,6 @@ import :std.details.apply;
 #include "dpl/std/utility/bitset.h"
 #include "dpl/std/utility/exchange.h"
 #include "dpl/std/utility/forward.h"
-#include "dpl/std/utility/forward_as.h"
 #include "dpl/std/utility/forward_like.h"
 #include "dpl/std/utility/ignore.h"
 #include "dpl/std/utility/move.h"

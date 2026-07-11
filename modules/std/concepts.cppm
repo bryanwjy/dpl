@@ -7,37 +7,54 @@ module;
 
 export module dpl:std.concepts;
 export import :std.stddef;
-import :std.type_traits;
 import :std.details.concepts;
 
-// IWYU pragma: begin_exports
-#include "dpl/std/concepts/array_initializable.h"
-#include "dpl/std/concepts/assignable_from.h"
-#include "dpl/std/concepts/boolean_testable.h"
-#include "dpl/std/concepts/common_reference_with.h"
-#include "dpl/std/concepts/common_with.h"
-#include "dpl/std/concepts/constructible_from.h"
-#include "dpl/std/concepts/convertible_to.h"
-#include "dpl/std/concepts/copy_constructible.h"
-#include "dpl/std/concepts/copyable.h"
-#include "dpl/std/concepts/default_initializable.h"
-#include "dpl/std/concepts/derived_from.h"
-#include "dpl/std/concepts/destructible.h"
-#include "dpl/std/concepts/different_from.h"
-#include "dpl/std/concepts/enumeration.h"
-#include "dpl/std/concepts/equality_comparable.h"
-#include "dpl/std/concepts/floating_point.h"
-#include "dpl/std/concepts/forwardable_as.h"
-#include "dpl/std/concepts/integer_sequence_like.h"
-#include "dpl/std/concepts/integral.h"
-#include "dpl/std/concepts/integral_constant_like.h"
-#include "dpl/std/concepts/invocable.h"
-#include "dpl/std/concepts/movable.h"
-#include "dpl/std/concepts/move_constructible.h"
-#include "dpl/std/concepts/regular.h"
-#include "dpl/std/concepts/same_as.h"
-#include "dpl/std/concepts/semiregular.h"
-#include "dpl/std/concepts/swappable.h"
-#include "dpl/std/concepts/totally_ordered.h"
-#include "dpl/std/concepts/tuple_like.h"
-// IWYU pragma: end_exports
+__DPL_DEFAULT_NAMESPACE_BEGIN
+// NOLINTBEGIN(misc-unused-using-decls)
+using __DPL array_initializable;
+using __DPL assignable_from;
+using __DPL boolean_testable;
+using __DPL common_reference_with;
+using __DPL common_with;
+using __DPL constructible_from;
+using __DPL convertible_to;
+using __DPL copy_constructible;
+using __DPL copyable;
+using __DPL core_convertible_to;
+using __DPL default_initializable;
+using __DPL derived_from;
+using __DPL destructible;
+using __DPL different_from;
+using __DPL enumeration;
+using __DPL equality_comparable;
+using __DPL equality_comparable_with;
+using __DPL explicitly_convertible_to;
+using __DPL floating_point;
+using __DPL index_sequence_like;
+using __DPL integer_sequence_like;
+using __DPL integral;
+using __DPL integral_constant_like;
+using __DPL invocable;
+using __DPL movable;
+using __DPL move_constructible;
+using __DPL regular;
+using __DPL regular_invocable;
+using __DPL same_as;
+using __DPL scoped_enumeration;
+using __DPL semiregular;
+using __DPL signed_integral;
+using __DPL swappable;
+using __DPL swappable_with;
+using __DPL to_index_sequence;
+using __DPL to_integer_sequence;
+using __DPL totally_ordered;
+using __DPL totally_ordered_with;
+using __DPL tuple_like;
+using __DPL unscoped_enumeration;
+using __DPL unsigned_integral;
+
+using __DPL ranges::get_element;
+using __DPL ranges::swap;
+// NOLINTEND(misc-unused-using-decls)
+
+__DPL_DEFAULT_NAMESPACE_END
