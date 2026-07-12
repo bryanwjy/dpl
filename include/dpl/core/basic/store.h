@@ -16,7 +16,7 @@
 #  include "dpl/core/immediate/const_mask.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 
 void store(...) noexcept = delete;
@@ -128,8 +128,8 @@ struct aligned_store_t {
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::store_t store{};
-DPL_EXPORT inline constexpr internal::aligned_store_t aligned_store{};
+inline constexpr internal::store_t store{};
+inline constexpr internal::aligned_store_t aligned_store{};
 } // namespace cpo
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

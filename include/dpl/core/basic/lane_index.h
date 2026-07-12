@@ -17,7 +17,7 @@
 #  include "dpl/std/utility/ignore.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::internal {
 /**
@@ -98,9 +98,9 @@ struct canonical_impl<lane_index_t<T>> :
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT template <typename T, typename U = __DPL ignore_t>
+template <typename T, typename U = __DPL ignore_t>
 inline constexpr internal::lane_index_t<T, U> lane_index{};
 }
 } // namespace datapar
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

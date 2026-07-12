@@ -9,14 +9,14 @@
 #  include "dpl/std/utility/forward.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
-DPL_EXPORT template <simd_type T>
+template <simd_type T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr auto DPL_VECTORCALL to_native_type(T&& src) noexcept {
     return static_cast<simd_native_type_t<T>>(__DPL forward<T>(src));
 }
 
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

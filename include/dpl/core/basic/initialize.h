@@ -17,7 +17,7 @@
 #  include "dpl/std/utility/ignore.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 
 template <typename>
@@ -87,8 +87,8 @@ public:
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT template <typename T, typename U = ignore_t>
+template <typename T, typename U = ignore_t>
 inline constexpr internal::initialize_t<T, U> initialize{};
 }
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

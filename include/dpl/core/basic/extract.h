@@ -16,7 +16,7 @@
 #  include "dpl/std/concepts/integral_constant_like.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 template <typename T>
 concept extraction_index = integral_constant_like<T> || integral<T>;
@@ -48,8 +48,8 @@ struct canonical_impl<extract_t> {
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::extract_t extract{};
+inline constexpr internal::extract_t extract{};
 }
 } // namespace datapar
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

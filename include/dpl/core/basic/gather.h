@@ -14,7 +14,7 @@
 
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void gather(...) noexcept = delete;
 
@@ -159,8 +159,8 @@ public:
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::gather_t gather{};
+inline constexpr internal::gather_t gather{};
 }
 } // namespace datapar
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

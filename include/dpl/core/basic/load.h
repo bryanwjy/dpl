@@ -16,7 +16,7 @@
 #  include "dpl/std/utility/ignore.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::internal {
 void load(...) noexcept = delete;
@@ -212,10 +212,10 @@ struct aligned_load_t {
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT template <typename T, typename U = __DPL ignore_t>
+template <typename T, typename U = __DPL ignore_t>
 inline constexpr internal::load_t<T, U> load{};
-DPL_EXPORT template <typename T, typename U = __DPL ignore_t>
+template <typename T, typename U = __DPL ignore_t>
 inline constexpr internal::aligned_load_t<T, U> aligned_load{};
 } // namespace cpo
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

@@ -9,7 +9,7 @@
 #  include "dpl/std/utility/ignore.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 template <typename T, typename U = __DPL ignore_t>
 requires requires {
@@ -22,4 +22,4 @@ requires requires { typename iota_sequence_t<T, U>; }
 inline constexpr auto iota_sequence = iota_sequence_t<T, U>{};
 
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

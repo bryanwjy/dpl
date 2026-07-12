@@ -8,23 +8,11 @@
 #  include "dpl/core/concepts/simd_type.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
-namespace datapar {
-namespace internal {
-template <simd_abi A>
-consteval remove_cv_t<A> make_abi() noexcept {
-    return remove_cv_t<A>{};
-}
-
-template <simd_type T>
-consteval simd_abi_type_t<T> make_abi() noexcept {
-    return simd_abi_type_t<T>{};
-}
-
+__DPL_DEFAULT_NAMESPACE_BEGIN
+namespace datapar::internal {
 template <typename A>
-requires requires { internal::make_abi<A>(); }
-inline constexpr auto abi = make_abi<A>();
-} // namespace internal
-} // namespace datapar
+requires simd_abi<A> || simd_type<A>
+inline constexpr simd_abi_type_t<A> abi{};
+} // namespace datapar::internal
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

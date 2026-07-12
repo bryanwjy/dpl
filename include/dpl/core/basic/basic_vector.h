@@ -18,9 +18,9 @@
 #  include "dpl/std/type_traits/is_same.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
-DPL_EXPORT template <typename E, typename A>
+template <typename E, typename A>
 class basic_vector {
     static_assert(is_same_v<E, decay_t<E>> && is_same_v<A, decay_t<A>>);
     static_assert(simd_element_for<E, A> &&
@@ -85,4 +85,4 @@ private:
     vector_type data_;
 };
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

@@ -18,7 +18,7 @@
 #  include "dpl/std/utility/ignore.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::internal {
 template <typename>
@@ -112,9 +112,9 @@ struct canonical_impl<broadcast_t<T, U>> {
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT template <typename T, typename U = __DPL ignore_t>
+template <typename T, typename U = __DPL ignore_t>
 inline constexpr internal::broadcast_t<T, U> broadcast{};
 }
 } // namespace datapar
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

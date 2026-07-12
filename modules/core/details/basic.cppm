@@ -1,0 +1,36 @@
+// Copyright 2025 Bryan Wong
+module;
+
+#define DPL_MODULES 1
+#include "dpl/config.h"
+
+export module dpl:core.details.basic;
+export import :core.fwd;
+import :core.details.type_traits;
+import :core.concepts;
+import :core.type_traits;
+import :core.immediate;
+import :core.dispatch;
+import :std.concepts;
+import :std.bit;
+import :std.type_traits;
+import :std.utility;
+
+// IWYU pragma: begin_exports
+#include "dpl/core/basic/aligned.h"
+#include "dpl/core/basic/basic_mask.h"
+#include "dpl/core/basic/basic_vector.h"
+#include "dpl/core/basic/broadcast.h"
+#include "dpl/core/basic/expand_load.h"
+#include "dpl/core/basic/extract.h"
+#include "dpl/core/basic/gather.h"
+#include "dpl/core/basic/initialize.h"
+#include "dpl/core/basic/internal/abi.h"
+#include "dpl/core/basic/internal/iota_sequence.h"
+#include "dpl/core/basic/lane_index.h"
+#include "dpl/core/basic/load.h"
+#include "dpl/core/basic/store.h"
+#include "dpl/core/basic/to_bitset.h"
+#include "dpl/core/basic/to_canonical.h"
+#include "dpl/core/basic/to_native_type.h"
+// IWYU pragma: end_exports

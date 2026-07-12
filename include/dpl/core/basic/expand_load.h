@@ -16,7 +16,7 @@
 #  include "dpl/std/utility/unreachable.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::internal {
 void expand_load(...) noexcept = delete;
@@ -145,8 +145,8 @@ struct canonical_impl<expand_load_t<T>> :
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT template <typename T, typename U = __DPL ignore_t>
+template <typename T, typename U = __DPL ignore_t>
 inline constexpr internal::expand_load_t<T, U> expand_load{};
 } // namespace cpo
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

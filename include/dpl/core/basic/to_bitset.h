@@ -13,7 +13,7 @@
 #  include "dpl/std/utility/bitset.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void to_bitset(...) noexcept = delete;
 
@@ -51,12 +51,21 @@ struct canonical_impl<to_bitset_t> {
         basic_mask<E, A> val) noexcept {
         return to_bitset(internal::abi<A>, val);
     }
+
+    template <const_mask_like M>
+    requires requires(M mask) {
+        { to_bitset(mask) } -> bitset_type;
+    }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(M mask) noexcept {
+        return to_bitset(mask);
+    }
 };
 } // namespace datapar::internal
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::to_bitset_t to_bitset{};
+inline constexpr internal::to_bitset_t to_bitset{};
 } // namespace cpo
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

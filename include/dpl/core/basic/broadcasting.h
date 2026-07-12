@@ -3,13 +3,13 @@
 
 #include "dpl/config.h"
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar {
-DPL_EXPORT struct broadcasting_t {
+struct broadcasting_t {
     explicit constexpr broadcasting_t() noexcept = default;
 };
-DPL_EXPORT inline constexpr broadcasting_t broadcasting{};
+inline constexpr broadcasting_t broadcasting{};
 } // namespace datapar
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

@@ -12,16 +12,16 @@
 #  include "dpl/std/utility/forward.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
-DPL_EXPORT template <canonical_simd_type T>
+template <canonical_simd_type T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr T to_canonical(T src) noexcept {
     return src;
 }
 
-DPL_EXPORT template <extended_simd_type T>
+template <extended_simd_type T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr canonical_type_t<T>
     DPL_VECTORCALL to_canonical(T&& src) {
@@ -33,4 +33,4 @@ constexpr canonical_type_t<T>
 }
 
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

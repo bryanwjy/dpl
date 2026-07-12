@@ -1,4 +1,4 @@
-// Copyright 2025 Bryan Wong
+// Copyright 2026 Bryan Wong
 module;
 
 #define DPL_MODULES 1
@@ -6,31 +6,37 @@ module;
 
 export module dpl:core.basic;
 export import :core.fwd;
-import :core.details.type_traits;
-import :core.concepts;
-import :core.type_traits;
-import :core.immediate;
-import :core.dispatch;
-import :std.concepts;
-import :std.bit;
-import :std.type_traits;
-import :std.utility;
+import :core.details.basic;
 
-// IWYU pragma: begin_exports
-#include "dpl/core/basic/aligned.h"
-#include "dpl/core/basic/basic_mask.h"
-#include "dpl/core/basic/basic_vector.h"
-#include "dpl/core/basic/broadcast.h"
-#include "dpl/core/basic/expand_load.h"
-#include "dpl/core/basic/extract.h"
-#include "dpl/core/basic/gather.h"
-#include "dpl/core/basic/initialize.h"
-#include "dpl/core/basic/internal/abi.h"
-#include "dpl/core/basic/internal/iota_sequence.h"
-#include "dpl/core/basic/lane_index.h"
-#include "dpl/core/basic/load.h"
-#include "dpl/core/basic/store.h"
-#include "dpl/core/basic/to_bitset.h"
-#include "dpl/core/basic/to_canonical.h"
-#include "dpl/core/basic/to_native_type.h"
-// IWYU pragma: end_exports
+__DPL_DEFAULT_NAMESPACE_BEGIN
+// NOLINTBEGIN(misc-unused-using-decls)
+
+namespace datapar {
+using __DPL datapar::aligned;
+using __DPL datapar::aligned_t;
+using __DPL datapar::basic_mask;
+using __DPL datapar::basic_vector;
+using __DPL datapar::broadcasting;
+using __DPL datapar::broadcasting_t;
+using __DPL datapar::to_canonical;
+using __DPL datapar::to_native_type;
+//
+
+inline namespace cpo {
+using __DPL datapar::cpo::aligned_load;
+using __DPL datapar::cpo::aligned_store;
+using __DPL datapar::cpo::broadcast;
+using __DPL datapar::cpo::expand_load;
+using __DPL datapar::cpo::extract;
+using __DPL datapar::cpo::from_bitset;
+using __DPL datapar::cpo::gather;
+using __DPL datapar::cpo::initialize;
+using __DPL datapar::cpo::lane_index;
+using __DPL datapar::cpo::load;
+using __DPL datapar::cpo::store;
+using __DPL datapar::cpo::to_bitset;
+} // namespace cpo
+} // namespace datapar
+
+// NOLINTEND(misc-unused-using-decls)
+__DPL_DEFAULT_NAMESPACE_END

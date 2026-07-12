@@ -20,7 +20,7 @@
 #  include "dpl/std/utility/bitset.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 template <typename>
 void from_bitset(...) noexcept = delete;
@@ -84,8 +84,8 @@ public:
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT template <typename T, typename U = ignore_t>
+template <typename T, typename U = ignore_t>
 inline constexpr internal::from_bitset_t<T, U> from_bitset{};
 }
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END
