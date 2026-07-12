@@ -5,7 +5,7 @@
 
 #include "dpl/core/dispatch/operation/base.h"
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::internal {
 
@@ -35,4 +35,4 @@ class cast_operation_base : public primitive_operation_base<D> {};
 
 } // namespace datapar::internal
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

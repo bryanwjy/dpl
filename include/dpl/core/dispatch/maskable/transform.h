@@ -21,7 +21,7 @@
 #  include "dpl/core/type_traits/simd_element_type.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::internal {
 
@@ -335,4 +335,4 @@ protected:
 };
 } // namespace datapar::internal
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

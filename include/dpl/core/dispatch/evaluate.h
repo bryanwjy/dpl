@@ -11,7 +11,7 @@
 #  include "dpl/std/utility/forward.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 
 struct evaluate_t {
@@ -43,7 +43,7 @@ struct evaluate_t {
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::evaluate_t evaluate{};
+inline constexpr internal::evaluate_t evaluate{};
 } // namespace cpo
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

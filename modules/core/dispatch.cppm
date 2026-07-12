@@ -6,28 +6,28 @@ module;
 
 export module dpl:core.dispatch;
 export import :core.fwd;
-import :core.details.type_traits;
-import :std.concepts;
-import :std.bit;
-import :std.type_traits;
-import :std.utility;
-import :core.concepts;
-import :core.type_traits;
-import :core.immediate;
+import :core.details.dispatch;
 
-// IWYU pragma: begin_exports
-#include "dpl/core/dispatch/broadcastable/base.h"
-#include "dpl/core/dispatch/broadcastable/binary.h"
-#include "dpl/core/dispatch/broadcastable/selection.h"
-#include "dpl/core/dispatch/broadcastable/ternary.h"
-#include "dpl/core/dispatch/concepts/operation.h"
-#include "dpl/core/dispatch/evaluate.h"
-#include "dpl/core/dispatch/interface.h"
-#include "dpl/core/dispatch/maskable/accumulation.h"
-#include "dpl/core/dispatch/maskable/predicate.h"
-#include "dpl/core/dispatch/maskable/transform.h"
-#include "dpl/core/dispatch/operation/algorithm.h"
-#include "dpl/core/dispatch/operation/basic.h"
-#include "dpl/core/dispatch/operation/math.h"
-#include "dpl/core/dispatch/operation/primitive.h"
-// IWYU pragma: end_exports
+__DPL_DEFAULT_NAMESPACE_BEGIN
+// NOLINTBEGIN(misc-unused-using-decls)
+
+namespace datapar {
+inline namespace cpo {
+using __DPL datapar::cpo::evaluate;
+}
+
+using __DPL datapar::maskable_simd_operation;
+using __DPL datapar::same_operation_as;
+using __DPL datapar::simd_algorithm_operation;
+using __DPL datapar::simd_basic_operation;
+using __DPL datapar::simd_canonical_invocable;
+using __DPL datapar::simd_extension_invocable;
+using __DPL datapar::simd_invocable;
+using __DPL datapar::simd_math_operation;
+using __DPL datapar::simd_operation;
+using __DPL datapar::simd_primitive_operation;
+
+} // namespace datapar
+
+// NOLINTEND(misc-unused-using-decls)
+__DPL_DEFAULT_NAMESPACE_END

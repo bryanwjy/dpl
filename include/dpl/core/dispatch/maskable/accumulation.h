@@ -25,7 +25,7 @@
 #  include "dpl/std/utility/forward.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::internal {
 
@@ -348,4 +348,4 @@ protected:
 
 } // namespace datapar::internal
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

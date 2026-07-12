@@ -9,7 +9,7 @@
 #  include "dpl/core/concepts/broadcastable_to.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 struct bwand_t;
 struct select_t;
@@ -36,4 +36,4 @@ inline constexpr fbroadcast_t<T, U> broadcast;
 } // namespace fwd
 } // namespace datapar::internal
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

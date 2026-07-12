@@ -8,7 +8,7 @@
 #  include "dpl/std/type_traits/remove_cvref.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::internal {
 
@@ -31,4 +31,4 @@ struct result_or_identity<T> : simd_expression_result<T> {};
 
 } // namespace datapar::internal
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

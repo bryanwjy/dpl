@@ -5,7 +5,7 @@
 
 #include "dpl/core/dispatch/evaluate.h"
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 
 template <typename T>
@@ -22,4 +22,4 @@ constexpr auto DPL_VECTORCALL forward_or_eval(T&& val) noexcept {
 
 } // namespace datapar::internal
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

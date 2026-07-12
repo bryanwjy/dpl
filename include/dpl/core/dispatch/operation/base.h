@@ -7,7 +7,7 @@
 #include "dpl/core/dispatch/private/cpo.h"
 #include "dpl/core/dispatch/private/forward_or_eval.h"
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::internal {
 
@@ -62,4 +62,4 @@ class basic_operation_base : public operation_base<D> {};
 
 } // namespace datapar::internal
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

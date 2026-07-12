@@ -5,7 +5,7 @@
 
 #include "dpl/core/dispatch/interface.h"
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::internal {
 
@@ -22,4 +22,4 @@ inline constexpr fallback_impl<D> fallback;
 
 } // namespace datapar::internal
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END
