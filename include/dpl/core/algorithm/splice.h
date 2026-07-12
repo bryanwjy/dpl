@@ -15,7 +15,7 @@
 #  include "dpl/core/operations/select.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void splice(...) noexcept = delete;
 
@@ -156,9 +156,9 @@ struct splicei_t {
 } // namespace datapar::internal
 
 namespace datapar {
-DPL_EXPORT template <auto V>
+template <auto V>
 inline constexpr internal::splicei_t<V> splicei{};
-DPL_EXPORT inline constexpr internal::splice_t splice{};
+inline constexpr internal::splice_t splice{};
 } // namespace datapar
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

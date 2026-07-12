@@ -15,7 +15,7 @@
 #  include "dpl/core/operations/compare/min.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::internal {
 void scan_min(...) noexcept = delete;
@@ -223,8 +223,8 @@ public:
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::scan_min_t scan_min{};
+inline constexpr internal::scan_min_t scan_min{};
 }
 } // namespace datapar
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

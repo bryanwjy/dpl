@@ -13,6 +13,7 @@
 #  include "dpl/core/basic/from_bitset.h"
 #  include "dpl/core/basic/internal/abi.h"
 #  include "dpl/core/basic/to_bitset.h"
+#  include "dpl/core/concepts/cpo_invocable.h"
 #  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/dispatch/interface.h"
@@ -73,7 +74,7 @@ struct fallback_impl<rotr_t> {
     }
 
     template <canonical_mask T>
-    requires fixed_width_mask<T> && regular_invocable<to_bitset_t, T>
+    requires fixed_width_mask<T> && cpo_invocable<to_bitset_t, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr T DPL_VECTORCALL operator()(T val, size_t size) noexcept {
         using bitset_t = invoke_result_t<to_bitset_t, T>;

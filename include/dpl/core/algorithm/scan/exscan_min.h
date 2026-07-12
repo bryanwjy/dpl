@@ -14,7 +14,7 @@
 #  include "dpl/std/utility/forward.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::internal {
 void exscan_min(...) noexcept = delete;
@@ -267,7 +267,7 @@ public:
 } // namespace datapar::internal
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::exscan_min_t exscan_min{};
+inline constexpr internal::exscan_min_t exscan_min{};
 }
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

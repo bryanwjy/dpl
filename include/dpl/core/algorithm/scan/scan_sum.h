@@ -15,7 +15,7 @@
 #  include "dpl/core/operations/arithmetic/add.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::internal {
 void scan_sum(...) noexcept = delete;
@@ -224,8 +224,8 @@ public:
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::scan_sum_t scan_sum{};
+inline constexpr internal::scan_sum_t scan_sum{};
 }
 } // namespace datapar
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

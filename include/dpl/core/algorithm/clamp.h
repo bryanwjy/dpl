@@ -13,7 +13,7 @@
 #  include "dpl/core/operations/minmax.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void clamp(...) noexcept = delete;
 
@@ -237,7 +237,7 @@ struct extended_impl<clamp_t> {
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::clamp_t clamp{};
+inline constexpr internal::clamp_t clamp{};
 } // namespace cpo
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

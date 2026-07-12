@@ -19,6 +19,11 @@ import :core.operations;
 import :core.type_traits;
 import :core.utility;
 
+DPL_DISABLE_WARNING_PUSH()
+#if DPL_COMPILER_MSVC
+DPL_DISABLE_WARNING(5244)
+#endif
+
 // IWYU pragma: begin_exports
 #include "dpl/core/math/details/fwd.h"
 
@@ -36,3 +41,5 @@ import :core.utility;
 #include "dpl/core/math/details/rounding.h"
 #include "dpl/core/math/details/rsqrt2.h"
 // IWYU pragma: end_exports
+
+DPL_DISABLE_WARNING_POP()

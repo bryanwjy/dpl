@@ -17,7 +17,7 @@
 #  include "dpl/std/concepts/integral_constant_like.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void rotate_right(...) noexcept = delete;
 
@@ -322,9 +322,11 @@ public:
 } // namespace datapar::internal
 
 namespace datapar {
-DPL_EXPORT inline constexpr internal::rotate_right_t rotate_right{};
-DPL_EXPORT template <size_t V>
+inline namespace cpo {
+inline constexpr internal::rotate_right_t rotate_right{};
+template <size_t V>
 inline constexpr internal::rotate_righti_t<V> rotate_righti{};
+} // namespace cpo
 } // namespace datapar
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

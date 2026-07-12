@@ -15,7 +15,7 @@
 #  include "dpl/core/immediate/immediate.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::internal {
 void exscan(...) noexcept = delete;
@@ -332,7 +332,7 @@ public:
 } // namespace datapar::internal
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::exscan_t exscan{};
+inline constexpr internal::exscan_t exscan{};
 }
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

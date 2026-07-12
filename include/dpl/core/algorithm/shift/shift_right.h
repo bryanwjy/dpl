@@ -22,7 +22,7 @@
 #  include "dpl/std/type_traits/type_identity.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void shift_right(...) noexcept = delete;
 
@@ -324,9 +324,11 @@ public:
 } // namespace datapar::internal
 
 namespace datapar {
-DPL_EXPORT inline constexpr internal::shift_right_t shift_right{};
-DPL_EXPORT template <size_t V>
+inline namespace cpo {
+inline constexpr internal::shift_right_t shift_right{};
+template <size_t V>
 inline constexpr internal::shift_righti_t<V> shift_righti{};
+} // namespace cpo
 } // namespace datapar
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

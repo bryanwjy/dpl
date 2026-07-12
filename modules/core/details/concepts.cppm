@@ -13,6 +13,11 @@ import :std.type_traits;
 import :std.utility;
 import :core.type_traits;
 
+DPL_DISABLE_WARNING_PUSH()
+#if DPL_COMPILER_MSVC
+DPL_DISABLE_WARNING(5244)
+#endif
+
 // IWYU pragma: begin_exports
 #include "dpl/core/concepts/broadcastable_to.h"
 #include "dpl/core/concepts/canonical.h"
@@ -29,3 +34,5 @@ import :core.type_traits;
 #include "dpl/core/concepts/simd_type.h"
 #include "dpl/core/concepts/simd_vector.h"
 // IWYU pragma: end_exports
+
+DPL_DISABLE_WARNING_POP()

@@ -18,7 +18,7 @@
 #  include "dpl/std/utility/forward.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::internal {
 template <typename F, typename T>
@@ -78,4 +78,4 @@ constexpr auto DPL_VECTORCALL reduction(T val, Op&& op) noexcept(
 }
 } // namespace datapar::internal
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

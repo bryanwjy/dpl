@@ -16,6 +16,11 @@ import :std.bit;
 import :std.type_traits;
 import :std.utility;
 
+DPL_DISABLE_WARNING_PUSH()
+#if DPL_COMPILER_MSVC
+DPL_DISABLE_WARNING(5244)
+#endif
+
 // IWYU pragma: begin_exports
 #include "dpl/core/basic/aligned.h"
 #include "dpl/core/basic/basic_mask.h"
@@ -34,3 +39,5 @@ import :std.utility;
 #include "dpl/core/basic/to_canonical.h"
 #include "dpl/core/basic/to_native_type.h"
 // IWYU pragma: end_exports
+
+DPL_DISABLE_WARNING_POP()

@@ -6,25 +6,40 @@ module;
 
 export module dpl:core.algorithm;
 export import :core.fwd;
-export import :core.operations;
-import :core.details.type_traits;
-import :std.concepts;
-import :std.bit;
-import :std.type_traits;
-import :std.utility;
-import :core.basic;
-import :core.concepts;
-import :core.type_traits;
-import :core.utility;
+import :core.details.algorithm;
 
-// IWYU pragma: begin_exports
-#include "dpl/core/algorithm/clamp.h"
-#include "dpl/core/algorithm/compress.h"
-#include "dpl/core/algorithm/expand.h"
-#include "dpl/core/algorithm/reduce.h"
-#include "dpl/core/algorithm/rotate.h"
-#include "dpl/core/algorithm/scan.h"
-#include "dpl/core/algorithm/shift.h"
-#include "dpl/core/algorithm/slide.h"
-#include "dpl/core/algorithm/splice.h"
-// IWYU pragma: end_exports
+__DPL_DEFAULT_NAMESPACE_BEGIN
+// NOLINTBEGIN(misc-unused-using-decls)
+
+namespace datapar {
+inline namespace cpo {
+using __DPL datapar::cpo::clamp;
+using __DPL datapar::cpo::compress;
+using __DPL datapar::cpo::expand;
+using __DPL datapar::cpo::exscan;
+using __DPL datapar::cpo::exscan_max;
+using __DPL datapar::cpo::exscan_min;
+using __DPL datapar::cpo::exscan_sum;
+using __DPL datapar::cpo::hmax;
+using __DPL datapar::cpo::hmin;
+using __DPL datapar::cpo::hsum;
+using __DPL datapar::cpo::inner_product;
+using __DPL datapar::cpo::reduce;
+using __DPL datapar::cpo::rotate_left;
+using __DPL datapar::cpo::rotate_lefti;
+using __DPL datapar::cpo::rotate_right;
+using __DPL datapar::cpo::rotate_righti;
+using __DPL datapar::cpo::scan;
+using __DPL datapar::cpo::scan_max;
+using __DPL datapar::cpo::scan_min;
+using __DPL datapar::cpo::scan_sum;
+using __DPL datapar::cpo::shift_left;
+using __DPL datapar::cpo::shift_lefti;
+using __DPL datapar::cpo::shift_right;
+using __DPL datapar::cpo::shift_righti;
+
+} // namespace cpo
+} // namespace datapar
+
+// NOLINTEND(misc-unused-using-decls)
+__DPL_DEFAULT_NAMESPACE_END

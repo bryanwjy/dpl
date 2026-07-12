@@ -13,7 +13,7 @@
 #  include "dpl/core/operations/bitwise.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void slide_left(...) noexcept = delete;
 
@@ -341,9 +341,11 @@ struct slide_lefti_t {
 } // namespace datapar::internal
 
 namespace datapar {
-DPL_EXPORT template <auto V>
+inline namespace cpo {
+template <auto V>
 inline constexpr internal::slide_lefti_t<V> slide_lefti{};
-DPL_EXPORT inline constexpr internal::slide_left_t slide_left{};
+inline constexpr internal::slide_left_t slide_left{};
+} // namespace cpo
 } // namespace datapar
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

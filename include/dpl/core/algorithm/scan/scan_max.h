@@ -15,7 +15,7 @@
 #  include "dpl/core/operations/compare/max.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::internal {
 void scan_max(...) noexcept = delete;
@@ -223,8 +223,8 @@ public:
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::scan_max_t scan_max{};
+inline constexpr internal::scan_max_t scan_max{};
 }
 } // namespace datapar
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

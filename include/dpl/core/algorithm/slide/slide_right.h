@@ -13,7 +13,7 @@
 #  include "dpl/core/dispatch/operation/algorithm.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 
 void slide_right(...) noexcept = delete;
@@ -362,9 +362,11 @@ struct slide_righti_t {
 } // namespace datapar::internal
 
 namespace datapar {
-DPL_EXPORT template <auto V>
+inline namespace cpo {
+template <auto V>
 inline constexpr internal::slide_righti_t<V> slide_righti{};
-DPL_EXPORT inline constexpr internal::slide_right_t slide_right{};
+inline constexpr internal::slide_right_t slide_right{};
+} // namespace cpo
 } // namespace datapar
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

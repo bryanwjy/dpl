@@ -17,7 +17,7 @@
 #  include "dpl/core/operations/logical.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void reduce(...) noexcept = delete;
 struct reduce_t :
@@ -267,7 +267,7 @@ public:
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::reduce_t reduce{};
+inline constexpr internal::reduce_t reduce{};
 } // namespace cpo
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

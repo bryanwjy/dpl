@@ -15,6 +15,11 @@ import :core.concepts;
 import :core.type_traits;
 import :core.immediate;
 
+DPL_DISABLE_WARNING_PUSH()
+#if DPL_COMPILER_MSVC
+DPL_DISABLE_WARNING(5244)
+#endif
+
 // IWYU pragma: begin_exports
 #include "dpl/core/dispatch/broadcastable/base.h"
 #include "dpl/core/dispatch/broadcastable/binary.h"
@@ -31,3 +36,5 @@ import :core.immediate;
 #include "dpl/core/dispatch/operation/math.h"
 #include "dpl/core/dispatch/operation/primitive.h"
 // IWYU pragma: end_exports
+
+DPL_DISABLE_WARNING_POP()

@@ -13,7 +13,7 @@
 #  include "dpl/core/operations/arithmetic/multiply.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::internal {
 void inner_product(...) noexcept = delete;
@@ -266,7 +266,7 @@ struct fallback_impl<inner_product_t> {
 } // namespace datapar::internal
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::inner_product_t inner_product{};
+inline constexpr internal::inner_product_t inner_product{};
 }
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

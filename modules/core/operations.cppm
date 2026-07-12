@@ -38,7 +38,9 @@ using __DPL datapar::cpo::bwnot;
 using __DPL datapar::cpo::bwor;
 using __DPL datapar::cpo::bwornot;
 using __DPL datapar::cpo::bwshift_left;
+using __DPL datapar::cpo::bwshift_lefti;
 using __DPL datapar::cpo::bwshift_right;
+using __DPL datapar::cpo::bwshift_righti;
 using __DPL datapar::cpo::bwxor;
 //
 using __DPL datapar::cpo::byteswap;
@@ -48,7 +50,9 @@ using __DPL datapar::cpo::countr_one;
 using __DPL datapar::cpo::countr_zero;
 using __DPL datapar::cpo::popcount;
 using __DPL datapar::cpo::rotl;
+using __DPL datapar::cpo::rotli;
 using __DPL datapar::cpo::rotr;
+using __DPL datapar::cpo::rotri;
 //
 using __DPL datapar::cpo::abi_cast;
 using __DPL datapar::cpo::element_cast;

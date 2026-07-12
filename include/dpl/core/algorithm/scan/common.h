@@ -19,7 +19,7 @@
 #  include "dpl/std/utility/forward.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::internal {
 struct exscan_sum_t;
@@ -37,7 +37,7 @@ concept scan_operator_for =
 template <fixed_width_vector T, integral_constant_like Imm,
     scan_operator_for<T> Op>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-static constexpr T DPL_VECTORCALL inclusive_scan(Imm, T val, Op&& op) {
+constexpr T DPL_VECTORCALL inclusive_scan(Imm, T val, Op&& op) {
 
     [&]<size_t I>(this auto self, immediate<I> offset) {
         using bitset_t = bitset<simd_abi_traits<T>::size>;
@@ -67,7 +67,7 @@ static constexpr T DPL_VECTORCALL inclusive_scan(Imm, T val, Op&& op) {
 
 template <simd_vector T, scan_operator_for<T> Op>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-static constexpr T DPL_VECTORCALL inclusive_scan(size_t size, T val, Op op) {
+constexpr T DPL_VECTORCALL inclusive_scan(size_t size, T val, Op op) {
     auto const iota = dx::lane_index<T>();
     for (auto i = 0zu; i < size; i <<= 1) {
         auto const shifted = dx::shift_right(val, i);
@@ -80,7 +80,7 @@ static constexpr T DPL_VECTORCALL inclusive_scan(size_t size, T val, Op op) {
 
 template <simd_vector T, scan_operator_for<T> Op>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-static constexpr T DPL_VECTORCALL inclusive_scan(T&& val, Op&& op) {
+constexpr T DPL_VECTORCALL inclusive_scan(T&& val, Op&& op) {
     using type = remove_cvref_t<T>;
     if constexpr (fixed_width_vector<type>) {
         return internal::inclusive_scan(simd_abi_traits<type>::size,
@@ -93,4 +93,4 @@ static constexpr T DPL_VECTORCALL inclusive_scan(T&& val, Op&& op) {
 
 } // namespace datapar::internal
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

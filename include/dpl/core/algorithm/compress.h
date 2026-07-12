@@ -20,7 +20,7 @@
 #  include "dpl/core/type_traits/simd_abi_traits.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 
 void compress(...) noexcept = delete;
@@ -317,7 +317,9 @@ private:
 } // namespace datapar::internal
 
 namespace datapar {
-DPL_EXPORT inline constexpr internal::compress_t compress{};
+inline namespace cpo {
+inline constexpr internal::compress_t compress{};
+}
 } // namespace datapar
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END
