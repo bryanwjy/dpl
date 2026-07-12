@@ -17,8 +17,8 @@
 #  include "dpl/core/operations/arithmetic.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
-DPL_EXPORT namespace datapar::fmath {
+__DPL_DEFAULT_NAMESPACE_BEGIN
+namespace datapar::fmath {
 
 /**
  * Approximates 1 / sqrt( 2x ) where x is in the interval [0.5,1)
@@ -87,4 +87,4 @@ public:
 inline constexpr rsqrt2_t rsqrt2{};
 
 } // namespace datapar::fmath
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

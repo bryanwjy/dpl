@@ -13,7 +13,7 @@
 #  include "dpl/core/immediate/immediate.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::fmath {
 namespace dx = __DPL datapar;
 
@@ -42,4 +42,4 @@ constexpr basic_vector<E, A>
 }
 
 } // namespace datapar::fmath
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

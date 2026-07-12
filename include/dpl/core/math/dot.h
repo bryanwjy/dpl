@@ -18,7 +18,7 @@
 #  include "dpl/core/type_traits/common_abi.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 /**
  * @brief Computes the bfloat16 dot product with float32 accumulation.
@@ -264,7 +264,7 @@ struct fallback_impl<dot_product_t> {
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::dot_product_t dot_product{};
+inline constexpr internal::dot_product_t dot_product{};
 } // namespace cpo
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

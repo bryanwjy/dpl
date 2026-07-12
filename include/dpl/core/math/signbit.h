@@ -16,7 +16,7 @@
 #  include "dpl/core/type_traits/representation.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void signbit(...) noexcept = delete;
 
@@ -199,7 +199,7 @@ public:
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::signbit_t signbit{};
+inline constexpr internal::signbit_t signbit{};
 }
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

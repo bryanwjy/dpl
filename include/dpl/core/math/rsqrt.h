@@ -3,6 +3,9 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/math/details/accuracy.h"
+#include "dpl/core/math/details/ldexp.h"
+#include "dpl/core/math/details/rsqrt2.h"
 #include "dpl/core/math/fixup.h"
 #include "dpl/core/math/frexp.h"
 
@@ -13,15 +16,12 @@
 #  include "dpl/core/dispatch/interface.h"
 #  include "dpl/core/dispatch/maskable/transform.h"
 #  include "dpl/core/dispatch/operation/math.h"
-#  include "dpl/core/math/details/accuracy.h"
-#  include "dpl/core/math/details/ldexp.h"
-#  include "dpl/core/math/details/rsqrt2.h"
 #  include "dpl/core/operations/arithmetic.h" // IWYU pragma: keep
 #  include "dpl/core/operations/bitwise.h"    // IWYU pragma: keep
 #  include "dpl/core/operations/compare.h"    // IWYU pragma: keep
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void rsqrt(...) noexcept = delete;
 
@@ -187,7 +187,7 @@ public:
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::rsqrt_t rsqrt{};
+inline constexpr internal::rsqrt_t rsqrt{};
 }
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

@@ -10,8 +10,8 @@
 #  include "dpl/core/basic/broadcast.h"
 #  include "dpl/core/immediate/constants/digits.h"
 #  include "dpl/core/immediate/immediate.h"
+#  include "dpl/core/numbers/floating_point_like.h"
 #  include "dpl/std/bit/bit_width.h"
-#  include "dpl/std/concepts/floating_point.h"
 #  include "dpl/std/type_traits/remove_const.h"
 #endif
 
@@ -20,8 +20,8 @@ DPL_DISABLE_WARNING_PUSH()
 DPL_DISABLE_WARNING("-Wc++26-extensions")
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
-DPL_EXPORT namespace datapar::fmath {
+__DPL_DEFAULT_NAMESPACE_BEGIN
+namespace datapar::fmath {
 namespace estrin {
 struct unintialized_t {};
 
@@ -221,7 +221,7 @@ public:
     }
 };
 } // namespace datapar::fmath
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END
 
 #if DPL_HAS_CXX26_EXTENSIONS
 DPL_DISABLE_WARNING_POP()

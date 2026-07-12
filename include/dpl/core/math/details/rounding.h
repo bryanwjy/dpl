@@ -4,15 +4,13 @@
 #include "dpl/config.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/math/details/fwd.h"
-
 #  include "dpl/std/bit/popcount.h"
 #  include "dpl/std/utility/to_underlying.h"
 #  include "dpl/std/utility/to_unsigned.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
-DPL_EXPORT namespace datapar::fmath {
+__DPL_DEFAULT_NAMESPACE_BEGIN
+namespace datapar::fmath {
 
 enum class rounding_flags {
     to_nearest_int = 1,
@@ -73,4 +71,4 @@ template <rounding_flags R>
 inline constexpr rounding_t<R> rounding_v{};
 
 } // namespace datapar::fmath
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

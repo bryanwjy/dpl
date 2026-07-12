@@ -6,47 +6,97 @@ module;
 #include "dpl/config.h"
 
 export module dpl:core.math;
-export import :core.fwd;
-import :core.details.type_traits;
 import :core.details.math;
-import :std.concepts;
-import :std.bit;
-import :std.type_traits;
-import :std.utility;
-import :core.basic;
-import :core.concepts;
-import :core.immediate;
-import :core.numbers;
-import :core.operations;
-import :core.type_traits;
-import :core.utility;
 
-// IWYU pragma: begin_exports
-#include "dpl/core/math/addsub.h"
-#include "dpl/core/math/ceil.h"
-#include "dpl/core/math/copysign.h"
-#include "dpl/core/math/dot.h"
-#include "dpl/core/math/exp.h"
-#include "dpl/core/math/fixup.h"
-#include "dpl/core/math/floor.h"
-#include "dpl/core/math/fma.h"
-#include "dpl/core/math/fpfix.h"
-#include "dpl/core/math/isfinite.h"
-#include "dpl/core/math/isinf.h"
-#include "dpl/core/math/isnan.h"
-#include "dpl/core/math/isnanq.h"
-#include "dpl/core/math/isnans.h"
-#include "dpl/core/math/isnormal.h"
-#include "dpl/core/math/ldexp.h"
-#include "dpl/core/math/lerp.h"
-#include "dpl/core/math/rcp.h"
-#include "dpl/core/math/round.h"
-#include "dpl/core/math/rounding.h"
-#include "dpl/core/math/rsqrt.h"
-#include "dpl/core/math/sign.h"
-#include "dpl/core/math/signbit.h"
-#include "dpl/core/math/sincos.h"
-#include "dpl/core/math/sinhcosh.h"
-#include "dpl/core/math/sqrt.h"
-#include "dpl/core/math/trunc.h"
-// IWYU pragma: end_exports
+// NOLINTBEGIN(misc-unused-using-decls,misc-unused-alias-decls)
+__DPL_DEFAULT_NAMESPACE_BEGIN
+namespace datapar {
+namespace rounding {
+using __DPL datapar::rounding::current_dir;
+using __DPL datapar::rounding::current_dir_t;
+using __DPL datapar::rounding::no_exc;
+using __DPL datapar::rounding::no_exc_t;
+using __DPL datapar::rounding::to_nearest_int;
+using __DPL datapar::rounding::to_nearest_int_t;
+using __DPL datapar::rounding::to_neg_inf;
+using __DPL datapar::rounding::to_neg_inf_t;
+using __DPL datapar::rounding::to_pos_inf;
+using __DPL datapar::rounding::to_pos_inf_t;
+using __DPL datapar::rounding::to_zero;
+using __DPL datapar::rounding::to_zero_t;
+} // namespace rounding
+
+namespace fpfix {
+using __DPL datapar::fpfix::all;
+using __DPL datapar::fpfix::finite;
+using __DPL datapar::fpfix::infinity;
+using __DPL datapar::fpfix::nan;
+using __DPL datapar::fpfix::neg_inf;
+using __DPL datapar::fpfix::negative;
+using __DPL datapar::fpfix::none;
+using __DPL datapar::fpfix::one;
+using __DPL datapar::fpfix::pos_inf;
+using __DPL datapar::fpfix::positive;
+using __DPL datapar::fpfix::qnan;
+using __DPL datapar::fpfix::revert;
+using __DPL datapar::fpfix::signed_inf;
+using __DPL datapar::fpfix::snan;
+using __DPL datapar::fpfix::zero;
+//
+using __DPL datapar::fpfix::condition_set;
+using __DPL datapar::fpfix::condition_set_for;
+using __DPL datapar::fpfix::fpclass_type;
+using __DPL datapar::fpfix::popcount;
+using __DPL datapar::fpfix::result_subset_of;
+//
+using __DPL datapar::fpfix::condition;
+} // namespace fpfix
+
+inline namespace cpo {
+using __DPL datapar::cpo::ceil;
+using __DPL datapar::cpo::floor;
+using __DPL datapar::cpo::round;
+using __DPL datapar::cpo::trunc;
+//
+using __DPL datapar::cpo::copysign;
+using __DPL datapar::cpo::sign;
+using __DPL datapar::cpo::signbit;
+//
+using __DPL datapar::cpo::dot_product;
+using __DPL datapar::cpo::lerp;
+//
+// TODO: cleanup and export frexp
+using __DPL datapar::cpo::exp;
+using __DPL datapar::cpo::exp2;
+using __DPL datapar::cpo::fixup;
+using __DPL datapar::cpo::ldexp;
+using __DPL datapar::cpo::log2;
+using __DPL datapar::cpo::pow;
+using __DPL datapar::cpo::rcp;
+using __DPL datapar::cpo::rsqrt;
+using __DPL datapar::cpo::sqrt;
+//
+
+using __DPL datapar::cpo::isfinite;
+using __DPL datapar::cpo::isinf;
+using __DPL datapar::cpo::isnan;
+using __DPL datapar::cpo::isnanq;
+using __DPL datapar::cpo::isnans;
+using __DPL datapar::cpo::isnormal;
+//
+using __DPL datapar::cpo::cos;
+using __DPL datapar::cpo::cosh;
+using __DPL datapar::cpo::sin;
+using __DPL datapar::cpo::sincos;
+using __DPL datapar::cpo::sincosi;
+using __DPL datapar::cpo::sinh;
+using __DPL datapar::cpo::sinhcosh;
+using __DPL datapar::cpo::sinhcoshi;
+
+} // namespace cpo
+} // namespace datapar
+
+namespace rounding = __DPL datapar::rounding;
+namespace fpfix = __DPL datapar::fpfix;
+__DPL_DEFAULT_NAMESPACE_END
+// NOLINTEND(misc-unused-using-decls,misc-unused-alias-decls)

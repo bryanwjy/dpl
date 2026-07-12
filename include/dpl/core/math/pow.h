@@ -3,6 +3,8 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/math/details/pair.h"
+#include "dpl/core/math/details/polynomial.h"
 #include "dpl/core/math/fixup.h"
 #include "dpl/core/math/frexp.h"
 #include "dpl/core/math/round.h"
@@ -17,14 +19,12 @@
 #  include "dpl/core/dispatch/maskable/transform.h"
 #  include "dpl/core/dispatch/operation/math.h"
 #  include "dpl/core/immediate/constants/infinity.h"
-#  include "dpl/core/math/details/pair.h"
-#  include "dpl/core/math/details/polynomial.h"
 #  include "dpl/core/operations/arithmetic.h" // IWYU pragma: keep
 #  include "dpl/core/operations/bitwise.h"    // IWYU pragma: keep
 #  include "dpl/core/operations/compare.h"    // IWYU pragma: keep
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void pow(...) noexcept = delete;
 
@@ -368,7 +368,7 @@ public:
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::pow_t pow{};
+inline constexpr internal::pow_t pow{};
 }
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

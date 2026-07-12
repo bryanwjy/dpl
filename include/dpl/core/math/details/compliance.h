@@ -9,8 +9,8 @@
 #  include "dpl/std/type_traits/is_base_of.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
-DPL_EXPORT namespace datapar::fmath {
+__DPL_DEFAULT_NAMESPACE_BEGIN
+namespace datapar::fmath {
 struct compliance_t {
     __DPL_HIDE_FROM_ABI constexpr ~compliance_t() = default;
 };
@@ -37,4 +37,4 @@ inline constexpr speed_t speed{};
 inline constexpr full_t full{};
 } // namespace compliance
 } // namespace datapar::fmath
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

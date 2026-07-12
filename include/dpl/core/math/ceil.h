@@ -4,6 +4,7 @@
 #include "dpl/config.h"
 
 #include "dpl/core/math/copysign.h"
+#include "dpl/core/math/details/constants.h"
 #include "dpl/core/math/isfinite.h"
 #include "dpl/core/math/rounding.h"
 #include "dpl/core/math/trunc.h"
@@ -15,13 +16,12 @@
 #  include "dpl/core/dispatch/maskable/transform.h"
 #  include "dpl/core/dispatch/operation/math.h"
 #  include "dpl/core/immediate/constants/one.h"
-#  include "dpl/core/math/details/constants.h"
 #  include "dpl/core/operations/arithmetic.h"
 #  include "dpl/core/operations/compare.h"
 #  include "dpl/core/operations/select.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 
 struct DPL_EMPTY_BASES ceil_t :
@@ -326,7 +326,7 @@ struct fallback_impl<ceil_t> {
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::ceil_t ceil{};
+inline constexpr internal::ceil_t ceil{};
 }
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

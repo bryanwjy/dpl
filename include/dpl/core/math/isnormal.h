@@ -15,7 +15,7 @@
 #  include "dpl/core/operations/compare.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void isnormal(...) noexcept = delete;
 
@@ -180,7 +180,7 @@ public:
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::isnormal_t isnormal{};
+inline constexpr internal::isnormal_t isnormal{};
 }
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

@@ -15,7 +15,7 @@
 #  include "dpl/core/operations/bitwise/bwxor.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void copysign(...) noexcept = delete;
 
@@ -218,7 +218,7 @@ struct fallback_impl<copysign_t> {
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::copysign_t copysign{};
+inline constexpr internal::copysign_t copysign{};
 }
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

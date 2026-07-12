@@ -9,8 +9,8 @@
 #  include "dpl/std/type_traits/is_base_of.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
-DPL_EXPORT namespace datapar::fmath {
+__DPL_DEFAULT_NAMESPACE_BEGIN
+namespace datapar::fmath {
 struct accuracy_t {
     __DPL_HIDE_FROM_ABI constexpr ~accuracy_t() = default;
 };
@@ -31,4 +31,4 @@ inline constexpr maximum_t maximum{};
 inline constexpr speed_t speed{};
 } // namespace accuracy
 } // namespace datapar::fmath
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

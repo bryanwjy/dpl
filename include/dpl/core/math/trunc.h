@@ -3,6 +3,8 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/math/details/compliance.h"
+#include "dpl/core/math/details/ilogb.h"
 #include "dpl/core/math/rounding.h"
 
 #if !DPL_MODULES
@@ -13,8 +15,6 @@
 #  include "dpl/core/dispatch/maskable/transform.h"
 #  include "dpl/core/dispatch/operation/math.h"
 #  include "dpl/core/immediate/constants/one.h"
-#  include "dpl/core/math/details/compliance.h"
-#  include "dpl/core/math/details/ilogb.h"
 #  include "dpl/core/operations/arithmetic.h"
 #  include "dpl/core/operations/bitwise/bwandnot.h"
 #  include "dpl/core/operations/compare.h"
@@ -22,7 +22,7 @@
 #  include "dpl/core/type_traits/representation.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 
 struct trunc_t :
@@ -338,7 +338,7 @@ public:
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::trunc_t trunc{};
+inline constexpr internal::trunc_t trunc{};
 }
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

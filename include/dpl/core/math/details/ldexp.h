@@ -18,8 +18,8 @@
 #  include "dpl/std/concepts/floating_point.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
-DPL_EXPORT namespace datapar::fmath {
+__DPL_DEFAULT_NAMESPACE_BEGIN
+namespace datapar::fmath {
 
 template <floating_point T, simd_abi A>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
@@ -46,4 +46,4 @@ constexpr auto DPL_VECTORCALL ldexp(compliance::speed_t, basic_vector<T, A> val,
 }
 
 } // namespace datapar::fmath
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

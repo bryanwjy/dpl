@@ -5,6 +5,7 @@
 
 #include "dpl/core/math/ceil.h"
 #include "dpl/core/math/copysign.h"
+#include "dpl/core/math/details/constants.h"
 #include "dpl/core/math/floor.h"
 #include "dpl/core/math/isfinite.h"
 #include "dpl/core/math/rounding.h"
@@ -14,7 +15,6 @@
 #  include "dpl/core/concepts/extended.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/immediate/constants/one.h"
-#  include "dpl/core/math/details/constants.h"
 #  include "dpl/core/operations/arithmetic.h"
 #  include "dpl/core/operations/bitwise/bwandnot.h"
 #  include "dpl/core/operations/cast.h"
@@ -23,7 +23,7 @@
 #  include "dpl/core/type_traits/representation.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 
 struct DPL_EMPTY_BASES round_t :
@@ -498,7 +498,7 @@ struct fallback_impl<round_t> {
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::round_t round{};
+inline constexpr internal::round_t round{};
 }
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

@@ -3,6 +3,8 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/math/details/pair.h"
+#include "dpl/core/math/details/polynomial.h"
 #include "dpl/core/math/fixup.h"
 #include "dpl/core/math/frexp.h"
 
@@ -15,15 +17,13 @@
 #  include "dpl/core/dispatch/operation/math.h"
 #  include "dpl/core/immediate/constants/infinity.h"
 #  include "dpl/core/immediate/constants/nan.h"
-#  include "dpl/core/math/details/pair.h"
-#  include "dpl/core/math/details/polynomial.h"
 #  include "dpl/core/numbers/ext.h"           // IWYU pragma: keep
 #  include "dpl/core/operations/arithmetic.h" // IWYU pragma: keep
 #  include "dpl/core/operations/bitwise.h"    // IWYU pragma: keep
 #  include "dpl/core/operations/compare.h"    // IWYU pragma: keep
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void log2(...) noexcept = delete;
 
@@ -251,7 +251,7 @@ struct fallback_impl<log2_t> {
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::log2_t log2{};
+inline constexpr internal::log2_t log2{};
 }
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

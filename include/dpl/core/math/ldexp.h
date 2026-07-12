@@ -16,7 +16,7 @@
 #  include "dpl/std/bit/popcount.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 
 void ldexp(...) noexcept = delete;
@@ -239,4 +239,4 @@ inline namespace cpo {
 inline constexpr internal::ldexp_t ldexp{};
 }
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

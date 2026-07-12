@@ -15,7 +15,7 @@
 #  include "dpl/std/concepts/floating_point.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void lerp(...) noexcept = delete;
 
@@ -367,7 +367,7 @@ public:
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::lerp_t lerp{};
+inline constexpr internal::lerp_t lerp{};
 } // namespace cpo
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

@@ -3,17 +3,18 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/math/details/fpfix.h"
+
 #if !DPL_MODULES
-#  include "dpl/core/math/details/fpfix.h"
 #  include "dpl/std/bit/popcount.h"
 #  include "dpl/std/concepts/floating_point.h"
 #  include "dpl/std/type_traits/remove_cv.h"
 #  include "dpl/std/utility/to_underlying.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
-DPL_EXPORT namespace datapar::fpfix {
+namespace datapar::fpfix {
 
 inline constexpr mx::revert_t revert{};
 inline constexpr mx::signed_inf_t signed_inf{};
@@ -60,6 +61,6 @@ inline constexpr mx::fixup_pair<static_cast<mx::fpc>(C),
     condition{};
 } // namespace datapar::fpfix
 
-DPL_EXPORT namespace fpfix = datapar::fpfix; // NOLINT
+namespace fpfix = datapar::fpfix; // NOLINT
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

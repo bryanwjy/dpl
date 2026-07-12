@@ -14,8 +14,8 @@
 #  include "dpl/std/concepts/floating_point.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
-DPL_EXPORT namespace datapar::fmath {
+__DPL_DEFAULT_NAMESPACE_BEGIN
+namespace datapar::fmath {
 
 struct toint_t : broadcastable_base<toint_t> {
     __DPL_HIDE_FROM_ABI explicit constexpr toint_t() noexcept = default;
@@ -97,4 +97,4 @@ struct inv_ln2_t : broadcastable_base<inv_ln2_t> {
 inline constexpr inv_ln2_t inv_ln2{};
 
 } // namespace datapar::fmath
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

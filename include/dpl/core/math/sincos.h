@@ -3,6 +3,12 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/math/details/gather.h"
+#include "dpl/core/math/details/ilogb.h"
+#include "dpl/core/math/details/ldexp.h"
+#include "dpl/core/math/details/pair.h"
+#include "dpl/core/math/details/polynomial.h"
+#include "dpl/core/math/details/rempi_table.h"
 #include "dpl/core/math/round.h"
 #include "dpl/core/math/sign.h"
 #include "dpl/core/math/trunc.h"
@@ -15,19 +21,13 @@
 #  include "dpl/core/immediate/constants/inv_pi.h"
 #  include "dpl/core/immediate/constants/nan.h"
 #  include "dpl/core/immediate/constants/zero.h"
-#  include "dpl/core/math/details/gather.h"
-#  include "dpl/core/math/details/ilogb.h"
-#  include "dpl/core/math/details/ldexp.h"
-#  include "dpl/core/math/details/pair.h"
-#  include "dpl/core/math/details/polynomial.h"
-#  include "dpl/core/math/details/rempi_table.h"
 #  include "dpl/core/operations/bitwise.h" // IWYU pragma: keep
 #  include "dpl/core/operations/compare.h"
 #  include "dpl/core/operations/logical.h"
 #  include "dpl/core/operations/select.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 
 void sin(...) noexcept = delete;
@@ -1095,11 +1095,11 @@ struct fallback_impl<cos_t> {
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::sin_t sin{};
-DPL_EXPORT inline constexpr internal::cos_t cos{};
-DPL_EXPORT inline constexpr internal::sincos_t sincos{};
-DPL_EXPORT template <auto V>
+inline constexpr internal::sin_t sin{};
+inline constexpr internal::cos_t cos{};
+inline constexpr internal::sincos_t sincos{};
+template <auto V>
 inline constexpr internal::sincosi_t<V> sincosi{};
 } // namespace cpo
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

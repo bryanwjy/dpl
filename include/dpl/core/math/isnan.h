@@ -18,7 +18,7 @@
 #  include "dpl/core/type_traits/representation.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void isnan(...) noexcept = delete;
 
@@ -184,7 +184,7 @@ public:
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::isnan_t isnan{};
+inline constexpr internal::isnan_t isnan{};
 }
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

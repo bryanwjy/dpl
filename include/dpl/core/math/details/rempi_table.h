@@ -7,8 +7,8 @@
 #  include "dpl/std/concepts/floating_point.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
-DPL_EXPORT namespace datapar::fmath {
+__DPL_DEFAULT_NAMESPACE_BEGIN
+namespace datapar::fmath {
 template <floating_point T>
 inline constexpr T rempi_table[] = {};
 
@@ -4316,4 +4316,4 @@ inline constexpr double rempi_table<double>[] = {
     0,
 };
 } // namespace datapar::fmath
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

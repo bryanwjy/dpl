@@ -26,7 +26,7 @@
 #  include "dpl/core/operations/select.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::internal {
 void fixup(...) noexcept = delete;
@@ -481,12 +481,10 @@ private:
 };
 } // namespace datapar::internal
 
-DPL_EXPORT namespace fpfix = datapar::fpfix; // NOLINT
-
 namespace datapar {
 inline namespace cpo {
 inline constexpr internal::fixup_t fixup{};
 }
 } // namespace datapar
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

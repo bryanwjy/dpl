@@ -3,6 +3,9 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/math/details/floating_point_simd.h"
+#include "dpl/core/math/details/ilogb.h"
+#include "dpl/core/math/details/ldexp.h"
 #include "dpl/core/math/ldexp.h"
 
 #if !DPL_MODULES
@@ -12,9 +15,6 @@
 #  include "dpl/core/immediate/constants/exponent_bias.h"
 #  include "dpl/core/immediate/constants/mantissa_width.h"
 #  include "dpl/core/immediate/constants/min_value.h"
-#  include "dpl/core/math/details/floating_point_simd.h"
-#  include "dpl/core/math/details/ilogb.h"
-#  include "dpl/core/math/details/ldexp.h"
 #  include "dpl/core/operations/arithmetic.h"
 #  include "dpl/core/operations/cast.h"
 #  include "dpl/core/operations/compare.h"
@@ -22,7 +22,7 @@
 #  include "dpl/std/concepts/integral.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar {
 
@@ -174,30 +174,29 @@ template <enumeration auto... Vs>
 inline constexpr bool is_frexp_options<frexp_options_t<Vs...>> = true;
 } // namespace internal
 
-DPL_EXPORT inline constexpr internal::frexp_copysign_t frexp_copysign{};
-DPL_EXPORT inline constexpr internal::frexp_abs_t frexp_abs{};
-DPL_EXPORT inline constexpr internal::frexp_positive_t frexp_positive{};
-DPL_EXPORT inline constexpr internal::frexp_binade_t frexp_binade{};
-DPL_EXPORT inline constexpr internal::frexp_standard_t frexp_standard{};
-DPL_EXPORT inline constexpr internal::frexp_extended_t frexp_extended{};
-DPL_EXPORT inline constexpr internal::frexp_reduced_t frexp_reduced{};
-DPL_EXPORT inline constexpr internal::frexp_integral_t frexp_integral{};
-DPL_EXPORT inline constexpr internal::frexp_floating_point_t frexp_floating_point{};
-DPL_EXPORT inline constexpr auto frexp_default =
+inline constexpr internal::frexp_copysign_t frexp_copysign{};
+inline constexpr internal::frexp_abs_t frexp_abs{};
+inline constexpr internal::frexp_positive_t frexp_positive{};
+inline constexpr internal::frexp_binade_t frexp_binade{};
+inline constexpr internal::frexp_standard_t frexp_standard{};
+inline constexpr internal::frexp_extended_t frexp_extended{};
+inline constexpr internal::frexp_reduced_t frexp_reduced{};
+inline constexpr internal::frexp_integral_t frexp_integral{};
+inline constexpr internal::frexp_floating_point_t frexp_floating_point{};
+inline constexpr auto frexp_default =
     frexp_copysign | frexp_standard | frexp_integral;
 
 template <typename T>
 concept is_frexp_type = same_as<T, internal::frexp_integral_t> ||
     same_as<T, internal::frexp_floating_point_t>;
 
-DPL_EXPORT template <fmath::floating_point_simd T,
-    is_frexp_type auto E = frexp_integral>
+template <fmath::floating_point_simd T, is_frexp_type auto E = frexp_integral>
 struct frexp_result {
     T fr;
     T exp;
 };
 
-DPL_EXPORT template <fmath::floating_point_simd T>
+template <fmath::floating_point_simd T>
 requires requires {
     typename signed_representation_t<typename T::value_type>;
     typename rebind_simd_t<T, signed_representation_t<typename T::value_type>>;
@@ -211,7 +210,7 @@ struct frexp_result<T, frexp_integral> {
     rebind_simd_t<T, signed_representation_t<typename T::value_type>> exp;
 };
 
-DPL_EXPORT template <typename T>
+template <typename T>
 concept frexp_options = internal::is_frexp_options<T>;
 } // namespace datapar
 
@@ -407,7 +406,7 @@ public:
 
 namespace datapar {
 
-DPL_EXPORT template <fmath::floating_point_simd Fr, simd_vector Exp,
+template <fmath::floating_point_simd Fr, simd_vector Exp,
     frexp_options Opt = decltype(frexp_default)>
 requires (Opt::has(frexp_integral) && integral<simd_element_type_t<Exp>> &&
              common_size_with<simd_element_type_t<Fr>,
@@ -422,8 +421,8 @@ constexpr auto make_frexp_result(Fr fr, Exp exp, Opt = frexp_default) noexcept {
 }
 
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::frexp_t frexp{};
+inline constexpr internal::frexp_t frexp{};
 }
 } // namespace datapar
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

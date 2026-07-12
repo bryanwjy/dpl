@@ -21,13 +21,13 @@
 #  include "dpl/std/concepts/convertible_to.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
-DPL_EXPORT namespace datapar::internal {
+__DPL_DEFAULT_NAMESPACE_BEGIN
+namespace datapar::internal {
 struct rsqrt_t;
 struct sqrt_t;
 } // namespace datapar::internal
 
-DPL_EXPORT namespace datapar::fmath {
+namespace datapar::fmath {
 
 template <floating_point_like T, simd_abi A>
 requires simd_floating_point_for<T, A>
@@ -631,4 +631,4 @@ requires explicitly_convertible_to<ln2_t, T>
 inline constexpr auto ln2_v = static_cast<T>(ln2);
 
 } // namespace datapar::fmath
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

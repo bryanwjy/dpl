@@ -15,8 +15,8 @@
 #  include "dpl/std/utility/to_underlying.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
-DPL_EXPORT namespace datapar::fmath {
+__DPL_DEFAULT_NAMESPACE_BEGIN
+namespace datapar::fmath {
 enum class fpc : unsigned char {
     none = 0,
     zero = 1 << 0,
@@ -308,4 +308,4 @@ inline constexpr bool
         (... && result_type<Ts, E>);
 } // namespace datapar::fmath
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

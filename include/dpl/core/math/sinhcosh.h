@@ -3,6 +3,9 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/math/details/ldexp.h"
+#include "dpl/core/math/details/pair.h"
+#include "dpl/core/math/details/polynomial.h"
 #include "dpl/core/math/round.h"
 
 #if !DPL_MODULES
@@ -10,16 +13,13 @@
 #  include "dpl/core/dispatch/interface.h"
 #  include "dpl/core/dispatch/maskable/transform.h"
 #  include "dpl/core/dispatch/operation/math.h"
-#  include "dpl/core/math/details/ldexp.h"
-#  include "dpl/core/math/details/pair.h"
-#  include "dpl/core/math/details/polynomial.h"
 #  include "dpl/core/operations/bitwise.h" // IWYU pragma: keep
 #  include "dpl/core/operations/compare.h"
 #  include "dpl/core/operations/logical.h"
 #  include "dpl/core/operations/select.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 
 void sinh(...) noexcept = delete;
@@ -868,11 +868,11 @@ struct fallback_impl<cosh_t> {
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::sinh_t sinh{};
-DPL_EXPORT inline constexpr internal::cosh_t cosh{};
-DPL_EXPORT inline constexpr internal::sinhcosh_t sinhcosh{};
-DPL_EXPORT template <auto V>
+inline constexpr internal::sinh_t sinh{};
+inline constexpr internal::cosh_t cosh{};
+inline constexpr internal::sinhcosh_t sinhcosh{};
+template <auto V>
 inline constexpr internal::sinhcoshi_t<V> sinhcoshi{};
 } // namespace cpo
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

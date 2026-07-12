@@ -18,7 +18,7 @@
 #  include "dpl/core/operations/select.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 /**
  * Returns the negation of the left argument if the right argument is
@@ -230,8 +230,8 @@ struct fallback_impl<sign_t> {
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::sign_t sign{};
+inline constexpr internal::sign_t sign{};
 }
 } // namespace datapar
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

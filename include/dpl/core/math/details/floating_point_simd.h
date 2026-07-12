@@ -11,9 +11,9 @@
 #  include "dpl/core/numbers/floating_point_like.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
-DPL_EXPORT namespace datapar::fmath {
+namespace datapar::fmath {
 template <typename E, typename A>
 concept simd_floating_point_for =
     floating_point_like<E> && simd_element_for<E, A>;
@@ -25,4 +25,4 @@ concept floating_point_simd_type_with_abi =
     internal::simd_type_with_abi<T, A> && floating_point_simd<T>;
 } // namespace datapar::fmath
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

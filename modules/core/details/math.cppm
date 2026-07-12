@@ -6,7 +6,7 @@ module;
 
 export module dpl:core.details.math;
 export import :core.fwd;
-import :core.details.type_traits;
+import :core.type_traits;
 import :std.concepts;
 import :std.bit;
 import :std.type_traits;
@@ -25,21 +25,36 @@ DPL_DISABLE_WARNING(5244)
 #endif
 
 // IWYU pragma: begin_exports
-#include "dpl/core/math/details/fwd.h"
-
-#include "dpl/core/math/details/accuracy.h"
-#include "dpl/core/math/details/compliance.h"
-#include "dpl/core/math/details/constants.h"
-#include "dpl/core/math/details/floating_point_simd.h"
-#include "dpl/core/math/details/fpfix.h"
-#include "dpl/core/math/details/gather.h"
-#include "dpl/core/math/details/ilogb.h"
-#include "dpl/core/math/details/ldexp.h"
-#include "dpl/core/math/details/pair.h"
-#include "dpl/core/math/details/polynomial.h"
-#include "dpl/core/math/details/rempi_table.h"
-#include "dpl/core/math/details/rounding.h"
-#include "dpl/core/math/details/rsqrt2.h"
+#include "dpl/core/math/addsub.h"
+#include "dpl/core/math/ceil.h"
+#include "dpl/core/math/copysign.h"
+#include "dpl/core/math/dot.h"
+#include "dpl/core/math/exp.h"
+#include "dpl/core/math/exp2.h"
+#include "dpl/core/math/fixup.h"
+#include "dpl/core/math/floor.h"
+#include "dpl/core/math/fma.h"
+#include "dpl/core/math/fpfix.h"
+#include "dpl/core/math/isfinite.h"
+#include "dpl/core/math/isinf.h"
+#include "dpl/core/math/isnan.h"
+#include "dpl/core/math/isnanq.h"
+#include "dpl/core/math/isnans.h"
+#include "dpl/core/math/isnormal.h"
+#include "dpl/core/math/ldexp.h"
+#include "dpl/core/math/lerp.h"
+#include "dpl/core/math/log2.h"
+#include "dpl/core/math/pow.h"
+#include "dpl/core/math/rcp.h"
+#include "dpl/core/math/round.h"
+#include "dpl/core/math/rounding.h"
+#include "dpl/core/math/rsqrt.h"
+#include "dpl/core/math/sign.h"
+#include "dpl/core/math/signbit.h"
+#include "dpl/core/math/sincos.h"
+#include "dpl/core/math/sinhcosh.h"
+#include "dpl/core/math/sqrt.h"
+#include "dpl/core/math/trunc.h"
 // IWYU pragma: end_exports
 
 DPL_DISABLE_WARNING_POP()
