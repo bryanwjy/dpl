@@ -17,7 +17,7 @@
 #  include "dpl/std/utility/to_unsigned.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
 struct nexponent_bits_t : broadcastable_base<nexponent_bits_t> {
@@ -51,4 +51,4 @@ requires explicitly_convertible_to<exponent_bits_t, T>
 inline constexpr auto exponent_bits_v = static_cast<T>(exponent_bits);
 
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

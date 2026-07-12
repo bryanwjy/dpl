@@ -5,11 +5,11 @@
 
 #include "dpl/core/immediate/broadcastable_base.h"
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar {
 
-DPL_EXPORT struct zero_t;
+struct zero_t;
 
 struct nzero_t : broadcastable_base<nzero_t> {
     __DPL_HIDE_FROM_ABI explicit constexpr nzero_t() noexcept = default;
@@ -24,7 +24,7 @@ struct nzero_t : broadcastable_base<nzero_t> {
     consteval zero_t operator-(this nzero_t) noexcept;
 };
 
-DPL_EXPORT struct zero_t : broadcastable_base<zero_t> {
+struct zero_t : broadcastable_base<zero_t> {
     __DPL_HIDE_FROM_ABI explicit constexpr zero_t() noexcept = default;
 
     template <typename T>
@@ -41,11 +41,11 @@ consteval zero_t nzero_t::operator-(this nzero_t) noexcept {
     return zero_t{};
 }
 
-DPL_EXPORT inline constexpr zero_t zero{};
+inline constexpr zero_t zero{};
 
-DPL_EXPORT template <typename T>
+template <typename T>
 requires explicitly_convertible_to<zero_t, T>
 inline constexpr auto zero_v = static_cast<T>(zero);
 
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

@@ -13,7 +13,7 @@
 #  include "dpl/std/concepts/convertible_to.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
 inline constexpr struct epsilon_t : broadcastable_base<epsilon_t> {
@@ -34,4 +34,4 @@ requires explicitly_convertible_to<epsilon_t, T>
 inline constexpr auto epsilon_v = static_cast<T>(epsilon);
 
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

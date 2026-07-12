@@ -9,10 +9,10 @@
 #  include "dpl/std/concepts/convertible_to.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
-DPL_EXPORT struct one_t : broadcastable_base<one_t> {
+struct one_t : broadcastable_base<one_t> {
     __DPL_HIDE_FROM_ABI explicit constexpr one_t() noexcept = default;
 
     template <typename T>
@@ -23,11 +23,11 @@ DPL_EXPORT struct one_t : broadcastable_base<one_t> {
     }
 };
 
-DPL_EXPORT inline constexpr one_t one{};
+inline constexpr one_t one{};
 
-DPL_EXPORT template <typename T>
+template <typename T>
 requires explicitly_convertible_to<one_t, T>
 inline constexpr auto one_v = static_cast<T>(one);
 
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

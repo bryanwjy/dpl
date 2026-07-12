@@ -70,7 +70,8 @@ inline constexpr struct bitcmp_t {
 
 template <dpl::floating_point_like To, dpl::floating_point_like From,
     typename Pred = decltype(dpp::cmpeq)>
-requires (dpp::digits_v<To> != dpp::digits_v<From>)
+requires (dpl::floating_point_traits<To>::digits !=
+    dpl::floating_point_traits<From>::digits)
 constexpr bool one_way(From val, Pred pred = dpp::cmpeq) noexcept {
     constexpr auto count =
         min(element_count<From, abi>, element_count<To, abi>);

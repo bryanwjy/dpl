@@ -14,10 +14,10 @@
 #  include "dpl/std/bit/bit_type.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
-DPL_EXPORT template <floating_point_like T>
+template <floating_point_like T>
 struct exponent_bias_t : broadcastable_base<exponent_bias_t<T>> {
     __DPL_HIDE_FROM_ABI explicit constexpr exponent_bias_t() noexcept = default;
 
@@ -32,11 +32,11 @@ struct exponent_bias_t : broadcastable_base<exponent_bias_t<T>> {
     }
 };
 
-DPL_EXPORT template <basic_element T>
+template <basic_element T>
 inline constexpr exponent_bias_t<T> exponent_bias{};
 
-DPL_EXPORT template <basic_element T>
+template <basic_element T>
 inline constexpr int exponent_bias_v = exponent_bias<T>;
 
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

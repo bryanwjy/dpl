@@ -276,8 +276,10 @@ constexpr void large_sp_to_int() noexcept {
     static_assert(sizeof(I) == sizeof(float));
     using rep_t = dpp::signed_representation_t<F>;
     constexpr auto max = []() {
-        auto const rep = rep_t(-1)
-            << (sizeof(F) * dpl::char_bit_v - dpp::digits_v<F> - 1);
+        // Gets the maximal value below which all integers are representable
+        constexpr auto shift = dpl::floating_point_traits<F>::width -
+            dpl::floating_point_traits<F>::digits - 1;
+        auto const rep = dpl::to_signed(dpl::to_unsigned(rep_t(-1)) << shift);
         auto const val = rep & dpp::max_value_v<rep_t>;
         if (val > dpp::max_value_v<I>) {
             return static_cast<F>(dpp::max_value_v<I>);

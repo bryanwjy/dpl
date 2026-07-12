@@ -11,9 +11,9 @@
 #  include "dpl/std/utility/template_barrier.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
-DPL_EXPORT template <auto V>
+template <auto V>
 struct immediate : integral_constant<remove_const_t<decltype(V)>, V> {
 private:
     using base_type DPL_NODEBUG =
@@ -62,10 +62,10 @@ public:
     }
 };
 
-DPL_EXPORT template <auto V>
+template <auto V>
 inline constexpr immediate<V> imm{};
 
-DPL_EXPORT template <auto V>
+template <auto V>
 consteval immediate<V> to_immediate(immediate<V> imm) noexcept {
     return imm;
 }
@@ -82,16 +82,15 @@ concept immediate_like_of = convertible_to<T, E> &&
     requires { typename immediate<static_cast<E>(T())>; };
 } // namespace internal
 
-DPL_EXPORT template <template_barrier_t = template_barrier,
-    internal::immediate_like T>
+template <template_barrier_t = template_barrier, internal::immediate_like T>
 consteval immediate<T::value> to_immediate(T imm) noexcept {
     return {};
 }
 
-DPL_EXPORT template <typename E, internal::immediate_like_of<E> T>
+template <typename E, internal::immediate_like_of<E> T>
 consteval auto to_immediate(T) noexcept -> immediate<static_cast<E>(T())> {
     return {};
 }
 
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

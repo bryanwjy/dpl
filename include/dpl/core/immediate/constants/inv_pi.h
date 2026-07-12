@@ -10,10 +10,10 @@
 #  include "dpl/std/concepts/floating_point.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
-DPL_EXPORT struct inv_pi_t : broadcastable_base<inv_pi_t> {
+struct inv_pi_t : broadcastable_base<inv_pi_t> {
     __DPL_HIDE_FROM_ABI explicit constexpr inv_pi_t() noexcept = default;
 
     template <floating_point T>
@@ -23,11 +23,11 @@ DPL_EXPORT struct inv_pi_t : broadcastable_base<inv_pi_t> {
     }
 };
 
-DPL_EXPORT inline constexpr inv_pi_t inv_pi{};
+inline constexpr inv_pi_t inv_pi{};
 
-DPL_EXPORT template <typename T>
+template <typename T>
 requires explicitly_convertible_to<inv_pi_t, T>
 inline constexpr T inv_pi_v = static_cast<T>(inv_pi);
 
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

@@ -15,11 +15,11 @@
 #  include "dpl/std/utility/ignore.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar {
 
-DPL_EXPORT struct all_bits_t : broadcastable_base<all_bits_t> {
+struct all_bits_t : broadcastable_base<all_bits_t> {
     __DPL_HIDE_FROM_ABI explicit constexpr all_bits_t() noexcept = default;
 
     template <integral T>
@@ -44,11 +44,11 @@ DPL_EXPORT struct all_bits_t : broadcastable_base<all_bits_t> {
     }
 };
 
-DPL_EXPORT inline constexpr all_bits_t all_bits{};
+inline constexpr all_bits_t all_bits{};
 
-DPL_EXPORT template <typename T>
+template <typename T>
 requires explicitly_convertible_to<all_bits_t, T>
 inline constexpr auto all_bits_v = static_cast<T>(all_bits);
 
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

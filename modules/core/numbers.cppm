@@ -10,6 +10,7 @@ import :core.details.numbers;
 __DPL_DEFAULT_NAMESPACE_BEGIN
 // NOLINTBEGIN(misc-unused-using-decls,misc-unused-alias-decls)
 using __DPL floating_point_like;
+using __DPL floating_point_traits;
 namespace ext {
 using __DPL ext::bfloat16;
 using __DPL ext::float16;

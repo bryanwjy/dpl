@@ -6,36 +6,39 @@ module;
 
 export module dpl:core.immediate;
 export import :core.fwd;
-import :core.details.type_traits;
-import :std.concepts;
-import :std.bit;
-import :std.type_traits;
-import :std.utility;
-import :core.concepts;
-import :core.numbers;
-import :core.type_traits;
+import :core.details.immediate;
 
-// IWYU pragma: begin_exports
-#include "dpl/core/immediate/broadcastable_base.h"
-#include "dpl/core/immediate/const_mask.h"
-#include "dpl/core/immediate/constants/all_bits.h"
-#include "dpl/core/immediate/constants/digits.h"
-#include "dpl/core/immediate/constants/epsilon.h"
-#include "dpl/core/immediate/constants/exponent_bias.h"
-#include "dpl/core/immediate/constants/exponent_bits.h"
-#include "dpl/core/immediate/constants/exponent_mask.h"
-#include "dpl/core/immediate/constants/infinity.h"
-#include "dpl/core/immediate/constants/inv_pi.h"
-#include "dpl/core/immediate/constants/ln2.h"
-#include "dpl/core/immediate/constants/lsb.h"
-#include "dpl/core/immediate/constants/mantissa_bits.h"
-#include "dpl/core/immediate/constants/mantissa_width.h"
-#include "dpl/core/immediate/constants/max_value.h"
-#include "dpl/core/immediate/constants/min_value.h"
-#include "dpl/core/immediate/constants/msb.h"
-#include "dpl/core/immediate/constants/nan.h"
-#include "dpl/core/immediate/constants/one.h"
-#include "dpl/core/immediate/constants/value_bits.h"
-#include "dpl/core/immediate/constants/zero.h"
-#include "dpl/core/immediate/immediate.h"
-// IWYU pragma: end_exports
+__DPL_DEFAULT_NAMESPACE_BEGIN
+// NOLINTBEGIN(misc-unused-using-decls)
+
+namespace datapar {
+using __DPL datapar::all_bits;
+using __DPL datapar::all_bits_t;
+using __DPL datapar::all_bits_v;
+using __DPL datapar::broadcastable_base;
+using __DPL datapar::const_mask;
+using __DPL datapar::imm;
+using __DPL datapar::immediate;
+using __DPL datapar::lsb;
+using __DPL datapar::lsb_v;
+using __DPL datapar::msb;
+using __DPL datapar::msb_v;
+using __DPL datapar::one;
+using __DPL datapar::one_t;
+using __DPL datapar::one_v;
+using __DPL datapar::zero;
+using __DPL datapar::zero_t;
+using __DPL datapar::zero_v;
+// TODO move and hide everything below under math
+using __DPL datapar::infinity;
+using __DPL datapar::infinity_v;
+using __DPL datapar::max_value;
+using __DPL datapar::max_value_v;
+using __DPL datapar::min_value;
+using __DPL datapar::min_value_v;
+using __DPL datapar::nan;
+using __DPL datapar::nan_v;
+} // namespace datapar
+
+// NOLINTEND(misc-unused-using-decls)
+__DPL_DEFAULT_NAMESPACE_END

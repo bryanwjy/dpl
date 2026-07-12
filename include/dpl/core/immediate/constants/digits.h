@@ -11,7 +11,7 @@
 #  include "dpl/std/concepts/integral.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 template <integral T>
 consteval int digits_of() noexcept {
@@ -27,18 +27,18 @@ consteval int digits_of() noexcept {
     return static_cast<int>(floating_point_traits<T>::digits);
 }
 
-DPL_EXPORT template <basic_element T>
+template <basic_element T>
 struct digits_t :
     integral_constant<int, digits_of<T>()>,
     broadcastable_base<digits_t<T>> {
     __DPL_HIDE_FROM_ABI explicit constexpr digits_t() noexcept = default;
 };
 
-DPL_EXPORT template <basic_element T>
+template <basic_element T>
 inline constexpr digits_t<T> digits{};
 
-DPL_EXPORT template <basic_element T>
+template <basic_element T>
 inline constexpr int digits_v = digits<T>;
 
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

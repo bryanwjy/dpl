@@ -15,7 +15,7 @@
 #  include "dpl/std/concepts/integral.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
 template <floating_point T>
@@ -64,4 +64,4 @@ requires explicitly_convertible_to<exponent_mask_t<T>, U> &&
 inline constexpr auto exponent_mask_v = static_cast<U>(exponent_mask<T>);
 
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

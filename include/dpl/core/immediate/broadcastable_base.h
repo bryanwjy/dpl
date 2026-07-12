@@ -10,19 +10,19 @@
 #  include "dpl/std/type_traits/is_empty.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar {
-DPL_EXPORT template <typename T>
+template <typename T>
 struct broadcastable_base {
     __DPL_HIDE_FROM_ABI constexpr ~broadcastable_base() noexcept = default;
 };
 
-DPL_EXPORT template <typename T, typename ValueType>
+template <typename T, typename ValueType>
 concept broadcastable_constant = derived_from<T, broadcastable_base<T>> &&
     is_empty_v<T> && semiregular<T> && convertible_to<T, ValueType> &&
     requires { typename integral_constant<ValueType, T{}>; };
 
 } // namespace datapar
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

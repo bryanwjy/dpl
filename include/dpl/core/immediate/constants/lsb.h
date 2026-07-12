@@ -12,10 +12,10 @@
 #  include "dpl/std/concepts/integral.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
-DPL_EXPORT struct lsb_t : broadcastable_base<lsb_t> {
+struct lsb_t : broadcastable_base<lsb_t> {
     __DPL_HIDE_FROM_ABI explicit constexpr lsb_t() noexcept = default;
 
     template <integral T>
@@ -40,11 +40,11 @@ DPL_EXPORT struct lsb_t : broadcastable_base<lsb_t> {
     }
 };
 
-DPL_EXPORT inline constexpr lsb_t lsb{};
+inline constexpr lsb_t lsb{};
 
-DPL_EXPORT template <typename T>
+template <typename T>
 requires explicitly_convertible_to<lsb_t, T>
 inline constexpr auto lsb_v = static_cast<T>(lsb);
 
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

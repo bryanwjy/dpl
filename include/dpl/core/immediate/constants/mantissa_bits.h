@@ -14,10 +14,10 @@
 #  include "dpl/std/concepts/convertible_to.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
-DPL_EXPORT struct mantissa_bits_t : broadcastable_base<mantissa_bits_t> {
+struct mantissa_bits_t : broadcastable_base<mantissa_bits_t> {
     __DPL_HIDE_FROM_ABI explicit constexpr mantissa_bits_t() noexcept = default;
 
     template <floating_point_like T>
@@ -27,11 +27,11 @@ DPL_EXPORT struct mantissa_bits_t : broadcastable_base<mantissa_bits_t> {
     }
 };
 
-DPL_EXPORT inline constexpr mantissa_bits_t mantissa_bits{};
+inline constexpr mantissa_bits_t mantissa_bits{};
 
-DPL_EXPORT template <typename T>
+template <typename T>
 requires explicitly_convertible_to<mantissa_bits_t, T>
 inline constexpr auto mantissa_bits_v = static_cast<T>(mantissa_bits);
 
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

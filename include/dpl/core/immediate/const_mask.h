@@ -21,7 +21,7 @@
 #  include "dpl/std/utility/template_barrier.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 namespace internal {
 template <size_t W>
@@ -48,7 +48,7 @@ struct mask_value<W> {
 #undef __DPL_MAX_BITS
 } // namespace internal
 
-DPL_EXPORT template <size_t W, internal::mask_value_t<W> V>
+template <size_t W, internal::mask_value_t<W> V>
 struct const_mask;
 
 namespace internal {
@@ -58,7 +58,7 @@ template <size_t W, internal::mask_value_t<W> V>
 inline constexpr bool const_mask_specialization<const_mask<W, V>> = true;
 } // namespace internal
 
-DPL_EXPORT template <size_t W, internal::mask_value_t<W> V>
+template <size_t W, internal::mask_value_t<W> V>
 struct const_mask : const_mask_base<const_mask<W, V>> {
 
 private:
@@ -285,7 +285,7 @@ template <typename M, typename T>
 concept const_mask_for = fixed_width_simd_type<T> && const_mask_like<M> &&
     simd_abi_traits<T>::size >= __DPL bit_width(M::value);
 
-DPL_EXPORT template <fixed_width_simd_type T, const_mask_for<T> M>
+template <fixed_width_simd_type T, const_mask_for<T> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 consteval auto to_const_mask(M) noexcept {
     constexpr auto width = simd_abi_traits<T>::size();
@@ -345,7 +345,7 @@ template <auto V>
 requires requires { typename cmask_t<V>; }
 inline constexpr cmask_t<V> cmask_v{};
 
-DPL_EXPORT template <template_barrier_t = template_barrier, const_mask_like M>
+template <template_barrier_t = template_barrier, const_mask_like M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 consteval auto to_const_mask(M) noexcept {
     constexpr auto W = internal::auto_width(M::value);
@@ -353,7 +353,7 @@ consteval auto to_const_mask(M) noexcept {
     return const_mask<W, V>{};
 }
 
-DPL_EXPORT template <template_barrier_t = template_barrier, size_t W,
+template <template_barrier_t = template_barrier, size_t W,
     internal::mask_value_t<W> V>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 consteval auto to_const_mask(const_mask<W, V> mask) noexcept {
@@ -361,4 +361,4 @@ consteval auto to_const_mask(const_mask<W, V> mask) noexcept {
 }
 
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

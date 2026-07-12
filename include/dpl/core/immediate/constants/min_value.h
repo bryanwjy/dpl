@@ -14,10 +14,10 @@
 #  include "dpl/std/concepts/integral.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
-DPL_EXPORT struct min_value_t : broadcastable_base<min_value_t> {
+struct min_value_t : broadcastable_base<min_value_t> {
     __DPL_HIDE_FROM_ABI explicit constexpr min_value_t() noexcept = default;
 
     template <integral T>
@@ -40,11 +40,11 @@ DPL_EXPORT struct min_value_t : broadcastable_base<min_value_t> {
     }
 };
 
-DPL_EXPORT inline constexpr min_value_t min_value{};
+inline constexpr min_value_t min_value{};
 
-DPL_EXPORT template <typename T>
+template <typename T>
 requires explicitly_convertible_to<min_value_t, T>
 inline constexpr auto min_value_v = static_cast<T>(min_value);
 
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END
