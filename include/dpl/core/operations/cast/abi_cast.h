@@ -20,7 +20,7 @@
 #  include "dpl/core/type_traits/simd_native_type.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 template <typename>
 void abi_cast(...) noexcept = delete;
@@ -199,9 +199,9 @@ struct extended_impl<abi_cast_t<ToA>> {
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT template <typename To>
+template <typename To>
 inline constexpr internal::abi_cast_t<To> abi_cast{};
 } // namespace cpo
 } // namespace datapar
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

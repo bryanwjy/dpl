@@ -26,7 +26,7 @@
 #  include "dpl/std/utility/bitset.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void rotl(...) noexcept = delete;
 
@@ -478,10 +478,10 @@ public:
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::rotl_t rotl{};
-DPL_EXPORT template <size_t V>
+inline constexpr internal::rotl_t rotl{};
+template <size_t V>
 inline constexpr internal::rotli_t<V> rotli{};
 } // namespace cpo
 } // namespace datapar
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

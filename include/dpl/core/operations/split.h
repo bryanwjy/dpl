@@ -19,7 +19,7 @@
 #  include "dpl/core/operations/internal/array_for.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 /**
  * @brief Splits a SIMD value into @p N equally sized SIMD values.
@@ -211,8 +211,8 @@ public:
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT template <size_t N>
+template <size_t N>
 inline constexpr internal::split_t<N> split{};
 }
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

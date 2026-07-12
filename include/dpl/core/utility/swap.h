@@ -11,7 +11,7 @@
 #  include "dpl/std/utility/template_barrier.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 template <template_barrier_t = __DPL template_barrier, typename M, simd_type L,
     simd_type R>
@@ -46,4 +46,4 @@ __DPL_HIDE_FROM_ABI constexpr void swap(L& lhs, R& rhs) noexcept {
     rhs = __DPL move(right);
 }
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

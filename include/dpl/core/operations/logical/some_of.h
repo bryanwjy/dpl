@@ -19,7 +19,7 @@
 #  include "dpl/std/concepts/invocable.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 
 void some_of(...) noexcept = delete;
@@ -83,7 +83,7 @@ struct extended_impl<some_of_t> {
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::some_of_t some_of{};
+inline constexpr internal::some_of_t some_of{};
 } // namespace cpo
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

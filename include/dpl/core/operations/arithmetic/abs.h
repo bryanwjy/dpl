@@ -19,7 +19,7 @@
 #  include "dpl/std/type_traits/type_identity.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void abs(...) noexcept = delete;
 
@@ -182,8 +182,8 @@ public:
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::abs_t abs{};
+inline constexpr internal::abs_t abs{};
 } // namespace cpo
 } // namespace datapar
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

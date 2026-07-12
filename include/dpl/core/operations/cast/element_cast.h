@@ -20,7 +20,7 @@
 #  include "dpl/core/type_traits/rebind_simd.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 template <typename>
 void element_cast(...) noexcept = delete;
@@ -223,9 +223,9 @@ public:
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT template <typename To>
+template <typename To>
 inline constexpr internal::element_cast_t<To> element_cast{};
 } // namespace cpo
 } // namespace datapar
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

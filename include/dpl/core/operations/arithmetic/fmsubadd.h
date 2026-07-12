@@ -18,7 +18,7 @@
 #  include "dpl/core/immediate/const_mask.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 
 void fmsubadd(...) noexcept = delete;
@@ -58,7 +58,7 @@ struct fallback_impl<fmsubadd_t> : ternary_broadcasting_fallback<fmsubadd_t> {
     using ternary_broadcasting_fallback<fmsubadd_t>::operator();
 };
 
-DPL_EXPORT inline constexpr fallback_impl<fmsubadd_t> ffmsubadd;
+inline constexpr fallback_impl<fmsubadd_t> ffmsubadd;
 
 template <typename AT, typename BT, typename CT,
     typename A = common_abi_t<AT, BT, CT>>
@@ -378,7 +378,7 @@ public:
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::fmsubadd_t fmsubadd{};
+inline constexpr internal::fmsubadd_t fmsubadd{};
 } // namespace cpo
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

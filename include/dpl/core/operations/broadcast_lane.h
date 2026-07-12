@@ -17,7 +17,7 @@
 #  include "dpl/std/type_traits/sequence.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void broadcast_lane(...) noexcept = delete;
 
@@ -337,9 +337,9 @@ struct broadcast_lanei_t {
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT template <size_t I>
+template <size_t I>
 inline constexpr internal::broadcast_lanei_t<I> broadcast_lanei{};
-DPL_EXPORT inline constexpr internal::broadcast_lane_t broadcast_lane{};
+inline constexpr internal::broadcast_lane_t broadcast_lane{};
 } // namespace cpo
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

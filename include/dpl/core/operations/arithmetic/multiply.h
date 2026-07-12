@@ -18,7 +18,7 @@
 #  include "dpl/core/dispatch/operation/primitive.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void multiply(...) noexcept = delete;
 
@@ -239,8 +239,8 @@ public:
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::multiply_t multiply{};
+inline constexpr internal::multiply_t multiply{};
 } // namespace cpo
 } // namespace datapar
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

@@ -19,7 +19,7 @@
 #  include "dpl/std/utility/to_unsigned.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 
 void countl_one(...) noexcept = delete;
@@ -214,8 +214,8 @@ public:
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::countl_one_t countl_one{};
+inline constexpr internal::countl_one_t countl_one{};
 }
 } // namespace datapar
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

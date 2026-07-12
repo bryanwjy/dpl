@@ -12,7 +12,7 @@ namespace {
 namespace xmm = dpl::datapar::xmm;
 namespace dpp = dpl::datapar;
 template <typename... Ts>
-constexpr auto element_count = dpp::simd_abi_traits<Ts...>::size;
+constexpr auto element_count = dpp::simd_abi_traits<Ts...>::size();
 
 template <typename T>
 consteval T repeat_as(unsigned char val) {
@@ -22,14 +22,10 @@ consteval T repeat_as(unsigned char val) {
     }
     return x;
 }
-constexpr auto min(auto lhs, auto rhs) noexcept {
-    return lhs < rhs ? lhs : rhs;
-}
-
 template <dpl::integral To, dpl::integral From>
 constexpr bool test(From src) noexcept {
-    constexpr auto keep =
-        min(element_count<To, xmm::abi_tag>, element_count<From, xmm::abi_tag>);
+    constexpr auto keep = dpp::min(
+        element_count<To, xmm::abi_tag>, element_count<From, xmm::abi_tag>);
     constexpr auto M = (1 << keep) - 1;
 
     return dpp::all_of(

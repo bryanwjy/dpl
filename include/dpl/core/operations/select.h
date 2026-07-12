@@ -22,7 +22,7 @@
 #  include "dpl/std/concepts/integral.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void select(...) noexcept = delete;
 
@@ -700,9 +700,9 @@ struct selecti_t {
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT template <integral auto V>
+template <integral auto V>
 inline constexpr internal::selecti_t<V> selecti{};
-DPL_EXPORT inline constexpr internal::select_t select{};
+inline constexpr internal::select_t select{};
 } // namespace cpo
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

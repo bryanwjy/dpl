@@ -11,7 +11,7 @@
 #  include "dpl/std/utility/ignore.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 
 template <typename E, typename = __DPL ignore_t>
@@ -30,4 +30,4 @@ struct alignas(simd_abi_traits<T>::alignment) array_for<T, __DPL ignore_t> {
 
 } // namespace datapar::internal
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

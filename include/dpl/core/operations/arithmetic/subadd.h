@@ -19,7 +19,7 @@
 #  include "dpl/core/immediate/const_mask.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 /**
  * @brief Fused SIMD sub-add operation using a fixed lane-parity sign mask.
@@ -252,7 +252,7 @@ public:
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::subadd_t subadd{};
+inline constexpr internal::subadd_t subadd{};
 } // namespace cpo
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

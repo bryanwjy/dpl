@@ -16,7 +16,7 @@
 #  include "dpl/core/dispatch/operation/primitive.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 
 void logical_or(...) noexcept = delete;
@@ -87,7 +87,7 @@ struct extended_impl<logical_or_t> {
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::logical_or_t logical_or{};
+inline constexpr internal::logical_or_t logical_or{};
 } // namespace cpo
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

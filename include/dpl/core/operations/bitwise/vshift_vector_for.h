@@ -13,7 +13,7 @@
 #  include "dpl/std/concepts/integral.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 
 template <typename T, typename L>
@@ -27,4 +27,4 @@ concept canonical_vshift_vector_for =
     common_size_with<simd_element_type_t<L>, simd_element_type_t<T>>;
 
 } // namespace datapar::internal
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

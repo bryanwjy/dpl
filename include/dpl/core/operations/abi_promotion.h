@@ -12,7 +12,7 @@
 #  include "dpl/std/type_traits/type_identity.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
 namespace internal {
@@ -73,36 +73,36 @@ concept demotable_abi =
 
 } // namespace internal
 
-DPL_EXPORT template <fixed_width_abi From, internal::define_promotion_from<From> To>
+template <fixed_width_abi From, internal::define_promotion_from<From> To>
 consteval void define_promotion() noexcept {}
 
 #define DPL_DEFINE_ABI_PROMOTION(FROM, TO) \
     static_assert((define_promotion<FROM, TO>(), true))
 
-DPL_EXPORT template <typename>
+template <typename>
 struct promote_abi {};
 
-DPL_EXPORT template <internal::promotable_abi T>
+template <internal::promotable_abi T>
 struct promote_abi<T> : internal::promote_abi<T> {};
 
-DPL_EXPORT template <fixed_width_simd_type T>
+template <fixed_width_simd_type T>
 requires internal::promotable_abi<typename T::abi_type>
 struct promote_abi<T> : promote_abi<typename T::abi_type> {};
 
-DPL_EXPORT template <typename>
+template <typename>
 struct demote_abi {};
 
-DPL_EXPORT template <internal::demotable_abi T>
+template <internal::demotable_abi T>
 struct demote_abi<T> : internal::demote_abi<T> {};
 
-DPL_EXPORT template <fixed_width_simd_type T>
+template <fixed_width_simd_type T>
 requires internal::demotable_abi<typename T::abi_type>
 struct demote_abi<T> : demote_abi<typename T::abi_type> {};
 
-DPL_EXPORT template <typename T>
+template <typename T>
 using promote_abi_t = typename promote_abi<T>::type;
 
-DPL_EXPORT template <typename T>
+template <typename T>
 using demote_abi_t = typename demote_abi<T>::type;
 
 template <size_t N, typename C>
@@ -142,4 +142,4 @@ using split_target_t DPL_NODEBUG =
 
 } // namespace datapar
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

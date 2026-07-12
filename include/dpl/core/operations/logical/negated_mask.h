@@ -23,7 +23,7 @@
 #include "dpl/core/operations/reinterpret.h"
 #include "dpl/core/operations/select.h"
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 
 template <typename T>
@@ -284,11 +284,11 @@ private:
 } // namespace datapar::internal
 
 namespace datapar {
-DPL_EXPORT template <simd_mask T, typename E, typename A>
+template <simd_mask T, typename E, typename A>
 requires requires { typename rebind_simd<T, E, A>::type; }
 struct rebind_simd<internal::negated_mask<T>, E, A> {
     using type DPL_NODEBUG =
         internal::negated_mask<typename rebind_simd<T, E, A>::type>;
 };
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

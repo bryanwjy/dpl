@@ -17,7 +17,7 @@
 #  include "dpl/std/concepts/convertible_to.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 
 void none_of(...) noexcept = delete;
@@ -83,7 +83,7 @@ struct extended_impl<none_of_t> {
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::none_of_t none_of{};
+inline constexpr internal::none_of_t none_of{};
 } // namespace cpo
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

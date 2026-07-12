@@ -13,7 +13,7 @@
 #  include "dpl/core/type_traits/simd_abi_type.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
 /**
@@ -64,12 +64,12 @@ namespace datapar {
  * are not guaranteed to be normalized and must use the regular `to_simd_mask`
  * overload.
  */
-DPL_EXPORT struct assume_normalized_mask_t {
+struct assume_normalized_mask_t {
     __DPL_HIDE_FROM_ABI explicit constexpr assume_normalized_mask_t() noexcept =
         default;
 };
 
-DPL_EXPORT inline constexpr assume_normalized_mask_t assume_normalized_mask{};
+inline constexpr assume_normalized_mask_t assume_normalized_mask{};
 } // namespace datapar
 
 namespace datapar::internal {
@@ -134,4 +134,4 @@ inline constexpr internal::to_simd_mask_t to_simd_mask{};
 } // namespace cpo
 } // namespace datapar
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

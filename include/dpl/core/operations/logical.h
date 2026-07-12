@@ -17,20 +17,22 @@
 // IWYU pragma: end_exports
 
 #if !DPL_MODULES
+#  include "dpl/core/concepts/cpo_invocable.h"
 #  include "dpl/core/concepts/simd_mask.h"
+#  include "dpl/core/type_traits/details/cpo_result.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar {
 
-DPL_EXPORT template <typename D>
+template <typename D>
 class logical_simd_interface {
 public:
     template <simd_mask R>
     requires internal::cpo_invocable<internal::logical_or_t, D, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    constexpr invoke_result_t<internal::logical_or_t, D, R> operator||(
+    constexpr internal::cpo_result_t<internal::logical_or_t, D, R> operator||(
         this D lhs, R rhs) noexcept
     requires simd_mask<D>
     {
@@ -40,7 +42,7 @@ public:
     template <simd_mask R>
     requires internal::cpo_invocable<internal::logical_and_t, D, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    constexpr invoke_result_t<internal::logical_and_t, D, R> operator&&(
+    constexpr internal::cpo_result_t<internal::logical_and_t, D, R> operator&&(
         this D lhs, R rhs) noexcept
     requires simd_mask<D>
     {
@@ -49,7 +51,7 @@ public:
 
     template <simd_mask Self>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    constexpr invoke_result_t<internal::logical_not_t, Self> operator!(
+    constexpr internal::cpo_result_t<internal::logical_not_t, Self> operator!(
         this Self lhs) noexcept {
         return datapar::logical_not(lhs);
     }
@@ -57,8 +59,8 @@ public:
     template <simd_mask L>
     requires internal::cpo_invocable<internal::logical_or_t, L, D>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    friend constexpr invoke_result_t<internal::logical_or_t, L, D> operator||(
-        L lhs, D rhs) noexcept
+    friend constexpr internal::cpo_result_t<internal::logical_or_t, L, D>
+    operator||(L lhs, D rhs) noexcept
     requires simd_mask<D>
     {
         return datapar::logical_or(lhs, rhs);
@@ -67,39 +69,41 @@ public:
     template <simd_mask L>
     requires internal::cpo_invocable<internal::logical_or_t, L, D>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    friend constexpr invoke_result_t<internal::logical_and_t, L, D> operator&&(
-        L lhs, D rhs) noexcept
+    friend constexpr internal::cpo_result_t<internal::logical_and_t, L, D>
+    operator&&(L lhs, D rhs) noexcept
     requires simd_mask<D>
     {
         return datapar::logical_and(lhs, rhs);
     }
 };
 
-DPL_EXPORT template <simd_mask L, simd_mask R>
+inline namespace operators {
+template <simd_mask L, simd_mask R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-constexpr invoke_result_t<internal::bwor_t, L, R> operator||(
+constexpr internal::cpo_result_t<internal::bwor_t, L, R> operator||(
     L lhs, R rhs) noexcept {
     return datapar::logical_or(lhs, rhs);
 }
 
-DPL_EXPORT template <simd_mask L, simd_mask R>
+template <simd_mask L, simd_mask R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-constexpr invoke_result_t<internal::bwand_t, L, R> operator&&(
+constexpr internal::cpo_result_t<internal::bwand_t, L, R> operator&&(
     L lhs, R rhs) noexcept {
     return datapar::logical_and(lhs, rhs);
 }
 
-DPL_EXPORT template <simd_mask T>
+template <simd_mask T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr auto operator!(T val) noexcept
-    -> invoke_result_t<internal::logical_not_t, T> {
-    if constexpr (canonical_mask<T>) {
+    -> internal::cpo_result_t<internal::logical_not_t, T> {
+    if constexpr (canonical_mask<T> &&
+        !is_same_v<T, typename simd_abi_traits<T>::native_mask>) {
         return internal::make_negated_mask(val);
     } else {
         return datapar::logical_not(val);
     }
 }
-
+} // namespace operators
 } // namespace datapar
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

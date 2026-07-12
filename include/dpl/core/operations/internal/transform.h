@@ -15,7 +15,7 @@
 #  include "dpl/std/utility/bitset.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 
 template <typename F, typename R, typename... Args>
@@ -75,4 +75,4 @@ constexpr Result transform(Op func, Ts... args) noexcept {
 }
 
 } // namespace datapar::internal
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

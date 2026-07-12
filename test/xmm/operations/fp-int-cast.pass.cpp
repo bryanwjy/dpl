@@ -12,13 +12,9 @@ namespace {
 namespace xmm = dpl::datapar::xmm;
 namespace dpp = dpl::datapar;
 template <typename... Ts>
-constexpr auto element_count = dpp::simd_abi_traits<Ts...>::size;
+constexpr auto element_count = dpp::simd_abi_traits<Ts...>::size();
 
 using dpl::ext_literals::operator""_bf16;
-
-constexpr auto min(auto lhs, auto rhs) noexcept {
-    return lhs < rhs ? lhs : rhs;
-}
 
 template <typename T, dpl::size_t N>
 struct array {
@@ -58,8 +54,8 @@ constexpr void general_int_to_fp() noexcept {
         }
     }(0, 1, 2, 3, 7, 15, 255, 1023, 65535, 1048575, 1234567, 7654321, 10000000);
     auto const make_expected = [](I val) {
-        constexpr auto keep =
-            min(element_count<F, xmm::abi_tag>, element_count<I, xmm::abi_tag>);
+        constexpr auto keep = dpp::min(
+            element_count<F, xmm::abi_tag>, element_count<I, xmm::abi_tag>);
         auto const result =
             dpp::broadcast<F, xmm::abi_tag>(static_cast<F>(val));
         return dpp::selecti<(1 << keep) - 1>(result, dpp::zero);
@@ -85,7 +81,7 @@ constexpr void parallel_int_to_fp() noexcept {
     }(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
     auto const make_expected = [](I const* ptr) {
         return [&]<dpl::size_t... Is>(dpl::index_sequence<Is...>) {
-            constexpr auto keep = min(
+            constexpr auto keep = dpp::min(
                 element_count<F, xmm::abi_tag>, element_count<I, xmm::abi_tag>);
             constexpr I zero = 0;
             return dpp::initialize<F, xmm::abi_tag>(
@@ -256,8 +252,8 @@ constexpr void general_fp_to_int() noexcept {
         }
     }(F(0.0), F(1.9), nextbefore(F(1)), dpp::min_value_v<F>);
     auto const make_expected = [](F val) {
-        constexpr auto keep =
-            min(element_count<F, xmm::abi_tag>, element_count<I, xmm::abi_tag>);
+        constexpr auto keep = dpp::min(
+            element_count<F, xmm::abi_tag>, element_count<I, xmm::abi_tag>);
         auto const result =
             dpp::broadcast<I, xmm::abi_tag>(static_cast<I>(val));
         return dpp::selecti<(1 << keep) - 1>(result, dpp::zero);
@@ -295,8 +291,8 @@ constexpr void large_sp_to_int() noexcept {
         }
     }(F(16777216.0), F(16777217.0), max);
     auto const make_expected = [](F val) {
-        constexpr auto keep =
-            min(element_count<F, xmm::abi_tag>, element_count<I, xmm::abi_tag>);
+        constexpr auto keep = dpp::min(
+            element_count<F, xmm::abi_tag>, element_count<I, xmm::abi_tag>);
         constexpr auto M = (1 << keep) - 1;
         auto const result =
             dpp::broadcast<I, xmm::abi_tag>(static_cast<I>(val));
@@ -370,7 +366,7 @@ constexpr void parallel_fp_to_int() noexcept {
             F(11), F(12), F(13), F(14), F(15));
     auto const make_expected = [](F const* ptr) {
         return [&]<dpl::size_t... Is>(dpl::index_sequence<Is...>) {
-            constexpr auto keep = min(
+            constexpr auto keep = dpp::min(
                 element_count<F, xmm::abi_tag>, element_count<I, xmm::abi_tag>);
 
             constexpr F zero = 0;

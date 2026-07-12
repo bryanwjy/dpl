@@ -17,7 +17,7 @@
 #  include "dpl/core/dispatch/operation/primitive.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void cmpge(...) noexcept = delete;
 
@@ -190,7 +190,7 @@ public:
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::cmpge_t cmpge{};
+inline constexpr internal::cmpge_t cmpge{};
 }
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

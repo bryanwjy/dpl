@@ -14,16 +14,21 @@
 #include "dpl/core/operations/bitwise/bwxor.h"
 // IWYU pragma: end_exports
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+#if !DPL_MODULES
+#  include "dpl/core/concepts/cpo_invocable.h"
+#  include "dpl/core/type_traits/details/cpo_result.h"
+#endif
+
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
-DPL_EXPORT template <typename D>
+template <typename D>
 class bitwise_simd_interface {
 public:
     template <typename R>
     requires internal::cpo_invocable<internal::bwor_t, D, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    constexpr invoke_result_t<internal::bwor_t, D, R> operator|(
+    constexpr internal::cpo_result_t<internal::bwor_t, D, R> operator|(
         this D lhs, R rhs) noexcept
     requires simd_vector<D>
     {
@@ -33,7 +38,7 @@ public:
     template <typename R>
     requires internal::cpo_invocable<internal::bwand_t, D, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    constexpr invoke_result_t<internal::bwand_t, D, R> operator&(
+    constexpr internal::cpo_result_t<internal::bwand_t, D, R> operator&(
         this D lhs, R rhs) noexcept
     requires simd_vector<D>
     {
@@ -43,7 +48,7 @@ public:
     template <typename R>
     requires internal::cpo_invocable<internal::bwxor_t, D, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    constexpr invoke_result_t<internal::bwxor_t, D, R> operator^(
+    constexpr internal::cpo_result_t<internal::bwxor_t, D, R> operator^(
         this D lhs, R rhs) noexcept
     requires simd_vector<D>
     {
@@ -53,7 +58,7 @@ public:
     template <typename R>
     requires internal::cpo_invocable<internal::bwshift_left_t, D, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    constexpr invoke_result_t<internal::bwshift_left_t, D, R> operator<<(
+    constexpr internal::cpo_result_t<internal::bwshift_left_t, D, R> operator<<(
         this D lhs, R rhs) noexcept
     requires simd_vector<D>
     {
@@ -63,8 +68,8 @@ public:
     template <typename R>
     requires internal::cpo_invocable<internal::bwshift_right_t, D, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    constexpr invoke_result_t<internal::bwshift_right_t, D, R> operator>>(
-        this D lhs, R rhs) noexcept
+    constexpr internal::cpo_result_t<internal::bwshift_right_t, D, R>
+    operator>>(this D lhs, R rhs) noexcept
     requires simd_vector<D>
     {
         return datapar::bwshift_right(lhs, rhs);
@@ -72,7 +77,7 @@ public:
 
     template <typename R>
     requires internal::cpo_invocable<internal::bwor_t, D, R> &&
-        assignable_from<D&, invoke_result_t<internal::bwor_t, D, R>>
+        assignable_from<D&, internal::cpo_result_t<internal::bwor_t, D, R>>
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
         constexpr D& operator|=(this D& lhs, R rhs) noexcept
     requires simd_vector<D>
@@ -82,7 +87,7 @@ public:
 
     template <typename R>
     requires internal::cpo_invocable<internal::bwand_t, D, R> &&
-        assignable_from<D&, invoke_result_t<internal::bwand_t, D, R>>
+        assignable_from<D&, internal::cpo_result_t<internal::bwand_t, D, R>>
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
         constexpr D& operator&=(this D& lhs, R rhs) noexcept
     requires simd_vector<D>
@@ -92,7 +97,7 @@ public:
 
     template <typename R>
     requires internal::cpo_invocable<internal::bwxor_t, D, R> &&
-        assignable_from<D&, invoke_result_t<internal::bwxor_t, D, R>>
+        assignable_from<D&, internal::cpo_result_t<internal::bwxor_t, D, R>>
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
         constexpr D& operator^=(this D& lhs, R rhs) noexcept
     requires simd_vector<D>
@@ -102,7 +107,8 @@ public:
 
     template <typename R>
     requires internal::cpo_invocable<internal::bwshift_left_t, D, R> &&
-        assignable_from<D&, invoke_result_t<internal::bwshift_left_t, D, R>>
+        assignable_from<D&,
+            internal::cpo_result_t<internal::bwshift_left_t, D, R>>
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
         constexpr D& operator<<=(this D& lhs, R rhs) noexcept
     requires simd_vector<D>
@@ -112,7 +118,8 @@ public:
 
     template <typename R>
     requires internal::cpo_invocable<internal::bwshift_right_t, D, R> &&
-        assignable_from<D&, invoke_result_t<internal::bwshift_right_t, D, R>>
+        assignable_from<D&,
+            internal::cpo_result_t<internal::bwshift_right_t, D, R>>
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
         constexpr D& operator>>=(this D& lhs, R rhs) noexcept
     requires simd_vector<D>
@@ -122,7 +129,7 @@ public:
 
     template <typename L>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    friend constexpr invoke_result_t<internal::bwor_t, L, D> operator|(
+    friend constexpr internal::cpo_result_t<internal::bwor_t, L, D> operator|(
         L lhs, D rhs) noexcept
     requires simd_vector<D>
     {
@@ -131,7 +138,7 @@ public:
 
     template <typename L>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    friend constexpr invoke_result_t<internal::bwand_t, L, D> operator&(
+    friend constexpr internal::cpo_result_t<internal::bwand_t, L, D> operator&(
         L lhs, D rhs) noexcept
     requires simd_vector<D>
     {
@@ -140,7 +147,7 @@ public:
 
     template <typename L>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    friend constexpr invoke_result_t<internal::bwxor_t, L, D> operator^(
+    friend constexpr internal::cpo_result_t<internal::bwxor_t, L, D> operator^(
         L lhs, D rhs) noexcept
     requires simd_vector<D>
     {
@@ -155,100 +162,116 @@ public:
     }
 };
 
-DPL_EXPORT template <typename L, typename R>
+inline namespace operators {
+template <typename L, typename R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-constexpr invoke_result_t<internal::bwor_t, L, R> operator|(
+constexpr internal::cpo_result_t<internal::bwor_t, L, R> operator|(
     L lhs, R rhs) noexcept {
     return datapar::bwor(lhs, rhs);
 }
 
-DPL_EXPORT template <typename L, typename R>
+template <typename L, typename R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-constexpr invoke_result_t<internal::bwand_t, L, R> operator&(
+constexpr internal::cpo_result_t<internal::bwand_t, L, R> operator&(
     L lhs, R rhs) noexcept {
     return datapar::bwand(lhs, rhs);
 }
 
-DPL_EXPORT template <typename L, typename R>
+template <typename L, typename R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-constexpr invoke_result_t<internal::bwxor_t, L, R> operator^(
+constexpr internal::cpo_result_t<internal::bwxor_t, L, R> operator^(
     L lhs, R rhs) noexcept {
     return datapar::bwxor(lhs, rhs);
 }
 
-DPL_EXPORT template <typename L, typename R>
+template <typename L, typename R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-constexpr invoke_result_t<internal::bwshift_left_t, L, R> operator<<(
+constexpr internal::cpo_result_t<internal::bwshift_left_t, L, R> operator<<(
     L lhs, R rhs) noexcept {
     return datapar::bwshift_left(lhs, rhs);
 }
 
-DPL_EXPORT template <typename L, typename R>
+template <typename L, typename R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-constexpr invoke_result_t<internal::bwshift_right_t, L, R> operator>>(
+constexpr internal::cpo_result_t<internal::bwshift_right_t, L, R> operator>>(
     L lhs, R rhs) noexcept {
     return datapar::bwshift_right(lhs, rhs);
 }
 
-DPL_EXPORT template <typename L, typename R>
+template <typename L, typename R>
 requires requires {
-    typename invoke_result_t<internal::bwor_t, L, R>;
-    requires assignable_from<L&, invoke_result_t<internal::bwor_t, L, R>>;
+    typename internal::cpo_result_t<internal::bwor_t, L, R>;
+    requires assignable_from<L&,
+        internal::cpo_result_t<internal::bwor_t, L, R>>;
 }
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
 constexpr L& operator|=(L& lhs, R rhs) noexcept {
     return lhs = lhs | rhs;
 }
 
-DPL_EXPORT template <typename L, typename R>
+template <typename L, typename R>
 requires requires {
-    typename invoke_result_t<internal::bwand_t, L, R>;
-    requires assignable_from<L&, invoke_result_t<internal::bwand_t, L, R>>;
+    typename internal::cpo_result_t<internal::bwand_t, L, R>;
+    requires assignable_from<L&,
+        internal::cpo_result_t<internal::bwand_t, L, R>>;
 }
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
 constexpr L& operator&=(L& lhs, R rhs) noexcept {
     return lhs = lhs & rhs;
 }
 
-DPL_EXPORT template <typename L, typename R>
+template <typename L, typename R>
 requires requires {
-    typename invoke_result_t<internal::bwxor_t, L, R>;
-    requires assignable_from<L&, invoke_result_t<internal::bwxor_t, L, R>>;
+    typename internal::cpo_result_t<internal::bwxor_t, L, R>;
+    requires assignable_from<L&,
+        internal::cpo_result_t<internal::bwxor_t, L, R>>;
 }
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
 constexpr L& operator^=(L& lhs, R rhs) noexcept {
     return lhs = lhs ^ rhs;
 }
 
-DPL_EXPORT template <typename L, typename R>
+template <typename L, typename R>
 requires requires {
-    typename invoke_result_t<internal::bwshift_left_t, L, R>;
+    typename internal::cpo_result_t<internal::bwshift_left_t, L, R>;
     requires assignable_from<L&,
-        invoke_result_t<internal::bwshift_left_t, L, R>>;
+        internal::cpo_result_t<internal::bwshift_left_t, L, R>>;
 }
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
 constexpr L& operator<<=(L& lhs, R rhs) noexcept {
     return lhs = (lhs << rhs);
 }
 
-DPL_EXPORT template <typename L, typename R>
+template <typename L, typename R>
 requires requires {
-    typename invoke_result_t<internal::bwshift_right_t, L, R>;
+    typename internal::cpo_result_t<internal::bwshift_right_t, L, R>;
     requires assignable_from<L&,
-        invoke_result_t<internal::bwshift_right_t, L, R>>;
+        internal::cpo_result_t<internal::bwshift_right_t, L, R>>;
+}
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
+constexpr L& operator>>=(L& lhs, R rhs) noexcept {
+    return lhs = (lhs >> rhs);
+}
+
+template <typename L, typename R>
+requires requires {
+    typename internal::cpo_result_t<internal::bwshift_right_t, L, R>;
+    requires assignable_from<L&,
+        internal::cpo_result_t<internal::bwshift_right_t, L, R>>;
 }
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
 constexpr L& operator&=(L& lhs, R rhs) noexcept {
     return lhs = (lhs >> rhs);
 }
 
-DPL_EXPORT template <typename T>
+template <typename T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr auto operator~(T val) noexcept
-    -> invoke_result_t<internal::bwnot_t, T> {
+    -> internal::cpo_result_t<internal::bwnot_t, T> {
     return datapar::bwnot(val);
 }
 
+} // namespace operators
 } // namespace datapar
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

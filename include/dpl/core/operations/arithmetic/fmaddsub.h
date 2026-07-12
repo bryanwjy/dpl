@@ -18,7 +18,7 @@
 #  include "dpl/core/immediate/const_mask.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 
 void fmaddsub(...) noexcept = delete;
@@ -377,7 +377,7 @@ public:
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::fmaddsub_t fmaddsub{};
+inline constexpr internal::fmaddsub_t fmaddsub{};
 } // namespace cpo
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

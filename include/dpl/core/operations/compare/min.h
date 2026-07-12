@@ -15,9 +15,10 @@
 #  include "dpl/core/dispatch/interface.h"
 #  include "dpl/core/dispatch/maskable/transform.h"
 #  include "dpl/core/dispatch/operation/primitive.h"
+#  include "dpl/std/type_traits/is_arithmetic.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void min(...) noexcept = delete;
 
@@ -28,6 +29,14 @@ struct DPL_EMPTY_BASES min_t :
     using operation_base<min_t>::operator();
     using maskable_transform_base<min_t>::operator();
     using binary_broadcastable_operation<min_t>::operator();
+
+    template <totally_ordered L, totally_ordered_with<L> R = L>
+    requires (!simd_type<L> && !simd_type<R>) && is_scalar_v<L> &&
+        is_arithmetic_v<L> && is_scalar_v<R> && is_arithmetic_v<R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD) static constexpr auto operator()(
+        L lhs, R rhs) noexcept {
+        return lhs < rhs ? lhs : rhs;
+    }
 };
 
 template <>
@@ -242,7 +251,7 @@ public:
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::min_t min{};
+inline constexpr internal::min_t min{};
 } // namespace cpo
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

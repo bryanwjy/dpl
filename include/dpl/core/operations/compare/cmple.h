@@ -18,7 +18,7 @@
 #  include "dpl/std/concepts/totally_ordered.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void cmple(...) noexcept = delete;
 
@@ -188,7 +188,7 @@ public:
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::cmple_t cmple{};
+inline constexpr internal::cmple_t cmple{};
 }
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

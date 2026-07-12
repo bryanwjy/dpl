@@ -8,13 +8,9 @@ namespace xmm = dpl::datapar::xmm;
 namespace dpp = dpl::datapar;
 using abi = xmm::abi_tag;
 template <typename... Ts>
-constexpr auto element_count = dpp::simd_abi_traits<Ts...>::size;
+constexpr auto element_count = dpp::simd_abi_traits<Ts...>::size();
 
 using dpl::ext_literals::operator""_bf16;
-
-constexpr auto min(auto lhs, auto rhs) noexcept {
-    return lhs < rhs ? lhs : rhs;
-}
 
 template <dpl::floating_point_like To, dpl::floating_point_like From>
 constexpr To float_cast(From val) noexcept {
@@ -27,7 +23,7 @@ template <dpl::floating_point_like To, dpl::floating_point_like From,
 requires dpl::different_from<From, To>
 constexpr bool round_trip(From val, Pred pred = dpp::cmpeq) noexcept {
     constexpr auto count =
-        min(element_count<From, abi>, element_count<To, abi>);
+        dpp::min(element_count<From, abi>, element_count<To, abi>);
     constexpr auto M = (1 << count) - 1;
     auto const src = dpp::selecti<M>(dpp::broadcast<From, abi>(val), dpp::zero);
     static_assert(dpl::same_as<From,
@@ -74,7 +70,7 @@ requires (dpl::floating_point_traits<To>::digits !=
     dpl::floating_point_traits<From>::digits)
 constexpr bool one_way(From val, Pred pred = dpp::cmpeq) noexcept {
     constexpr auto count =
-        min(element_count<From, abi>, element_count<To, abi>);
+        dpp::min(element_count<From, abi>, element_count<To, abi>);
     constexpr auto M = (1 << count) - 1;
     auto const src = dpp::selecti<M>(dpp::broadcast<From, abi>(val), dpp::zero);
     auto const dst = dpp::selecti<M>(

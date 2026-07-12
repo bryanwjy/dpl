@@ -19,7 +19,7 @@
 #  include "dpl/std/type_traits/sequence.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void permute(...) noexcept = delete;
 
@@ -365,9 +365,9 @@ public:
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::permute_t permute{};
-DPL_EXPORT template <size_t... Is>
+inline constexpr internal::permute_t permute{};
+template <size_t... Is>
 inline constexpr internal::permutei_t<Is...> permutei{};
 } // namespace cpo
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

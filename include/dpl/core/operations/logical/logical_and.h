@@ -18,7 +18,7 @@
 #  include "dpl/core/type_traits/simd_abi_type.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 
 void logical_and(...) noexcept = delete;
@@ -89,7 +89,7 @@ struct extended_impl<logical_and_t> {
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::logical_and_t logical_and{};
+inline constexpr internal::logical_and_t logical_and{};
 } // namespace cpo
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

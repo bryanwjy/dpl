@@ -21,7 +21,7 @@
 #  include "dpl/std/concepts/equality_comparable.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void cmpneq(...) noexcept = delete;
 
@@ -219,7 +219,7 @@ public:
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::cmpneq_t cmpneq{};
+inline constexpr internal::cmpneq_t cmpneq{};
 }
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

@@ -16,11 +16,11 @@
 #  include "dpl/std/utility/move.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar {
 
-DPL_EXPORT template <simd_type T, size_t N>
+template <simd_type T, size_t N>
 struct split_result;
 
 namespace internal {
@@ -44,7 +44,7 @@ inline constexpr bool is_explicit_constructible_from<U, split_result<T, N>,
     is_explicitly_constructible_v<U, choose_type_t<Is, T>...>;
 } // namespace internal
 
-DPL_EXPORT template <simd_type T, size_t N>
+template <simd_type T, size_t N>
 struct split_result {
     static constexpr size_constant<N> size{};
 
@@ -80,28 +80,28 @@ constexpr auto make_split_result(Ts&&... data) noexcept {
         static_cast<common_type_t<Ts...>>(__DPL forward<Ts>(data))...};
 }
 
-DPL_EXPORT template <size_t I, size_t N, simd_type T>
+template <size_t I, size_t N, simd_type T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr decltype(auto) get(
     split_result<T, N> const&& data DPL_LIFETIMEBOUND) noexcept {
     return __DPL move(data[I]);
 }
 
-DPL_EXPORT template <size_t I, size_t N, simd_type T>
+template <size_t I, size_t N, simd_type T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr decltype(auto) get(
     split_result<T, N> const& data DPL_LIFETIMEBOUND) noexcept {
     return data[I];
 }
 
-DPL_EXPORT template <size_t I, size_t N, simd_type T>
+template <size_t I, size_t N, simd_type T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr decltype(auto) get(
     split_result<T, N>&& data DPL_LIFETIMEBOUND) noexcept {
     return __DPL move(data[I]);
 }
 
-DPL_EXPORT template <size_t I, size_t N, simd_type T>
+template <size_t I, size_t N, simd_type T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr decltype(auto) get(
     split_result<T, N>& data DPL_LIFETIMEBOUND) noexcept {
@@ -110,13 +110,13 @@ constexpr decltype(auto) get(
 
 } // namespace datapar
 
-DPL_EXPORT template <datapar::simd_type T, size_t N>
+template <datapar::simd_type T, size_t N>
 struct tuple_size<datapar::split_result<T, N>> :
     integral_constant<size_t, N> {};
 
-DPL_EXPORT template <size_t I, datapar::simd_type T, size_t N>
+template <size_t I, datapar::simd_type T, size_t N>
 struct tuple_element<I, datapar::split_result<T, N>> {
     using type = T;
 };
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

@@ -19,7 +19,7 @@
 #  include "dpl/std/utility/forward.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 template <typename>
 void simd_cast(...) noexcept = delete;
@@ -115,8 +115,8 @@ struct extended_impl<simd_cast_t<To>> {
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT template <typename To>
+template <typename To>
 inline constexpr internal::simd_cast_t<To> simd_cast{};
 } // namespace cpo
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

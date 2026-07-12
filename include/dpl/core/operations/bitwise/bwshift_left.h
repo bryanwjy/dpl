@@ -19,7 +19,7 @@
 #  include "dpl/core/dispatch/operation/primitive.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void bwshift_left(...) noexcept = delete;
 
@@ -498,9 +498,9 @@ struct bwshift_lefti_t {
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::bwshift_left_t bwshift_left{};
-DPL_EXPORT template <size_t N>
+inline constexpr internal::bwshift_left_t bwshift_left{};
+template <size_t N>
 inline constexpr internal::bwshift_lefti_t<N> bwshift_lefti{};
 } // namespace cpo
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

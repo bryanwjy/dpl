@@ -17,7 +17,7 @@
 #  include "dpl/std/type_traits/type_identity.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void bwnot(...) noexcept = delete;
 
@@ -222,8 +222,8 @@ public:
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::bwnot_t bwnot{};
+inline constexpr internal::bwnot_t bwnot{};
 } // namespace cpo
 } // namespace datapar
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

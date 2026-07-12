@@ -17,7 +17,7 @@
 #  include "dpl/core/dispatch/operation/primitive.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void max(...) noexcept = delete;
 
@@ -28,6 +28,14 @@ struct DPL_EMPTY_BASES max_t :
     using operation_base<max_t>::operator();
     using maskable_transform_base<max_t>::operator();
     using binary_broadcastable_operation<max_t>::operator();
+
+    template <totally_ordered L, totally_ordered_with<L> R = L>
+    requires (!simd_type<L> && !simd_type<R>) && is_scalar_v<L> &&
+        is_arithmetic_v<L> && is_scalar_v<R> && is_arithmetic_v<R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)static constexpr auto operator()(
+        L lhs, R rhs) noexcept {
+        return lhs < rhs ? rhs : lhs;
+    }
 };
 
 template <>
@@ -242,7 +250,7 @@ public:
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::max_t max{};
+inline constexpr internal::max_t max{};
 } // namespace cpo
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

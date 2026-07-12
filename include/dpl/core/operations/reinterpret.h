@@ -24,7 +24,7 @@
 #  include "dpl/std/type_traits/is_volatile.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 template <typename>
 void reinterpret(...) noexcept = delete;
@@ -152,8 +152,8 @@ struct extended_impl<reinterpret_t<ToE>> {
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT template <typename To>
+template <typename To>
 inline constexpr internal::reinterpret_t<To> reinterpret{};
 } // namespace cpo
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

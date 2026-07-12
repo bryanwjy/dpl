@@ -20,7 +20,7 @@
 #  include "dpl/std/type_traits/type_identity.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void negate(...) noexcept = delete;
 
@@ -175,8 +175,8 @@ public:
 
 namespace datapar {
 inline namespace cpo {
-DPL_EXPORT inline constexpr internal::negate_t negate{};
+inline constexpr internal::negate_t negate{};
 } // namespace cpo
 } // namespace datapar
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END

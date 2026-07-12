@@ -10,7 +10,7 @@
 #  include "dpl/std/type_traits/make_signed.h"
 #endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 template <simd_type T>
 requires integral<simd_element_type_t<T>>
@@ -20,4 +20,4 @@ constexpr auto to_signed(T simd) noexcept {
     return datapar::reinterpret<To>(simd);
 }
 } // namespace datapar
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END
