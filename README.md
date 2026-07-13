@@ -16,9 +16,17 @@ This library is an exploration of an idea I had about compile-time declarative d
 
 I started this project knowing how template-heavy the implementation was going to be; I chose to implement the project using C++20 to use concepts and constraints as well as C++ modules (though this was later changed to C++23 to access some better QoL features).
 
-* **Extensibility:** Designed so you can inject custom logic, generator expressions, or backends without fighting the library’s internal structure (though you'd have to settle for fighting with my terrible naming sensibilities).
+* **Extensibility:** Designed so you can inject custom logic, generator expressions, or backends without fighting the library’s internal structure (though you'd have to settle for fighting with my questionable naming choices).
 * **Freestanding Design:** By bypassing `std::`, the library has zero dependencies and is implemented entirely via compiler intrinsics. I understand some projects have very valid reasons for not using the standard library, e.g. bloat, freestanding requirement, ABI control, etc. I don’t really have a strong justification in that sense. I generally try to aim for minimalism over generalism; when first starting out, I didn't think I needed that many type-traits so I implemented it myself using compiler builtins. It worked out well in the beginning. A few iterations later, "a few" turned into most of the type-traits (and concepts) defined by the standard :see_no_evil:.
 * **constexpr:** *Fixed-width* simd types should have all (including [math](include/dpl/core/math)) operations be constexpr
+
+## Current Limitations
+
+* **C++ Modules:** The standard library module (`import std;`) is currently unsupported.
+* Some language features, such as structured bindings, require specializations of standard library templates like `std::tuple_size` and `std::tuple_element`. For module builds, forward-declaring these templates (which is technically undefined behaviour) in the Global Module Fragment (GMF) so they can be specialized in the named module.
+* This restriction does not apply to:
+  * Header builds.
+  * Module builds that include standard library headers in the GMF rather than importing the standard library as modules.
 
 
 ## Project Structure
