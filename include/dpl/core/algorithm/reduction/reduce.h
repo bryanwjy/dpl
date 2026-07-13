@@ -21,8 +21,8 @@ __DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void reduce(...) noexcept = delete;
 struct reduce_t :
-    private reduction_base<reduce_t>,
-    private maskable_transform_base<reduce_t> {
+    public reduction_base<reduce_t>,
+    public maskable_transform_base<reduce_t> {
     using operation_base<reduce_t>::operator();
     using maskable_transform_base<reduce_t>::operator();
 };

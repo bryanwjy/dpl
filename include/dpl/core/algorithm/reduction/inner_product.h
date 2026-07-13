@@ -19,8 +19,8 @@ namespace datapar::internal {
 void inner_product(...) noexcept = delete;
 
 struct inner_product_t :
-    private exclusive_scan_base<inner_product_t>,
-    private maskable_accumulation_base<inner_product_t> {
+    public reduction_base<inner_product_t>,
+    public maskable_accumulation_base<inner_product_t> {
     using operation_base<inner_product_t>::operator();
     using maskable_accumulation_base<inner_product_t>::operator();
 };

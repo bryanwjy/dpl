@@ -20,8 +20,8 @@ namespace datapar::internal {
 void hmax(...) noexcept = delete;
 
 struct hmax_t :
-    private inclusive_scan_base<hmax_t>,
-    private maskable_transform_base<hmax_t> {
+    public reduction_base<hmax_t>,
+    public maskable_transform_base<hmax_t> {
     using operation_base<hmax_t>::operator();
     using maskable_transform_base<hmax_t>::operator();
 };

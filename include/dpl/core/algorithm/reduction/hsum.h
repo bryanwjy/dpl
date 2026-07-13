@@ -20,8 +20,8 @@ namespace datapar::internal {
 void hsum(...) noexcept = delete;
 
 struct hsum_t :
-    private inclusive_scan_base<hsum_t>,
-    private maskable_transform_base<hsum_t> {
+    public reduction_base<hsum_t>,
+    public maskable_transform_base<hsum_t> {
     using operation_base<hsum_t>::operator();
     using maskable_transform_base<hsum_t>::operator();
 };

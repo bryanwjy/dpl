@@ -29,6 +29,7 @@ using __DPL datapar::cpo::rotate_left;
 using __DPL datapar::cpo::rotate_lefti;
 using __DPL datapar::cpo::rotate_right;
 using __DPL datapar::cpo::rotate_righti;
+using __DPL datapar::cpo::sad;
 using __DPL datapar::cpo::scan;
 using __DPL datapar::cpo::scan_max;
 using __DPL datapar::cpo::scan_min;

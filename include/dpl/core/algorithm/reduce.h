@@ -9,4 +9,5 @@
 #include "dpl/core/algorithm/reduction/hsum.h"
 #include "dpl/core/algorithm/reduction/inner_product.h"
 #include "dpl/core/algorithm/reduction/reduce.h"
+#include "dpl/core/algorithm/reduction/sad.h"
 // IWYU pragma: end_exports

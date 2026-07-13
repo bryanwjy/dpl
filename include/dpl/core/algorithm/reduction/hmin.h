@@ -20,8 +20,8 @@ namespace datapar::internal {
 void hmin(...) noexcept = delete;
 
 struct hmin_t :
-    private inclusive_scan_base<hmin_t>,
-    private maskable_transform_base<hmin_t> {
+    public reduction_base<hmin_t>,
+    public maskable_transform_base<hmin_t> {
     using operation_base<hmin_t>::operator();
     using maskable_transform_base<hmin_t>::operator();
 };
