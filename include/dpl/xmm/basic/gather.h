@@ -3,28 +3,26 @@
 #pragma once
 
 #include "dpl/config.h"
-#if !DPL_ARCH_x86_64 || !DPL_SIMD_X86_SSE4_2
-#  error "Unsupported platform"
-#endif
+#if DPL_SIMD_X86_SSE4_2
 
-#include "dpl/xmm/basic/abi.h"
-#include "dpl/xmm/basic/broadcast.h"
-#include "dpl/xmm/basic/extract.h"
-#include "dpl/xmm/basic/initialize.h"
+#  include "dpl/xmm/basic/abi.h"
+#  include "dpl/xmm/basic/broadcast.h"
+#  include "dpl/xmm/basic/extract.h"
+#  include "dpl/xmm/basic/initialize.h"
 
-#if !DPL_MODULES
-#  include "dpl/core/immediate/immediate.h"
-#  include "dpl/core/type_traits/representation.h"
-#  include "dpl/std/bit/bit_cast.h"
-#  include "dpl/std/type_traits/sequence.h"
+#  if !DPL_MODULES
+#    include "dpl/core/immediate/immediate.h"
+#    include "dpl/core/type_traits/representation.h"
+#    include "dpl/std/bit/bit_cast.h"
+#    include "dpl/std/type_traits/sequence.h"
 
-#  include <immintrin.h>
-#endif
+#    include <immintrin.h>
+#  endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::xmm {
-namespace details {
+namespace internal {
 template <simd_element E, integral I>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr vector<E>
@@ -77,17 +75,17 @@ constexpr vector<E>
         }(imm<Is>)...);
     }(iota<E>);
 }
-} // namespace details
+} // namespace internal
 
-#if DPL_SIMD_X86_AVX2
+#  if DPL_SIMD_X86_AVX2
 
-DPL_EXPORT template <simd_element E>
+template <simd_element E>
 requires common_size_with<E, int32> || common_size_with<E, int64>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
 constexpr vector<E>
     DPL_VECTORCALL gather(E const* ptr, vector<int32> idx) noexcept {
     if consteval {
-        return details::gather(ptr, idx);
+        return internal::gather(ptr, idx);
     } else {
         if constexpr (same_as<E, int32>) {
             return _mm_i32gather_epi32(ptr, +idx, sizeof(E));
@@ -112,7 +110,7 @@ constexpr vector<E>
     }
 }
 
-DPL_EXPORT template <simd_element E>
+template <simd_element E>
 requires common_size_with<E, int32> || common_size_with<E, int64>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
 constexpr vector<E>
@@ -120,7 +118,7 @@ constexpr vector<E>
         type_identity_t<mask<E>> mask, E const* ptr,
         vector<int32> idx) noexcept {
     if consteval {
-        return details::gather(src, mask, ptr, idx);
+        return internal::gather(src, mask, ptr, idx);
     } else {
         if constexpr (same_as<E, int32>) {
             return _mm_mask_i32gather_epi32(+src, ptr, +idx, +mask, sizeof(E));
@@ -153,7 +151,7 @@ constexpr vector<E>
     }
 }
 
-DPL_EXPORT template <simd_element E>
+template <simd_element E>
 requires common_size_with<E, int32> || common_size_with<E, int64>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr vector<E> gather(dx::zero_t zero, type_identity_t<mask<E>> mask,
@@ -161,13 +159,13 @@ constexpr vector<E> gather(dx::zero_t zero, type_identity_t<mask<E>> mask,
     return xmm::gather(xmm::broadcast<E>(zero), mask, ptr, idx);
 }
 
-DPL_EXPORT template <simd_element E>
+template <simd_element E>
 requires common_size_with<E, int32> || common_size_with<E, int64>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
 constexpr vector<E>
     DPL_VECTORCALL gather(E const* ptr, vector<int64> idx) noexcept {
     if consteval {
-        return details::gather(ptr, idx);
+        return internal::gather(ptr, idx);
     } else {
         if constexpr (same_as<E, int64>) {
             return _mm_i64gather_epi64(ptr, +idx, sizeof(E));
@@ -192,7 +190,7 @@ constexpr vector<E>
     }
 }
 
-DPL_EXPORT template <simd_element E>
+template <simd_element E>
 requires common_size_with<E, int32> || common_size_with<E, int64>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
 constexpr vector<E>
@@ -200,7 +198,7 @@ constexpr vector<E>
         type_identity_t<mask<E>> mask, E const* ptr,
         vector<int64> idx) noexcept {
     if consteval {
-        return details::gather(src, mask, ptr, idx);
+        return internal::gather(src, mask, ptr, idx);
     } else {
         if constexpr (same_as<E, int32>) {
             return _mm_mask_i64gather_epi32(+src, ptr, +idx, +mask, sizeof(E));
@@ -239,7 +237,7 @@ constexpr vector<E>
     }
 }
 
-DPL_EXPORT template <simd_element E>
+template <simd_element E>
 requires common_size_with<E, int32> || common_size_with<E, int64>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr vector<E> gather(dx::zero_t zero, type_identity_t<mask<E>> mask,
@@ -247,16 +245,16 @@ constexpr vector<E> gather(dx::zero_t zero, type_identity_t<mask<E>> mask,
     return xmm::gather(xmm::broadcast<E>(zero), mask, ptr, idx);
 }
 
-#  if DPL_SIMD_x86_AVX512F & DPL_SIMD_x86_AVX512VL
+#    if DPL_SIMD_x86_AVX512F & DPL_SIMD_x86_AVX512VL
 
-DPL_EXPORT template <simd_element E, xmm::imask_t<E> M>
+template <simd_element E, xmm::imask_t<E> M>
 requires common_size_with<E, int32> || common_size_with<E, int64>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
 constexpr vector<E>
     DPL_VECTORCALL gather(type_identity_t<vector<E>> src,
         xmm::cmask_t<E, M> mask, E const* ptr, vector<int32> idx) noexcept {
     if consteval {
-        return details::gather(src, mask, ptr, idx);
+        return internal::gather(src, mask, ptr, idx);
     } else {
         if constexpr (same_as<E, int32>) {
             return _mm_mmask_i32gather_epi32(
@@ -292,7 +290,7 @@ constexpr vector<E>
     }
 }
 
-DPL_EXPORT template <simd_element E, xmm::imask_t<E> M>
+template <simd_element E, xmm::imask_t<E> M>
 requires common_size_with<E, int32> || common_size_with<E, int64>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr vector<E> gather(dx::zero_t zero, xmm::cmask_t<E, M> mask,
@@ -300,14 +298,14 @@ constexpr vector<E> gather(dx::zero_t zero, xmm::cmask_t<E, M> mask,
     return xmm::gather(xmm::broadcast<E>(zero), mask, ptr, idx);
 }
 
-DPL_EXPORT template <simd_element E, xmm::imask_t<E> M>
+template <simd_element E, xmm::imask_t<E> M>
 requires common_size_with<E, int32> || common_size_with<E, int64>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
 constexpr vector<E>
     DPL_VECTORCALL gather(type_identity_t<vector<E>> src,
         xmm::cmask_t<E, M> mask, E const* ptr, vector<int64> idx) noexcept {
     if consteval {
-        return details::gather(src, mask, ptr, idx);
+        return internal::gather(src, mask, ptr, idx);
     } else {
         if constexpr (same_as<E, int32>) {
             return _mm_mmask_i64gather_epi32(
@@ -343,7 +341,7 @@ constexpr vector<E>
     }
 }
 
-DPL_EXPORT template <simd_element E, xmm::imask_t<E> M>
+template <simd_element E, xmm::imask_t<E> M>
 requires common_size_with<E, int32> || common_size_with<E, int64>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr vector<E> gather(dx::zero_t zero, xmm::cmask_t<E, M> mask,
@@ -351,7 +349,7 @@ constexpr vector<E> gather(dx::zero_t zero, xmm::cmask_t<E, M> mask,
     return xmm::gather(xmm::broadcast<E>(zero), mask, ptr, idx);
 }
 
-DPL_EXPORT template <simd_element E, xmm::imask_t<E> M>
+template <simd_element E, xmm::imask_t<E> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr vector<E> gather(abi_tag, dx::zero_t zero, xmm::cmask_t<E, M> mask,
     E const* ptr, vector<int32> idx) noexcept
@@ -360,7 +358,7 @@ requires requires { xmm::gather(zero, mask, ptr, idx); }
     return xmm::gather(zero, mask, ptr, idx);
 }
 
-DPL_EXPORT template <simd_element E, xmm::imask_t<E> M>
+template <simd_element E, xmm::imask_t<E> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr vector<E> gather(abi_tag, type_identity_t<vector<E>> src,
     xmm::cmask_t<E, M> mask, E const* ptr, vector<int32> idx) noexcept
@@ -369,7 +367,7 @@ requires requires { xmm::gather(src, mask, ptr, idx); }
     return xmm::gather(src, mask, ptr, idx);
 }
 
-DPL_EXPORT template <simd_element E, xmm::imask_t<E> M>
+template <simd_element E, xmm::imask_t<E> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr vector<E> gather(abi_tag, dx::zero_t zero, xmm::cmask_t<E, M> mask,
     E const* ptr, vector<int64> idx) noexcept
@@ -378,7 +376,7 @@ requires requires { xmm::gather(zero, mask, ptr, idx); }
     return xmm::gather(zero, mask, ptr, idx);
 }
 
-DPL_EXPORT template <simd_element E, xmm::imask_t<E> M>
+template <simd_element E, xmm::imask_t<E> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr vector<E> gather(abi_tag, type_identity_t<vector<E>> src,
     xmm::cmask_t<E, M> mask, E const* ptr, vector<int64> idx) noexcept
@@ -387,10 +385,10 @@ requires requires { xmm::gather(src, mask, ptr, idx); }
     return xmm::gather(src, mask, ptr, idx);
 }
 
-#  endif //  #if DPL_SIMD_x86_AVX512F & DPL_SIMD_x86_AVX512VL
-#endif //  #if DPL_SIMD_x86_AVX2
+#    endif //  #if DPL_SIMD_x86_AVX512F & DPL_SIMD_x86_AVX512VL
+#  endif   //  #if DPL_SIMD_x86_AVX2
 
-DPL_EXPORT template <simd_element E>
+template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr vector<E> gather(abi_tag, E const* ptr, vector<int32> idx) noexcept
 requires requires { xmm::gather(ptr, idx); }
@@ -398,7 +396,7 @@ requires requires { xmm::gather(ptr, idx); }
     return xmm::gather(ptr, idx);
 }
 
-DPL_EXPORT template <simd_element E>
+template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr vector<E> gather(abi_tag, dx::zero_t zero,
     type_identity_t<mask<E>> mask, E const* ptr, vector<int32> idx) noexcept
@@ -407,7 +405,7 @@ requires requires { xmm::gather(zero, mask, ptr, idx); }
     return xmm::gather(zero, mask, ptr, idx);
 }
 
-DPL_EXPORT template <simd_element E>
+template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr vector<E> gather(abi_tag, type_identity_t<vector<E>> src,
     type_identity_t<mask<E>> mask, E const* ptr, vector<int32> idx) noexcept
@@ -416,7 +414,7 @@ requires requires { xmm::gather(src, mask, ptr, idx); }
     return xmm::gather(src, mask, ptr, idx);
 }
 
-DPL_EXPORT template <simd_element E>
+template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr vector<E> gather(abi_tag, E const* ptr, vector<int64> idx) noexcept
 requires requires { xmm::gather(ptr, idx); }
@@ -424,7 +422,7 @@ requires requires { xmm::gather(ptr, idx); }
     return xmm::gather(ptr, idx);
 }
 
-DPL_EXPORT template <simd_element E>
+template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr vector<E> gather(abi_tag, dx::zero_t zero,
     type_identity_t<mask<E>> mask, E const* ptr, vector<int64> idx) noexcept
@@ -433,7 +431,7 @@ requires requires { xmm::gather(zero, mask, ptr, idx); }
     return xmm::gather(zero, mask, ptr, idx);
 }
 
-DPL_EXPORT template <simd_element E>
+template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr vector<E> gather(abi_tag, type_identity_t<vector<E>> src,
     type_identity_t<mask<E>> mask, E const* ptr, vector<int64> idx) noexcept
@@ -444,4 +442,6 @@ requires requires { xmm::gather(src, mask, ptr, idx); }
 
 } // namespace datapar::xmm
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END
+
+#endif

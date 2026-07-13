@@ -4,37 +4,35 @@
 
 #include "dpl/config.h"
 
-#if !DPL_ARCH_x86_64 || !DPL_SIMD_X86_SSE4_2
-#  error "Unsupported platform"
-#endif
+#if DPL_SIMD_X86_SSE4_2
 
-#include "dpl/xmm/basic/abi.h"
+#  include "dpl/xmm/basic/abi.h"
 
-#if !DPL_MODULES
-#  include "dpl/core/type_traits/representation.h"
-#  include "dpl/std/bit/bit_cast.h"
-#  include "dpl/std/concepts/integral_constant_like.h"
-#  include "dpl/std/type_traits/conditional.h"     // IWYU pragma: keep
-#  include "dpl/std/type_traits/underlying_type.h" // IWYU pragma: keep
-#  include "dpl/std/utility/to_signed.h"
-#  include "dpl/std/utility/to_underlying.h"
+#  if !DPL_MODULES
+#    include "dpl/core/type_traits/representation.h"
+#    include "dpl/std/bit/bit_cast.h"
+#    include "dpl/std/concepts/integral_constant_like.h"
+#    include "dpl/std/type_traits/conditional.h"     // IWYU pragma: keep
+#    include "dpl/std/type_traits/underlying_type.h" // IWYU pragma: keep
+#    include "dpl/std/utility/to_signed.h"
+#    include "dpl/std/utility/to_underlying.h"
 
-#  include <immintrin.h>
-#endif
+#    include <immintrin.h>
+#  endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::xmm {
 
-DPL_EXPORT template <simd_element E>
+template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr E extract(vector<E> src, size_t idx) noexcept {
-#if !DPL_COMPILER_MSVC
+#  if !DPL_COMPILER_MSVC
     struct alignas(abi_tag::alignment) buffer {
         E data[abi_tag::size / sizeof(E)];
     };
     return __DPL bit_cast<E>(__DPL bit_cast<buffer>(src).data[idx]);
-#else
+#  else
     if constexpr (is_same_v<float, representation_t<E>>) {
         return __DPL bit_cast<E>((+src).m128_f32[idx]);
     } else if constexpr (is_same_v<double, E>) {
@@ -61,10 +59,10 @@ constexpr E extract(vector<E> src, size_t idx) noexcept {
             return __DPL bit_cast<E>((+src).m128i_u64[idx]);
         }
     }
-#endif
+#  endif
 }
 
-DPL_EXPORT template <simd_element E>
+template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr E extract(vector<E> src, integral_constant_like auto idx) noexcept {
     if consteval {
@@ -77,7 +75,7 @@ constexpr E extract(vector<E> src, integral_constant_like auto idx) noexcept {
             return __DPL bit_cast<E>(
                 _mm_extract_epi64(_mm_castpd_si128(+src), idx));
         } else if constexpr (is_same_v<E, ext::float16>) {
-#if DPL_SIMD_X86_AVX512FP16
+#  if DPL_SIMD_X86_AVX512FP16
             if constexpr (same_as<ext::float16, E>) {
                 return __DPL bit_cast<E>(static_cast<int16>(
                     _mm_extract_epi16(_mm_castph_si128(+src), imm8)));
@@ -85,10 +83,10 @@ constexpr E extract(vector<E> src, integral_constant_like auto idx) noexcept {
                 return __DPL bit_cast<E>(static_cast<int16>(
                     _mm_extract_epi16(__DPL bit_cast<__m128i>(+src), imm8)));
             }
-#else
+#  else
             return __DPL bit_cast<E>(static_cast<int16>(
                 _mm_extract_epi16(__DPL bit_cast<__m128i>(+src), imm8)));
-#endif
+#  endif
         } else {
             if constexpr (sizeof(E) == sizeof(int64)) {
                 return __DPL bit_cast<E>(_mm_extract_epi64(+src, imm8));
@@ -128,19 +126,19 @@ constexpr bool is_true(T val) noexcept {
     return xmm::is_true(__DPL to_underlying(val));
 }
 
-DPL_EXPORT template <simd_element E>
+template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr bool extract(mask<E> src, size_t idx) noexcept {
     return xmm::is_true(xmm::extract(vector<E>(+src), idx));
 }
 
-DPL_EXPORT template <simd_element E>
+template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr bool extract(mask<E> src, integral_constant_like auto idx) noexcept {
     return xmm::is_true(xmm::extract(vector<E>(+src), idx));
 }
 
-DPL_EXPORT template <simd_element E>
+template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr E extract(abi_tag, vector<E> src, size_t idx) noexcept
 requires requires { xmm::extract(src, idx); }
@@ -148,7 +146,7 @@ requires requires { xmm::extract(src, idx); }
     return xmm::extract(src, idx);
 }
 
-DPL_EXPORT template <simd_element E>
+template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr E extract(
     abi_tag, vector<E> src, integral_constant_like auto idx) noexcept
@@ -157,7 +155,7 @@ requires requires { xmm::extract(src, idx); }
     return xmm::extract(src, idx);
 }
 
-DPL_EXPORT template <simd_element E>
+template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr bool extract(abi_tag, mask<E> src, size_t idx) noexcept
 requires requires { xmm::extract(src, idx); }
@@ -165,7 +163,7 @@ requires requires { xmm::extract(src, idx); }
     return xmm::extract(src, idx);
 }
 
-DPL_EXPORT template <simd_element E>
+template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr bool extract(
     abi_tag, mask<E> src, integral_constant_like auto idx) noexcept
@@ -176,4 +174,6 @@ requires requires { xmm::extract(src, idx); }
 
 } // namespace datapar::xmm
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END
+
+#endif

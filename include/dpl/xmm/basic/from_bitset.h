@@ -9,26 +9,24 @@ DPL_DISABLE_WARNING_PUSH()
 DPL_DISABLE_WARNING("-Wc++26-extensions")
 #endif
 
-#if !DPL_ARCH_x86_64 || !DPL_SIMD_X86_SSE4_2
-#  error "Unsupported platform"
-#endif
+#if DPL_SIMD_X86_SSE4_2
 
-#include "dpl/xmm/basic/abi.h"
-#include "dpl/xmm/basic/initialize.h"
+#  include "dpl/xmm/basic/abi.h"
+#  include "dpl/xmm/basic/initialize.h"
 
-#if !DPL_MODULES
-#  include "dpl/core/immediate/constants/all_bits.h"
-#  include "dpl/core/immediate/constants/zero.h"
-#  include "dpl/core/type_traits/representation.h"
-#  include "dpl/core/type_traits/simd_abi_traits.h"
-#  include "dpl/std/bit/bit_cast.h"
-#  include "dpl/std/utility/bitset.h"
-#  include "dpl/std/utility/to_signed.h"
+#  if !DPL_MODULES
+#    include "dpl/core/immediate/constants/all_bits.h"
+#    include "dpl/core/immediate/constants/zero.h"
+#    include "dpl/core/type_traits/representation.h"
+#    include "dpl/core/type_traits/simd_abi_traits.h"
+#    include "dpl/std/bit/bit_cast.h"
+#    include "dpl/std/utility/bitset.h"
+#    include "dpl/std/utility/to_signed.h"
 
-#  include <immintrin.h>
-#endif
+#    include <immintrin.h>
+#  endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::xmm {
 
 namespace internal {
@@ -47,15 +45,14 @@ inline constexpr auto mask_lane_bits = []<size_t... Is>(index_sequence<Is...>) {
 }(iota<E>);
 } // namespace internal
 
-DPL_EXPORT template <simd_element E>
+template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr mask<E> from_bitset(
-    bitset<simd_abi_traits<E, abi_tag>::size> mask) noexcept {
+constexpr mask<E> from_bitset(bitset_t<E> mask) noexcept {
     constexpr auto width = simd_abi_traits<E, abi_tag>::size;
     if consteval {
         return [&]<size_t... Is>(index_sequence<Is...>) {
             return +xmm::initialize<E>(
-                abi_tag{}, (mask[Is] ? dx::all_bits_v<E> : dx::zero_v<E>)...);
+                (mask[Is] ? dx::all_bits_v<E> : dx::zero_v<E>)...);
         }(iota<E>);
     } else {
         auto const xmm0 = [&]() {
@@ -96,11 +93,11 @@ constexpr mask<E> from_bitset(
                 return _mm_set1_epi32(-( __DPL to_underlying(mask) != 0));
             }
         }();
-        if constexpr (same_as<native_vector_t<E>, __m128>) {
+        if constexpr (same_as<E, float>) {
             return _mm_castsi128_ps(xmm0);
-        } else if constexpr (same_as<native_vector_t<E>, __m128d>) {
+        } else if constexpr (same_as<E, double>) {
             return _mm_castsi128_pd(xmm0);
-        } else if constexpr (same_as<native_vector_t<E>, __m128i>) {
+        } else if constexpr (integral<E>) {
             return xmm0;
         } else {
             return __DPL bit_cast<native_vector_t<E>>(xmm0);
@@ -108,16 +105,17 @@ constexpr mask<E> from_bitset(
     }
 }
 
-DPL_EXPORT template <simd_element E>
-DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr mask<E> from_bitset(
-    abi_tag tag, bitset<simd_abi_traits<E, abi_tag>::size> mask) noexcept {
+template <simd_element E>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+constexpr mask<E> from_bitset(abi_tag tag, bitset_t<E> mask) noexcept {
     return xmm::from_bitset<E>(mask);
 }
 
 } // namespace datapar::xmm
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END
+
+#endif
 
 #if DPL_HAS_CXX26_EXTENSIONS
 DPL_DISABLE_WARNING_POP()

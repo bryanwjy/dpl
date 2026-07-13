@@ -4,29 +4,28 @@
 
 #include "dpl/config.h"
 
-#if !DPL_ARCH_x86_64 || !DPL_SIMD_X86_SSE4_2
-#  error "Unsupported platform"
-#endif
+#if DPL_SIMD_X86_SSE4_2
 
-#include "dpl/xmm/basic/abi.h"
-#include "dpl/xmm/basic/initialize.h"
+#  include "dpl/xmm/basic/abi.h"
+#  include "dpl/xmm/basic/initialize.h"
 
-#if !DPL_MODULES
-#  include "dpl/core/immediate/constants/all_bits.h"
-#  include "dpl/core/immediate/constants/zero.h"
-#  include "dpl/std/bit/bit_cast.h"
-#  include "dpl/std/type_traits/sequence.h"
-#  include "dpl/std/type_traits/type_identity.h"
+#  if !DPL_MODULES
+#    include "dpl/core/immediate/constants/all_bits.h"
+#    include "dpl/core/immediate/constants/zero.h"
+#    include "dpl/std/bit/bit_cast.h"
+#    include "dpl/std/type_traits/sequence.h"
+#    include "dpl/std/type_traits/type_identity.h"
 
-#  include <immintrin.h>
-#endif
+#    include <immintrin.h>
+#  endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::xmm {
-DPL_EXPORT template <simd_element E>
+
+template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr vector<E> broadcast(abi_tag tag, type_identity_t<E> scalar) noexcept {
+constexpr vector<E> broadcast(type_identity_t<E> scalar) noexcept {
     if consteval {
         constexpr auto forward = [](auto, E scalar) { return scalar; };
         return [forward]<size_t... Is>(index_sequence<Is...>, E data) {
@@ -55,11 +54,11 @@ constexpr vector<E> broadcast(abi_tag tag, type_identity_t<E> scalar) noexcept {
     }
 }
 
-DPL_EXPORT template <simd_element E>
+template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr vector<E> broadcast(abi_tag tag, dx::zero_t) noexcept {
+constexpr vector<E> broadcast(dx::zero_t zero) noexcept {
     if consteval {
-        return xmm::broadcast<E>(tag, 0);
+        return xmm::broadcast<E>(0);
     } else {
         if constexpr (is_same_v<native_vector_t<E>, __m128>) {
             return _mm_setzero_ps();
@@ -74,11 +73,11 @@ constexpr vector<E> broadcast(abi_tag tag, dx::zero_t) noexcept {
     }
 }
 
-DPL_EXPORT template <simd_element E>
+template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr vector<E> broadcast(abi_tag tag, dx::all_bits_t) noexcept {
+constexpr vector<E> broadcast(dx::all_bits_t all) noexcept {
     if consteval {
-        return xmm::broadcast<E>(tag, dx::all_bits_v<E>);
+        return xmm::broadcast<E>(dx::all_bits_v<E>);
     } else {
         auto xmm0 = _mm_undefined_si128();
         xmm0 = _mm_cmpeq_epi32(xmm0, xmm0);
@@ -95,48 +94,57 @@ constexpr vector<E> broadcast(abi_tag tag, dx::all_bits_t) noexcept {
     }
 }
 
-DPL_EXPORT template <simd_element E>
+template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr mask<E> broadcast(abi_tag tag, same_as<bool> auto scalar) noexcept {
-    return scalar ? +xmm::broadcast<E>(tag, dx::all_bits)
-                  : +xmm::broadcast<E>(tag, dx::zero);
+constexpr mask<E> broadcast(same_as<bool> auto boolean) noexcept {
+    return boolean ? +xmm::broadcast<E>(dx::all_bits)
+                   : +xmm::broadcast<E>(dx::zero);
 }
 
-DPL_EXPORT template <simd_element E, integral_constant_like V>
+template <simd_element E, integral_constant_like V>
 requires same_as<typename V::value_type, bool>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr mask<E> broadcast(abi_tag tag, V) noexcept {
+constexpr mask<E> broadcast(V) noexcept {
     if constexpr (V::value) {
-        return +xmm::broadcast<E>(tag, dx::all_bits);
+        return +xmm::broadcast<E>(dx::all_bits);
     } else {
-        return +xmm::broadcast<E>(tag, dx::zero);
+        return +xmm::broadcast<E>(dx::zero);
     }
 }
 
-DPL_EXPORT template <simd_element E>
+template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr vector<E> broadcast(type_identity_t<E> scalar) noexcept {
-    return xmm::broadcast<E>(xmm::abi, scalar);
+constexpr vector<E> broadcast(abi_tag, type_identity_t<E> scalar) noexcept {
+    return xmm::broadcast<E>(scalar);
 }
 
-DPL_EXPORT template <simd_element E, same_as<bool> T>
+template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr mask<E> broadcast(T boolean) noexcept {
-    return xmm::broadcast<E>(xmm::abi, boolean);
+constexpr vector<E> broadcast(abi_tag, dx::zero_t zero) noexcept {
+    return xmm::broadcast<E>(zero);
 }
 
-DPL_EXPORT template <simd_element E>
+template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr vector<E> broadcast(dx::zero_t zero) noexcept {
-    return xmm::broadcast<E>(xmm::abi, zero);
+constexpr vector<E> broadcast(abi_tag, dx::all_bits_t all_bits) noexcept {
+    return xmm::broadcast<E>(all_bits);
 }
 
-DPL_EXPORT template <simd_element E>
+template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr vector<E> broadcast(dx::all_bits_t all) noexcept {
-    return xmm::broadcast<E>(xmm::abi, all);
+constexpr mask<E> broadcast(abi_tag, same_as<bool> auto boolean) noexcept {
+    return xmm::broadcast<E>(boolean);
+}
+
+template <simd_element E, integral_constant_like V>
+requires same_as<typename V::value_type, bool>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+constexpr mask<E> broadcast(abi_tag, V constant) noexcept {
+    return xmm::broadcast<E>(constant);
 }
 
 } // namespace datapar::xmm
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END
+
+#endif

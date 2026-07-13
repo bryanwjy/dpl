@@ -4,18 +4,25 @@ module;
 #define DPL_MODULES 1
 #include "dpl/config.h"
 
-#include <immintrin.h>
 export module dpl.xmm:basic;
-export import dpl;
+import :details.basic;
 
-// IWYU pragma: begin_exports
-#include "dpl/xmm/basic/abi.h"
-#include "dpl/xmm/basic/broadcast.h"
-#include "dpl/xmm/basic/extract.h"
-#include "dpl/xmm/basic/from_bitset.h"
-#include "dpl/xmm/basic/gather.h"
-#include "dpl/xmm/basic/initialize.h"
-#include "dpl/xmm/basic/load.h"
-#include "dpl/xmm/basic/store.h"
-#include "dpl/xmm/basic/to_bitset.h"
-// IWYU pragma: end_exports
+__DPL_DEFAULT_NAMESPACE_BEGIN
+// NOLINTBEGIN(misc-unused-using-decls)
+namespace datapar::xmm {
+using __DPL datapar::xmm::abi;
+using __DPL datapar::xmm::abi_tag;
+using __DPL datapar::xmm::broadcast;
+using __DPL datapar::xmm::extract;
+using __DPL datapar::xmm::from_bitset;
+using __DPL datapar::xmm::gather;
+using __DPL datapar::xmm::initialize;
+using __DPL datapar::xmm::load;
+using __DPL datapar::xmm::mask;
+using __DPL datapar::xmm::store;
+using __DPL datapar::xmm::to_bitset;
+using __DPL datapar::xmm::vector;
+} // namespace datapar::xmm
+namespace xmm = datapar::xmm;
+// NOLINTEND(misc-unused-using-decls)
+__DPL_DEFAULT_NAMESPACE_END

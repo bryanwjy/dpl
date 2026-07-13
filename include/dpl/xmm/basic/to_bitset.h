@@ -4,26 +4,24 @@
 
 #include "dpl/config.h"
 
-#if !DPL_ARCH_x86_64 || !DPL_SIMD_X86_SSE4_2
-#  error "Unsupported platform"
-#endif
+#if DPL_SIMD_X86_SSE4_2
 
-#include "dpl/xmm/basic/abi.h"
-#include "dpl/xmm/basic/extract.h"
+#  include "dpl/xmm/basic/abi.h"
+#  include "dpl/xmm/basic/extract.h"
 
-#if !DPL_MODULES
-#  include "dpl/core/immediate/immediate.h"
-#  include "dpl/std/bit/bit_cast.h"
+#  if !DPL_MODULES
+#    include "dpl/core/immediate/immediate.h"
+#    include "dpl/std/bit/bit_cast.h"
 
-#  include <immintrin.h>
-#endif
+#    include <immintrin.h>
+#  endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::xmm {
-DPL_EXPORT template <simd_element E>
-DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD) constexpr bitset<vector<E>::size()>
-to_bitset(mask<E> src) noexcept {
+template <simd_element E>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD) constexpr bitset_t<E>
+    DPL_VECTORCALL to_bitset(mask<E> src) noexcept {
     using bitset_t = bitset<vector<E>::size()>;
     if consteval {
         return [&]<size_t... Is>(index_sequence<Is...>) {
@@ -57,11 +55,13 @@ to_bitset(mask<E> src) noexcept {
     }
 }
 
-DPL_EXPORT template <simd_element E>
-DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD) constexpr bitset<vector<E>::size()>
-to_bitset(abi_tag, mask<E> src) noexcept {
+template <simd_element E>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD) constexpr bitset_t<E> to_bitset(
+    abi_tag, mask<E> src) noexcept {
     return xmm::to_bitset(src);
 }
 } // namespace datapar::xmm
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END
+
+#endif

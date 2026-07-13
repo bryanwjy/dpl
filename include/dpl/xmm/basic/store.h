@@ -4,24 +4,22 @@
 
 #include "dpl/config.h"
 
-#if !DPL_ARCH_x86_64 || !DPL_SIMD_X86_SSE4_2
-#  error "Unsupported platform"
-#endif
+#if DPL_SIMD_X86_SSE4_2
 
-#include "dpl/xmm/basic/abi.h"
-#include "dpl/xmm/basic/extract.h"
+#  include "dpl/xmm/basic/abi.h"
+#  include "dpl/xmm/basic/extract.h"
 
-#if !DPL_MODULES
-#  include "dpl/core/basic/aligned.h"
-#  include "dpl/std/bit/bit_cast.h"
+#  if !DPL_MODULES
+#    include "dpl/core/basic/aligned.h"
+#    include "dpl/std/bit/bit_cast.h"
 
-#  include <immintrin.h>
-#endif
+#    include <immintrin.h>
+#  endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::xmm {
-DPL_EXPORT template <simd_element E>
+template <simd_element E>
 __DPL_HIDE_FROM_ABI constexpr void store(vector<E> src, E* dst) noexcept {
     if consteval {
         for (auto i = 0zu; i < src.size(); ++i) {
@@ -39,17 +37,17 @@ __DPL_HIDE_FROM_ABI constexpr void store(vector<E> src, E* dst) noexcept {
                 __DPL bit_cast<__m128i>(+src));
         } else {
             static_assert(is_same_v<ext::float16, E>);
-#if DPL_SIMD_X86_AVX512FP16
+#  if DPL_SIMD_X86_AVX512FP16
             _mm_storeu_ph(dst, +src);
-#else
+#  else
             _mm_storeu_si128(reinterpret_cast<__m128i*>(dst),
                 __DPL bit_cast<__m128i>(+src));
-#endif
+#  endif
         }
     }
 }
 
-DPL_EXPORT template <simd_element E>
+template <simd_element E>
 __DPL_HIDE_FROM_ABI constexpr void store(
     aligned_t, vector<E> src, E* dst) noexcept {
     if consteval {
@@ -67,17 +65,17 @@ __DPL_HIDE_FROM_ABI constexpr void store(
                 __DPL bit_cast<__m128i>(+src));
         } else {
             static_assert(is_same_v<ext::float16, E>);
-#if DPL_SIMD_X86_AVX512FP16
+#  if DPL_SIMD_X86_AVX512FP16
             _mm_store_ph(dst, +src);
-#else
+#  else
             _mm_store_si128(reinterpret_cast<__m128i*>(dst),
                 __DPL bit_cast<__m128i>(+src));
-#endif
+#  endif
         }
     }
 }
 
-DPL_EXPORT template <simd_element E>
+template <simd_element E>
 __DPL_HIDE_FROM_ABI constexpr void store(
     abi_tag, vector<E> src, E* dst) noexcept
 requires requires { xmm::store(src, dst); }
@@ -85,7 +83,7 @@ requires requires { xmm::store(src, dst); }
     xmm::store(src, dst);
 }
 
-DPL_EXPORT template <simd_element E>
+template <simd_element E>
 __DPL_HIDE_FROM_ABI constexpr void store(
     abi_tag, aligned_t aligned, vector<E> src, E* dst) noexcept
 requires requires { xmm::store(aligned, src, dst); }
@@ -95,4 +93,6 @@ requires requires { xmm::store(aligned, src, dst); }
 
 } // namespace datapar::xmm
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END
+
+#endif
