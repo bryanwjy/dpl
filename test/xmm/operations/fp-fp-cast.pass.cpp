@@ -12,12 +12,6 @@ constexpr auto element_count = dpp::simd_abi_traits<Ts...>::size();
 
 using dpl::ext_literals::operator""_bf16;
 
-template <dpl::floating_point_like To, dpl::floating_point_like From>
-constexpr To float_cast(From val) noexcept {
-    static_assert(dpl::explicitly_convertible_to<From, To>);
-    return static_cast<To>(val);
-}
-
 template <dpl::floating_point_like To, dpl::floating_point_like From,
     typename Pred = decltype(dpp::cmpeq)>
 requires dpl::different_from<From, To>
@@ -29,7 +23,7 @@ constexpr bool round_trip(From val, Pred pred = dpp::cmpeq) noexcept {
     static_assert(dpl::same_as<From,
         typename dpl::remove_const_t<decltype(src)>::value_type>);
     auto const dst = dpp::selecti<M>(
-        dpp::broadcast<To, abi>(float_cast<To>(val)), dpp::zero);
+        dpp::broadcast<To, abi>(static_cast<To>(val)), dpp::zero);
     auto const actual_dst = dpp::element_cast<To>(src);
     auto const dstequal = pred(actual_dst, dst);
     auto const actual_castback = dpp::element_cast<From>(actual_dst);
@@ -74,7 +68,7 @@ constexpr bool one_way(From val, Pred pred = dpp::cmpeq) noexcept {
     constexpr auto M = (1 << count) - 1;
     auto const src = dpp::selecti<M>(dpp::broadcast<From, abi>(val), dpp::zero);
     auto const dst = dpp::selecti<M>(
-        dpp::broadcast<To, abi>(float_cast<To>(val)), dpp::zero);
+        dpp::broadcast<To, abi>(static_cast<To>(val)), dpp::zero);
     auto const actual_dst = dpp::element_cast<To>(src);
     auto const dstequal = pred(actual_dst, dst);
     auto const actual_castback = dpp::element_cast<From>(actual_dst);

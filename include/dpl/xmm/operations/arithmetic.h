@@ -5,6 +5,7 @@
 #include "dpl/config.h"
 
 // IWYU pragma: begin_exports
+#include "dpl/xmm/operations/arithmetic/abs.h"
 #include "dpl/xmm/operations/arithmetic/add.h"
 #include "dpl/xmm/operations/arithmetic/divide.h"
 #include "dpl/xmm/operations/arithmetic/multiply.h"

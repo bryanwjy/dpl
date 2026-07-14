@@ -4,27 +4,25 @@
 
 #include "dpl/config.h"
 
-#if !DPL_ARCH_x86_64 || !DPL_SIMD_X86_SSE4_2
-#  error "Unsupported platform"
-#endif
+#if DPL_SIMD_X86_SSE4_2
 
-#include "dpl/xmm/operations/reinterpret.h"
+#  include "dpl/xmm/operations/reinterpret.h"
 
-#if !DPL_MODULES
-#  include "dpl/core/concepts/common_size_with.h"
-#  include "dpl/core/immediate/immediate.h"
-#  include "dpl/core/operations/to_simd_mask.h"
-#  include "dpl/xmm/basic/abi.h"
-#  include "dpl/xmm/basic/extract.h"
+#  if !DPL_MODULES
+#    include "dpl/core/concepts/common_size_with.h"
+#    include "dpl/core/immediate/immediate.h"
+#    include "dpl/core/operations/to_simd_mask.h"
+#    include "dpl/xmm/basic/abi.h"
+#    include "dpl/xmm/basic/extract.h"
 
-#  include <immintrin.h>
-#endif
+#    include <immintrin.h>
+#  endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::xmm {
 
-DPL_EXPORT template <simd_element E>
+template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr mask<E>
     DPL_VECTORCALL to_simd_mask(abi_tag tag, vector<E> src) noexcept {
@@ -72,7 +70,7 @@ constexpr mask<E>
     }
 }
 
-DPL_EXPORT template <simd_element E>
+template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr mask<E>
     DPL_VECTORCALL to_simd_mask(
@@ -80,14 +78,14 @@ constexpr mask<E>
     return +src;
 }
 
-DPL_EXPORT template <simd_element E>
+template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr mask<E>
     DPL_VECTORCALL to_simd_mask(vector<E> src) noexcept {
     return xmm::to_simd_mask(xmm::abi, src);
 }
 
-DPL_EXPORT template <simd_element E>
+template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr mask<E>
     DPL_VECTORCALL to_simd_mask(
@@ -97,4 +95,6 @@ constexpr mask<E>
 
 } // namespace datapar::xmm
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END
+
+#endif

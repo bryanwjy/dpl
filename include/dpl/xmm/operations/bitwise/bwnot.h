@@ -5,22 +5,20 @@
 #include "dpl/config.h"
 
 // IWYU pragma: private, include "dpl/xmm/operations/bitwise.h"
-#if !DPL_ARCH_x86_64 || !DPL_SIMD_X86_SSE4_2
-#  error "Unsupported platform"
-#endif
+#if DPL_SIMD_X86_SSE4_2
 
-#include "dpl/xmm/operations/bitwise/bwxor.h"
-#include "dpl/xmm/operations/reinterpret.h"
+#  include "dpl/xmm/operations/bitwise/bwxor.h"
+#  include "dpl/xmm/operations/reinterpret.h"
 
-#if !DPL_MODULES
-#  include "dpl/core/fwd.h"
+#  if !DPL_MODULES
+#    include "dpl/core/fwd.h"
 
-#  include "dpl/xmm/basic/abi.h"
+#    include "dpl/xmm/basic/abi.h"
 
-#  include <immintrin.h>
-#endif
+#    include <immintrin.h>
+#  endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::xmm {
 
@@ -57,4 +55,6 @@ requires requires { xmm::bwnot(val); }
 
 } // namespace datapar::xmm
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END
+
+#endif

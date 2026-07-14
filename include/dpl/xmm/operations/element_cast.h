@@ -3,29 +3,26 @@
 
 #include "dpl/config.h"
 
-#if !DPL_ARCH_x86_64 || !DPL_SIMD_X86_SSE4_2
-#  error "Unsupported platform"
-#endif
+#if DPL_SIMD_X86_SSE4_2
 
-#include "dpl/xmm/operations/abs.h"
-#include "dpl/xmm/operations/arithmetic.h"
-#include "dpl/xmm/operations/bitwise.h"
-#include "dpl/xmm/operations/reinterpret.h"
-#include "dpl/xmm/operations/select.h"
+#  include "dpl/xmm/operations/arithmetic.h"
+#  include "dpl/xmm/operations/bitwise.h"
+#  include "dpl/xmm/operations/reinterpret.h"
+#  include "dpl/xmm/operations/select.h"
 
-#if !DPL_MODULES
-#  include "dpl/core/immediate/constants/infinity.h"
-#  include "dpl/core/immediate/constants/max_value.h"
-#  include "dpl/core/immediate/constants/msb.h"
-#  include "dpl/std/bit/bit_cast.h"
-#  include "dpl/std/utility/to_unsigned.h"
-#  include "dpl/xmm/basic/abi.h"
-#  include "dpl/xmm/basic/broadcast.h"
+#  if !DPL_MODULES
+#    include "dpl/core/immediate/constants/infinity.h"
+#    include "dpl/core/immediate/constants/max_value.h"
+#    include "dpl/core/immediate/constants/msb.h"
+#    include "dpl/std/bit/bit_cast.h"
+#    include "dpl/std/utility/to_unsigned.h"
+#    include "dpl/xmm/basic/abi.h"
+#    include "dpl/xmm/basic/broadcast.h"
 
-#  include <immintrin.h>
-#endif
+#    include <immintrin.h>
+#  endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::xmm {
 template <typename T, typename U>
@@ -53,9 +50,9 @@ struct convert_t<float> {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static inline vector<float> DPL_VECTORCALL operator()(
         vector<ext::float16> src) noexcept {
-#if DPL_SIMD_X86_F16C
+#  if DPL_SIMD_X86_F16C
         return _mm_cvtph_ps(+src);
-#else
+#  else
         auto const arg =
             vector<uint32>(_mm_cvtepu16_epi32(+xmm::reinterpret<uint16>(src)));
         auto const msb = xmm::broadcast<uint32>(0x8000);
@@ -75,18 +72,18 @@ struct convert_t<float> {
         auto const abs_f32 =
             xmm::bwor(xmm::reinterpret<float>(nonfinite), shifted);
         return xmm::bwor(abs_f32, signs);
-#endif
+#  endif
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static inline vector<float> DPL_VECTORCALL operator()(
         vector<ext::bfloat16> src) noexcept {
-#if DPL_SIMD_X86_AVX512BF16 & DPL_SIMD_X86_AVX512VL
+#  if DPL_SIMD_X86_AVX512BF16 & DPL_SIMD_X86_AVX512VL
         return _mm_cvtpbh_ps(+src);
-#else
+#  else
         auto const isrc = __DPL bit_cast<__m128i>(+src);
         return _mm_castsi128_ps(_mm_slli_epi32(_mm_cvtepu16_epi32(isrc), 16));
-#endif
+#  endif
     }
 
     template <integral E>
@@ -94,13 +91,13 @@ struct convert_t<float> {
     static inline vector<float>
         DPL_VECTORCALL operator()(vector<E> src) noexcept {
         if constexpr (sizeof(E) == sizeof(int64)) {
-#if DPL_SIMD_X86_AVX512DQ & DPL_SIMD_X86_AVX512VL
+#  if DPL_SIMD_X86_AVX512DQ & DPL_SIMD_X86_AVX512VL
             if constexpr (unsigned_integral<representation_t<E>>) {
                 return _mm_cvtepu64_ps(+src);
             } else {
                 return _mm_cvtepi64_ps(+src);
             }
-#else
+#  else
             auto const zero = _mm_setzero_si128();
             if constexpr (signed_integral<representation_t<E>>) {
                 auto const hisign =
@@ -145,7 +142,7 @@ struct convert_t<float> {
                     _mm_castsi128_ps(_mm_unpacklo_epi64(hihilolo, zero)),
                     _mm_castsi128_ps(_mm_unpackhi_epi64(hihilolo, zero)));
             }
-#endif
+#  endif
         } else if constexpr (sizeof(E) == sizeof(int32)) {
             if constexpr (signed_integral<representation_t<E>>) {
                 return _mm_cvtepi32_ps(+src);
@@ -208,47 +205,47 @@ struct convert_t<To> {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static inline vector<To> DPL_VECTORCALL operator()(
         vector<float> src) noexcept {
-#if DPL_SIMD_X86_AVX512DQ & DPL_SIMD_X86_AVX512VL
+#  if DPL_SIMD_X86_AVX512DQ & DPL_SIMD_X86_AVX512VL
         if constexpr (unsigned_integral<To>) {
             return _mm_cvttps_epu64(+src);
         } else {
             return _mm_cvttps_epi64(+src);
         }
-#else
+#  else
         return _mm_unpacklo_epi64(
             _mm_cvtsi64_si128(static_cast<int64>(src[imm<0>])),
             _mm_cvtsi64_si128(static_cast<int64>(src[imm<1>])));
-#endif
+#  endif
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static inline vector<To> DPL_VECTORCALL operator()(
         vector<double> src) noexcept {
-#if DPL_SIMD_X86_AVX512DQ & DPL_SIMD_X86_AVX512VL
+#  if DPL_SIMD_X86_AVX512DQ & DPL_SIMD_X86_AVX512VL
         if constexpr (unsigned_integral<To>) {
             return _mm_cvttpd_epu64(+src);
         } else {
             return _mm_cvttpd_epi64(+src);
         }
-#else
+#  else
         return _mm_set_epi64x(
             static_cast<To>(src[imm<1>]), static_cast<To>(src[imm<0>]));
-#endif
+#  endif
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static inline vector<To> DPL_VECTORCALL operator()(
         vector<ext::float16> src) noexcept {
-#if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
+#  if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
         if constexpr (unsigned_integral<To>) {
             return _mm_cvttph_epu64(+src);
         } else {
             return _mm_cvttph_epi64(+src);
         }
-#else
+#  else
         constexpr convert_t<float> convert{};
         return operator()(convert(src));
-#endif
+#  endif
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
@@ -266,12 +263,12 @@ struct convert_t<To> {
     static inline vector<To>
         DPL_VECTORCALL operator()(vector<E> src) noexcept {
         if constexpr (sizeof(E) == sizeof(int64)) {
-#if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
+#  if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
             return _mm_cvtepi64_epi32(+src);
-#else
+#  else
             return _mm_castps_si128(_mm_shuffle_ps(_mm_castsi128_ps(+src),
                 _mm_setzero_ps(), _MM_SHUFFLE(2, 0, 2, 0)));
-#endif
+#  endif
         } else if constexpr (sizeof(E) == sizeof(To)) {
             return +src;
         } else if constexpr (sizeof(E) == sizeof(int16)) {
@@ -294,9 +291,9 @@ struct convert_t<To> {
     static inline vector<To> DPL_VECTORCALL operator()(
         vector<float> src) noexcept {
         if constexpr (unsigned_integral<To>) {
-#if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
+#  if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
             return _mm_cvttps_epu32(+src);
-#else
+#  else
             constexpr int32 magic = 0x4f000000;
             auto xmm0 = +src;
             auto xmm2 = _mm_castsi128_ps(_mm_set1_epi32(magic));
@@ -306,7 +303,7 @@ struct convert_t<To> {
             xmm0 = _mm_sub_ps(xmm0, xmm2);
             xmm0 = _mm_cvttps_epi32(xmm0);
             return _mm_xor_ps(xmm0, xmm1);
-#endif
+#  endif
         } else {
             return _mm_cvttps_epi32(+src);
         }
@@ -316,12 +313,12 @@ struct convert_t<To> {
     static inline vector<To> DPL_VECTORCALL operator()(
         vector<double> src) noexcept {
         if constexpr (unsigned_integral<To>) {
-#if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
+#  if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
             return _mm_cvttpd_epu32(+src);
-#else
+#  else
             return _mm_set_epi32(0, 0, static_cast<uint32>(src[imm<1>]),
                 static_cast<uint32>(src[imm<0>]));
-#endif
+#  endif
         } else {
             return _mm_cvttpd_epi32(+src);
         }
@@ -330,13 +327,13 @@ struct convert_t<To> {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static inline vector<To> DPL_VECTORCALL operator()(
         vector<ext::float16> src) noexcept {
-#if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
+#  if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
         if constexpr (signed_integral<To>) {
             return _mm_cvttph_epi32(+src);
         } else {
             return _mm_cvttph_epu32(+src);
         }
-#else
+#  else
         constexpr convert_t<float> to_fp32{};
         if constexpr (signed_integral<To>) {
             // Cheaper to convert to float first
@@ -355,7 +352,7 @@ struct convert_t<To> {
             return _mm_castps_si128(_mm_blendv_ps(
                 _mm_set1_ps(-0.0f), result, _mm_castsi128_ps(valid)));
         }
-#endif
+#  endif
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
@@ -373,22 +370,22 @@ struct convert_t<To> {
     static inline vector<To>
         DPL_VECTORCALL operator()(vector<E> src) noexcept {
         if constexpr (sizeof(E) == sizeof(int64)) {
-#if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
+#  if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
             return _mm_cvtepi64_epi16(+src);
-#else
+#  else
             auto const qwords = _mm_and_si128(+src, _mm_set1_epi64x(0xffff));
             // Extract low 32 bits of each 64-bit lane
             auto const dwords =
                 _mm_shuffle_epi32(qwords, _MM_SHUFFLE(3, 1, 2, 0));
             return _mm_packus_epi32(dwords, _mm_setzero_si128());
-#endif
+#  endif
         } else if constexpr (sizeof(E) == sizeof(int32)) {
-#if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
+#  if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
             return _mm_cvtepi32_epi16(+src);
-#else
+#  else
             auto const dwords = _mm_and_si128(+src, _mm_set1_epi32(0xffff));
             return _mm_packus_epi32(dwords, _mm_setzero_si128());
-#endif
+#  endif
         } else if constexpr (sizeof(E) == sizeof(To)) {
             return +src;
         } else {
@@ -415,7 +412,7 @@ struct convert_t<To> {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static inline vector<To> DPL_VECTORCALL operator()(
         vector<ext::float16> src) noexcept {
-#if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
+#  if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
         if constexpr (unsigned_integral<To>) {
             cosntexpr auto cmp_lt_oq = 17; // lessthan, ordered, quiet
             auto const error = xmm::broadcast<ext::float16>(dx::msb);
@@ -425,7 +422,7 @@ struct convert_t<To> {
         } else {
             return _mm_cvttph_epi16(+src);
         }
-#else
+#  else
         constexpr convert_t<int32> to_int32;
         auto const hi =
             vector<ext::float16>(__DPL bit_cast<__m128h>(_mm_unpackhi_epi64(
@@ -442,7 +439,7 @@ struct convert_t<To> {
         } else {
             return result;
         }
-#endif
+#  endif
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
@@ -474,31 +471,31 @@ struct convert_t<To> {
     static inline vector<To>
         DPL_VECTORCALL operator()(vector<E> src) noexcept {
         if constexpr (sizeof(E) == sizeof(int64)) {
-#if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
+#  if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
             return _mm_cvtepi64_epi8(+src);
-#else
+#  else
             auto const qwords = _mm_and_si128(+src, _mm_set1_epi64x(0xff));
             // Extract low 32 bits of each 64-bit lane
             auto const dwords =
                 _mm_shuffle_epi32(qwords, _MM_SHUFFLE(3, 1, 2, 0));
             auto const zero = _mm_setzero_si128();
             return _mm_packus_epi16(_mm_packus_epi32(dwords, zero), zero);
-#endif
+#  endif
         } else if constexpr (sizeof(E) == sizeof(int32)) {
-#if DPL_SIMD_X86_AVX512BW & DPL_SIMD_X86_AVX512VL
+#  if DPL_SIMD_X86_AVX512BW & DPL_SIMD_X86_AVX512VL
             return _mm_cvtepi32_epi8(+src);
-#else
+#  else
             auto const masked = _mm_and_si128(+src, _mm_set1_epi32(0xff));
             auto const zero = _mm_setzero_si128();
             return _mm_packus_epi16(_mm_packus_epi32(masked, zero), zero);
-#endif
+#  endif
         } else if constexpr (sizeof(E) == sizeof(int16)) {
-#if DPL_SIMD_X86_AVX512BW & DPL_SIMD_X86_AVX512VL
+#  if DPL_SIMD_X86_AVX512BW & DPL_SIMD_X86_AVX512VL
             return _mm_cvtepi16_epi8(+src);
-#else
+#  else
             auto const masked = _mm_and_si128(+src, _mm_set1_epi16(0xff));
             return _mm_packus_epi16(masked, _mm_setzero_si128());
-#endif
+#  endif
         } else {
             static_assert(sizeof(E) == sizeof(To));
             return +src;
@@ -544,9 +541,9 @@ struct convert_t<double> {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static inline vector<double> DPL_VECTORCALL operator()(
         vector<ext::float16> src) noexcept {
-#if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
+#  if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
         return _mm_cvtph_pd(+src);
-#else
+#  else
         constexpr convert_t<uint64> to_uint;
         auto const arg = to_uint(xmm::reinterpret<uint16>(src));
         auto const msb = xmm::broadcast<uint64>(0x8000);
@@ -566,7 +563,7 @@ struct convert_t<double> {
         auto const abs_f64 =
             xmm::bwor(xmm::reinterpret<double>(nonfinite), shifted);
         return xmm::bwor(abs_f64, signs);
-#endif
+#  endif
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
@@ -581,9 +578,9 @@ struct convert_t<double> {
     static inline vector<double>
         DPL_VECTORCALL operator()(vector<E> src) noexcept {
         if constexpr (sizeof(E) == sizeof(int64)) {
-#if DPL_SIMD_X86_AVX512DQ & DPL_SIMD_X86_AVX512VL
+#  if DPL_SIMD_X86_AVX512DQ & DPL_SIMD_X86_AVX512VL
             return _mm_cvtepi64_pd(+src);
-#else
+#  else
             // Without AVX512, it is simply not worth it to vectorize
             if constexpr (signed_integral<E>) {
                 return _mm_setr_pd(
@@ -595,7 +592,7 @@ struct convert_t<double> {
                     static_cast<double>(
                         __DPL to_unsigned(_mm_extract_epi64(src, 1))));
             }
-#endif
+#  endif
         } else if constexpr (sizeof(E) == sizeof(int32)) {
             if constexpr (signed_integral<E>) {
                 return _mm_cvtepi32_pd(+src);
@@ -651,13 +648,13 @@ public:
         DPL_VECTORCALL operator()(vector<E> src) noexcept {
         constexpr convert_t<float> to_fp32;
         if constexpr (sizeof(E) == sizeof(int64)) {
-#if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
+#  if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
             if constexpr (unsigned_integral<representation_t<E>>) {
                 return _mm_cvtepu64_ph(+src);
             } else {
                 return _mm_cvtepi64_ph(+src);
             }
-#else
+#  else
             auto const zero = _mm_setzero_si128();
             if constexpr (unsigned_integral<representation_t<E>>) {
                 auto const all = _mm_set1_epi64x(0xffff);
@@ -677,15 +674,15 @@ public:
                 return xmm::reinterpret<ext::float16>(xmm::bit_fill(
                     vsign16, operator()(xmm::reinterpret<uint64>(abs))));
             }
-#endif
+#  endif
         } else if constexpr (sizeof(E) == sizeof(int32)) {
-#if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
+#  if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
             if constexpr (unsigned_integral<representation_t<E>>) {
                 return _mm_cvtepu32_ph(+src);
             } else {
                 return _mm_cvtepi32_ph(+src);
             }
-#else
+#  else
             auto const zero = _mm_setzero_si128();
             if constexpr (unsigned_integral<representation_t<E>>) {
                 auto const all = _mm_set1_epi32(0xffff);
@@ -706,15 +703,15 @@ public:
                         vsign16,
                         operator()(xmm::reinterpret<uint32>(xmm::abi, abs))));
             }
-#endif
+#  endif
         } else if constexpr (sizeof(E) == sizeof(int16)) {
-#if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
+#  if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
             if constexpr (unsigned_integral<representation_t<E>>) {
                 return _mm_cvtepu16_ph(+src);
             } else {
                 return _mm_cvtepi16_ph(+src);
             }
-#else
+#  else
             if constexpr (unsigned_integral<representation_t<E>>) {
                 auto const zero = _mm_setzero_si128();
                 auto const lo =
@@ -736,12 +733,12 @@ public:
                     xmm::abi, xmm::abs(xmm::abi, src)));
                 return xmm::bwor(xmm::abi, sign, abs);
             }
-#endif
+#  endif
         } else {
-#if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
+#  if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
             constexpr convert_t<int16> to_i16;
             return _mm_cvtepi16_ph(+to_i16(src));
-#else
+#  else
             if constexpr (unsigned_integral<E>) {
                 constexpr convert_t<uint16> to_uint16;
                 return operator()(to_uint16(src));
@@ -749,16 +746,16 @@ public:
                 constexpr convert_t<int16> to_int16;
                 return operator()(to_int16(src));
             }
-#endif
+#  endif
         }
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static inline vector<ext::float16> DPL_VECTORCALL operator()(
         vector<double> src) noexcept {
-#if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
+#  if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
         return _mm_cvtpd_ph(+src);
-#else
+#  else
         auto const i64 = xmm::reinterpret<int64>(src);
         auto const msb64 = xmm::broadcast<int64>(dx::msb);
         auto const sign16 = xmm::bwshift_right<48>(
@@ -792,16 +789,16 @@ public:
                 _mm_shuffle_ps(_mm_castsi128_ps(+result),
                     _mm_castsi128_ps(zero), _MM_SHUFFLE(2, 0, 2, 0)),
                 zero)));
-#endif
+#  endif
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static inline vector<ext::float16> DPL_VECTORCALL operator()(
         vector<float> src) noexcept {
-#if DPL_SIMD_X86_F16C
+#  if DPL_SIMD_X86_F16C
         return __DPL bit_cast<__m128h>(
             _mm_cvtps_ph(+src, _MM_FROUND_TO_NEAREST_INT));
-#else
+#  else
         auto const i32 = xmm::reinterpret<int32>(src);
         auto const msb32 = xmm::broadcast<int32>(dx::msb);
         auto const sign16 = xmm::bwshift_right<16>(
@@ -831,7 +828,7 @@ public:
             xmm::bwor(sign16, xmm::reinterpret<uint32>(xmm::bwor(isnan, f16)));
         return xmm::reinterpret<ext::float16>(
             vector<uint32>(_mm_packus_epi32(+result, _mm_setzero_si128())));
-#endif
+#  endif
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
@@ -891,9 +888,9 @@ struct convert_t<ext::bfloat16> {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static inline vector<ext::bfloat16> DPL_VECTORCALL operator()(
         vector<float> src) noexcept {
-#if DPL_SIMD_X86_AVX512BF16 & DPL_SIMD_X86_AVX512VL
+#  if DPL_SIMD_X86_AVX512BF16 & DPL_SIMD_X86_AVX512VL
         return _mm_cvtneps_pbh(+src);
-#else
+#  else
         // deal with nan & inf
         auto const fval = +src;
         auto const ival = __DPL bit_cast<__m128i>(fval);
@@ -908,7 +905,7 @@ struct convert_t<ext::bfloat16> {
         auto const result =
             _mm_or_si128(_mm_srli_epi32(_mm_add_epi32(ival, bias), 16), isnan);
         return __DPL bit_cast<__m128bh>(_mm_packus_epi32(result, zero));
-#endif
+#  endif
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
@@ -937,7 +934,7 @@ struct convert_t {};
 
 } // namespace details
 
-DPL_EXPORT template <simd_element To, simd_element E>
+template <simd_element To, simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 inline vector<To> element_cast(vector<E> src) noexcept
 requires requires(xmm::details::convert_t<To> cvt) { cvt(src); }
@@ -946,8 +943,7 @@ requires requires(xmm::details::convert_t<To> cvt) { cvt(src); }
     return cvt(src);
 }
 
-DPL_EXPORT template <simd_element_for<xmm::abi_tag> To,
-    simd_element_for<xmm::abi_tag> E>
+template <simd_element_for<xmm::abi_tag> To, simd_element_for<xmm::abi_tag> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 inline vector<To> element_cast(abi_tag, vector<E> src) noexcept
 requires requires(xmm::details::convert_t<To> cvt) { cvt(src); }
@@ -963,4 +959,6 @@ inline vector<float> to_float(vector<ext::bfloat16> arg) noexcept {
 
 } // namespace datapar::xmm
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END
+
+#endif

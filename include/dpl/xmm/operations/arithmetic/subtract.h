@@ -6,26 +6,24 @@
 
 // IWYU pragma: private, include "dpl/xmm/operations/arithmetic.h"
 
-#if !DPL_ARCH_x86_64 || !DPL_SIMD_X86_SSE4_2
-#  error "Unsupported platform"
-#endif
+#if DPL_SIMD_X86_SSE4_2
 
-#include "dpl/xmm/operations/arithmetic/cast.h"
-#include "dpl/xmm/operations/reinterpret.h"
+#  include "dpl/xmm/operations/arithmetic/to_float.h"
+#  include "dpl/xmm/operations/reinterpret.h"
 
-#if !DPL_MODULES
-#  include "dpl/std/type_traits/type_identity.h"
-#  include "dpl/std/utility/template_barrier.h"
-#  include "dpl/xmm/basic/abi.h"
+#  if !DPL_MODULES
+#    include "dpl/std/type_traits/type_identity.h"
+#    include "dpl/std/utility/template_barrier.h"
+#    include "dpl/xmm/basic/abi.h"
 
-#  include <immintrin.h>
-#endif
+#    include <immintrin.h>
+#  endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::xmm {
 
-DPL_EXPORT template <template_barrier_t = template_barrier, simd_element E>
+template <template_barrier_t = template_barrier, simd_element E>
 requires integral<E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<E>
@@ -42,21 +40,21 @@ inline vector<E>
     }
 }
 
-DPL_EXPORT DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline vector<float>
-    DPL_VECTORCALL subtract(vector<float> lhs, vector<float> rhs) noexcept {
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+inline vector<float> DPL_VECTORCALL subtract(
+    vector<float> lhs, vector<float> rhs) noexcept {
     return _mm_sub_ps(+lhs, +rhs);
 }
 
-DPL_EXPORT DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline vector<double>
-    DPL_VECTORCALL subtract(vector<double> lhs, vector<double> rhs) noexcept {
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+inline vector<double> DPL_VECTORCALL subtract(
+    vector<double> lhs, vector<double> rhs) noexcept {
     return _mm_sub_pd(+lhs, +rhs);
 }
 
-#if DPL_SIMD_X86_AVX512VL
-#  if DPL_SIMD_X86_AVX512F
-DPL_EXPORT template <imask_t<int32> M, integral E>
+#  if DPL_SIMD_X86_AVX512VL
+#    if DPL_SIMD_X86_AVX512F
+template <imask_t<int32> M, integral E>
 requires common_size_with<E, int32>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<E>
@@ -65,7 +63,7 @@ inline vector<E>
     return _mm_mask_sub_epi32(+src, M, +lhs, +rhs);
 }
 
-DPL_EXPORT template <imask_t<int32> M, integral E>
+template <imask_t<int32> M, integral E>
 requires common_size_with<E, int32>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<E>
@@ -74,7 +72,7 @@ inline vector<E>
     return _mm_maskz_sub_epi32(M, +lhs, +rhs);
 }
 
-DPL_EXPORT template <imask_t<float> M>
+template <imask_t<float> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<float>
     DPL_VECTORCALL subtract(vector<float> src, cmask_t<float, M>,
@@ -82,7 +80,7 @@ inline vector<float>
     return _mm_mask_sub_ps(+src, M, +lhs, +rhs);
 }
 
-DPL_EXPORT template <imask_t<double> M>
+template <imask_t<double> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<double>
     DPL_VECTORCALL subtract(vector<double> src, cmask_t<double, M>,
@@ -90,7 +88,7 @@ inline vector<double>
     return _mm_mask_sub_pd(+src, M, +lhs, +rhs);
 }
 
-DPL_EXPORT template <imask_t<float> M>
+template <imask_t<float> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<float>
     DPL_VECTORCALL subtract(dx::zero_t, cmask_t<float, M>, vector<float> lhs,
@@ -98,7 +96,7 @@ inline vector<float>
     return _mm_maskz_sub_ps(M, +lhs, +rhs);
 }
 
-DPL_EXPORT template <imask_t<double> M>
+template <imask_t<double> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<double>
     DPL_VECTORCALL subtract(dx::zero_t, cmask_t<double, M>, vector<double> lhs,
@@ -106,11 +104,11 @@ inline vector<double>
     return _mm_maskz_sub_pd(M, +lhs, +rhs);
 }
 
-#  endif
+#    endif
 
-#  if DPL_SIMD_X86_AVX512DQ
+#    if DPL_SIMD_X86_AVX512DQ
 
-DPL_EXPORT template <imask_t<int64> M, integral E>
+template <imask_t<int64> M, integral E>
 requires common_size_with<E, int64>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<E>
@@ -119,7 +117,7 @@ inline vector<E>
     return _mm_mask_sub_epi64(+src, M, +lhs, +rhs);
 }
 
-DPL_EXPORT template <imask_t<int64> M, integral E>
+template <imask_t<int64> M, integral E>
 requires common_size_with<E, int64>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<E>
@@ -128,11 +126,11 @@ inline vector<E>
     return _mm_maskz_sub_epi64(M, +lhs, +rhs);
 }
 
-#  endif
+#    endif
 
-#  if DPL_SIMD_X86_AVX512BW
+#    if DPL_SIMD_X86_AVX512BW
 
-DPL_EXPORT template <imask_t<int16> M, integral E>
+template <imask_t<int16> M, integral E>
 requires common_size_with<E, int16>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<E>
@@ -141,7 +139,7 @@ inline vector<E>
     return _mm_mask_sub_epi16(+src, M, +lhs, +rhs);
 }
 
-DPL_EXPORT template <imask_t<int16> M, integral E>
+template <imask_t<int16> M, integral E>
 requires common_size_with<E, int16>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<E>
@@ -150,7 +148,7 @@ inline vector<E>
     return _mm_maskz_sub_epi16(M, +lhs, +rhs);
 }
 
-DPL_EXPORT template <imask_t<int8> M, integral E>
+template <imask_t<int8> M, integral E>
 requires common_size_with<E, int8>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<E>
@@ -159,7 +157,7 @@ inline vector<E>
     return _mm_mask_sub_epi8(+src, M, +lhs, +rhs);
 }
 
-DPL_EXPORT template <imask_t<int8> M, integral E>
+template <imask_t<int8> M, integral E>
 requires common_size_with<E, int8>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<E>
@@ -168,15 +166,15 @@ inline vector<E>
     return _mm_maskz_sub_epi8(M, +lhs, +rhs);
 }
 
-#  endif
+#    endif
 
-#  if DPL_SIMD_X86_AVX512FP16
+#    if DPL_SIMD_X86_AVX512FP16
 inline vector<ext::float16> DPL_VECTORCALL subtract(
     vector<ext::float16> lhs, vector<ext::float16> rhs) noexcept {
     return _mm_sub_ph(+lhs, +rhs);
 }
 
-DPL_EXPORT template <imask_t<ext::float16> M>
+template <imask_t<ext::float16> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<ext::float16>
     DPL_VECTORCALL subtract(vector<ext::float16> src, cmask_t<ext::float16, M>,
@@ -184,17 +182,17 @@ inline vector<ext::float16>
     return _mm_mask_sub_ph(src, M, +lhs, +rhs);
 }
 
-DPL_EXPORT template <imask_t<ext::float16> M>
+template <imask_t<ext::float16> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<ext::float16>
     DPL_VECTORCALL subtract(dx::zero_t zero, cmask_t<ext::float16, M>,
         vector<ext::float16> lhs, vector<ext::float16> rhs) noexcept {
     return _mm_maskz_sub_ph(M, +lhs, +rhs);
 }
+#    endif
 #  endif
-#endif
 
-DPL_EXPORT template <same_as<ext::bfloat16> E>
+template <same_as<ext::bfloat16> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<ext::bfloat16>
     DPL_VECTORCALL subtract(vector<E> lhs, vector<E> rhs) noexcept {
@@ -205,18 +203,18 @@ inline vector<ext::bfloat16>
     auto const lo = xmm::subtract(xmm::to_float(lhs), xmm::to_float(rhs));
     auto const hi = xmm::subtract(xmm::to_float(hlhs), xmm::to_float(hrhs));
 
-#if DPL_SIMD_X86_AVX512BF16 & DPL_SIMD_X86_AVX512VL
+#  if DPL_SIMD_X86_AVX512BF16 & DPL_SIMD_X86_AVX512VL
     return _mm_cvtne2ps_pbh(+hi, +lo);
-#else
+#  else
     auto const packed =
         _mm_packus_epi32( __DPL bit_cast<__m128i>(+element_cast<E>(lo)),
             __DPL bit_cast<__m128i>(+element_cast<E>(hi)));
 
     return xmm::reinterpret<ext::bfloat16>(vector<int16>(packed));
-#endif
+#  endif
 }
 
-DPL_EXPORT template <simd_element E>
+template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 inline auto DPL_VECTORCALL subtract(
     abi_tag, vector<E> lhs, vector<E> rhs) noexcept
@@ -225,7 +223,7 @@ requires requires { xmm::subtract(lhs, rhs); }
     return xmm::subtract(lhs, rhs);
 }
 
-DPL_EXPORT template <simd_element E, imask_t<E> M>
+template <simd_element E, imask_t<E> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 inline vector<E>
     DPL_VECTORCALL subtract(abi_tag, type_identity_t<vector<E>> src,
@@ -235,7 +233,7 @@ requires requires { xmm::subtract(src, mask, lhs, rhs); }
     return xmm::subtract(src, mask, lhs, rhs);
 }
 
-DPL_EXPORT template <simd_element E, imask_t<E> M>
+template <simd_element E, imask_t<E> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 inline vector<E>
     DPL_VECTORCALL subtract(abi_tag, dx::zero_t zero, cmask_t<E, M> mask,
@@ -247,4 +245,6 @@ requires requires { xmm::subtract(zero, mask, lhs, rhs); }
 
 } // namespace datapar::xmm
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END
+
+#endif

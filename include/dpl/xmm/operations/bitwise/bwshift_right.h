@@ -4,28 +4,26 @@
 
 #include "dpl/config.h"
 
-#if !DPL_ARCH_x86_64 || !DPL_SIMD_X86_SSE4_2
-#  error "Unsupported platform"
-#endif
+#if DPL_SIMD_X86_SSE4_2
 
-#include "dpl/xmm/operations/bitwise/bwshift_left.h"
-#include "dpl/xmm/operations/reinterpret.h"
+#  include "dpl/xmm/operations/bitwise/bwshift_left.h"
+#  include "dpl/xmm/operations/reinterpret.h"
 
-#if !DPL_MODULES
-#  include "dpl/core/fwd.h"
+#  if !DPL_MODULES
+#    include "dpl/core/fwd.h"
 
-#  include "dpl/core/concepts/common_size_with.h"
-#  include "dpl/core/immediate/immediate.h"
-#  include "dpl/core/type_traits/common_size_type.h"
-#  include "dpl/core/type_traits/representation.h"
-#  include "dpl/std/concepts/integral_constant_like.h"
-#  include "dpl/std/utility/template_barrier.h"
-#  include "dpl/xmm/basic/abi.h"
+#    include "dpl/core/concepts/common_size_with.h"
+#    include "dpl/core/immediate/immediate.h"
+#    include "dpl/core/type_traits/common_size_type.h"
+#    include "dpl/core/type_traits/representation.h"
+#    include "dpl/std/concepts/integral_constant_like.h"
+#    include "dpl/std/utility/template_barrier.h"
+#    include "dpl/xmm/basic/abi.h"
 
-#  include <immintrin.h>
-#endif
+#    include <immintrin.h>
+#  endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::xmm {
 
@@ -81,17 +79,17 @@ inline vector<E>
         if constexpr (unsigned_integral<E>) {
             return _mm_srl_epi64(+val, _mm_cvtsi32_si128(shift));
         } else {
-#if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
+#  if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
             return _mm_srav_epi64(
                 +val, _mm_set1_epi64x(static_cast<int64>(shift)));
-#else
+#  else
             auto const vval = +val;
             auto const shifted = _mm_srl_epi64(vval, _mm_cvtsi32_si128(shift));
             auto const sign = _mm_cmpgt_epi64(_mm_setzero_si128(), vval);
             auto const fill =
                 _mm_sll_epi64(sign, _mm_cvtsi32_si128(64 - shift));
             return _mm_or_si128(shifted, fill);
-#endif
+#  endif
         }
     } else if constexpr (sizeof(E) == sizeof(int32)) {
         if constexpr (unsigned_integral<E>) {
@@ -143,15 +141,15 @@ inline vector<E>
         if constexpr (unsigned_integral<E>) {
             return _mm_srli_epi64(+val, static_cast<int>(V));
         } else {
-#if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
+#  if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
             return _mm_srai_epi64(+val, static_cast<int>(V));
-#else
+#  else
             auto const vval = +val;
             auto const shifted = _mm_srli_epi64(vval, static_cast<int>(V));
             auto const sign = _mm_cmpgt_epi64(_mm_setzero_si128(), vval);
             auto const fill = _mm_slli_epi64(sign, static_cast<int>(64 - V));
             return _mm_or_si128(shifted, fill);
-#endif
+#  endif
         }
     } else if constexpr (sizeof(E) == sizeof(int32)) {
         if constexpr (unsigned_integral<E>) {
@@ -188,7 +186,7 @@ inline vector<E>
     }
 }
 
-#if DPL_SIMD_X86_AVX2
+#  if DPL_SIMD_X86_AVX2
 
 template <template_barrier_t = template_barrier, simd_element L,
     common_size_with<L> R>
@@ -204,15 +202,15 @@ inline vector<L>
         if constexpr (unsigned_integral<L>) {
             return _mm_srlv_epi64(+lhs, +rhs);
         } else {
-#  if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
+#    if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
             return _mm_srav_epi64(+lhs, +rhs);
-#  else
+#    else
             auto const shifted = _mm_srlv_epi64(+lhs, +rhs);
             auto const sign = _mm_cmpgt_epi64(_mm_setzero_si128(), +lhs);
             auto const fill =
                 _mm_slli_epi64(sign, _mm_sub_epi64(_mm_set1_epi64x(64), +rhs));
             return _mm_or_si128(shifted, fill);
-#  endif
+#    endif
         }
     } else if constexpr (sizeof(L) == sizeof(int32)) {
         if constexpr (unsigned_integral<L>) {
@@ -221,13 +219,13 @@ inline vector<L>
             return _mm_srav_epi32(+lhs, +rhs);
         }
     } else if constexpr (sizeof(L) == sizeof(int16)) {
-#  if DPL_SIMD_X86_AVX512BW & DPL_SIMD_X86_AVX512VL
+#    if DPL_SIMD_X86_AVX512BW & DPL_SIMD_X86_AVX512VL
         if constexpr (unsigned_integral<L>) {
             return _mm_srlv_epi16(+lhs, +rhs);
         } else {
             return _mm_srav_epi16(+lhs, +rhs);
         }
-#  else
+#    else
         if constexpr (unsigned_integral<L>) {
             auto xmm0 = +lhs;
             auto xmm1 = +rhs;
@@ -259,7 +257,7 @@ inline vector<L>
             xmm1 = _mm_blend_epi16(xmm1, xmm0, 0x55);
             return _mm_packus_epi32(xmm2, xmm1);
         }
-#  endif
+#    endif
     } else {
         static_assert(sizeof(L) == sizeof(int8));
         if constexpr (unsigned_integral<L>) {
@@ -299,7 +297,7 @@ inline vector<L>
 }
 
 // No efficient way to right shift without avx2
-#endif
+#  endif
 
 template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -343,4 +341,5 @@ requires requires { xmm::bwshift_right(lhs, rhs); }
 
 } // namespace datapar::xmm
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END
+#endif

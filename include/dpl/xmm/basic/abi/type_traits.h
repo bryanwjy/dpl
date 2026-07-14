@@ -11,9 +11,8 @@
 #if DPL_SIMD_X86_SSE4_2
 
 #  if !DPL_MODULES
-#    include "dpl/core/concepts/same_as.h"
-#    include "dpl/core/type_traits/remove_cv.h"
 #    include "dpl/core/type_traits/simd_element_representation.h"
+#    include "dpl/std/type_traits/remove_cv.h"
 
 #    include <immintrin.h>
 #  endif

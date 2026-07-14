@@ -4,26 +4,24 @@
 
 #include "dpl/config.h"
 
-#if !DPL_ARCH_x86_64 || !DPL_SIMD_X86_SSE4_2
-#  error "Unsupported platform"
-#endif
+#if DPL_SIMD_X86_SSE4_2
 
-#include "dpl/xmm/operations/reinterpret.h"
+#  include "dpl/xmm/operations/reinterpret.h"
 
-#if !DPL_MODULES
-#  include "dpl/core/fwd.h"
+#  if !DPL_MODULES
+#    include "dpl/core/fwd.h"
 
-#  include "dpl/core/concepts/common_size_with.h"
-#  include "dpl/core/immediate/immediate.h"
-#  include "dpl/core/type_traits/representation.h"
-#  include "dpl/std/concepts/integral_constant_like.h"
-#  include "dpl/std/utility/template_barrier.h"
-#  include "dpl/xmm/basic/abi.h"
+#    include "dpl/core/concepts/common_size_with.h"
+#    include "dpl/core/immediate/immediate.h"
+#    include "dpl/core/type_traits/representation.h"
+#    include "dpl/std/concepts/integral_constant_like.h"
+#    include "dpl/std/utility/template_barrier.h"
+#    include "dpl/xmm/basic/abi.h"
 
-#  include <immintrin.h>
-#endif
+#    include <immintrin.h>
+#  endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::xmm {
 
@@ -132,7 +130,7 @@ inline vector<E>
     }
 }
 
-#if DPL_SIMD_X86_AVX2
+#  if DPL_SIMD_X86_AVX2
 
 template <template_barrier_t = __DPL template_barrier, simd_element L,
     common_size_with<L> R>
@@ -149,9 +147,9 @@ inline vector<L>
     } else if constexpr (sizeof(L) == sizeof(int32)) {
         return _mm_sllv_epi32(+lhs, +rhs);
     } else if constexpr (sizeof(L) == sizeof(int16)) {
-#  if DPL_SIMD_X86_AVX512BW & DPL_SIMD_X86_AVX512VL
+#    if DPL_SIMD_X86_AVX512BW & DPL_SIMD_X86_AVX512VL
         return _mm_sllv_epi16(+lhs, +rhs);
-#  else
+#    else
         // Maybe just use the ymm registers?
         auto xmm0 = +lhs;
         auto xmm1 = +rhs;
@@ -168,7 +166,7 @@ inline vector<L>
         xmm2 = _mm_blend_epi16(xmm1, xmm2, mask);
         xmm1 = _mm_blend_epi16(xmm1, xmm0, mask);
         return _mm_packus_epi32(xmm2, xmm1);
-#  endif
+#    endif
     } else {
         static_assert(sizeof(L) == sizeof(int8));
         auto xmm0 = +lhs;
@@ -190,7 +188,7 @@ inline vector<L>
     }
 }
 
-#else
+#  else
 // SSE 4.2
 template <template_barrier_t = __DPL template_barrier, simd_element L,
     common_size_with<L> R>
@@ -260,7 +258,7 @@ inline vector<L>
     }
 }
 
-#endif
+#  endif
 
 template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -304,4 +302,6 @@ requires requires { xmm::bwshift_left(lhs, rhs); }
 
 } // namespace datapar::xmm
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END
+
+#endif

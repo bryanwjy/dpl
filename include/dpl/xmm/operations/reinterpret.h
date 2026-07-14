@@ -4,24 +4,22 @@
 
 #include "dpl/config.h"
 
-#if !DPL_ARCH_x86_64 || !DPL_SIMD_X86_SSE4_2
-#  error "Unsupported platform"
-#endif
+#if DPL_SIMD_X86_SSE4_2
 
-#if !DPL_MODULES
-#  include "dpl/std/bit/bit_cast.h"
-#  include "dpl/xmm/basic/abi.h"
-#  include "dpl/xmm/basic/load.h"
-#  include "dpl/xmm/basic/store.h"
+#  if !DPL_MODULES
+#    include "dpl/std/bit/bit_cast.h"
+#    include "dpl/xmm/basic/abi.h"
+#    include "dpl/xmm/basic/load.h"
+#    include "dpl/xmm/basic/store.h"
 
-#  include <immintrin.h>
-#endif
+#    include <immintrin.h>
+#  endif
 
-DPL_DEFAULT_NAMESPACE_BEGIN
+__DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::xmm {
 
-DPL_EXPORT template <simd_element E, simd_element F>
+template <simd_element E, simd_element F>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr vector<E> reinterpret(vector<F> src) noexcept {
     if consteval {
@@ -51,11 +49,11 @@ constexpr vector<E> reinterpret(vector<F> src) noexcept {
                 return __DPL bit_cast<native_vector_t<E>>(+src);
             } else {
                 static_assert(is_same_v<F, ext::float16>);
-#if DPL_SIMD_X86_AVX512FP16
+#  if DPL_SIMD_X86_AVX512FP16
                 return _mm_castph_ps(+src);
-#else
+#  else
                 return __DPL bit_cast<native_vector_t<E>>(+src);
-#endif
+#  endif
             }
         } else if constexpr (is_same_v<E, double>) {
             if constexpr (is_same_v<F, float>) {
@@ -68,11 +66,11 @@ constexpr vector<E> reinterpret(vector<F> src) noexcept {
                 return __DPL bit_cast<native_vector_t<E>>(+src);
             } else {
                 static_assert(is_same_v<F, ext::float16>);
-#if DPL_SIMD_X86_AVX512FP16
+#  if DPL_SIMD_X86_AVX512FP16
                 return _mm_castph_pd(+src);
-#else
+#  else
                 return __DPL bit_cast<native_vector_t<E>>(+src);
-#endif
+#  endif
             }
         } else if constexpr (integral<E>) {
             if constexpr (is_same_v<F, double>) {
@@ -85,17 +83,17 @@ constexpr vector<E> reinterpret(vector<F> src) noexcept {
                 return __DPL bit_cast<native_vector_t<E>>(+src);
             } else {
                 static_assert(is_same_v<F, ext::float16>);
-#if DPL_SIMD_X86_AVX512FP16
+#  if DPL_SIMD_X86_AVX512FP16
                 return _mm_castph_si128(+src);
-#else
+#  else
                 return __DPL bit_cast<native_vector_t<E>>(+src);
-#endif
+#  endif
             }
         } else if constexpr (is_same_v<E, ext::bfloat16>) {
             return __DPL bit_cast<__m128bh>(+src);
         } else {
             static_assert(is_same_v<E, ext::float16>);
-#if DPL_SIMD_X86_AVX512FP16
+#  if DPL_SIMD_X86_AVX512FP16
             if constexpr (is_same_v<F, double>) {
                 return _mm_castpd_ph(+src);
             } else if constexpr (is_same_v<F, float>) {
@@ -107,26 +105,26 @@ constexpr vector<E> reinterpret(vector<F> src) noexcept {
             } else {
                 return +src;
             }
-#else
+#  else
             return __DPL bit_cast<native_vector_t<E>>(+src);
-#endif
+#  endif
         }
     }
 }
 
-DPL_EXPORT template <simd_element E, simd_element F>
+template <simd_element E, simd_element F>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr mask<E> reinterpret(mask<F> src) noexcept {
     return +xmm::reinterpret<E>(vector<F>(+src));
 }
 
-DPL_EXPORT template <simd_element E, simd_element F>
+template <simd_element E, simd_element F>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr vector<E> reinterpret(abi_tag, vector<F> src) noexcept {
     return xmm::reinterpret<E>(src);
 }
 
-DPL_EXPORT template <simd_element E, simd_element F>
+template <simd_element E, simd_element F>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr mask<E> reinterpret(abi_tag, mask<F> src) noexcept {
     return xmm::reinterpret<E>(src);
@@ -134,4 +132,6 @@ constexpr mask<E> reinterpret(abi_tag, mask<F> src) noexcept {
 
 } // namespace datapar::xmm
 
-DPL_DEFAULT_NAMESPACE_END
+__DPL_DEFAULT_NAMESPACE_END
+
+#endif
