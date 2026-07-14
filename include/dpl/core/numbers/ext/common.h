@@ -67,10 +67,6 @@ struct floating_point_traits<ext::bfloat16> {
     static constexpr auto exponent_bias =
         ((1 << __DPL popcount(exponent_mask)) - 1);
     static constexpr auto has_hidden_bit = true;
-    static constexpr auto has_denormal = true;
-    static constexpr auto has_infinity = true;
-    static constexpr auto has_quiet_nan = true;
-    static constexpr auto has_signaling_nan = true;
 };
 #endif
 
@@ -104,10 +100,6 @@ struct floating_point_traits<ext::float16> {
     static constexpr auto exponent_bias =
         ((1 << __DPL popcount(exponent_mask)) - 1);
     static constexpr auto has_hidden_bit = true;
-    static constexpr auto has_denormal = true;
-    static constexpr auto has_infinity = true;
-    static constexpr auto has_quiet_nan = true;
-    static constexpr auto has_signaling_nan = true;
 };
 #endif
 __DPL_DEFAULT_NAMESPACE_END

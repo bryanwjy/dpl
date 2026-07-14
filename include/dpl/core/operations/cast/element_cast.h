@@ -14,8 +14,6 @@
 #  include "dpl/core/dispatch/interface.h"
 #  include "dpl/core/dispatch/maskable/transform.h"
 #  include "dpl/core/dispatch/operation/primitive.h"
-#  include "dpl/core/immediate/constants/max_value.h"
-#  include "dpl/core/immediate/constants/min_value.h"
 #  include "dpl/core/immediate/constants/zero.h"
 #  include "dpl/core/type_traits/rebind_simd.h"
 #endif

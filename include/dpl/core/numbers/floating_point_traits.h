@@ -41,14 +41,6 @@ struct floating_point_traits<T> {
 
     static constexpr auto has_hidden_bit = true;
 
-    static constexpr auto has_denormal = true;
-
-    static constexpr auto has_infinity = true;
-
-    static constexpr auto has_quiet_nan = true;
-
-    static constexpr auto has_signaling_nan = true;
-
     static constexpr auto radix = 2zu;
 };
 
@@ -74,14 +66,6 @@ struct floating_point_traits<T> {
         ((1 << __DPL popcount(exponent_mask)) - 1);
 
     static constexpr auto has_hidden_bit = false;
-
-    static constexpr auto has_denormal = true;
-
-    static constexpr auto has_infinity = true;
-
-    static constexpr auto has_quiet_nan = true;
-
-    static constexpr auto has_signaling_nan = true;
 
     static constexpr auto radix = 2zu;
 };

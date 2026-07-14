@@ -305,8 +305,8 @@ public:
     requires (Opt::has(frexp_reduced))
     {
         using result_type = make_frexp_t<basic_vector<E, A>, Opt>;
-        constexpr auto fourthirds_v = static_cast<E>(1.0 / 0.75);
-        auto const fourthirds = dx::broadcast<E, A>(fourthirds_v);
+        constexpr auto fourthirds = static_cast<E>(1.0 / 0.75);
+        auto const vfourthirds = dx::broadcast<E, A>(fourthirds);
         auto const issubnormal = [](auto val) {
             if constexpr (Opt::has(frexp_positive)) {
                 return val < dx::min_value;
@@ -328,7 +328,7 @@ public:
             [](auto issubnormal, auto exp) {
                 return dx::select(issubnormal, exp - subnormal_offset<E>, exp);
             }(issubnormal,
-                fmath::ilogb(fmath::compliance::unsafe, dval * fourthirds));
+                fmath::ilogb(fmath::compliance::unsafe, dval * vfourthirds));
         auto const fr = [](auto val, auto fr) {
             if constexpr (Opt::has(frexp_positive)) {
                 return dx::select(val < dx::zero, dx::all_bits, fr);

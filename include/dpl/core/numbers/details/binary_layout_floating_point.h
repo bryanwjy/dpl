@@ -24,9 +24,6 @@ concept binary_layout_floating_point = floating_point_like<T> && requires {
     floating_point_traits<T>::exponent_mask;
     floating_point_traits<T>::exponent_bias;
     floating_point_traits<T>::has_hidden_bit;
-    floating_point_traits<T>::has_signaling_nan;
-    floating_point_traits<T>::has_denormal;
-    floating_point_traits<T>::has_infinity;
     floating_point_traits<T>::radix;
     requires (floating_point_traits<T>::radix == 2);
     typename size_constant<floating_point_traits<T>::width>;
@@ -39,10 +36,6 @@ concept binary_layout_floating_point = floating_point_like<T> && requires {
     typename integral_constant<bitset<floating_point_traits<T>::width>,
         floating_point_traits<T>::exponent_mask>;
     typename bool_constant<floating_point_traits<T>::has_hidden_bit>;
-    typename bool_constant<floating_point_traits<T>::has_signaling_nan>;
-    typename bool_constant<floating_point_traits<T>::has_quiet_nan>;
-    typename bool_constant<floating_point_traits<T>::has_denormal>;
-    typename bool_constant<floating_point_traits<T>::has_infinity>;
 };
 
 } // namespace details::numbers

@@ -20,6 +20,7 @@ DPL_DISABLE_WARNING(5244)
 #include "dpl/core/numbers/ext.h"
 #include "dpl/core/numbers/floating_point_like.h"
 #include "dpl/core/numbers/floating_point_traits.h"
+#include "dpl/core/numbers/integral_traits.h"
 // IWYU pragma: end_exports
 
 DPL_DISABLE_WARNING_POP()

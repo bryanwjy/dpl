@@ -12,8 +12,8 @@
 
 #  if !DPL_MODULES
 #    include "dpl/core/immediate/constants/infinity.h"
-#    include "dpl/core/immediate/constants/max_value.h"
 #    include "dpl/core/immediate/constants/msb.h"
+#    include "dpl/core/numbers/integral_traits.h"
 #    include "dpl/std/bit/bit_cast.h"
 #    include "dpl/std/utility/to_unsigned.h"
 #    include "dpl/xmm/basic/abi.h"
@@ -147,7 +147,8 @@ struct convert_t<float> {
             if constexpr (signed_integral<representation_t<E>>) {
                 return _mm_cvtepi32_ps(+src);
             } else {
-                constexpr auto max = max_value_v<make_signed_t<E>>;
+                constexpr auto max =
+                    integral_traits<make_signed_t<E>>::max_value;
                 auto const gt = _mm_cmpgt_epi32(+src, _mm_set1_epi32(max));
                 return _mm_add_ps(_mm_cvtepi32_ps(+src),
                     _mm_and_ps(gt, _mm_set1_ps(0x1p32f)));

@@ -56,7 +56,7 @@ constexpr void test() noexcept {
         }
     }
 
-    constexpr auto dwidth = sizeof(To) * dpl::char_bit_v;
+    constexpr auto dwidth = dpl::integral_traits<To>::width;
 
     if constexpr (sizeof(From) == sizeof(To)) {
         assert(test<To>(repeat_as<From>(0xAA)));
@@ -86,8 +86,8 @@ constexpr void test() noexcept {
         }
 
         if constexpr (sizeof(From) > sizeof(To)) {
-            constexpr auto offset =
-                (sizeof(From) - sizeof(To)) * dpl::char_bit_v;
+            constexpr auto offset = dpl::integral_traits<From>::width -
+                dpl::integral_traits<To>::width;
             assert(test<To>(static_cast<From>(1ll << (dwidth + offset))));
             if constexpr (dpl::signed_integral<From>) {
                 assert(test<To>(-static_cast<From>(1ll << (dwidth + offset))));
