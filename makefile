@@ -85,6 +85,7 @@ BUILD_FILES := $(BUILD_JSON) $(BUILD_TXT)
 BUILD_JSON_ALIAS := $(basename $(notdir $(BUILD_JSON)))
 BUILD_TXT_ALIAS := $(basename $(notdir $(BUILD_TXT)))
 MODULE_ALIAS := $(basename $(MODULE_SOURCES:$(ROOT_DIR)/%=%))
+BUILD_MANIFEST := $(OUTPUT_DIR)/build_manifest.txt
 
 .PHONY: all clean parallel_probes FORCE $(BUILD_JSON_ALIAS) $(BUILD_TXT_ALIAS) $(TEST_ALIAS) $(TEST_SUBDIRS) $(MODULE_ALIAS)
 
@@ -104,11 +105,27 @@ $(patsubst $(ROOT_DIR)/%.cpp,$(OUTPUT_DIR)/%.crc,$(wildcard $(ROOT_DIR)/$(1)/*.p
 $(patsubst $(ROOT_DIR)/%.cpp,$(OUTPUT_DIR)/%.crc,$(wildcard $(ROOT_DIR)/$(1)/**/*.pass.cpp))
 endef
 
-all: $(TEST_CRC) $(ALL_TARGETS) $(BUILD_FILES)
+
+empty :=
+space := $(empty) $(empty)
+# newline requiures two empty lines so that dereferencing it results in a single newline
+define newline
+
+
+endef
+
+all: $(TEST_CRC) $(ALL_TARGETS) $(BUILD_FILES) $(BUILD_MANIFEST)
 	@
 
 clean:
-	@rm -f $(TEST_CRC) $(ALL_TARGETS) $(BUILD_FILES) $(DEP_FILES) $(OUTPUT_DIR)/scan_barrier.d
+	@if [ -s $(BUILD_MANIFEST) ]; then \
+	    xargs rm -f < $(BUILD_MANIFEST) && rm $(BUILD_MANIFEST); \
+	else \
+		rm -f $(TEST_CRC) $(ALL_TARGETS) $(BUILD_FILES) $(DEP_FILES) $(OUTPUT_DIR)/scan_barrier.d; \
+	fi
+
+$(OUTPUT_DIR)/build_manifest.txt: $(ALL_SOURCES)
+	@$(file >$@,$(foreach f,$(sort $(TEST_CRC) $(ALL_TARGETS) $(BUILD_FILES) $(DEP_FILES) $(OUTPUT_DIR)/scan_barrier.d),$(f)$(newline)))
 
 $(OUTPUT_DIR)/env.stamp: FORCE
 	$(call replace_if_different, printf "%s\n" \
@@ -151,14 +168,6 @@ $(OUTPUT_DIR)/module_dependencies.json: $(OUTPUT_DIR)/scan_commands.json $(ALL_S
 	@mkdir -p '$(@D)'
 	@$(SCAN_DEPS) -format=p1689 -compilation-database=$< -o $@.tmp
 	@cmp -s $@.tmp $@ 2>/dev/null && rm $@.tmp || mv $@.tmp $@
-
-empty :=
-space := $(empty) $(empty)
-# newline requiures two empty lines so that dereferencing it results in a single newline
-define newline
-
-
-endef
 
 $(OUTPUT_DIR)/module_implementations.txt: FORCE
 	@mkdir -p '$(@D)'

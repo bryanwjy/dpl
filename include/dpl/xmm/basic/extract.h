@@ -9,6 +9,7 @@
 #  include "dpl/xmm/basic/abi.h"
 
 #  if !DPL_MODULES
+#    include "dpl/core/numbers/floating_point_like.h"
 #    include "dpl/core/type_traits/representation.h"
 #    include "dpl/std/bit/bit_cast.h"
 #    include "dpl/std/concepts/integral_constant_like.h"
@@ -115,7 +116,7 @@ constexpr bool is_true(unsigned_integral auto val) noexcept {
 }
 
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, FLATTEN, NODISCARD)
-constexpr bool is_true(floating_point auto val) noexcept {
+constexpr bool is_true(floating_point_like auto val) noexcept {
     using int_type = signed_representation_t<decltype(val)>;
     return xmm::is_true(__DPL bit_cast<int_type>(val));
 }

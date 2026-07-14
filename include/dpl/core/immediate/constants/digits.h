@@ -8,6 +8,7 @@
 #if !DPL_MODULES
 #  include "dpl/core/concepts/simd_element.h"
 #  include "dpl/core/numbers/floating_point_traits.h"
+#  include "dpl/core/numbers/integral_traits.h"
 #  include "dpl/std/concepts/integral.h"
 #endif
 
@@ -15,11 +16,7 @@ __DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 template <integral T>
 consteval int digits_of() noexcept {
-    if constexpr (signed_integral<T>) {
-        return sizeof(T) * char_bit_v - 1;
-    } else {
-        return sizeof(T) * char_bit_v;
-    }
+    return static_cast<int>(integral_traits<T>::digits);
 }
 
 template <floating_point_like T>

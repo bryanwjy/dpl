@@ -7,13 +7,13 @@
 #include "dpl/core/immediate/constants/digits.h"
 
 #if !DPL_MODULES
-#  include "dpl/std/concepts/floating_point.h"
+#  include "dpl/core/numbers/floating_point_like.h"
 #endif
 
 __DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
-template <floating_point T>
+template <floating_point_like T>
 struct mantissa_width_t :
     integral_constant<int, digits_v<T> - 1>,
     broadcastable_base<mantissa_width_t<T>> {
@@ -21,10 +21,10 @@ struct mantissa_width_t :
         default;
 };
 
-template <floating_point T>
+template <floating_point_like T>
 inline constexpr mantissa_width_t<T> mantissa_width{};
 
-template <floating_point T>
+template <floating_point_like T>
 inline constexpr int mantissa_width_v = mantissa_width<T>;
 
 } // namespace datapar
