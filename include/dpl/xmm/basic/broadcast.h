@@ -101,8 +101,7 @@ constexpr mask<E> broadcast(same_as<bool> auto boolean) noexcept {
                    : +xmm::broadcast<E>(dx::zero);
 }
 
-template <simd_element E, integral_constant_like V>
-requires same_as<typename V::value_type, bool>
+template <simd_element E, bool_constant_like V>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr mask<E> broadcast(V) noexcept {
     if constexpr (V::value) {
@@ -136,8 +135,7 @@ constexpr mask<E> broadcast(abi_tag, same_as<bool> auto boolean) noexcept {
     return xmm::broadcast<E>(boolean);
 }
 
-template <simd_element E, integral_constant_like V>
-requires same_as<typename V::value_type, bool>
+template <simd_element E, bool_constant_like V>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr mask<E> broadcast(abi_tag, V constant) noexcept {
     return xmm::broadcast<E>(constant);

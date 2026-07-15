@@ -95,11 +95,11 @@ constexpr E extract(vector<E> src, integral_constant_like auto idx) noexcept {
                 return __DPL bit_cast<E>(_mm_extract_epi32(+src, imm8));
             } else if constexpr (sizeof(E) == sizeof(int16)) {
                 return __DPL bit_cast<E>(
-                    static_cast<E>(_mm_extract_epi16(+src, imm8)));
+                    static_cast<int16>(_mm_extract_epi16(+src, imm8)));
             } else {
                 static_assert(sizeof(E) == sizeof(int8));
                 return __DPL bit_cast<E>(
-                    static_cast<E>(_mm_extract_epi8(+src, imm8)));
+                    static_cast<int8>(_mm_extract_epi8(+src, imm8)));
             }
         }
     }

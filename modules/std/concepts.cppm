@@ -13,6 +13,7 @@ __DPL_DEFAULT_NAMESPACE_BEGIN
 // NOLINTBEGIN(misc-unused-using-decls)
 using __DPL array_initializable;
 using __DPL assignable_from;
+using __DPL bool_constant_like;
 using __DPL boolean_testable;
 using __DPL common_reference_with;
 using __DPL common_with;

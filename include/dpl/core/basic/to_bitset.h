@@ -21,6 +21,7 @@ struct to_bitset_t : public basic_operation_base<to_bitset_t> {
     using operation_base<to_bitset_t>::operator();
 
     template <const_mask_like M>
+    requires (!simd_mask<M>)
     static consteval auto operator()(M mask) noexcept
     requires requires {
         { to_bitset(mask) } -> bitset_type;
@@ -50,15 +51,6 @@ struct canonical_impl<to_bitset_t> {
     static constexpr bitset<simd_abi_traits<A, E>::size> operator()(
         basic_mask<E, A> val) noexcept {
         return to_bitset(internal::abi<A>, val);
-    }
-
-    template <const_mask_like M>
-    requires requires(M mask) {
-        { to_bitset(mask) } -> bitset_type;
-    }
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(M mask) noexcept {
-        return to_bitset(mask);
     }
 };
 } // namespace datapar::internal

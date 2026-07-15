@@ -96,11 +96,14 @@ struct canonical_impl<broadcast_t<T, U>> {
         return broadcast<E>(internal::abi<A>, scalar);
     }
 
-    template <integral_constant_like V>
-    requires same_as<bool, typename V::value_type>
+    template <bool_constant_like V>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr basic_mask<E, A> operator()(V scalar) noexcept {
-        if constexpr (requires { broadcast<E>(internal::abi<A>, scalar); }) {
+        if constexpr (requires {
+                          {
+                              broadcast<E>(internal::abi<A>, scalar)
+                          } -> same_as<basic_mask<E, A>>;
+                      }) {
             return broadcast<E>(internal::abi<A>, scalar);
         } else {
             return broadcast<E>(internal::abi<A>, V::value);

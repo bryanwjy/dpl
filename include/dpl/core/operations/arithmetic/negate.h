@@ -43,7 +43,7 @@ struct fallback_impl<negate_t> {
     static constexpr auto DPL_VECTORCALL operator()(
         basic_vector<E, A> val) noexcept {
         return internal::transform<basic_vector<E, A>>(
-            [](auto val) { return -val; }, val);
+            [](E val) -> E { return -val; }, val);
     }
 };
 

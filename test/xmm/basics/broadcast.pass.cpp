@@ -88,6 +88,14 @@ constexpr void test_broadcast() {
     test_broadcast_value(static_cast<E>(1));
     test_broadcast_value(static_cast<E>(-1));
     test_broadcast_value(static_cast<E>(42));
+
+    assert(dpl::popcount(dpp::to_bitset(dpp::broadcast<E, abi_t>(true))) ==
+        dpl::bitset<abi_traits<E>::size>::size());
+    assert(dpl::popcount(dpp::to_bitset(dpp::broadcast<E, abi_t>(false))) == 0);
+    assert(dpl::popcount(dpp::to_bitset(dpp::broadcast<E, abi_t>(
+               dpl::true_type{}))) == dpl::bitset<abi_traits<E>::size>::size());
+    assert(dpl::popcount(dpp::to_bitset(
+               dpp::broadcast<E, abi_t>(dpl::false_type{}))) == 0);
 }
 
 constexpr void test_broadcast_float() {

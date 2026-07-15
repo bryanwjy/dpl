@@ -46,7 +46,7 @@ class unary_arithmetic {
     // const_mask type aliases -- NTTP values via to_underlying(bitset<W>(...))
     template <dpl::size_t W>
     using alt_cmask_t =
-        dpp::const_mask<W, dpl::to_underlying(dpl::bitset<W>(0x5555u))>;
+        dpp::const_mask<W, dpl::to_underlying(dpl::bitset<W>(0x55555555u))>;
 
     template <dpl::size_t W>
     using all_cmask_t =
@@ -78,11 +78,12 @@ class unary_arithmetic {
             static_cast<E>((Is % 2zu == 0) ? static_cast<E>(Is + 1)
                                            : -static_cast<E>(Is + 1))...};
 
-        auto v = dpp::initialize<E, A>(in_vals[Is]...);
-        auto r = op(v);
+        auto const vals = dpp::load<E, A>(in_vals);
+        auto const actual = op(vals);
+        auto const expected = dpp::initialize<E, A>(scalar_op(in_vals[Is])...);
 
-        ((assert(dpl::bit_cast<U>(dpp::extract(r, Is)) ==
-             dpl::bit_cast<U>(scalar_op(in_vals[Is])))),
+        ((assert(dpl::bit_cast<U>(dpp::extract(actual, Is)) ==
+             dpl::bit_cast<U>(dpp::extract(expected, Is)))),
             ...);
 
         // op(0) == scalar_op(0)
@@ -315,12 +316,9 @@ public:
         test<dpl::uint64>(op, scalar_op);
         test<float>(op, scalar_op);
         test<double>(op, scalar_op);
-#if DPL_SUPPORTS_FLOAT16
-        test<dpl::float16>(op, scalar_op);
-#endif
-#if DPL_SUPPORTS_BFLOAT16
-        test<dpl::bfloat16>(op, scalar_op);
-#endif
+        test<dpl::ext::float16>(op, scalar_op);
+        test<dpl::ext::bfloat16>(op, scalar_op);
+
         return true;
     }
 

@@ -25,6 +25,13 @@ inline constexpr struct bitcmp_t {
         return dpp::reinterpret<dpp::signed_representation_t<type>>(lhs) ==
             dpp::reinterpret<dpp::signed_representation_t<type>>(rhs);
     }
+
+    template <typename T>
+    requires dpl::is_scalar_v<T>
+    static constexpr auto operator()(T lhs, T rhs) noexcept {
+        return dpl::bit_cast<dpp::unsigned_representation_t<T>>(lhs) ==
+            dpl::bit_cast<dpp::unsigned_representation_t<T>>(rhs);
+    }
 } bitcmp{};
 
 } // namespace dpl::test
