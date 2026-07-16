@@ -7,7 +7,7 @@ module;
 export module dpl.test;
 export import :binary_transform;
 export import :unary_transform;
-export import :data_provider;
+export import :data_generator;
 export import :utils.comparison;
 export import :utils.span;
 export import :utils.array;

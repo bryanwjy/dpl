@@ -43,8 +43,13 @@ int main() {
             }
         };
 
-        auto const data = dpl::test::data_provider<abi_t>::template array<E>();
-        auto const src = dpl::test::data_provider<abi_t>::template src<E>();
+        dpl::test::mt19937 engine((sizeof(E) * dpl::char_bit_v) % 31);
+        auto const data = dpl::test::data_generator::generate_array<abi_t, E>(
+            dpl::unsigned_integral<E> ? static_cast<E>(0) : static_cast<E>(-97),
+            97, engine);
+        auto const src =
+            dpl::test::data_generator::generate<E>(98, 127, engine);
+
         auto expected = data;
         for (auto& val : expected) {
             val = expected_op(val);

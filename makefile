@@ -87,6 +87,9 @@ BUILD_TXT_ALIAS := $(basename $(notdir $(BUILD_TXT)))
 MODULE_ALIAS := $(basename $(MODULE_SOURCES:$(ROOT_DIR)/%=%))
 BUILD_MANIFEST := $(OUTPUT_DIR)/build_manifest.txt
 
+# Do not evaluate now
+PROBE_FILES = $(wildcard $(OUTPUT_DIR)/probe/*.valid) $(wildcard $(OUTPUT_DIR)/probe/*.ptrn) $(OUTPUT_DIR)/probe/supported_flags.txt
+
 .PHONY: all clean parallel_probes FORCE $(BUILD_JSON_ALIAS) $(BUILD_TXT_ALIAS) $(TEST_ALIAS) $(TEST_SUBDIRS) $(MODULE_ALIAS)
 
 define replace_if_different
@@ -121,11 +124,13 @@ clean:
 	@if [ -s $(BUILD_MANIFEST) ]; then \
 	    xargs rm -f < $(BUILD_MANIFEST) && rm $(BUILD_MANIFEST); \
 	else \
-		rm -f $(TEST_CRC) $(ALL_TARGETS) $(BUILD_FILES) $(DEP_FILES) $(OUTPUT_DIR)/scan_barrier.d; \
+		rm -f $(TEST_CRC) $(ALL_TARGETS) $(BUILD_FILES) $(DEP_FILES) $(OUTPUT_DIR)/scan_barrier.d $(PROBE_FILES); \
 	fi
 
+ifneq ($(MAKECMDGOALS),clean)
+
 $(OUTPUT_DIR)/build_manifest.txt: $(ALL_SOURCES)
-	@$(file >$@,$(foreach f,$(sort $(TEST_CRC) $(ALL_TARGETS) $(BUILD_FILES) $(DEP_FILES) $(OUTPUT_DIR)/scan_barrier.d),$(f)$(newline)))
+	@$(file >$@,$(foreach f,$(sort $(TEST_CRC) $(ALL_TARGETS) $(BUILD_FILES) $(DEP_FILES) $(OUTPUT_DIR)/scan_barrier.d $(PROBE_FILES)),$(f)$(newline)))
 
 $(OUTPUT_DIR)/env.stamp: FORCE
 	$(call replace_if_different, printf "%s\n" \
@@ -266,4 +271,6 @@ $(OUTPUT_DIR)/probe/%.valid: $(OUTPUT_DIR)/probe/%.ptrn
 	else \
 		touch $@; \
 	fi
+endif
+
 endif
