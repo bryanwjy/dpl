@@ -73,7 +73,7 @@ concept not_ref_wrapper = !is_wrapped<remove_cvref_t<T>>;
 
 struct invoke_t {
     template <typename F, typename... Args>
-    __DPL_HIDE_FROM_ABI constexpr auto
+    __DPL_HIDE_FROM_ABI static constexpr auto
     operator()(F&& func, Args&&... args) noexcept(
         noexcept(__DPL declval<F>()(__DPL declval<Args>()...)))
         -> decltype(__DPL declval<F>()(__DPL declval<Args>()...)) {

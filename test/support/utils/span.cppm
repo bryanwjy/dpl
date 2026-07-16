@@ -221,7 +221,7 @@ public:
     constexpr span(dpl::type_identity_t<element_type> (&data)[N]) noexcept
         : data_(data) {}
 
-    constexpr span(pointer data, size_type size = extent) noexcept
+    explicit constexpr span(pointer data, size_type size) noexcept
         : data_(data) {
         assert(size == extent);
     }

@@ -30,7 +30,7 @@ struct DPL_EMPTY_BASES bwnot_t :
 
 template <>
 struct operation_signature<bwnot_t> {
-    static consteval void operator()(simd_vector auto&&) noexcept {}
+    static consteval void operator()(simd_type auto&&) noexcept {}
 };
 
 template <>
@@ -45,7 +45,7 @@ struct fallback_impl<bwnot_t> {
     static constexpr basic_vector<E, A>
         DPL_VECTORCALL operator()(basic_vector<E, A> val) noexcept {
         if constexpr (cpo_invocable<bwandnot_t, basic_mask<E, A>, all_bits_t>) {
-            return bwandnot_t::operator()(val, dx::all_bits);
+            return bwandnot_t::operator()(dx::all_bits, val);
         } else {
             using bit_type = bit_type_t<sizeof(E) * char_bit_v>;
             return internal::transform<basic_vector<E, A>>(
@@ -64,7 +64,7 @@ struct fallback_impl<bwnot_t> {
     static constexpr basic_mask<E, A>
         DPL_VECTORCALL operator()(basic_mask<E, A> val) noexcept {
         if constexpr (cpo_invocable<bwandnot_t, basic_mask<E, A>, true_type>) {
-            return bwandnot_t::operator()(val, true_type{});
+            return bwandnot_t::operator()(true_type{}, val);
         } else {
             return dx::from_bitset<E, A>(~dx::to_bitset(val));
         }

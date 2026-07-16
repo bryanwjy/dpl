@@ -50,7 +50,7 @@ protected:
             return extended<Op>(__DPL forward<Ts>(args)...);
         } else if constexpr ((... || simd_expression<Ts>)) {
             return operator()(
-                internal::forward_or_eval(__DPL forward<Ts>(args)...));
+                internal::forward_or_eval(__DPL forward<Ts>(args))...);
         } else {
             return impl::fallback<D>(__DPL forward<Ts>(args)...);
         }

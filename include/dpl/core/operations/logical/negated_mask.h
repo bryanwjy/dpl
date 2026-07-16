@@ -9,9 +9,9 @@
 #  include "dpl/core/basic/extract.h"
 #  include "dpl/core/basic/to_native_type.h"
 #  include "dpl/core/concepts/simd_mask.h"
-#  include "dpl/core/type_traits/canonical_type.h"
 #  include "dpl/core/type_traits/rebind_simd.h"
-#  include "dpl/std/utility/forward.h"
+#  include "dpl/core/type_traits/simd_element_type.h"
+#  include "dpl/core/type_traits/simd_native_type.h"
 #endif
 
 #include "dpl/core/operations/bit.h"
@@ -38,13 +38,13 @@ class negated_mask;
 template <canonical_mask T>
 inline constexpr bool is_negated_mask_specialization<negated_mask<T>> = true;
 
-template <typename T>
+template <canonical_mask T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr negated_mask<remove_cvref_t<T>> make_negated_mask(T&& val) noexcept {
-    return negated_mask<remove_cvref_t<T>>(__DPL forward<T>(val));
+constexpr negated_mask<T> make_negated_mask(T val) noexcept {
+    return negated_mask<T>(val);
 }
 
-template <typename T>
+template <canonical_mask T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr auto make_negated_mask(negated_mask<T> const& val) noexcept {
     return !val;
@@ -60,28 +60,26 @@ public:
     using value_type = bool;
     using result_type = T;
 
-private:
-    using mask_type DPL_NODEBUG =
-        typename abi_type::template native_mask<element_type>;
-
 public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr size_t size() noexcept {
         return simd_abi_traits<T>::size();
     }
 
-    __DPL_HIDE_FROM_ABI constexpr negated_mask() noexcept
-        : negated_mask(dx::to_native_type(canonical_type_t<T>())) {}
+    __DPL_HIDE_FROM_ABI constexpr negated_mask() noexcept : mask_() {}
 
-    __DPL_HIDE_FROM_ABI constexpr negated_mask(T mask) noexcept : mask_(mask) {}
+    __DPL_HIDE_FROM_ABI constexpr negated_mask(
+        simd_native_type_t<T> native) noexcept
+        : mask_(native) {}
+
+    __DPL_HIDE_FROM_ABI explicit constexpr negated_mask(T mask) noexcept
+        : negated_mask(dx::to_native_type(mask)) {}
 
     template <different_from<T> U>
-    requires common_size_with<simd_element_type_t<U>, simd_element_type_t<T>> &&
-        same_abi_as<simd_abi_type_t<T>, simd_abi_type_t<U>> &&
-        regular_invocable<internal::reinterpret_t<element_type>, U>
+    requires common_mask_with<T, U> &&
+        cpo_invocable<reinterpret_t<element_type>, U>
     __DPL_HIDE_FROM_ABI constexpr negated_mask(negated_mask<U> other) noexcept
-        : negated_mask(
-              dx::to_native_type(dx::reinterpret<element_type>(!other))) {}
+        : negated_mask(dx::reinterpret<element_type>(!other)) {}
 
     template <different_from<T> U>
     requires convertible_to<T, U>
@@ -96,7 +94,8 @@ public:
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    explicit constexpr operator mask_type(this negated_mask self) noexcept {
+    explicit constexpr operator simd_native_type_t<T>(
+        this negated_mask self) noexcept {
         return dx::to_native_type(dx::bwnot(!self));
     }
 
@@ -279,8 +278,13 @@ public:
     }
 
 private:
-    mask_type mask_;
+    simd_native_type_t<T> mask_;
 };
+
+template <canonical_mask T>
+requires (!is_negated_mask_specialization<T>)
+negated_mask(T) -> negated_mask<T>;
+
 } // namespace datapar::internal
 
 namespace datapar {

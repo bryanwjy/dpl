@@ -320,7 +320,7 @@ protected:
     requires signature_compatible<D, Ts...> && cpo_invocable<D, Ts...> &&
         simd_vector<result_t<Ts...>> &&
         (exact_mask_for<M, result_t<Ts...>> ||
-            const_mask_for<M, result_t<Ts...>>) &&
+            const_mask_for<remove_cvref_t<M>, result_t<Ts...>>) &&
         requires {
             operator()(
                 dx::zero, internal::declarg<M>(), internal::declarg<Ts>()...);

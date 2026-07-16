@@ -44,8 +44,12 @@ using __DPL template_barrier_t;
 using __DPL to_signed;
 using __DPL to_underlying;
 using __DPL to_unsigned;
-using __DPL type_pack;
 using __DPL unreachable;
+//
+using __DPL type_pack;
 using __DPL value_pack;
+namespace pack {
+using __DPL pack::for_each;
+}
 // NOLINTEND(misc-unused-using-decls)
 __DPL_DEFAULT_NAMESPACE_END

@@ -93,11 +93,10 @@ constexpr internal::cpo_result_t<internal::bwand_t, L, R> operator&&(
 }
 
 template <simd_mask T>
+requires internal::cpo_invocable<internal::logical_not_t, T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-constexpr auto operator!(T val) noexcept
-    -> internal::cpo_result_t<internal::logical_not_t, T> {
-    if constexpr (canonical_mask<T> &&
-        !is_same_v<T, typename simd_abi_traits<T>::native_mask>) {
+constexpr auto operator!(T val) noexcept {
+    if constexpr (requires { internal::make_negated_mask(val); }) {
         return internal::make_negated_mask(val);
     } else {
         return datapar::logical_not(val);

@@ -25,8 +25,8 @@ namespace datapar::internal {
 void negate(...) noexcept = delete;
 
 struct DPL_EMPTY_BASES negate_t :
-    private arithmetic_base<negate_t>,
-    private maskable_transform_base<negate_t> {
+    public arithmetic_base<negate_t>,
+    public maskable_transform_base<negate_t> {
     using operation_base<negate_t>::operator();
     using maskable_transform_base<negate_t>::operator();
 };

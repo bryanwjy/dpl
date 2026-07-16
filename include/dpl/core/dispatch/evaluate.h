@@ -34,8 +34,9 @@ struct evaluate_t {
     }
 
     template <simd_type T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr T DPL_VECTORCALL operator()(T&& val) noexcept {
+    requires (!simd_expression<T>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(T&& val) noexcept {
         return __DPL forward<T>(val);
     }
 };

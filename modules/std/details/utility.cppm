@@ -24,13 +24,12 @@ DPL_DISABLE_WARNING(5244)
 #include "dpl/std/utility/forward_like.h"
 #include "dpl/std/utility/ignore.h"
 #include "dpl/std/utility/move.h"
+#include "dpl/std/utility/pack.h"
 #include "dpl/std/utility/template_barrier.h"
 #include "dpl/std/utility/to_signed.h"
 #include "dpl/std/utility/to_underlying.h"
 #include "dpl/std/utility/to_unsigned.h"
-#include "dpl/std/utility/type_pack.h"
 #include "dpl/std/utility/unreachable.h"
-#include "dpl/std/utility/value_pack.h"
 // IWYU pragma: end_exports
 
 DPL_DISABLE_WARNING_POP()

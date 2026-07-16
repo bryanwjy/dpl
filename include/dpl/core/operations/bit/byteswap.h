@@ -17,7 +17,7 @@
 #  include "dpl/core/type_traits/simd_abi_type.h"
 #  include "dpl/std/bit/bit_cast.h"
 #  include "dpl/std/bit/byteswap.h"
-#  include "dpl/std/utility/bitset.h"
+#  include "dpl/std/type_traits/type_identity.h"
 #endif
 
 __DPL_DEFAULT_NAMESPACE_BEGIN

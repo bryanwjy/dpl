@@ -21,7 +21,7 @@ namespace datapar::internal {
 
 void logical_not(...) noexcept = delete;
 
-struct logical_not_t : private logical_base<logical_not_t> {
+struct logical_not_t : public logical_base<logical_not_t> {
     using operation_base<logical_not_t>::operator();
 };
 
@@ -34,7 +34,7 @@ struct operation_signature<logical_not_t> {
 template <>
 struct fallback_impl<logical_not_t> {
 
-    template <simd_type T>
+    template <simd_mask T>
     requires cpo_invocable<bwnot_t, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(T&& val) noexcept(

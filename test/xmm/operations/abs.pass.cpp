@@ -27,34 +27,65 @@ import dpl.test;
 int main() {
     namespace dpp = dpl::datapar;
     namespace xmm = dpl::datapar::xmm;
-    static constexpr auto expected = []<typename E>(E v) constexpr -> E {
-        if constexpr (dpl::unsigned_integral<E>) {
-            return v;
-        } else if constexpr (dpl::integral<E>) {
-            using U = dpp::unsigned_representation_t<E>;
-            return v < E(0) ? static_cast<E>(-static_cast<U>(v)) : v;
-        } else {
-            using U = dpp::unsigned_representation_t<E>;
-            constexpr U sign_mask = U(1) << (sizeof(E) * dpl::char_bit_v - 1u);
-            return dpl::bit_cast<E>(
-                static_cast<U>(dpl::bit_cast<U>(v) & ~sign_mask));
+    using abi_t = xmm::abi_tag;
+
+    using types = dpl::type_pack<dpl::int8, dpl::uint8, dpl::int16, dpl::uint16,
+        dpl::int32, dpl::uint32, dpl::int64, dpl::uint64, float, double,
+        dpl::ext::float16, dpl::ext::bfloat16>;
+
+    constexpr auto run_tests = []<typename E>(dpl::type_identity<E> type) {
+        constexpr auto expected_op = [](E v) {
+            if constexpr (dpl::unsigned_integral<E>) {
+                return v;
+            } else if constexpr (dpl::integral<E>) {
+                using U = dpp::unsigned_representation_t<E>;
+                return v < E(0) ? static_cast<E>(-static_cast<U>(v)) : v;
+            } else {
+                using U = dpp::unsigned_representation_t<E>;
+                constexpr U sign_mask = U(1)
+                    << (sizeof(E) * dpl::char_bit_v - 1u);
+                return dpl::bit_cast<E>(
+                    static_cast<U>(dpl::bit_cast<U>(v) & ~sign_mask));
+            }
+        };
+
+        auto const data = dpl::test::data_provider<abi_t>::template array<E>();
+        auto const src = dpl::test::data_provider<abi_t>::template src<E>();
+        auto expected = data;
+        for (auto& val : expected) {
+            val = expected_op(val);
         }
+
+        dpl::test::unary_transform<abi_t>::test<E>(data, dpp::abs, expected);
+        dpl::test::unary_transform<abi_t>::test_masked<E>(data, dpp::abs, src);
+
+        if constexpr (dpl::signed_integral<E>) {
+            if not consteval {
+                // Implementation-defined
+                auto const min = dpl::integral_traits<E>::min_value;
+                dpl::test::unary_transform<abi_t>::test(min, dpp::abs, min);
+            }
+        }
+
+        if constexpr (dpl::floating_point_like<E>) {
+            for (auto const arg :
+                dpl::test::array{dpp::msb_v<E>, -dpp::infinity_v<E>,
+                    dpp::infinity_v<E>, -dpp::nan_v<E>, dpp::nan_v<E>}) {
+
+                auto const expected = expected_op(arg);
+                dpl::test::unary_transform<abi_t>::test(
+                    arg, dpp::abs, expected, dpl::test::bitcmp);
+            }
+        }
+
+        return true;
     };
 
-    using abi_t = xmm::abi_tag;
-    static_assert(
-        dpl::test::unary_arithmetic<abi_t>::run_all(dpp::abs, expected));
-    assert(dpl::test::unary_arithmetic<abi_t>::run_all(dpp::abs, expected));
-
-    // below is runtime only -min_value is implementation defined and not
-    // allowed at consteval
-    assert(dpl::test::unary_arithmetic<abi_t>::test_value<dpl::int8>(
-        dpp::min_value, dpp::abs, expected));
-    assert(dpl::test::unary_arithmetic<abi_t>::test_value<dpl::int16>(
-        dpp::min_value, dpp::abs, expected));
-    assert(dpl::test::unary_arithmetic<abi_t>::test_value<dpl::int32>(
-        dpp::min_value, dpp::abs, expected));
-    assert(dpl::test::unary_arithmetic<abi_t>::test_value<dpl::int64>(
-        dpp::min_value, dpp::abs, expected));
+    dpl::pack::for_each(
+        [=](auto tp) {
+            static_assert(run_tests(tp));
+            assert(run_tests(tp));
+        },
+        types{});
     return 0;
 }
