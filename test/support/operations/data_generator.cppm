@@ -178,6 +178,16 @@ public:
         }
     }
 
+    template <typename E>
+    static constexpr E generate_half_range(mt19937& rng) noexcept {
+        if constexpr (dpl::integral<E>) {
+            return generate(dpl::integral_traits<E>::min_value / 2,
+                dpl::integral_traits<E>::max_value / 2, rng);
+        } else {
+            return generate<E>(-0.0, dpp::max_value_v<E> / 2, rng);
+        }
+    }
+
     template <dpp::simd_abi A, dpp::simd_element_for<A> E>
     static constexpr auto generate_array(E min, E max, mt19937& rng) noexcept {
         using abi_traits = dpp::simd_abi_traits<A, E>;
@@ -207,6 +217,24 @@ public:
             unique_array<E> data(abi_traits::size());
             for (auto& val : data) {
                 val = generate<E>(rng);
+            }
+            return data;
+        }
+    }
+
+    template <dpp::simd_abi A, dpp::simd_element_for<A> E>
+    static constexpr auto generate_half_range_array(mt19937& rng) noexcept {
+        using abi_traits = dpp::simd_abi_traits<A, E>;
+        if constexpr (dpp::fixed_width_abi<A>) {
+            using array_t = array<E, abi_traits::size>;
+            return [&]<size_t... Is>(dpl::index_sequence<Is...>) {
+                return array_t{
+                    (dpl::ignore = Is, generate_half_range<E>(rng))...};
+            }(dpl::make_index_sequence<abi_traits::size>{});
+        } else {
+            unique_array<E> data(abi_traits::size());
+            for (auto& val : data) {
+                val = generate_half_range<E>(rng);
             }
             return data;
         }

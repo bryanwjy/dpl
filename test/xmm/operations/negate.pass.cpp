@@ -43,12 +43,12 @@ int main() {
             }
         };
 
-        dpl::test::mt19937 engine((sizeof(E) * dpl::char_bit_v) % 31);
-        auto const data = dpl::test::data_generator::generate_array<abi_t, E>(
-            dpl::unsigned_integral<E> ? static_cast<E>(0) : static_cast<E>(-97),
-            97, engine);
-        auto const src =
-            dpl::test::data_generator::generate<E>(98, 127, engine);
+        dpl::test::mt19937 engine(
+            (sizeof(E) * dpl::char_bit_v) % 31 + dpl::floating_point_like<E>);
+        auto const data =
+            dpl::test::data_generator::generate_half_range_array<abi_t, E>(
+                engine);
+        auto const src = dpp::max_value_v<E>;
 
         auto expected = data;
         for (auto& val : expected) {

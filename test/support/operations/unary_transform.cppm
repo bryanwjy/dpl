@@ -17,7 +17,7 @@ namespace dpl::test {
 
 namespace dpp = dpl::datapar;
 
-// Generic test infrastructure for binary maskable_transform SIMD operations
+// Generic test infrastructure for unary maskable_transform SIMD operations
 export template <dpp::simd_abi A>
 class unary_transform {
 
