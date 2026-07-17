@@ -23,9 +23,9 @@ namespace datapar::internal {
 void add(...) noexcept = delete;
 
 struct DPL_EMPTY_BASES add_t :
-    private arithmetic_base<add_t>,
-    private maskable_transform_base<add_t>,
-    private binary_broadcastable_operation<add_t> {
+    public arithmetic_base<add_t>,
+    public maskable_transform_base<add_t>,
+    public binary_broadcastable_operation<add_t> {
     using operation_base<add_t>::operator();
     using maskable_transform_base<add_t>::operator();
     using binary_broadcastable_operation<add_t>::operator();

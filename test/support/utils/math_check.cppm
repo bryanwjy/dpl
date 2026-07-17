@@ -11,23 +11,23 @@ import dpl;
 
 export namespace dpl::test {
 
-constexpr bool ieee_denormal() noexcept {
-    if consteval {
-        return true;
-    } else {
-        float volatile denorm =
-            dpl::bit_cast<float>(dpl::floating_point_traits<float>::signbit >>
-                (dpl::floating_point_traits<float>::width - 1));
-        return (denorm + 0.0f) == denorm;
-    }
-}
-
 constexpr bool finite_math_only() noexcept {
     if consteval {
         return false;
     } else {
-        float volatile inf = dpl::datapar::infinity_v<float>;
-        return inf + 1.0f != inf;
+        // Implementation defined, may not work everywhere
+        float volatile nan = dpl::bit_cast<float>(-1);
+        return nan == nan;
+    }
+}
+
+constexpr bool ieee_denormal() noexcept {
+    if consteval {
+        return false;
+    } else {
+        // Implementation defined, may not work everywhere
+        float volatile denormal = dpl::bit_cast<float>(0x00800000) * 0.5f;
+        return denormal != 0.0f;
     }
 }
 

@@ -23,9 +23,9 @@ namespace datapar::internal {
 void multiply(...) noexcept = delete;
 
 struct DPL_EMPTY_BASES multiply_t :
-    private arithmetic_base<multiply_t>,
-    private maskable_transform_base<multiply_t>,
-    private binary_broadcastable_operation<multiply_t> {
+    public arithmetic_base<multiply_t>,
+    public maskable_transform_base<multiply_t>,
+    public binary_broadcastable_operation<multiply_t> {
     using operation_base<multiply_t>::operator();
     using maskable_transform_base<multiply_t>::operator();
     using binary_broadcastable_operation<multiply_t>::operator();

@@ -6,6 +6,7 @@
 #if DPL_SIMD_X86_SSE4_2
 
 #  include "dpl/xmm/operations/arithmetic.h"
+#  include "dpl/xmm/operations/arithmetic/to_float.h"
 #  include "dpl/xmm/operations/bitwise.h"
 #  include "dpl/xmm/operations/reinterpret.h"
 #  include "dpl/xmm/operations/select.h"
@@ -98,7 +99,7 @@ struct convert_t<float> {
                 return _mm_cvtepi64_ps(+src);
             }
 #  else
-            auto const zero = _mm_setzero_si128();
+            auto const zero = +xmm::broadcast<int>(dx::zero);
             if constexpr (signed_integral<representation_t<E>>) {
                 auto const hisign =
                     _mm_and_si128(_mm_set1_epi64x(1ll << 63), +src);
@@ -162,11 +163,12 @@ struct convert_t<float> {
         } else {
             if constexpr (unsigned_integral<E>) {
                 auto const lo = _mm_cvtepu16_epi32(
-                    _mm_unpacklo_epi8(+src, _mm_setzero_si128()));
+                    _mm_unpacklo_epi8(+src, +xmm::broadcast<int>(dx::zero)));
                 return _mm_cvtepi32_ps(lo);
             } else {
                 auto const lo = _mm_cvtepi16_epi32(_mm_srai_epi16(
-                    _mm_unpacklo_epi8(_mm_setzero_si128(), +src), 8));
+                    _mm_unpacklo_epi8(+xmm::broadcast<int>(dx::zero), +src),
+                    8));
                 return _mm_cvtepi32_ps(lo);
             }
         }
@@ -268,7 +270,7 @@ struct convert_t<To> {
             return _mm_cvtepi64_epi32(+src);
 #  else
             return _mm_castps_si128(_mm_shuffle_ps(_mm_castsi128_ps(+src),
-                _mm_setzero_ps(), _MM_SHUFFLE(2, 0, 2, 0)));
+                +xmm::broadcast<float>(dx::zero), _MM_SHUFFLE(2, 0, 2, 0)));
 #  endif
         } else if constexpr (sizeof(E) == sizeof(To)) {
             return +src;
@@ -346,9 +348,9 @@ struct convert_t<To> {
             // There's likely a faster way, but this is just easier :p
             auto const f32 = +to_fp32(src);
             auto const u32 = _mm_castps_si128(f32);
-            auto const valid =
-                _mm_andnot_si128(_mm_cmplt_epi32(u32, _mm_setzero_si128()),
-                    _mm_cmplt_epi32(u32, _mm_set1_epi32(0x7f800000)));
+            auto const valid = _mm_andnot_si128(
+                _mm_cmplt_epi32(u32, +xmm::broadcast<int>(dx::zero)),
+                _mm_cmplt_epi32(u32, _mm_set1_epi32(0x7f800000)));
             auto const result = _mm_cvttps_epi32(f32);
             return _mm_castps_si128(_mm_blendv_ps(
                 _mm_set1_ps(-0.0f), result, _mm_castsi128_ps(valid)));
@@ -378,14 +380,14 @@ struct convert_t<To> {
             // Extract low 32 bits of each 64-bit lane
             auto const dwords =
                 _mm_shuffle_epi32(qwords, _MM_SHUFFLE(3, 1, 2, 0));
-            return _mm_packus_epi32(dwords, _mm_setzero_si128());
+            return _mm_packus_epi32(dwords, +xmm::broadcast<int>(dx::zero));
 #  endif
         } else if constexpr (sizeof(E) == sizeof(int32)) {
 #  if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
             return _mm_cvtepi32_epi16(+src);
 #  else
             auto const dwords = _mm_and_si128(+src, _mm_set1_epi32(0xffff));
-            return _mm_packus_epi32(dwords, _mm_setzero_si128());
+            return _mm_packus_epi32(dwords, +xmm::broadcast<int>(dx::zero));
 #  endif
         } else if constexpr (sizeof(E) == sizeof(To)) {
             return +src;
@@ -425,9 +427,9 @@ struct convert_t<To> {
         }
 #  else
         constexpr convert_t<int32> to_int32;
-        auto const hi =
-            vector<ext::float16>(__DPL bit_cast<__m128h>(_mm_unpackhi_epi64(
-                __DPL bit_cast<__m128i>(+src), _mm_setzero_si128())));
+        auto const hi = vector<ext::float16>(__DPL bit_cast<__m128h>(
+            _mm_unpackhi_epi64( __DPL bit_cast<__m128i>(+src),
+                +xmm::broadcast<int>(dx::zero))));
         auto const lo_mask = _mm_set1_epi32(0xffff);
         auto const left = operator()(to_int32(src));
         auto const right = operator()(to_int32(hi));
@@ -435,8 +437,8 @@ struct convert_t<To> {
         if constexpr (unsigned_integral<To>) {
             auto const error = _mm_set1_epi16(static_cast<int16>(0x8000));
             return _mm_blendv_epi8(result, error,
-                _mm_cmplt_epi16(
-                    __DPL bit_cast<__m128i>(+src), _mm_setzero_si128()));
+                _mm_cmplt_epi16( __DPL bit_cast<__m128i>(+src),
+                    +xmm::broadcast<int>(dx::zero)));
         } else {
             return result;
         }
@@ -447,9 +449,9 @@ struct convert_t<To> {
     static inline vector<To> DPL_VECTORCALL operator()(
         vector<ext::bfloat16> src) noexcept {
         constexpr convert_t<int32> to_int32;
-        auto const hi =
-            vector<ext::bfloat16>(__DPL bit_cast<__m128bh>(_mm_unpackhi_epi64(
-                __DPL bit_cast<__m128i>(+src), _mm_setzero_si128())));
+        auto const hi = vector<ext::bfloat16>(__DPL bit_cast<__m128bh>(
+            _mm_unpackhi_epi64( __DPL bit_cast<__m128i>(+src),
+                +xmm::broadcast<int>(dx::zero))));
         auto const lo_mask = _mm_set1_epi32(0xffff);
         auto const left = operator()(to_int32(src));
         auto const right = operator()(to_int32(hi));
@@ -457,8 +459,8 @@ struct convert_t<To> {
         if constexpr (unsigned_integral<To>) {
             auto const error = _mm_set1_epi16(static_cast<int16>(0x8000));
             return _mm_blendv_epi8(result, error,
-                _mm_cmplt_epi16(
-                    __DPL bit_cast<__m128i>(+src), _mm_setzero_si128()));
+                _mm_cmplt_epi16( __DPL bit_cast<__m128i>(+src),
+                    +xmm::broadcast<int>(dx::zero)));
         } else {
             return result;
         }
@@ -479,7 +481,7 @@ struct convert_t<To> {
             // Extract low 32 bits of each 64-bit lane
             auto const dwords =
                 _mm_shuffle_epi32(qwords, _MM_SHUFFLE(3, 1, 2, 0));
-            auto const zero = _mm_setzero_si128();
+            auto const zero = +xmm::broadcast<int>(dx::zero);
             return _mm_packus_epi16(_mm_packus_epi32(dwords, zero), zero);
 #  endif
         } else if constexpr (sizeof(E) == sizeof(int32)) {
@@ -487,7 +489,7 @@ struct convert_t<To> {
             return _mm_cvtepi32_epi8(+src);
 #  else
             auto const masked = _mm_and_si128(+src, _mm_set1_epi32(0xff));
-            auto const zero = _mm_setzero_si128();
+            auto const zero = +xmm::broadcast<int>(dx::zero);
             return _mm_packus_epi16(_mm_packus_epi32(masked, zero), zero);
 #  endif
         } else if constexpr (sizeof(E) == sizeof(int16)) {
@@ -495,7 +497,7 @@ struct convert_t<To> {
             return _mm_cvtepi16_epi8(+src);
 #  else
             auto const masked = _mm_and_si128(+src, _mm_set1_epi16(0xff));
-            return _mm_packus_epi16(masked, _mm_setzero_si128());
+            return _mm_packus_epi16(masked, +xmm::broadcast<int>(dx::zero));
 #  endif
         } else {
             static_assert(sizeof(E) == sizeof(To));
@@ -598,7 +600,8 @@ struct convert_t<double> {
             if constexpr (signed_integral<E>) {
                 return _mm_cvtepi32_pd(+src);
             } else {
-                auto const large = _mm_cmplt_epi32(+src, _mm_setzero_si128());
+                auto const large =
+                    _mm_cmplt_epi32(+src, +xmm::broadcast<int>(dx::zero));
                 auto const islolarge =
                     _mm_castsi128_pd(_mm_unpacklo_epi32(large, large));
                 return _mm_add_pd(_mm_and_pd(islolarge, _mm_set1_pd(0x1p32)),
@@ -614,11 +617,12 @@ struct convert_t<double> {
             static_assert(sizeof(E) == sizeof(int8));
             if constexpr (unsigned_integral<E>) {
                 auto const lo = _mm_cvtepu16_epi32(
-                    _mm_unpacklo_epi8(+src, _mm_setzero_si128()));
+                    _mm_unpacklo_epi8(+src, +xmm::broadcast<int>(dx::zero)));
                 return _mm_cvtepi32_pd(lo);
             } else {
                 auto const lo = _mm_cvtepi16_epi32(_mm_srai_epi16(
-                    _mm_unpacklo_epi8(_mm_setzero_si128(), +src), 8));
+                    _mm_unpacklo_epi8(+xmm::broadcast<int>(dx::zero), +src),
+                    8));
                 return _mm_cvtepi32_pd(lo);
             }
         }
@@ -656,7 +660,7 @@ public:
                 return _mm_cvtepi64_ph(+src);
             }
 #  else
-            auto const zero = _mm_setzero_si128();
+            auto const zero = +xmm::broadcast<int>(dx::zero);
             if constexpr (unsigned_integral<representation_t<E>>) {
                 auto const all = _mm_set1_epi64x(0xffff);
                 auto const isinf = mask<uint16>(_mm_packs_epi32(
@@ -684,7 +688,7 @@ public:
                 return _mm_cvtepi32_ph(+src);
             }
 #  else
-            auto const zero = _mm_setzero_si128();
+            auto const zero = +xmm::broadcast<int>(dx::zero);
             if constexpr (unsigned_integral<representation_t<E>>) {
                 auto const all = _mm_set1_epi32(0xffff);
                 auto const isinf = mask<uint16>(
@@ -714,7 +718,7 @@ public:
             }
 #  else
             if constexpr (unsigned_integral<representation_t<E>>) {
-                auto const zero = _mm_setzero_si128();
+                auto const zero = +xmm::broadcast<int>(dx::zero);
                 auto const lo =
                     to_fp32(vector<uint32>(_mm_unpacklo_epi16(+src, zero)));
                 auto const hi =
@@ -783,7 +787,7 @@ public:
             xmm::reinterpret<double>(rounded));
         auto const result =
             xmm::bwor(sign16, xmm::reinterpret<uint64>(xmm::bwor(isnan, f16)));
-        auto const zero = _mm_setzero_si128();
+        auto const zero = +xmm::broadcast<int>(dx::zero);
         // The cast here is just to ditribute the bits into place
         return xmm::reinterpret<ext::float16>(xmm::abi,
             vector<ext::float16>(_mm_packus_epi32(
@@ -827,8 +831,8 @@ public:
             xmm::reinterpret<float>(rounded));
         auto const result =
             xmm::bwor(sign16, xmm::reinterpret<uint32>(xmm::bwor(isnan, f16)));
-        return xmm::reinterpret<ext::float16>(
-            vector<uint32>(_mm_packus_epi32(+result, _mm_setzero_si128())));
+        return xmm::reinterpret<ext::float16>(vector<uint32>(
+            _mm_packus_epi32(+result, +xmm::broadcast<int>(dx::zero))));
 #  endif
     }
 
@@ -842,9 +846,9 @@ public:
     static inline vector<ext::float16> DPL_VECTORCALL operator()(
         vector<ext::bfloat16> src) noexcept {
         constexpr convert_t<float> to_f32;
-        auto const hi =
-            vector<ext::bfloat16>(__DPL bit_cast<__m128bh>(_mm_unpackhi_epi64(
-                __DPL bit_cast<__m128i>(+src), _mm_setzero_si128())));
+        auto const hi = vector<ext::bfloat16>(__DPL bit_cast<__m128bh>(
+            _mm_unpackhi_epi64( __DPL bit_cast<__m128i>(+src),
+                +xmm::broadcast<int>(dx::zero))));
         auto const left = operator()(to_f32(src));
         auto const right = operator()(to_f32(hi));
         return __DPL bit_cast<__m128h>(
@@ -865,8 +869,8 @@ struct convert_t<ext::bfloat16> {
         } else if constexpr (sizeof(E) == sizeof(int32)) {
             return operator()(to_fp32(src));
         } else if constexpr (sizeof(E) == sizeof(int16)) {
-            auto const hi =
-                vector<E>(_mm_unpackhi_epi64(+src, _mm_setzero_si128()));
+            auto const hi = vector<E>(
+                _mm_unpackhi_epi64(+src, +xmm::broadcast<int>(dx::zero)));
             auto const left = operator()(to_fp32(src));
             auto const right = operator()(to_fp32(hi));
             return __DPL bit_cast<__m128bh>(
@@ -895,7 +899,7 @@ struct convert_t<ext::bfloat16> {
         // deal with nan & inf
         auto const fval = +src;
         auto const ival = __DPL bit_cast<__m128i>(fval);
-        auto const zero = _mm_setzero_si128();
+        auto const zero = +xmm::broadcast<int>(dx::zero);
         auto const isnan = _mm_unpacklo_epi16(
             _mm_castps_si128(_mm_cmpunord_ps(fval, fval)), zero);
         // round to nearest even
@@ -919,9 +923,9 @@ struct convert_t<ext::bfloat16> {
     static inline vector<ext::bfloat16> DPL_VECTORCALL operator()(
         vector<ext::float16> src) noexcept {
         constexpr convert_t<float> to_f32;
-        auto const hi =
-            vector<ext::float16>(__DPL bit_cast<__m128h>(_mm_unpackhi_epi64(
-                __DPL bit_cast<__m128i>(+src), _mm_setzero_si128())));
+        auto const hi = vector<ext::float16>(__DPL bit_cast<__m128h>(
+            _mm_unpackhi_epi64( __DPL bit_cast<__m128i>(+src),
+                +xmm::broadcast<int>(dx::zero))));
         auto const left = operator()(to_f32(src));
         auto const right = operator()(to_f32(hi));
         return __DPL bit_cast<__m128bh>(
@@ -935,20 +939,16 @@ struct convert_t {};
 
 } // namespace details
 
-template <simd_element To, simd_element E>
+template <simd_element To, details::convert_to<To> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-inline vector<To> element_cast(vector<E> src) noexcept
-requires requires(xmm::details::convert_t<To> cvt) { cvt(src); }
-{
+inline vector<To> element_cast(vector<E> src) noexcept {
     constexpr xmm::details::convert_t<To> cvt;
     return cvt(src);
 }
 
-template <simd_element_for<xmm::abi_tag> To, simd_element_for<xmm::abi_tag> E>
+template <simd_element To, details::convert_to<To> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-inline vector<To> element_cast(abi_tag, vector<E> src) noexcept
-requires requires(xmm::details::convert_t<To> cvt) { cvt(src); }
-{
+inline vector<To> element_cast(abi_tag, vector<E> src) noexcept {
     constexpr xmm::details::convert_t<To> cvt;
     return cvt(src);
 }

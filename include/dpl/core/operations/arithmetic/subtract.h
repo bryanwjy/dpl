@@ -23,9 +23,9 @@ namespace datapar::internal {
 void subtract(...) noexcept = delete;
 
 struct DPL_EMPTY_BASES subtract_t :
-    private arithmetic_base<subtract_t>,
-    private maskable_transform_base<subtract_t>,
-    private binary_broadcastable_operation<subtract_t> {
+    public arithmetic_base<subtract_t>,
+    public maskable_transform_base<subtract_t>,
+    public binary_broadcastable_operation<subtract_t> {
     using operation_base<subtract_t>::operator();
     using maskable_transform_base<subtract_t>::operator();
     using binary_broadcastable_operation<subtract_t>::operator();

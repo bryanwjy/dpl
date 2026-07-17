@@ -178,7 +178,8 @@ private:
         if constexpr (dpl::signed_integral<E>) {
             constexpr auto shift = dpl::type_bit_v<E> - 1;
             auto const inter =
-                dpl::to_signed(dpl::to_unsigned(lhs) - dpl::to_unsigned(rhs));
+                dpl::to_signed(static_cast<dpl::make_unsigned_t<E>>(
+                    dpl::to_unsigned(lhs) - dpl::to_unsigned(rhs)));
 
             auto const lsign = lhs >> shift;
             auto const rsign = rhs >> shift;
@@ -223,18 +224,19 @@ public:
             auto const signed_max = dpl::bit_cast<bitset_t>(max) &
                 floating_point_traits<E>::signbit;
 
-            constexpr auto exp_rzero = floating_point_traits<E>::digits - 1;
+            constexpr auto exp_bits = floating_point_traits<E>::exponent_mask;
+            constexpr auto fr_bits = floating_point_traits<E>::mantissa_mask;
+            constexpr auto exp_rzero = dpl::countr_zero(exp_bits);
+            constexpr auto bias = floating_point_traits<E>::exponent_bias;
 
             if (signed_max == signed_min) {
                 auto const bits = dpl::bit_cast<bitset_t>(max - min);
-                auto const exp = dpl::to_underlying(
-                    (bits & floating_point_traits<E>::exponent_mask) >>
-                    exp_rzero);
-                auto const fr = dpl::to_underlying(
-                    bits & floating_point_traits<E>::mantissa_mask);
+                auto const exp =
+                    dpl::to_underlying((bits & exp_bits) >> exp_rzero);
+                auto const fr = dpl::to_underlying(bits & fr_bits);
 
                 auto const rand_exp =
-                    bitset_t(scalar_generator<uint_t>(0, exp)(rng))
+                    bitset_t(scalar_generator<uint_t>(1, exp)(rng))
                     << exp_rzero;
                 auto const rand_fr =
                     bitset_t(scalar_generator<uint_t>(0, fr)(rng));
@@ -253,13 +255,11 @@ public:
                     ? dpl::bit_cast<bitset_t>(static_cast<E>(-0.0))
                     : bitset_t();
 
-                auto const exp = dpl::to_underlying(
-                    (bits & floating_point_traits<E>::exponent_mask) >>
-                    exp_rzero);
-                auto const fr = dpl::to_underlying(
-                    bits & floating_point_traits<E>::mantissa_mask);
+                auto const exp =
+                    dpl::to_underlying((bits & exp_bits) >> exp_rzero);
+                auto const fr = dpl::to_underlying(bits & fr_bits);
                 auto const rand_exp =
-                    bitset_t(scalar_generator<uint_t>(0, exp)(rng))
+                    bitset_t(scalar_generator<uint_t>(1, exp)(rng))
                     << exp_rzero;
                 auto const rand_fr =
                     bitset_t(scalar_generator<uint_t>(0, fr)(rng));

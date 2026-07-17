@@ -109,10 +109,9 @@ inline vector<ext::bfloat16>
     return _mm_cvtne2ps_pbh(+hi, +lo);
 #  else
     auto const packed =
-        _mm_packus_epi32( __DPL bit_cast<__m128i>(+element_cast<E>(lo)),
-            __DPL bit_cast<__m128i>(+element_cast<E>(hi)));
-
-    return xmm::reinterpret<ext::bfloat16>(vector<int16>(packed));
+        _mm_shuffle_pd( __DPL bit_cast<__m128d>(+xmm::element_cast<E>(lo)),
+            __DPL bit_cast<__m128d>(+xmm::element_cast<E>(hi)), 0);
+    return xmm::reinterpret<ext::bfloat16>(vector<double>(packed));
 #  endif
 }
 

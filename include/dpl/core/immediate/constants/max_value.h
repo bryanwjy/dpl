@@ -31,14 +31,14 @@ struct max_value_t : broadcastable_base<max_value_t> {
     template <floating_point_like T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     constexpr operator T(this max_value_t) noexcept {
-        constexpr auto digits = floating_point_traits<T>::digits;
         constexpr auto exp = floating_point_traits<T>::exponent_mask;
         constexpr auto mantissa = floating_point_traits<T>::mantissa_mask;
         constexpr auto width = floating_point_traits<T>::width;
         constexpr auto exp_width = __DPL popcount(exp);
-        constexpr auto expv = __DPL to_underlying(
-            __DPL truncate<exp_width>(exp >> (digits - 1)));
-        constexpr auto result_exp = bitset<width>(bitset<exp_width>(expv - 1u));
+        constexpr auto shift = __DPL countr_zero(exp);
+
+        constexpr auto biased_exp = __DPL to_underlying(exp >> shift);
+        constexpr auto result_exp = bitset<width>(biased_exp - 1) << shift;
         if constexpr (floating_point_traits<T>::has_hidden_bit) {
             return __DPL bit_cast<T>(result_exp | mantissa);
         } else {

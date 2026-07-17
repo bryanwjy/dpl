@@ -63,7 +63,7 @@ struct floating_point_traits<T> {
     static constexpr auto exponent_mask = ~signbit & ~bitset<80>(~bitset<64>());
 
     static constexpr auto exponent_bias =
-        ((1 << __DPL popcount(exponent_mask)) - 1);
+        static_cast<int>(__DPL to_underlying(exponent_mask >> digits));
 
     static constexpr auto has_hidden_bit = false;
 

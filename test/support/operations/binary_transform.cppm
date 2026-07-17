@@ -24,8 +24,8 @@ class binary_transform {
     template <dpp::simd_element_for<A> E>
     using abi_traits = dpp::simd_abi_traits<A, E>;
     template <typename Op, typename E>
-    using op_result =
-        typename invoke_result_t<Op, dpp::basic_vector<E, A>>::value_type;
+    using op_result = typename invoke_result_t<Op, dpp::basic_vector<E, A>,
+        dpp::basic_vector<E, A>>::value_type;
     template <dpp::simd_element_for<A> E>
     using span_t = conditional_t<dpp::fixed_width_abi<A>,
         span<E const, abi_traits<E>::size>, span<E const>>;
@@ -33,9 +33,8 @@ class binary_transform {
     using vec_t = dpp::basic_vector<E, A>;
 
     template <typename E, typename Op, typename Cmp>
-    constexpr void test_masked(vec_t<E> const lhs, vec_t<E> const rhs,
-        Op const op, vec_t<op_result<Op, E>> const src,
-        Cmp cmp) const noexcept {
+    static constexpr void test_masked(vec_t<E> const lhs, vec_t<E> const rhs,
+        Op const op, vec_t<op_result<Op, E>> const src, Cmp cmp) noexcept {
         auto const all_true = dpp::broadcast<E, A>(true);
         auto const all_false = dpp::broadcast<E, A>(false);
         auto const alt_mask = (dpp::lane_index<A, E>() & 1) == 0;
@@ -50,7 +49,7 @@ class binary_transform {
 
             auto const actual = op(src, alt_mask, lhs, rhs);
             assert(dpp::all_of(cmp(actual, vop) == alt_mask));
-            assert(dpp::all_of(cmp(actual == src) == !alt_mask));
+            assert(dpp::all_of(cmp(actual, src) == !alt_mask));
         }
 
         // zero-masked: op(vzero, mask, lhs, rhs) == op(dpp::zero, mask,
@@ -135,7 +134,8 @@ public:
         auto const vlhs = dpp::load<E, A>(lhs.data());
         auto const vrhs = dpp::load<E, A>(rhs.data());
         auto const vexpected = dpp::load<E, A>(expected.data());
-        assert(dpp::all_of(cmp(op(vlhs, vrhs), vexpected)));
+        auto const vactual = op(vlhs, vrhs);
+        assert(dpp::all_of(cmp(vactual, vexpected)));
         return true;
     }
 
@@ -149,9 +149,9 @@ public:
             assert(rhs.size() == abi_traits<E>::size());
         }
 
-        auto const vlhs = dpp::load<E, A>(lhs.data());
-        auto const vrhs = dpp::load<E, A>(rhs.data());
-        auto const vexpected = dpp::load<E, A>(expected.data());
+        auto const vlhs = dpp::broadcast<E, A>(lhs);
+        auto const vrhs = dpp::broadcast<E, A>(rhs);
+        auto const vexpected = dpp::broadcast<E, A>(expected);
         assert(dpp::all_of(cmp(op(vlhs, vrhs), vexpected)));
         return true;
     }

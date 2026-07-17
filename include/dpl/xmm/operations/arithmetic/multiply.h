@@ -50,32 +50,32 @@ inline vector<E>
         return _mm_mullo_epi16(+lhs, +rhs);
     } else {
         static_assert(sizeof(E) == sizeof(int8));
-        auto const zero = _mm_setzero_si128();
+        auto const zero = +xmm::broadcast<E>(dx::zero);
         auto const vlhs = +lhs;
         auto const vrhs = +rhs;
         static constexpr auto unpacklo = [](__m128i val, __m128i zero) {
             if constexpr (unsigned_integral<E>) {
                 return _mm_unpacklo_epi8(val, zero);
             } else {
-                return _mm_unpacklo_epi8(
-                    val, _mm_cmpgt_epi8(_mm_setzero_si128(), val));
+                return _mm_unpacklo_epi8(val, _mm_cmpgt_epi8(zero, val));
             }
         };
         static constexpr auto unpackhi = [](__m128i val, __m128i zero) {
             if constexpr (unsigned_integral<E>) {
                 return _mm_unpackhi_epi8(val, zero);
             } else {
-                return _mm_unpackhi_epi8(
-                    val, _mm_cmpgt_epi8(_mm_setzero_si128(), val));
+                return _mm_unpackhi_epi8(val, _mm_cmpgt_epi8(zero, val));
             }
         };
         auto const left_lo = unpacklo(vlhs, zero);
         auto const left_hi = unpackhi(vlhs, zero);
         auto const right_lo = unpacklo(vrhs, zero);
         auto const right_hi = unpackhi(vrhs, zero);
-
-        auto const prod_lo = _mm_mullo_epi16(left_lo, right_lo);
-        auto const prod_hi = _mm_mullo_epi16(left_hi, right_hi);
+        auto const trunc = +xmm::broadcast<int16>(0xff);
+        auto const prod_lo =
+            _mm_and_si128(trunc, _mm_mullo_epi16(left_lo, right_lo));
+        auto const prod_hi =
+            _mm_and_si128(trunc, _mm_mullo_epi16(left_hi, right_hi));
         return _mm_packus_epi16(prod_lo, prod_hi);
     }
 }
@@ -230,10 +230,9 @@ inline vector<ext::bfloat16>
     return _mm_cvtne2ps_pbh(+hi, +lo);
 #  else
     auto const packed =
-        _mm_packus_epi32( __DPL bit_cast<__m128i>(+element_cast<E>(lo)),
-            __DPL bit_cast<__m128i>(+element_cast<E>(hi)));
-
-    return xmm::reinterpret<ext::bfloat16>(vector<int16>(packed));
+        _mm_shuffle_pd( __DPL bit_cast<__m128d>(+xmm::element_cast<E>(lo)),
+            __DPL bit_cast<__m128d>(+xmm::element_cast<E>(hi)), 0);
+    return xmm::reinterpret<ext::bfloat16>(vector<double>(packed));
 #  endif
 }
 
