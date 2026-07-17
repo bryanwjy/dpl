@@ -83,6 +83,11 @@ public:
         return self.value_;
     }
 
+    __DPL_HIDE_FROM_ABI explicit constexpr operator bool(
+        this bitset self) noexcept {
+        return self.value_;
+    }
+
     template <size_t... Ws>
     requires (sizeof...(Ws) > 1 && (... + Ws) == W)
     __DPL_HIDE_FROM_ABI constexpr bitset(bitset<Ws>... vals) noexcept

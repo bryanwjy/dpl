@@ -48,7 +48,7 @@ inline constexpr auto pinfinity_v = static_cast<T>(pinfinity);
 struct ninfinity_t : broadcastable_base<ninfinity_t> {
     __DPL_HIDE_FROM_ABI explicit constexpr ninfinity_t() noexcept = default;
 
-    template <floating_point T>
+    template <floating_point_like T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     constexpr operator T(this ninfinity_t) noexcept {
         return -static_cast<T>(exponent_bits);

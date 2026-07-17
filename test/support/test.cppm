@@ -12,7 +12,7 @@ export import :utils.comparison;
 export import :utils.span;
 export import :utils.array;
 export import :utils.math_check;
-export import :utils.unique_array;
+export import :utils.dynamic_array;
 export import :fp_fp;
 export import :fp_int;
 export import :int_int;

@@ -9,7 +9,7 @@ module;
 export module dpl.test:data_generator;
 import dpl;
 import :utils.array;
-import :utils.unique_array;
+import :utils.dynamic_array;
 
 namespace dpl::test {
 
@@ -113,7 +113,7 @@ public:
         idx_ = 0;
     }
     [[nodiscard]] constexpr result_type operator()() noexcept {
-        auto val = state_[idx_];
+        auto const val = state_[idx_];
         if (++idx_ == state_size) {
             update_states();
             idx_ = 0;
@@ -136,109 +136,167 @@ export using mt19937 = mt_engine<dpl::uint64, 64, 312, 156, 31,
     37, 0xfff7eee000000000ull, 43, 6364136223846793005ull>;
 
 namespace dpp = dpl::datapar;
-export class data_generator {
+
+struct half_range_t {
+    explicit constexpr half_range_t() noexcept = default;
+};
+
+export inline constexpr half_range_t half_range{};
+
+template <typename T>
+concept rng_like = requires(T& rng) {
+    typename T::result_type;
+    requires dpl::unsigned_integral<typename T::result_type>;
+    { rng() } noexcept -> dpl::same_as<typename T::result_type>;
+};
+
+export template <typename E>
+class scalar_generator {
+    static_assert(dpl::integral<E> || dpl::floating_point_like<E>);
 
 public:
-    template <typename E>
-    static constexpr E generate(E min, E max, mt19937& rng) noexcept {
-        auto const delta = max - min;
+    static constexpr E minimum = []() {
         if constexpr (dpl::integral<E>) {
+            return dpl::integral_traits<E>::min_value;
+        } else {
+            return -dpp::max_value_v<E>;
+        }
+    }();
+
+    static constexpr E maximum = []() {
+        if constexpr (dpl::integral<E>) {
+            return dpl::integral_traits<E>::max_value;
+        } else {
+            return dpp::max_value_v<E>;
+        }
+    }();
+
+private:
+    static constexpr E subtract(E lhs, E rhs) noexcept
+    requires dpl::integral<E>
+    {
+        if constexpr (dpl::signed_integral<E>) {
+            constexpr auto shift = dpl::type_bit_v<E> - 1;
+            auto const inter =
+                dpl::to_signed(dpl::to_unsigned(lhs) - dpl::to_unsigned(rhs));
+
+            auto const lsign = lhs >> shift;
+            auto const rsign = rhs >> shift;
+            auto const isign = inter >> shift;
+            auto const overflowed =
+                static_cast<bool>((lsign ^ rsign) & (lsign ^ isign));
+            return overflowed ? minimum : inter;
+        } else {
+            return lhs - rhs;
+        }
+    }
+
+public:
+    constexpr scalar_generator() noexcept : min_(minimum), max_(maximum) {}
+
+    constexpr scalar_generator(E min, E max) noexcept : min_(min), max_(max) {}
+
+    explicit constexpr scalar_generator(half_range_t) noexcept
+        : min_(minimum / 2)
+        , max_(maximum / 2) {}
+
+    template <rng_like Rng>
+    constexpr E operator()(Rng& rng) const noexcept {
+        using rtype = typename Rng::result_type;
+        if constexpr (dpl::integral<E>) {
+            auto const delta = subtract(max_, min_);
             return delta == 0
-                ? min
-                : static_cast<E>(rng() % static_cast<dpl::uint64>(delta)) + min;
+                ? min_
+                : static_cast<E>(rng() % static_cast<rtype>(delta)) + min_;
         } else {
-            using bitset_t = dpl::bitset<floating_point_traits<E>::width>;
-            max = max == dpp::infinity_v<E> ? dpp::max_value_v<E> : max;
-            min = min == -dpp::infinity_v<E> ? dpp::min_value_v<E> : min;
-            auto const bits = dpl::bit_cast<bitset_t>(delta);
-            auto const exp = dpl::to_underlying(
-                (bits & floating_point_traits<E>::exponent_mask) >>
-                floating_point_traits<E>::digits);
-            auto const fr = dpl::to_underlying(
-                bits & floating_point_traits<E>::mantissa_mask);
-            constexpr auto zero = dpl::to_underlying(bitset_t());
-            auto const rand_exp = bitset_t(generate(zero, exp, rng))
-                << floating_point_traits<E>::digits;
-            auto const rand_fr = bitset_t(generate(zero, fr, rng));
-            auto const sign_condition = dpl::popcount(rng()) >
-                (sizeof(decltype(rng())) * dpl::char_bit_v / 2);
-            auto const sign = min < 0 && (max < 0 || sign_condition)
-                ? dpl::bit_cast<bitset_t>(static_cast<E>(-0.0))
-                : bitset_t();
-            return dpl::bit_cast<E>(rand_exp | rand_fr | sign) + min;
-        }
-    }
-
-    template <typename E>
-    static constexpr E generate(mt19937& rng) noexcept {
-        if constexpr (dpl::integral<E>) {
-            return static_cast<E>(rng());
-        } else {
-            return generate<E>(-0.0, dpp::max_value, rng);
-        }
-    }
-
-    template <typename E>
-    static constexpr E generate_half_range(mt19937& rng) noexcept {
-        if constexpr (dpl::integral<E>) {
-            return generate(dpl::integral_traits<E>::min_value / 2,
-                dpl::integral_traits<E>::max_value / 2, rng);
-        } else {
-            return generate<E>(-0.0, dpp::max_value_v<E> / 2, rng);
-        }
-    }
-
-    template <dpp::simd_abi A, dpp::simd_element_for<A> E>
-    static constexpr auto generate_array(E min, E max, mt19937& rng) noexcept {
-        using abi_traits = dpp::simd_abi_traits<A, E>;
-        if constexpr (dpp::fixed_width_abi<A>) {
-            using array_t = array<E, abi_traits::size>;
-            return [&]<size_t... Is>(dpl::index_sequence<Is...>) {
-                return array_t{(dpl::ignore = Is, generate(min, max, rng))...};
-            }(dpl::make_index_sequence<abi_traits::size>{});
-        } else {
-            unique_array<E> data(abi_traits::size());
-            for (auto& val : data) {
-                val = generate(min, max, rng);
+            using bitset_t = dpl::bitset<dpl::type_bit_v<E>>;
+            using uint_t = dpp::unsigned_representation_t<E>;
+            auto const max = max_ == dpp::infinity_v<E> ? dpp::max_value : max_;
+            auto const min =
+                min_ == -dpp::infinity_v<E> ? dpp::min_value : min_;
+            if (!(min_ <= max_)) [[unlikely]] {
+                return dpp::nan;
             }
-            return data;
-        }
-    }
 
-    template <dpp::simd_abi A, dpp::simd_element_for<A> E>
-    static constexpr auto generate_array(mt19937& rng) noexcept {
-        using abi_traits = dpp::simd_abi_traits<A, E>;
-        if constexpr (dpp::fixed_width_abi<A>) {
-            using array_t = array<E, abi_traits::size>;
-            return [&]<size_t... Is>(dpl::index_sequence<Is...>) {
-                return array_t{(dpl::ignore = Is, generate<E>(rng))...};
-            }(dpl::make_index_sequence<abi_traits::size>{});
-        } else {
-            unique_array<E> data(abi_traits::size());
-            for (auto& val : data) {
-                val = generate<E>(rng);
+            auto const signed_min = dpl::bit_cast<bitset_t>(min_) &
+                floating_point_traits<E>::signbit;
+            auto const signed_max = dpl::bit_cast<bitset_t>(max) &
+                floating_point_traits<E>::signbit;
+
+            constexpr auto exp_rzero = floating_point_traits<E>::digits - 1;
+
+            if (signed_max == signed_min) {
+                auto const bits = dpl::bit_cast<bitset_t>(max - min);
+                auto const exp = dpl::to_underlying(
+                    (bits & floating_point_traits<E>::exponent_mask) >>
+                    exp_rzero);
+                auto const fr = dpl::to_underlying(
+                    bits & floating_point_traits<E>::mantissa_mask);
+
+                auto const rand_exp =
+                    bitset_t(scalar_generator<uint_t>(0, exp)(rng))
+                    << exp_rzero;
+                auto const rand_fr =
+                    bitset_t(scalar_generator<uint_t>(0, fr)(rng));
+                return dpl::bit_cast<E>(rand_exp | rand_fr) + min;
+            } else {
+
+                auto const is_signed = [&]() {
+                    auto const split = dpl::bit_cast<uint_t>(-min);
+                    auto const domain = dpl::bit_cast<uint_t>(max) + split - 1;
+                    auto gen = scalar_generator<uint_t>(0, domain);
+                    return gen(rng) < split;
+                }();
+                auto const bits = is_signed ? dpl::bit_cast<bitset_t>(-min)
+                                            : dpl::bit_cast<bitset_t>(max);
+                auto const signbit = is_signed
+                    ? dpl::bit_cast<bitset_t>(static_cast<E>(-0.0))
+                    : bitset_t();
+
+                auto const exp = dpl::to_underlying(
+                    (bits & floating_point_traits<E>::exponent_mask) >>
+                    exp_rzero);
+                auto const fr = dpl::to_underlying(
+                    bits & floating_point_traits<E>::mantissa_mask);
+                auto const rand_exp =
+                    bitset_t(scalar_generator<uint_t>(0, exp)(rng))
+                    << exp_rzero;
+                auto const rand_fr =
+                    bitset_t(scalar_generator<uint_t>(0, fr)(rng));
+                return dpl::bit_cast<E>(signbit | rand_exp | rand_fr);
             }
-            return data;
         }
     }
 
-    template <dpp::simd_abi A, dpp::simd_element_for<A> E>
-    static constexpr auto generate_half_range_array(mt19937& rng) noexcept {
-        using abi_traits = dpp::simd_abi_traits<A, E>;
+private:
+    E min_;
+    E max_;
+};
+
+export template <dpp::simd_abi A, dpp::simd_element_for<A> E>
+class array_generator : private scalar_generator<E> {
+    using abi_traits = dpp::simd_abi_traits<A, E>;
+    using array_t = array<E, abi_traits::size>;
+    using base_type = scalar_generator<E>;
+
+public:
+    using base_type::base_type;
+
+    template <rng_like Rng>
+    constexpr array_t operator()(Rng& rng) const
+        noexcept(dpp::fixed_width_abi<A>) {
         if constexpr (dpp::fixed_width_abi<A>) {
-            using array_t = array<E, abi_traits::size>;
             return [&]<size_t... Is>(dpl::index_sequence<Is...>) {
                 return array_t{
-                    (dpl::ignore = Is, generate_half_range<E>(rng))...};
+                    (dpl::ignore = Is, base_type::operator()(rng))...};
             }(dpl::make_index_sequence<abi_traits::size>{});
         } else {
-            unique_array<E> data(abi_traits::size());
+            dynamic_array<E> data(abi_traits::size());
             for (auto& val : data) {
-                val = generate_half_range<E>(rng);
+                val = base_type::operator()(rng);
             }
             return data;
         }
     }
 };
-
 } // namespace dpl::test

@@ -3,14 +3,14 @@ module;
 #define DPL_MODULES 1
 #include "dpl/config.h"
 
-export module dpl.test:utils.unique_array;
+export module dpl.test:utils.dynamic_array;
 import :utils.span;
 import dpl;
 
 namespace dpl::test {
 
 template <dpl::semiregular E>
-class unique_array {
+class dynamic_array {
     static_assert(dpl::is_same_v<E, dpl::decay_t<E>>);
 
 public:
@@ -22,14 +22,14 @@ public:
     using value_type = E;
     using difference_type = ptrdiff_t;
 
-    constexpr unique_array() noexcept = default;
-    constexpr ~unique_array() noexcept { destroy(); }
+    constexpr dynamic_array() noexcept = default;
+    constexpr ~dynamic_array() noexcept { destroy(); }
 
-    explicit constexpr unique_array(size_t count)
+    explicit constexpr dynamic_array(size_t count)
         : begin_(new E[count])
         , end_(begin_ + count) {}
 
-    explicit constexpr unique_array(span<E const> data)
+    explicit constexpr dynamic_array(span<E const> data)
         : begin_(new E[data.size()])
         , end_(begin_ + data.size()) {
         for (auto* ptr = begin_; auto const& val : data) {
@@ -37,14 +37,23 @@ public:
         }
     }
 
-    unique_array(unique_array const&) = delete;
-    unique_array& operator=(unique_array const&) = delete;
+    dynamic_array(dynamic_array const& other)
+        : dynamic_array(static_cast<span<E const>>(other)) {}
 
-    constexpr unique_array(unique_array&& other) noexcept
+    dynamic_array& operator=(dynamic_array const& other) {
+        if (this != &other) {
+            auto const _ = dpl::exchange(
+                *this, dynamic_array(static_cast<span<E const>>(other)));
+        }
+
+        return *this;
+    }
+
+    constexpr dynamic_array(dynamic_array&& other) noexcept
         : begin_(dpl::exchange(other.begin_, nullptr))
         , end_(dpl::exchange(other.end_, nullptr)) {}
 
-    constexpr unique_array& operator=(unique_array&& other) noexcept {
+    constexpr dynamic_array& operator=(dynamic_array&& other) noexcept {
         destroy();
         begin_ = dpl::exchange(other.begin_, nullptr);
         end_ = dpl::exchange(other.end_, nullptr);
@@ -93,8 +102,8 @@ private:
 };
 
 template <typename E>
-span(unique_array<E>&) -> span<E>;
+span(dynamic_array<E>&) -> span<E>;
 template <typename E>
-span(unique_array<E> const&) -> span<E const>;
+span(dynamic_array<E> const&) -> span<E const>;
 
 } // namespace dpl::test

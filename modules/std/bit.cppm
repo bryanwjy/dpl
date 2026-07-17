@@ -26,6 +26,7 @@ using __DPL has_single_bit;
 using __DPL popcount;
 using __DPL rotl;
 using __DPL rotr;
+using __DPL type_bit_v;
 // NOLINTEND(misc-unused-using-decls)
 
 __DPL_DEFAULT_NAMESPACE_END

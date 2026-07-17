@@ -123,6 +123,16 @@ public:
         }
     }
 
+    __DPL_HIDE_FROM_ABI explicit constexpr operator bool() const noexcept {
+        for (auto const val : this->storage_) {
+            if (val) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     template <size_t W2>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) constexpr bool operator==(
         bitset<W2> const& other) const {
