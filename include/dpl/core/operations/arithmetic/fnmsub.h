@@ -24,9 +24,9 @@ void fnmsub(...) noexcept = delete;
 struct fnmsub_t;
 
 struct DPL_EMPTY_BASES fnmsub_t :
-    private arithmetic_base<fnmsub_t>,
-    private maskable_transform_base<fnmsub_t>,
-    private ternary_broadcastable_operation<fnmsub_t> {
+    public arithmetic_base<fnmsub_t>,
+    public maskable_transform_base<fnmsub_t>,
+    public ternary_broadcastable_operation<fnmsub_t> {
     using operation_base<fnmsub_t>::operator();
     using maskable_transform_base<fnmsub_t>::operator();
     using ternary_broadcastable_operation<fnmsub_t>::operator();

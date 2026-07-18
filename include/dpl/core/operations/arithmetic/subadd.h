@@ -37,9 +37,9 @@ namespace datapar::internal {
 void subadd(...) noexcept = delete;
 
 struct DPL_EMPTY_BASES subadd_t :
-    private arithmetic_base<subadd_t>,
-    private maskable_transform_base<subadd_t>,
-    private binary_broadcastable_operation<subadd_t> {
+    public arithmetic_base<subadd_t>,
+    public maskable_transform_base<subadd_t>,
+    public binary_broadcastable_operation<subadd_t> {
     using operation_base<subadd_t>::operator();
     using maskable_transform_base<subadd_t>::operator();
     using binary_broadcastable_operation<subadd_t>::operator();

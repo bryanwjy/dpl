@@ -23,9 +23,9 @@ namespace datapar::internal {
 void divide(...) noexcept = delete;
 
 struct DPL_EMPTY_BASES divide_t :
-    private arithmetic_base<divide_t>,
-    private maskable_transform_base<divide_t>,
-    private binary_broadcastable_operation<divide_t> {
+    public arithmetic_base<divide_t>,
+    public maskable_transform_base<divide_t>,
+    public binary_broadcastable_operation<divide_t> {
     using operation_base<divide_t>::operator();
     using maskable_transform_base<divide_t>::operator();
     using binary_broadcastable_operation<divide_t>::operator();
@@ -41,7 +41,7 @@ struct operation_signature<divide_t> {
 template <>
 struct fallback_impl<divide_t> : binary_broadcasting_fallback<divide_t> {
     template <fixed_width_abi A, simd_element_for<A> E>
-    requires floating_point<E>
+    requires floating_point_like<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr basic_vector<E, A>
         DPL_VECTORCALL operator()(

@@ -26,9 +26,9 @@ void fmsubadd(...) noexcept = delete;
 struct fmsubadd_t;
 
 struct DPL_EMPTY_BASES fmsubadd_t :
-    private arithmetic_base<fmsubadd_t>,
-    private maskable_transform_base<fmsubadd_t>,
-    private ternary_broadcastable_operation<fmsubadd_t> {
+    public arithmetic_base<fmsubadd_t>,
+    public maskable_transform_base<fmsubadd_t>,
+    public ternary_broadcastable_operation<fmsubadd_t> {
     using operation_base<fmsubadd_t>::operator();
     using maskable_transform_base<fmsubadd_t>::operator();
     using ternary_broadcastable_operation<fmsubadd_t>::operator();

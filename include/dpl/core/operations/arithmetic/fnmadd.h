@@ -23,9 +23,9 @@ void fnmadd(...) noexcept = delete;
 struct fnmadd_t;
 
 struct DPL_EMPTY_BASES fnmadd_t :
-    private arithmetic_base<fnmadd_t>,
-    private maskable_transform_base<fnmadd_t>,
-    private ternary_broadcastable_operation<fnmadd_t> {
+    public arithmetic_base<fnmadd_t>,
+    public maskable_transform_base<fnmadd_t>,
+    public ternary_broadcastable_operation<fnmadd_t> {
     using operation_base<fnmadd_t>::operator();
     using maskable_transform_base<fnmadd_t>::operator();
     using ternary_broadcastable_operation<fnmadd_t>::operator();

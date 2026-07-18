@@ -76,9 +76,9 @@ namespace datapar::internal {
 void addsub(...) noexcept = delete;
 
 struct DPL_EMPTY_BASES addsub_t :
-    private arithmetic_base<addsub_t>,
-    private maskable_transform_base<addsub_t>,
-    private binary_broadcastable_operation<addsub_t> {
+    public arithmetic_base<addsub_t>,
+    public maskable_transform_base<addsub_t>,
+    public binary_broadcastable_operation<addsub_t> {
     using operation_base<addsub_t>::operator();
     using maskable_transform_base<addsub_t>::operator();
     using binary_broadcastable_operation<addsub_t>::operator();
