@@ -49,11 +49,12 @@ template <typename E, typename I, dpl::size_t... Is, dpl::size_t... Js>
 constexpr void test_gather(
     dpl::index_sequence<Is...>, dpl::index_sequence<Js...>) {
     static_assert(
-        dpp::simd_canonical_invocable<dpp::gather, E const*, vec_t<I>>);
+        dpp::is_simd_canonical_invocable<E const*, vec_t<I>>(dpp::gather));
 }
 
 template <typename E, typename I, dpl::size_t... Is, dpl::size_t... Js>
-requires dpp::simd_canonical_invocable<dpp::gather, E const*, vec_t<I>>
+requires dpp::simd_canonical_invocable<decltype(dpp::gather), E const*,
+    vec_t<I>>
 constexpr void test_gather(
     dpl::index_sequence<Is...>, dpl::index_sequence<Js...>) {
     constexpr auto elem_lanes = sizeof...(Is);
@@ -127,8 +128,8 @@ constexpr void check_masked(vec_t<E> v, dpl::size_t active_count,
 // ---- merge-masked gather: simd mask ----------------------------------------
 
 template <typename E, typename I, dpl::size_t... Is, dpl::size_t... Js>
-requires dpp::simd_canonical_invocable<dpp::gather, vec_t<E>, mask_t<E>,
-    E const*, vec_t<I>>
+requires dpp::simd_canonical_invocable<decltype(dpp::gather), vec_t<E>,
+    mask_t<E>, E const*, vec_t<I>>
 constexpr void test_merge_simd_gather(
     dpl::index_sequence<Is...>, dpl::index_sequence<Js...>) {
     constexpr auto elem_lanes = sizeof...(Is);
@@ -177,8 +178,8 @@ constexpr void test_merge_simd_gather(
 template <typename E, typename I, dpl::size_t... Is, dpl::size_t... Js>
 constexpr void test_merge_simd_gather(
     dpl::index_sequence<Is...>, dpl::index_sequence<Js...>) {
-    static_assert(dpp::simd_canonical_invocable<dpp::gather, vec_t<E>,
-                      mask_t<E>, E const*, vec_t<I>>,
+    static_assert(dpp::is_simd_canonical_invocable<vec_t<E>, mask_t<E>,
+                      E const*, vec_t<I>>(dpp::gather),
         "merge simd-masked gather not supported for this E/I combination");
 }
 
@@ -192,7 +193,7 @@ constexpr void test_merge_simd_gather() {
 // ---- merge-masked gather: const_mask ---------------------------------------
 
 template <typename E, typename I, dpl::size_t... Is, dpl::size_t... Js>
-requires dpp::simd_canonical_invocable<dpp::gather, vec_t<E>,
+requires dpp::simd_canonical_invocable<decltype(dpp::gather), vec_t<E>,
     alt_cmask_t<sizeof...(Is)>, E const*, vec_t<I>>
 constexpr void test_merge_cmask_gather(
     dpl::index_sequence<Is...>, dpl::index_sequence<Js...>) {
@@ -238,8 +239,8 @@ constexpr void test_merge_cmask_gather(
 template <typename E, typename I, dpl::size_t... Is, dpl::size_t... Js>
 constexpr void test_merge_cmask_gather(
     dpl::index_sequence<Is...>, dpl::index_sequence<Js...>) {
-    static_assert(dpp::simd_canonical_invocable<dpp::gather, vec_t<E>,
-        alt_cmask_t<sizeof...(Is)>, E const*, vec_t<I>>);
+    static_assert(dpp::is_simd_canonical_invocable<vec_t<E>,
+        alt_cmask_t<sizeof...(Is)>, E const*, vec_t<I>>(dpp::gather));
 }
 
 template <typename E, typename I>
@@ -252,8 +253,8 @@ constexpr void test_merge_cmask_gather() {
 // ---- zero-masked gather: simd mask -----------------------------------------
 
 template <typename E, typename I, dpl::size_t... Is, dpl::size_t... Js>
-requires dpp::simd_canonical_invocable<dpp::gather, dpp::zero_t, mask_t<E>,
-    E const*, vec_t<I>>
+requires dpp::simd_canonical_invocable<decltype(dpp::gather), dpp::zero_t,
+    mask_t<E>, E const*, vec_t<I>>
 constexpr void test_zero_simd_gather(
     dpl::index_sequence<Is...>, dpl::index_sequence<Js...>) {
     constexpr auto elem_lanes = sizeof...(Is);
@@ -300,8 +301,8 @@ constexpr void test_zero_simd_gather(
 template <typename E, typename I, dpl::size_t... Is, dpl::size_t... Js>
 constexpr void test_zero_simd_gather(
     dpl::index_sequence<Is...>, dpl::index_sequence<Js...>) {
-    static_assert(dpp::simd_canonical_invocable<dpp::gather, dpp::zero_t,
-        mask_t<E>, E const*, vec_t<I>>);
+    static_assert(dpp::is_simd_canonical_invocable<dpp::zero_t, mask_t<E>,
+        E const*, vec_t<I>>(dpp::gather));
 }
 
 template <typename E, typename I>
@@ -314,7 +315,7 @@ constexpr void test_zero_simd_gather() {
 // ---- zero-masked gather: const_mask ----------------------------------------
 
 template <typename E, typename I, dpl::size_t... Is, dpl::size_t... Js>
-requires dpp::simd_canonical_invocable<dpp::gather, dpp::zero_t,
+requires dpp::simd_canonical_invocable<decltype(dpp::gather), dpp::zero_t,
     alt_cmask_t<sizeof...(Is)>, E const*, vec_t<I>>
 constexpr void test_zero_cmask_gather(
     dpl::index_sequence<Is...>, dpl::index_sequence<Js...>) {
@@ -358,8 +359,8 @@ constexpr void test_zero_cmask_gather(
 template <typename E, typename I, dpl::size_t... Is, dpl::size_t... Js>
 constexpr void test_zero_cmask_gather(
     dpl::index_sequence<Is...>, dpl::index_sequence<Js...>) {
-    static_assert(dpp::simd_canonical_invocable<dpp::gather, dpp::zero_t,
-        alt_cmask_t<sizeof...(Is)>, E const*, vec_t<I>>);
+    static_assert(dpp::is_simd_canonical_invocable<dpp::zero_t,
+        alt_cmask_t<sizeof...(Is)>, E const*, vec_t<I>>(dpp::gather));
 }
 
 template <typename E, typename I>

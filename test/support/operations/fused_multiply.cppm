@@ -25,21 +25,22 @@ class fused_multiply {
     using vec_t = dpp::basic_vector<E, A>;
 
 public:
-    template <auto fmop, rng_like Rng, dpl::floating_point_like... Es>
+    template <dpp::simd_primitive_operation auto fmop, rng_like Rng,
+        dpl::floating_point_like... Es>
     static constexpr bool run_all(
         dpl::type_pack<Es...> pack, auto expected_op, Rng& engine) {
-        static_assert(dpp::simd_primitive_operation<fmop>);
         return dpl::pack::all_of(
             [&]<typename E>(dpl::type_identity<E> tp) {
                 static_assert(
-                    dpp::simd_invocable<fmop, vec_t<E>, vec_t<E>, vec_t<E>>);
+                    dpp::is_simd_invocable<vec_t<E>, vec_t<E>, vec_t<E>>(fmop));
                 return fused_multiply::template run<E, fmop>(
                     expected_op, engine);
             },
             pack);
     }
 
-    template <dpl::floating_point_like E, auto fmop, rng_like Rng>
+    template <dpl::floating_point_like E,
+        dpp::simd_primitive_operation auto fmop, rng_like Rng>
     static constexpr bool run(auto expected_op, Rng& engine) {
 
         constexpr auto max = []() {
@@ -81,8 +82,8 @@ public:
             dpl::test::ternary_transform<abi_t>::template test<E>(
                 a, b, 0, fmop, a * b);
         }
-        if constexpr (dpp::simd_canonical_invocable<dpp::fmadd, vec_t<E>,
-                          vec_t<E>, vec_t<E>>)
+        if constexpr (dpp::is_simd_canonical_invocable<vec_t<E>, vec_t<E>,
+                          vec_t<E>>(dpp::fmadd))
             if not consteval {
                 // catostrophic cancellation test
                 constexpr auto small_exp =

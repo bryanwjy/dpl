@@ -59,33 +59,36 @@ void check_signatures() {
     static_assert(noexcept(dpp::load<vec_t<E>>(dpl::declval<P>())));
     static_assert(noexcept(dpp::load<extended_stub<E>>(dpl::declval<P>())));
 
-    static_assert(dpp::simd_basic_operation<dpp::load<abi_t>>);
-    static_assert(dpp::simd_basic_operation<dpp::load<E, abi_t>>);
-    static_assert(dpp::simd_basic_operation<dpp::load<abi_t, E>>);
-    static_assert(dpp::simd_basic_operation<dpp::load<vec_t<E>>>);
-    static_assert(dpp::simd_basic_operation<dpp::load<extended_stub<E>>>);
+    static_assert(dpp::is_simd_basic_operation(dpp::load<abi_t>));
+    static_assert(dpp::is_simd_basic_operation(dpp::load<E, abi_t>));
+    static_assert(dpp::is_simd_basic_operation(dpp::load<abi_t, E>));
+    static_assert(dpp::is_simd_basic_operation(dpp::load<vec_t<E>>));
+    static_assert(dpp::is_simd_basic_operation(dpp::load<extended_stub<E>>));
 
-    static_assert(dpp::simd_basic_operation<dpp::load<abi_t>>);
-    static_assert(dpp::simd_basic_operation<dpp::load<E, abi_t>>);
-    static_assert(dpp::simd_basic_operation<dpp::load<abi_t, E>>);
-    static_assert(dpp::simd_basic_operation<dpp::load<vec_t<E>>>);
-    static_assert(dpp::simd_basic_operation<dpp::load<extended_stub<E>>>);
+    static_assert(dpp::is_simd_basic_operation(dpp::load<abi_t>));
+    static_assert(dpp::is_simd_basic_operation(dpp::load<E, abi_t>));
+    static_assert(dpp::is_simd_basic_operation(dpp::load<abi_t, E>));
+    static_assert(dpp::is_simd_basic_operation(dpp::load<vec_t<E>>));
+    static_assert(dpp::is_simd_basic_operation(dpp::load<extended_stub<E>>));
 
-    static_assert(dpp::simd_canonical_invocable<dpp::load<abi_t>, E const*>);
-    static_assert(dpp::simd_canonical_invocable<dpp::load<E, abi_t>, E const*>);
-    static_assert(dpp::simd_canonical_invocable<dpp::load<abi_t, E>, E const*>);
-    static_assert(dpp::simd_canonical_invocable<dpp::load<vec_t<E>>, E const*>);
+    static_assert(dpp::is_simd_canonical_invocable<E const*>(dpp::load<abi_t>));
     static_assert(
-        dpp::simd_canonical_invocable<dpp::load<extended_stub<E>>, E const*>);
-    static_assert(dpp::simd_canonical_invocable<dpp::load<abi_t>, E const*>);
-    static_assert(dpp::simd_canonical_invocable<dpp::load<E, abi_t>,
-        dpp::aligned_t, E const*>);
-    static_assert(dpp::simd_canonical_invocable<dpp::load<abi_t, E>,
-        dpp::aligned_t, E const*>);
-    static_assert(dpp::simd_canonical_invocable<dpp::load<vec_t<E>>,
-        dpp::aligned_t, E const*>);
-    static_assert(dpp::simd_canonical_invocable<dpp::load<extended_stub<E>>,
-        dpp::aligned_t, E const*>);
+        dpp::is_simd_canonical_invocable<E const*>(dpp::load<E, abi_t>));
+    static_assert(
+        dpp::is_simd_canonical_invocable<E const*>(dpp::load<abi_t, E>));
+    static_assert(
+        dpp::is_simd_canonical_invocable<E const*>(dpp::load<vec_t<E>>));
+    static_assert(dpp::is_simd_canonical_invocable<E const*>(
+        dpp::load<extended_stub<E>>));
+    static_assert(dpp::is_simd_canonical_invocable<E const*>(dpp::load<abi_t>));
+    static_assert(dpp::is_simd_canonical_invocable<dpp::aligned_t, E const*>(
+        dpp::load<E, abi_t>));
+    static_assert(dpp::is_simd_canonical_invocable<dpp::aligned_t, E const*>(
+        dpp::load<abi_t, E>));
+    static_assert(dpp::is_simd_canonical_invocable<dpp::aligned_t, E const*>(
+        dpp::load<vec_t<E>>));
+    static_assert(dpp::is_simd_canonical_invocable<dpp::aligned_t, E const*>(
+        dpp::load<extended_stub<E>>));
 }
 
 void check_signatures() {

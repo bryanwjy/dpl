@@ -27,6 +27,16 @@ using __DPL datapar::simd_math_operation;
 using __DPL datapar::simd_operation;
 using __DPL datapar::simd_primitive_operation;
 
+using __DPL datapar::is_maskable_simd_operation;
+using __DPL datapar::is_simd_algorithm_operation;
+using __DPL datapar::is_simd_basic_operation;
+using __DPL datapar::is_simd_canonical_invocable;
+using __DPL datapar::is_simd_extension_invocable;
+using __DPL datapar::is_simd_invocable;
+using __DPL datapar::is_simd_math_operation;
+using __DPL datapar::is_simd_operation;
+using __DPL datapar::is_simd_primitive_operation;
+
 } // namespace datapar
 
 // NOLINTEND(misc-unused-using-decls)

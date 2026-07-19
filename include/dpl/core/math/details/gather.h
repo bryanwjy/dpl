@@ -19,7 +19,8 @@ namespace dx = __DPL datapar;
 
 template <simd_abi A, simd_element_for<A> E, simd_element_for<A> I>
 requires integral<I> &&
-    (dx::simd_canonical_invocable<dx::gather, E const*, basic_vector<I, A>> ||
+    (dx::simd_canonical_invocable<dx::internal::gather_t, E const*,
+         basic_vector<I, A>> ||
         fixed_width_abi<A>)
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
 constexpr basic_vector<E, A>

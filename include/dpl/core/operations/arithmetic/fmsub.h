@@ -50,8 +50,8 @@ struct fallback_impl<fmsub_t> : ternary_broadcasting_fallback<fmsub_t> {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(
         AT aval, BT bval, CT cval) noexcept {
-        if constexpr (dx::simd_canonical_invocable<dx::fmadd, AT, BT, CT>) {
-            return dx::subtract(aval, bval, dx::negate(cval));
+        if constexpr (dx::is_simd_canonical_invocable<AT, BT, CT>(dx::fmadd)) {
+            return dx::fmadd(aval, bval, dx::negate(cval));
         } else {
             return dx::subtract(dx::multiply(aval, bval), cval);
         }
