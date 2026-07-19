@@ -86,7 +86,6 @@ class unary_transform {
             constexpr alt_cmask_t alt_cmask;
             constexpr all_cmask_t all_cmask;
             constexpr none_cmask_t none_cmask;
-            // merge-masked: active → vop, inactive → src
             {
                 assert(dpp::all_of(cmp(op(src, all_cmask, arg), vop)));
                 assert(dpp::none_of(cmp(op(src, none_cmask, arg), vop)));
@@ -97,8 +96,6 @@ class unary_transform {
                 assert(dpp::all_of(cmp(actual, src) == !alt_mask));
             }
 
-            // zero-masked: op(vzero, mask, arg) == op(dpp::zero, mask,
-            // arg)
             {
                 assert(dpp::all_of(cmp(
                     op(vzero, all_cmask, arg), op(dpp::zero, all_cmask, arg))));
@@ -108,8 +105,6 @@ class unary_transform {
                     op(vzero, alt_cmask, arg), op(dpp::zero, alt_cmask, arg))));
             }
 
-            // zero-masked alias: op(mask, arg) == op(dpp::zero, mask, lhs,
-            // rhs)
             {
                 assert(dpp::all_of(
                     cmp(op(all_cmask, arg), op(dpp::zero, all_cmask, arg))));
@@ -133,8 +128,7 @@ public:
 
         auto const vargs = dpp::load<E, A>(args.data());
         auto const vexpected = dpp::load<E, A>(expected.data());
-        assert(dpp::all_of(cmp(op(vargs), vexpected)));
-        return true;
+        return dpp::all_of(cmp(op(vargs), vexpected));
     }
 
     template <dpp::simd_element_for<A> E, typename Op,
@@ -143,8 +137,7 @@ public:
         Cmp cmp = dpp::cmpeq) noexcept {
         auto const varg = dpp::broadcast<E, A>(arg);
         auto const vexpected = dpp::broadcast<E, A>(expected);
-        assert(dpp::all_of(cmp(op(varg), vexpected)));
-        return true;
+        return dpp::all_of(cmp(op(varg), vexpected));
     }
 
     // Use bitcmp for masked tests

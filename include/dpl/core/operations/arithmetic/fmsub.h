@@ -4,6 +4,7 @@
 #include "dpl/config.h"
 
 // IWYU pragma: always_keep
+#include "dpl/core/operations/arithmetic/fmadd.h"
 #include "dpl/core/operations/arithmetic/multiply.h"
 #include "dpl/core/operations/arithmetic/subtract.h"
 
@@ -43,15 +44,17 @@ template <>
 struct fallback_impl<fmsub_t> : ternary_broadcasting_fallback<fmsub_t> {
 
     template <canonical_vector AT, canonical_vector BT, canonical_vector CT>
-    requires floating_point<simd_element_type_t<AT>> &&
-        floating_point<simd_element_type_t<BT>> &&
-        floating_point<simd_element_type_t<CT>> &&
-        cpo_invocable<multiply_t, AT, BT> &&
-        cpo_invocable<subtract_t, cpo_result_t<multiply_t, AT, BT>, CT>
+    requires floating_point_like<simd_element_type_t<AT>> &&
+        floating_point_like<simd_element_type_t<BT>> &&
+        floating_point_like<simd_element_type_t<CT>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(
         AT aval, BT bval, CT cval) noexcept {
-        return dx::subtract(dx::multiply(aval, bval), cval);
+        if constexpr (dx::simd_canonical_invocable<dx::fmadd, AT, BT, CT>) {
+            return dx::subtract(aval, bval, dx::negate(cval));
+        } else {
+            return dx::subtract(dx::multiply(aval, bval), cval);
+        }
     }
 
     using ternary_broadcasting_fallback<fmsub_t>::operator();

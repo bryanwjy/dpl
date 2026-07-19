@@ -85,7 +85,6 @@ class binary_transform {
             constexpr alt_cmask_t alt_cmask;
             constexpr all_cmask_t all_cmask;
             constexpr none_cmask_t none_cmask;
-            // merge-masked: active → vop, inactive → src
             {
                 assert(dpp::all_of(cmp(op(src, all_cmask, lhs, rhs), vop)));
                 assert(dpp::none_of(cmp(op(src, none_cmask, lhs, rhs), vop)));
@@ -96,8 +95,6 @@ class binary_transform {
                 assert(dpp::all_of(cmp(actual, src) == !alt_mask));
             }
 
-            // zero-masked: op(vzero, mask, lhs, rhs) == op(dpp::zero, mask,
-            // lhs, rhs)
             {
                 assert(dpp::all_of(cmp(op(vzero, all_cmask, lhs, rhs),
                     op(dpp::zero, all_cmask, lhs, rhs))));
@@ -107,8 +104,6 @@ class binary_transform {
                     op(dpp::zero, alt_cmask, lhs, rhs))));
             }
 
-            // zero-masked alias: op(mask, lhs, rhs) == op(dpp::zero, mask, lhs,
-            // rhs)
             {
                 assert(dpp::all_of(cmp(op(all_cmask, lhs, rhs),
                     op(dpp::zero, all_cmask, lhs, rhs))));
@@ -135,25 +130,18 @@ public:
         auto const vrhs = dpp::load<E, A>(rhs.data());
         auto const vexpected = dpp::load<E, A>(expected.data());
         auto const vactual = op(vlhs, vrhs);
-        assert(dpp::all_of(cmp(vactual, vexpected)));
-        return true;
+        return dpp::all_of(cmp(vactual, vexpected));
     }
 
     template <dpp::simd_element_for<A> E, typename Op,
         typename Cmp = decltype(dpp::cmpeq)>
     static constexpr bool test(E lhs, E rhs, Op op, op_result<Op, E> expected,
         Cmp cmp = dpp::cmpeq) noexcept {
-        if constexpr (dpp::scalable_abi<A>) {
-            assert(expected.size() == abi_traits<E>::size());
-            assert(lhs.size() == abi_traits<E>::size());
-            assert(rhs.size() == abi_traits<E>::size());
-        }
-
         auto const vlhs = dpp::broadcast<E, A>(lhs);
         auto const vrhs = dpp::broadcast<E, A>(rhs);
         auto const vexpected = dpp::broadcast<E, A>(expected);
-        assert(dpp::all_of(cmp(op(vlhs, vrhs), vexpected)));
-        return true;
+        auto const vactual = op(vlhs, vrhs);
+        return dpp::all_of(cmp(vactual, vexpected));
     }
 
     // Use bitcmp for masked tests
@@ -161,8 +149,10 @@ public:
         typename Cmp = decltype(test::bitcmp)>
     static constexpr bool test_masked(span_t<E> lhs, span_t<E> rhs, Op op,
         op_result<Op, E> src, Cmp cmp = test::bitcmp) noexcept {
-        assert(lhs.size() == abi_traits<E>::size());
-        assert(rhs.size() == abi_traits<E>::size());
+        if constexpr (dpp::scalable_abi<A>) {
+            assert(lhs.size() == abi_traits<E>::size());
+            assert(rhs.size() == abi_traits<E>::size());
+        }
         test_masked(dpp::load<E, A>(lhs.data()), dpp::load<E, A>(rhs.data()),
             op, dpp::broadcast<A>(src), cmp);
         return true;

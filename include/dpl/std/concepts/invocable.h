@@ -4,6 +4,7 @@
 
 #include "dpl/config.h"
 
+#include "dpl/std/concepts/boolean_testable.h"
 #if !DPL_MODULES
 #  include "dpl/std/type_traits/is_invocable.h"
 #endif
@@ -17,5 +18,9 @@ concept invocable = requires(F&& func, Args&&... args) {
 
 template <typename F, typename... Args>
 concept regular_invocable = invocable<F, Args...>;
+
+template <typename F, typename... Args>
+concept predicate = regular_invocable<F, Args...> &&
+    boolean_testable<invoke_result_t<F, Args...>>;
 
 __DPL_DEFAULT_NAMESPACE_END

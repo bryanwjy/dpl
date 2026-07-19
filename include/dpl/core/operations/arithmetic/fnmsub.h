@@ -43,8 +43,6 @@ template <>
 struct fallback_impl<fnmsub_t> : ternary_broadcasting_fallback<fnmsub_t> {
 
     template <canonical_vector AT, canonical_vector BT, canonical_vector CT>
-    requires cpo_invocable<fmadd_t, AT, BT, CT> &&
-        cpo_invocable<negate_t, cpo_result_t<fmadd_t, AT, BT, CT>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(
         AT aval, BT bval, CT cval) noexcept {

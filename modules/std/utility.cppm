@@ -49,7 +49,10 @@ using __DPL unreachable;
 using __DPL type_pack;
 using __DPL value_pack;
 namespace pack {
+using __DPL pack::all_of;
+using __DPL pack::any_of;
 using __DPL pack::for_each;
-}
+using __DPL pack::none_of;
+} // namespace pack
 // NOLINTEND(misc-unused-using-decls)
 __DPL_DEFAULT_NAMESPACE_END

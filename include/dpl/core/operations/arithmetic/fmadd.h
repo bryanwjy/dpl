@@ -43,11 +43,9 @@ template <>
 struct fallback_impl<fmadd_t> : ternary_broadcasting_fallback<fmadd_t> {
 
     template <canonical_vector AT, canonical_vector BT, canonical_vector CT>
-    requires floating_point<simd_element_type_t<AT>> &&
-        floating_point<simd_element_type_t<BT>> &&
-        floating_point<simd_element_type_t<CT>> &&
-        cpo_invocable<multiply_t, AT, BT> &&
-        cpo_invocable<add_t, cpo_result_t<multiply_t, AT, BT>, CT>
+    requires floating_point_like<simd_element_type_t<AT>> &&
+        floating_point_like<simd_element_type_t<BT>> &&
+        floating_point_like<simd_element_type_t<CT>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(
         AT aval, BT bval, CT cval) noexcept {

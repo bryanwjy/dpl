@@ -55,6 +55,17 @@ protected:
             return impl::fallback<D>(__DPL forward<Ts>(args)...);
         }
     }
+
+    template <typename T>
+    requires inherits_from<T, operation_base<T>>
+    friend consteval bool operator==(D, T) noexcept {
+        return dpl::is_same_v<T, D>;
+    }
+    template <typename T>
+    requires inherits_from<T, operation_base<T>>
+    friend consteval bool operator!=(D, D) noexcept {
+        return !dpl::is_same_v<T, D>;
+    }
 };
 
 template <typename D>
