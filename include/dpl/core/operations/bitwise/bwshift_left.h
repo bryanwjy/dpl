@@ -24,8 +24,8 @@ namespace datapar::internal {
 void bwshift_left(...) noexcept = delete;
 
 struct bwshift_left_t :
-    private bitwise_base<bwshift_left_t>,
-    private maskable_transform_base<bwshift_left_t> {
+    public bitwise_base<bwshift_left_t>,
+    public maskable_transform_base<bwshift_left_t> {
     using bitwise_base<bwshift_left_t>::operator();
     using maskable_transform_base<bwshift_left_t>::operator();
 };

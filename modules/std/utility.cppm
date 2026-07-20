@@ -46,6 +46,7 @@ using __DPL to_underlying;
 using __DPL to_unsigned;
 using __DPL unreachable;
 //
+using __DPL constant_type_pack;
 using __DPL type_pack;
 using __DPL value_pack;
 namespace pack {

@@ -27,9 +27,9 @@ namespace datapar::internal {
 void bwxor(...) noexcept = delete;
 
 struct DPL_EMPTY_BASES bwxor_t :
-    private bitwise_base<bwxor_t>,
-    private maskable_transform_base<bwxor_t>,
-    private binary_broadcastable_operation<bwxor_t> {
+    public bitwise_base<bwxor_t>,
+    public maskable_transform_base<bwxor_t>,
+    public binary_broadcastable_operation<bwxor_t> {
     using bitwise_base<bwxor_t>::operator();
     using maskable_transform_base<bwxor_t>::operator();
 };

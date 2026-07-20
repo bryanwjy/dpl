@@ -27,9 +27,9 @@ namespace datapar::internal {
 void bwor(...) noexcept = delete;
 
 struct DPL_EMPTY_BASES bwor_t :
-    private bitwise_base<bwor_t>,
-    private maskable_transform_base<bwor_t>,
-    private binary_broadcastable_operation<bwor_t> {
+    public bitwise_base<bwor_t>,
+    public maskable_transform_base<bwor_t>,
+    public binary_broadcastable_operation<bwor_t> {
     using bitwise_base<bwor_t>::operator();
     using maskable_transform_base<bwor_t>::operator();
 };

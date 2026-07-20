@@ -6,6 +6,7 @@
 
 #if !DPL_MODULES
 #  include "dpl/std/type_traits/constants.h"
+#  include "dpl/std/type_traits/remove_cvref.h"
 #  include "dpl/std/type_traits/structured_bindings.h"
 #  include "dpl/std/type_traits/type_identity.h"
 #endif

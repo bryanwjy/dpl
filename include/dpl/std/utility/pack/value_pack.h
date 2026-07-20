@@ -25,6 +25,9 @@ struct value_pack {
 };
 
 template <auto... Vs>
+using constant_type_pack = value_pack<integral_constant<decltype(Vs), Vs>{}...>;
+
+template <auto... Vs>
 struct tuple_size<value_pack<Vs...>> : size_constant<sizeof...(Vs)> {};
 
 template <size_t I, auto... Vs>

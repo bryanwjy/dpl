@@ -16,7 +16,7 @@
 		    "languages": ["C", "C++", "C++11", "C++20"],
 		},
 		"LSP": {
-            "clangd": {
+            "LSP-clangd": {
                 "initializationOptions": {
                 	"fallbackFlags": [
                 		"-O1",

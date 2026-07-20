@@ -186,7 +186,7 @@ private:
             auto const isign = inter >> shift;
             auto const overflowed =
                 static_cast<bool>((lsign ^ rsign) & (lsign ^ isign));
-            return overflowed ? minimum : inter;
+            return overflowed ? maximum : inter;
         } else {
             return lhs - rhs;
         }
