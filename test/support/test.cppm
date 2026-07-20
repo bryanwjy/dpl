@@ -10,6 +10,7 @@ export import :binary_transform;
 export import :unary_transform;
 export import :data_generator;
 export import :fused_multiply;
+export import :bitwise;
 export import :utils.comparison;
 export import :utils.span;
 export import :utils.array;

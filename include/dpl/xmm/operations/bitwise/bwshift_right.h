@@ -208,7 +208,7 @@ inline vector<L>
             auto const shifted = _mm_srlv_epi64(+lhs, +rhs);
             auto const sign = _mm_cmpgt_epi64(_mm_setzero_si128(), +lhs);
             auto const fill =
-                _mm_slli_epi64(sign, _mm_sub_epi64(_mm_set1_epi64x(64), +rhs));
+                _mm_sllv_epi64(sign, _mm_sub_epi64(_mm_set1_epi64x(64), +rhs));
             return _mm_or_si128(shifted, fill);
 #    endif
         }
@@ -261,33 +261,35 @@ inline vector<L>
     } else {
         static_assert(sizeof(L) == sizeof(int8));
         if constexpr (unsigned_integral<L>) {
-            using i16 = make_unsigned_t<bit_type_t<sizeof(L) * 2 * char_bit_v>>;
             auto xmm0 = +lhs;
             auto xmm1 = +rhs;
             auto xmm3 = _mm_cvtepu8_epi16(xmm1);
             auto xmm2 = _mm_cvtepu8_epi16(xmm0);
-            xmm2 = +xmm::bwshift_right(vector<i16>(xmm2), vector<i16>(xmm3));
+            xmm2 =
+                +xmm::bwshift_right(vector<uint16>(xmm2), vector<uint16>(xmm3));
             xmm1 = _mm_srli_si128(xmm1, 8);
             xmm0 = _mm_srli_si128(xmm0, 8);
             xmm1 = _mm_cvtepu8_epi16(xmm1);
             xmm0 = _mm_cvtepu8_epi16(xmm0);
-            xmm0 = +xmm::bwshift_right(vector<i16>(xmm0), vector<i16>(xmm1));
+            xmm0 =
+                +xmm::bwshift_right(vector<uint16>(xmm0), vector<uint16>(xmm1));
             xmm1 = _mm_srli_epi16(_mm_cmpeq_epi32(xmm1, xmm1), 8);
             xmm2 = _mm_and_si128(xmm2, xmm1);
             xmm1 = _mm_and_si128(xmm0, xmm1);
             return _mm_packus_epi16(xmm2, xmm1);
         } else {
-            using i16 = make_signed_t<bit_type_t<sizeof(L) * 2 * char_bit_v>>;
             auto xmm0 = +lhs;
             auto xmm1 = +rhs;
             auto xmm3 = _mm_cvtepi8_epi16(xmm1);
             auto xmm2 = _mm_cvtepi8_epi16(xmm0);
-            xmm2 = +xmm::bwshift_right(simd16(xmm2), simd16(xmm3));
+            xmm2 =
+                +xmm::bwshift_right(vector<int16>(xmm2), vector<int16>(xmm3));
             xmm1 = _mm_srli_si128(xmm1, 8);
             xmm0 = _mm_srli_si128(xmm0, 8);
             xmm1 = _mm_cvtepi8_epi16(xmm1);
             xmm0 = _mm_cvtepi8_epi16(xmm0);
-            xmm0 = +xmm::bwshift_right(simd16(xmm0), simd16(xmm1));
+            xmm0 =
+                +xmm::bwshift_right(vector<int16>(xmm0), vector<int16>(xmm1));
             xmm1 = _mm_srli_epi16(_mm_cmpeq_epi32(xmm1, xmm1), 8);
             xmm2 = _mm_and_si128(xmm2, xmm1);
             xmm1 = _mm_and_si128(xmm0, xmm1);

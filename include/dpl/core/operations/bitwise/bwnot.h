@@ -39,12 +39,13 @@ struct fallback_impl<bwnot_t> {
     using bitset_t DPL_NODEBUG = bitset<sizeof(E) * char_bit_v>;
 
     template <simd_abi A, simd_element_for<A> E>
-    requires cpo_invocable<bwandnot_t, basic_mask<E, A>, all_bits_t> ||
+    requires cpo_invocable<bwandnot_t, all_bits_t, basic_vector<E, A>> ||
         (sizeof(bitset_t<E>) == sizeof(E))
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr basic_vector<E, A>
         DPL_VECTORCALL operator()(basic_vector<E, A> val) noexcept {
-        if constexpr (cpo_invocable<bwandnot_t, basic_mask<E, A>, all_bits_t>) {
+        if constexpr (cpo_invocable<bwandnot_t, all_bits_t,
+                          basic_vector<E, A>>) {
             return bwandnot_t::operator()(dx::all_bits, val);
         } else {
             using bit_type = bit_type_t<sizeof(E) * char_bit_v>;

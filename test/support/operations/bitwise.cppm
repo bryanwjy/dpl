@@ -172,34 +172,62 @@ public:
             expected[i] = expected_op<bwop>(lhs[i], rhs[i]);
         }
 
-        dpl::test::binary_transform<abi_t>::template test<E>(
-            lhs, rhs, bwop, expected, test::bitcmp);
-        dpl::test::binary_transform<abi_t>::template test_masked<E>(
-            lhs, rhs, bwop, src);
+        dpl::test::unary_transform<abi_t>::template test<E>(
+            lhs,
+            [rhs = dpp::load<shift_t, abi_t>(rhs.data())](
+                auto... args) { return bwop(args..., rhs); },
+            expected, test::bitcmp);
+        dpl::test::unary_transform<abi_t>::template test_masked<E>(
+            lhs,
+            [rhs = dpp::load<shift_t, abi_t>(rhs.data())](
+                auto... args) { return bwop(args..., rhs); },
+            src);
 
-        dpl::pack::for_each(
-            [&](auto idx) {
-                auto const shifteri = [idx](auto... args) {
-                    return bwop(args..., idx);
-                };
-                auto const shifter = [idx](auto... args) {
-                    return bwop(args..., idx());
-                };
+        if constexpr (dpp::fixed_width_abi<A>) {
+            dpl::pack::for_each(
+                [&](auto idx) {
+                    auto const shifteri = [idx](auto... args) {
+                        return bwop(args..., idx);
+                    };
+                    if constexpr (idx() % 3 > 0) {
+                        if consteval {
+                            return;
+                        } else {
+                            dpl::test::unary_transform<abi_t>::template test<E>(
+                                lhs, shifteri, expected, test::bitcmp);
+                            dpl::test::unary_transform<
+                                abi_t>::template test_masked<E>(lhs, shifteri,
+                                src);
+                        }
+                    } else {
+                        dpl::test::unary_transform<abi_t>::template test<E>(
+                            lhs, shifteri, expected, test::bitcmp);
+                        dpl::test::unary_transform<abi_t>::template test_masked<
+                            E>(lhs, shifteri, src);
+                    }
+                },
+                dpl::make_index_sequence<dpl::type_bit_v<E> / 2>{});
+        }
 
-                for (auto i = 0zu; i < expected.size(); ++i) {
-                    expected[i] = expected_op<bwop>(lhs[i], idx);
+        for (auto i = 0zu; i < dpl::type_bit_v<E>; ++i) {
+            if consteval {
+                // reduce compile time
+                if (i % 3 > 0) {
+                    break;
                 }
+            }
 
-                dpl::test::unary_transform<abi_t>::template test<E>(
-                    lhs, shifteri, expected, test::bitcmp);
-                dpl::test::unary_transform<abi_t>::template test_masked<E>(
-                    lhs, shifteri, src);
-                dpl::test::unary_transform<abi_t>::template test<E>(
-                    lhs, shifter, expected, test::bitcmp);
-                dpl::test::unary_transform<abi_t>::template test_masked<E>(
-                    lhs, shifter, src);
-            },
-            dpl::make_index_sequence<dpl::type_bit_v<E>>{});
+            for (auto j = 0zu; j < expected.size(); ++j) {
+                expected[j] = expected_op<bwop>(lhs[j], i);
+            }
+
+            auto const shifter = [i](auto... args) { return bwop(args..., i); };
+
+            dpl::test::unary_transform<abi_t>::template test<E>(
+                lhs, shifter, expected, test::bitcmp);
+            dpl::test::unary_transform<abi_t>::template test_masked<E>(
+                lhs, shifter, src);
+        }
 
         return true;
     }
@@ -224,6 +252,8 @@ public:
             data, bwop, expected, test::bitcmp);
         dpl::test::unary_transform<abi_t>::template test_masked<E>(
             data, bwop, src);
+
+        return true;
     }
 };
 } // namespace dpl::test
