@@ -11,6 +11,7 @@ export import :unary_transform;
 export import :data_generator;
 export import :fused_multiply;
 export import :bitwise;
+export import :bitwise_mask;
 export import :utils.comparison;
 export import :utils.span;
 export import :utils.array;

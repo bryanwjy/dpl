@@ -45,9 +45,9 @@ inline mask<E>
     } else {
         auto const idx = _mm_load_si128(
             reinterpret_cast<__m128i const*>(details::niota_epi8));
-        constexpr auto invalid = static_cast<char>(-1);
-        auto const vshift = _mm_set1_epi8(
-            shift < mask<E>::size() ? static_cast<char>(shift) : invalid);
+        auto const vshift = _mm_set1_epi8(shift < mask<E>::size()
+                ? shift * sizeof(E)
+                : sizeof(details::niota_epi8));
         // if msb is set: dst = 0; else: dst = src[idx % 16]
         return _mm_shuffle_epi8(+val, _mm_add_epi8(idx, vshift));
     }

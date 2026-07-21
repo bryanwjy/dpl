@@ -26,8 +26,7 @@ __DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::xmm {
 
 namespace details {
-
-alignas(16) inline constexpr char iota_epi8[]{
+alignas(16) inline constexpr char iota_epi8[] = {
     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
 
 } // namespace details
@@ -43,9 +42,9 @@ inline mask<E>
     } else {
         auto const idx = _mm_load_si128(
             reinterpret_cast<__m128i const*>(details::iota_epi8));
-        constexpr auto invalid = static_cast<char>(-1);
-        auto const vshift = _mm_set1_epi8(
-            shift < mask<E>::size() ? static_cast<char>(shift) : invalid);
+        auto const vshift =
+            _mm_set1_epi8(shift < mask<E>::size() ? shift * sizeof(E)
+                                                  : sizeof(details::iota_epi8));
         return _mm_shuffle_epi8(+val, _mm_sub_epi8(idx, vshift));
     }
 }
