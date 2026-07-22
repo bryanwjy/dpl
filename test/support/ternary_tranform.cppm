@@ -6,10 +6,10 @@ module;
 #include <cassert>
 #include <cstdlib>
 
-export module dpl.test:ternary_transform;
-export import :utils.span;
-export import :utils.comparison;
-export import :utils.bitset_helpers;
+export module dpl.test:support.ternary_transform;
+export import :support.span;
+export import :support.comparison;
+export import :support.bitset_helpers;
 
 import dpl;
 

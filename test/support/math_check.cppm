@@ -5,7 +5,7 @@ module;
 
 #include <cassert>
 
-export module dpl.test:utils.math_check;
+export module dpl.test:support.math_check;
 
 import dpl;
 

@@ -5,7 +5,7 @@ module;
 
 #include <cassert>
 
-export module dpl.test:utils.span;
+export module dpl.test:support.span;
 
 import dpl;
 

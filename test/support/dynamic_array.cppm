@@ -3,8 +3,8 @@ module;
 #define DPL_MODULES 1
 #include "dpl/config.h"
 
-export module dpl.test:utils.dynamic_array;
-import :utils.span;
+export module dpl.test:support.dynamic_array;
+import :support.span;
 import dpl;
 
 namespace dpl::test {

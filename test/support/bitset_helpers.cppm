@@ -3,7 +3,7 @@ module;
 #define DPL_MODULES 1
 #include "dpl/config.h"
 
-export module dpl.test:utils.bitset_helpers;
+export module dpl.test:support.bitset_helpers;
 import dpl;
 
 namespace dpl::test {

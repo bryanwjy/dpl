@@ -7,7 +7,7 @@ module;
 export module dpl.test:fp_fp;
 
 import dpl;
-import :utils.comparison;
+import :support.comparison;
 
 export namespace dpl::test {
 

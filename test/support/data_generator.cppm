@@ -6,10 +6,10 @@ module;
 #include <cassert>
 #include <cstdlib>
 
-export module dpl.test:data_generator;
+export module dpl.test:support.data_generator;
 import dpl;
-import :utils.array;
-import :utils.dynamic_array;
+import :support.array;
+import :support.dynamic_array;
 
 namespace dpl::test {
 

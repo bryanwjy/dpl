@@ -3,8 +3,8 @@ module;
 #define DPL_MODULES 1
 #include "dpl/config.h"
 
-export module dpl.test:utils.array;
-import :utils.span;
+export module dpl.test:support.array;
+import :support.span;
 import dpl;
 
 namespace dpl::test {

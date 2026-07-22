@@ -7,7 +7,7 @@ module;
 export module dpl.test:int_int;
 
 import dpl;
-import :utils.comparison;
+import :support.comparison;
 
 export namespace dpl::test {
 

@@ -3,7 +3,7 @@ module;
 #define DPL_MODULES 1
 #include "dpl/config.h"
 
-export module dpl.test:utils.comparison;
+export module dpl.test:support.comparison;
 
 import dpl;
 

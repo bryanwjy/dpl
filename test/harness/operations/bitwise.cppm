@@ -7,12 +7,12 @@ module;
 #include <cstdlib>
 
 export module dpl.test:bitwise;
-export import :binary_transform;
-export import :unary_transform;
-export import :utils.span;
-export import :utils.comparison;
-export import :utils.bitset_helpers;
-export import :data_generator;
+export import :support.binary_transform;
+export import :support.unary_transform;
+export import :support.span;
+export import :support.comparison;
+export import :support.bitset_helpers;
+export import :support.data_generator;
 
 import dpl;
 
