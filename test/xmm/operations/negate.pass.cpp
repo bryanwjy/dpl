@@ -12,77 +12,20 @@ import dpl.test;
 //   (2) dpp::negate(src, mask, val)       -- merge-masked
 //   (3) dpp::negate(dpp::zero, mask, val) -- zero-masked explicit
 //   (4) dpp::negate(mask, val)            -- zero-masked alias (== form 3)
-//
-// INT_MIN: negate(INT_MIN) == INT_MIN on 2's complement hardware (wraps).
-// Float special cases (-0.0, ±inf, NaN) compared via bit_cast since
-// NaN != NaN under IEEE 754.
 
 int main() {
     namespace dpp = dpl::datapar;
     namespace xmm = dpl::datapar::xmm;
     using abi_t = xmm::abi_tag;
-
     using types = dpl::type_pack<dpl::int8, dpl::uint8, dpl::int16, dpl::uint16,
         dpl::int32, dpl::uint32, dpl::int64, dpl::uint64, float, double,
         dpl::ext::float16, dpl::ext::bfloat16>;
-
-    constexpr auto run_tests = []<typename E>(dpl::type_identity<E> type) {
-        constexpr auto expected_op = [](E v) {
-            if constexpr (dpl::integral<E>) {
-                return -v;
-            } else {
-                using U = dpp::unsigned_representation_t<E>;
-                constexpr U sign_mask = dpl::bit_cast<U>(dpp::msb_v<E>);
-                return dpl::bit_cast<E>(
-                    static_cast<U>(dpl::bit_cast<U>(v) ^ sign_mask));
-            }
-        };
-
-        dpl::test::mt19937 engine(
-            dpl::type_bit_v<E> % 31 + dpl::floating_point_like<E>);
-        dpl::test::array_generator<abi_t, E> const data_generator(
-            dpl::test::half_range);
-        dpl::test::scalar_generator<E> const src_generator(
-            dpp::max_value_v<E> / 4 * 3, dpp::max_value_v<E>);
-
-        auto const data = data_generator(engine);
-        auto const src = src_generator(engine);
-        auto expected = data;
-        for (auto& val : expected) {
-            val = expected_op(val);
-        }
-
-        dpl::test::unary_transform<abi_t>::test<E>(data, dpp::negate, expected);
-        dpl::test::unary_transform<abi_t>::test_masked<E>(
-            data, dpp::negate, src);
-
-        if constexpr (dpl::signed_integral<E>) {
-            if not consteval {
-                // Implementation-defined
-                auto const min = dpl::integral_traits<E>::min_value;
-                dpl::test::unary_transform<abi_t>::test(min, dpp::negate, min);
-            }
-        }
-
-        if constexpr (dpl::floating_point_like<E>) {
-            for (auto const arg :
-                dpl::test::array{dpp::msb_v<E>, -dpp::infinity_v<E>,
-                    dpp::infinity_v<E>, -dpp::nan_v<E>, dpp::nan_v<E>}) {
-
-                auto const expected = expected_op(arg);
-                dpl::test::unary_transform<abi_t>::test(
-                    arg, dpp::negate, expected, dpl::test::bitcmp);
-            }
-        }
-
-        return true;
+    constexpr auto run = []() {
+        dpl::test::mt19937 engine;
+        return dpl::test::signop<abi_t>::run_all<dpp::negate>(types{}, engine);
     };
 
-    dpl::pack::for_each(
-        [=](auto tp) {
-            static_assert(run_tests(tp));
-            assert(run_tests(tp));
-        },
-        types{});
+    static_assert(run());
+    assert(run());
     return 0;
 }

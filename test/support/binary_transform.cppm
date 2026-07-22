@@ -130,7 +130,8 @@ public:
         auto const vrhs = dpp::load<E, A>(rhs.data());
         auto const vexpected = dpp::load<E, A>(expected.data());
         auto const vactual = op(vlhs, vrhs);
-        return dpp::all_of(cmp(vactual, vexpected));
+        assert(dpp::all_of(cmp(vactual, vexpected)));
+        return true;
     }
 
     template <dpp::simd_element_for<A> E, typename Op,
@@ -141,7 +142,8 @@ public:
         auto const vrhs = dpp::broadcast<E, A>(rhs);
         auto const vexpected = dpp::broadcast<E, A>(expected);
         auto const vactual = op(vlhs, vrhs);
-        return dpp::all_of(cmp(vactual, vexpected));
+        assert(dpp::all_of(cmp(vactual, vexpected)));
+        return true;
     }
 
     // Use bitcmp for masked tests
