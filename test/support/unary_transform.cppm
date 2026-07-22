@@ -127,7 +127,7 @@ public:
         }
 
         auto const vargs = dpp::load<E, A>(args.data());
-        auto const vexpected = dpp::load<E, A>(expected.data());
+        auto const vexpected = dpp::load<A>(expected.data());
         return dpp::all_of(cmp(op(vargs), vexpected));
     }
 
@@ -136,7 +136,7 @@ public:
     static constexpr bool test(E arg, Op op, op_result<Op, E> expected,
         Cmp cmp = dpp::cmpeq) noexcept {
         auto const varg = dpp::broadcast<E, A>(arg);
-        auto const vexpected = dpp::broadcast<E, A>(expected);
+        auto const vexpected = dpp::broadcast<A>(expected);
         return dpp::all_of(cmp(op(varg), vexpected));
     }
 

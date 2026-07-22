@@ -49,6 +49,15 @@ public:
     E data_[N];
 };
 
+template <typename T, typename E, size_t N>
+constexpr array<T, N * sizeof(E) / sizeof(T)> reinterpret_array(
+    array<E, N> const& src) noexcept
+requires requires { dpl::bit_cast<array<T, N * sizeof(E) / sizeof(T)>>(src); }
+{
+    static_assert(N * sizeof(E) % sizeof(T) == 0);
+    return dpl::bit_cast<array<T, N * sizeof(E) / sizeof(T)>>(src);
+}
+
 template <typename E, size_t N>
 span(array<E, N>&) -> span<E, N>;
 template <typename E, size_t N>

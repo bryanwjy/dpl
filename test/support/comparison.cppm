@@ -4,7 +4,7 @@ module;
 #include "dpl/config.h"
 
 export module dpl.test:support.comparison;
-
+import :support.bitset_helpers;
 import dpl;
 
 export namespace dpl::test {
@@ -19,18 +19,19 @@ inline constexpr struct nancmp_t {
 } nancmp{};
 
 inline constexpr struct bitcmp_t {
-    template <dpp::simd_vector T>
-    static constexpr auto operator()(T lhs, T rhs) noexcept {
-        using type = typename T::value_type;
-        return dpp::reinterpret<dpp::signed_representation_t<type>>(lhs) ==
-            dpp::reinterpret<dpp::signed_representation_t<type>>(rhs);
+    template <dpp::simd_vector L, dpp::simd_vector R>
+    static constexpr auto operator()(L lhs, R rhs) noexcept {
+        using type = dpp::common_size_type_t<dpp::simd_element_type_t<L>,
+            dpp::simd_element_type_t<R>>;
+        using bits = dpp::unsigned_representation_t<type>;
+        return dpp::reinterpret<bits>(lhs) == dpp::reinterpret<bits>(rhs);
     }
 
-    template <typename T>
-    requires dpl::is_scalar_v<T>
-    static constexpr auto operator()(T lhs, T rhs) noexcept {
-        return dpl::bit_cast<dpp::unsigned_representation_t<T>>(lhs) ==
-            dpl::bit_cast<dpp::unsigned_representation_t<T>>(rhs);
+    template <typename L, typename R>
+    requires dpl::is_scalar_v<L> && dpl::is_scalar_v<R>
+    static constexpr auto operator()(L lhs, R rhs) noexcept {
+        return sizeof(L) == sizeof(R) &&
+            test::to_bitset(lhs) == test::to_bitset(rhs);
     }
 } bitcmp{};
 

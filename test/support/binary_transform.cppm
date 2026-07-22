@@ -128,7 +128,7 @@ public:
 
         auto const vlhs = dpp::load<E, A>(lhs.data());
         auto const vrhs = dpp::load<E, A>(rhs.data());
-        auto const vexpected = dpp::load<E, A>(expected.data());
+        auto const vexpected = dpp::load<A>(expected.data());
         auto const vactual = op(vlhs, vrhs);
         assert(dpp::all_of(cmp(vactual, vexpected)));
         return true;
@@ -140,7 +140,7 @@ public:
         Cmp cmp = dpp::cmpeq) noexcept {
         auto const vlhs = dpp::broadcast<E, A>(lhs);
         auto const vrhs = dpp::broadcast<E, A>(rhs);
-        auto const vexpected = dpp::broadcast<E, A>(expected);
+        auto const vexpected = dpp::broadcast<A>(expected);
         auto const vactual = op(vlhs, vrhs);
         assert(dpp::all_of(cmp(vactual, vexpected)));
         return true;

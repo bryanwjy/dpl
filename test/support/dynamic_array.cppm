@@ -5,6 +5,7 @@ module;
 
 export module dpl.test:support.dynamic_array;
 import :support.span;
+import :support.array;
 import dpl;
 
 namespace dpl::test {
@@ -100,6 +101,38 @@ private:
     pointer begin_;
     pointer end_;
 };
+
+template <typename T, typename E>
+constexpr dynamic_array<T> reinterpret_array(
+    dynamic_array<E> const& src) noexcept
+requires dpl::is_trivially_copyable_v<T> && dpl::is_trivially_copyable_v<E>
+{
+    static_assert(sizeof(T) > sizeof(E) ? sizeof(T) % sizeof(E) == 0
+                                        : sizeof(E) % sizeof(T) == 0);
+    dynamic_array<T> dst(src.size() * sizeof(E) / sizeof(T));
+    if constexpr (sizeof(E) == sizeof(T)) {
+        for (auto i = 0zu; i < dst.size(); ++i) {
+            dst[i] = dpl::bit_cast<T>(src[i]);
+        }
+    } else if constexpr (sizeof(E) < sizeof(T)) {
+        for (auto i = 0zu; i < dst.size(); ++i) {
+            constexpr auto ratio = sizeof(T) / sizeof(E);
+            dst[i] = [&]<size_t... Js>(dpl::index_sequence<Js...>) {
+                return dpl::bit_cast<T>(test::array{src[i * ratio + Js]...});
+            }(dpl::make_index_sequence<ratio>{});
+        }
+    } else {
+        for (auto i = 0zu; i < src.size(); ++i) {
+            constexpr auto ratio = sizeof(E) / sizeof(T);
+            auto const tsrc = dpl::bit_cast<test::array<T, ratio>>(src[i]);
+            for (auto j = 0zu; j < ratio; ++j) {
+                dst[i * ratio + j] = tsrc[j];
+            }
+        }
+    }
+
+    return dst;
+}
 
 template <typename E>
 span(dynamic_array<E>&) -> span<E>;

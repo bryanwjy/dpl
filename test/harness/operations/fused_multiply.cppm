@@ -6,11 +6,11 @@ module;
 #include <cassert>
 
 export module dpl.test:fused_multiply;
-export import :support.ternary_transform;
-export import :support.span;
-export import :support.comparison;
-export import :support.bitset_helpers;
-export import :support.data_generator;
+import :support.ternary_transform;
+import :support.span;
+import :support.comparison;
+import :support.bitset_helpers;
+import :support.data_generator;
 
 import dpl;
 

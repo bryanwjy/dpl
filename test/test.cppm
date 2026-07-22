@@ -15,6 +15,7 @@ export import :support.array;
 export import :support.math_check;
 export import :support.dynamic_array;
 export import :addition;
+export import :reinterpretation;
 export import :signop;
 export import :subtraction;
 export import :multiplication;
