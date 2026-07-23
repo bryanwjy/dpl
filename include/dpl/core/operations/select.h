@@ -443,7 +443,7 @@ private:
 
     template <typename L, typename R>
     using vresult_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<L>, common_abi_t<L, R>>;
+        basic_vector<simd_element_type_t<L>, common_abi_t<L, R>>;
 
 public:
     template <simd_vector L, common_vector_with<L> R,

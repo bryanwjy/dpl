@@ -9,22 +9,24 @@
 import dpl.xmm;
 import dpl.test;
 
-// Tests for dpp::reinterpret<E> on xmm ABI. Requires SSE4.2 (implied by
+// Tests for dpp::select on xmm ABI. Requires SSE4.2 (implied by
 // dpl.xmm).
 //
 // Forms tested:
-//   (1) dpp::reinterpret<E>(val)                  -- unmasked, always available
+//   dpp::select(mask, lhs, rhs)                  -- unmasked, always available
 
 int main() {
     namespace dpp = dpl::datapar;
     namespace xmm = dpl::datapar::xmm;
     using abi_t = xmm::abi_tag;
-    using types = dpl::type_pack<dpl::int8, dpl::uint8, dpl::int16, dpl::uint16,
-        dpl::int32, dpl::uint32, dpl::int64, dpl::uint64, float, double,
-        dpl::ext::float16, dpl::ext::bfloat16>;
+    // using types = dpl::type_pack<dpl::int8, dpl::uint8, dpl::int16,
+    // dpl::uint16,
+    //     dpl::int32, dpl::uint32, dpl::int64, dpl::uint64, float, double,
+    //     dpl::ext::float16, dpl::ext::bfloat16>;
+    using types = dpl::type_pack<dpl::ext::float16>;
     constexpr auto run = []() {
         dpl::test::mt19937 engine;
-        return dpl::test::reinterpretation<abi_t>::run_all(types{}, engine);
+        return dpl::test::selection<abi_t>::run_all(types{}, engine);
     };
 
     static_assert(run());

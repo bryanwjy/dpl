@@ -17,6 +17,7 @@ export import :support.dynamic_array;
 export import :addition;
 export import :reinterpretation;
 export import :signop;
+export import :selection;
 export import :subtraction;
 export import :multiplication;
 export import :fused_multiply;

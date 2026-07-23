@@ -23,7 +23,7 @@ constexpr bool finite_math_only() noexcept {
 
 constexpr bool ieee_denormal() noexcept {
     if consteval {
-        return false;
+        return true;
     } else {
         // Implementation defined, may not work everywhere
         float volatile denormal = dpl::bit_cast<float>(0x00800000) * 0.5f;

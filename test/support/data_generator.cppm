@@ -10,6 +10,8 @@ export module dpl.test:support.data_generator;
 import dpl;
 import :support.array;
 import :support.dynamic_array;
+import :support.span;
+import :support.bitset_helpers;
 
 namespace dpl::test {
 
@@ -65,7 +67,7 @@ private:
         }
     }
 
-    void update_states() {
+    constexpr void update_states() {
         auto i = 0zu;
         for (; i != (state_size - shift_size); ++i)
             update_state(i);
@@ -73,7 +75,7 @@ private:
             update_state(i, j);
     }
 
-    void update_state(size_t i, size_t k) {
+    constexpr void update_state(size_t i, size_t k) {
         size_t const j = (i + 1) % state_size;
         auto const mask = static_cast<result_type>(mask_bits == digits
                 ? ~static_cast<result_type>(0)
@@ -84,7 +86,7 @@ private:
         state_[i] = state_[k] ^ rshift<1>(tmp) ^ (xor_mask * (tmp & 1));
     }
 
-    void update_state(size_t i) {
+    constexpr void update_state(size_t i) {
         update_state(i, (i + shift_size) % state_size);
     }
 
@@ -297,6 +299,49 @@ public:
             }
             return data;
         }
+    }
+};
+
+export template <size_t N>
+class bit_generator;
+export template <size_t N>
+requires dpl::integral_bitset_type<dpl::bitset<N>>
+class bit_generator<N> :
+    private scalar_generator<typename dpl::bitset<N>::underlying_type> {
+    using result_type = dpl::bitset<N>;
+    using underlying_type = typename result_type::underlying_type;
+    using base_type = scalar_generator<underlying_type>;
+
+public:
+    constexpr bit_generator() noexcept
+        : base_type(static_cast<underlying_type>(0),
+              static_cast<underlying_type>(
+                  static_cast<underlying_type>(1) << N)) {}
+
+    template <rng_like Rng>
+    constexpr result_type operator()(Rng& rng) const noexcept {
+        return result_type{base_type::operator()(rng)};
+    }
+};
+
+export template <size_t N>
+class bit_generator : private scalar_generator<size_t> {
+    using result_type = dpl::bitset<N>;
+    using base_type = scalar_generator<size_t>;
+
+public:
+    constexpr bit_generator() noexcept : scalar_generator() {}
+
+    template <rng_like Rng>
+    constexpr result_type operator()(Rng& rng) const noexcept {
+        constexpr auto remainder = N % dpl::type_bit_v<size_t>;
+        constexpr auto count = N / dpl::type_bit_v<size_t> + remainder > 0;
+        return [&]<size_t... Is>(dpl::index_sequence<Is..., count - 1>) {
+            return result_type{
+                make_bitset_t<decltype(Is)>(base_type::operator()(rng))...,
+                make_bitset_t<size_t>(base_type::operator()(rng) % remainder),
+            };
+        }(dpl::make_index_sequence<count>{});
     }
 };
 } // namespace dpl::test
