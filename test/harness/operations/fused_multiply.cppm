@@ -74,12 +74,14 @@ public:
         dpl::test::ternary_transform<abi_t>::template test_masked<E>(
             lhs, mid, rhs, fmop, src);
 
-        dpl::test::ternary_transform<abi_t>::template test<E>(1, 1, 0, fmop, 1);
-        dpl::test::ternary_transform<abi_t>::template test<E>(1, 1, 1, fmop, 2);
+        dpl::test::ternary_transform<abi_t>::template test<E>(
+            1, 1, 0, fmop, expected_op(1, 1, 0));
+        dpl::test::ternary_transform<abi_t>::template test<E>(
+            1, 1, 1, fmop, expected_op(1, 1, 1));
         {
             auto const a = src_generator(engine), b = src_generator(engine);
             dpl::test::ternary_transform<abi_t>::template test<E>(
-                a, b, 0, fmop, a * b);
+                a, b, 0, fmop, expected_op(a, b, 0));
         }
         if constexpr (dpp::is_simd_canonical_invocable<vec_t<E>, vec_t<E>,
                           vec_t<E>>(dpp::fmadd))

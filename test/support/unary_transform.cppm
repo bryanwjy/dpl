@@ -128,7 +128,8 @@ public:
 
         auto const vargs = dpp::load<E, A>(args.data());
         auto const vexpected = dpp::load<A>(expected.data());
-        return dpp::all_of(cmp(op(vargs), vexpected));
+        assert(dpp::all_of(cmp(op(vargs), vexpected)));
+        return true;
     }
 
     template <dpp::simd_element_for<A> E, typename Op,
@@ -137,7 +138,8 @@ public:
         Cmp cmp = dpp::cmpeq) noexcept {
         auto const varg = dpp::broadcast<E, A>(arg);
         auto const vexpected = dpp::broadcast<A>(expected);
-        return dpp::all_of(cmp(op(varg), vexpected));
+        assert(dpp::all_of(cmp(op(varg), vexpected)));
+        return true;
     }
 
     // Use bitcmp for masked tests

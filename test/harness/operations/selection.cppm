@@ -12,6 +12,7 @@ import :support.binary_transform;
 import :support.span;
 import :support.comparison;
 import :support.data_generator;
+import :support.bitset_helpers;
 
 import dpl;
 
@@ -105,6 +106,8 @@ class selection {
             for (auto i = 0zu; i < mask.size(); ++i) {
                 if (!mask[i]) {
                     expected[i] = dpl::bit_cast<E>(~test::make_bitset_t<E>());
+                } else {
+                    expected[i] = lhs[i];
                 }
             }
 
@@ -141,6 +144,86 @@ class selection {
                 lhs,
                 [vmask](vec_t<E> arg) noexcept {
                     return dpp::select(!vmask, arg, dpp::all_bits);
+                },
+                expected, test::bitcmp);
+        }
+
+        {
+            constexpr auto lanes = abi_traits<E>::size();
+            using alt_cmask_t =
+                dpp::const_mask<lanes, test::repeat_byte<lanes>(0x55)>;
+            constexpr auto mask = dpp::to_bitset(alt_cmask_t());
+            auto const lhs = data_generator(engine);
+            auto const rhs = data_generator(engine);
+            auto expected = lhs;
+            for (auto i = 0zu; i < mask.size(); ++i) {
+                if (!mask[i]) {
+                    expected[i] = rhs[i];
+                }
+            }
+
+            test::binary_transform<abi_t>::template test<E>(
+                lhs, rhs,
+                [](vec_t<E> lhs, vec_t<E> rhs) noexcept {
+                    return dpp::select(alt_cmask_t(), lhs, rhs);
+                },
+                expected, test::bitcmp);
+
+            for (auto i = 0zu; i < mask.size(); ++i) {
+                if (!mask[i]) {
+                    expected[i] = 0;
+                }
+            }
+
+            test::unary_transform<abi_t>::template test<E>(
+                lhs,
+                [](vec_t<E> lhs) noexcept {
+                    return dpp::select(alt_cmask_t(), lhs, dpp::zero);
+                },
+                expected, test::bitcmp);
+
+            for (auto i = 0zu; i < mask.size(); ++i) {
+                if (mask[i]) {
+                    expected[i] = 0;
+                } else {
+                    expected[i] = lhs[i];
+                }
+            }
+
+            test::unary_transform<abi_t>::template test<E>(
+                lhs,
+                [](vec_t<E> lhs) noexcept {
+                    return dpp::select(alt_cmask_t(), dpp::zero, lhs);
+                },
+                expected, test::bitcmp);
+
+            for (auto i = 0zu; i < mask.size(); ++i) {
+                if (!mask[i]) {
+                    expected[i] = dpl::bit_cast<E>(~test::make_bitset_t<E>());
+                } else {
+                    expected[i] = lhs[i];
+                }
+            }
+
+            test::unary_transform<abi_t>::template test<E>(
+                lhs,
+                [](vec_t<E> lhs) noexcept {
+                    return dpp::select(alt_cmask_t(), lhs, dpp::all_bits);
+                },
+                expected, test::bitcmp);
+
+            for (auto i = 0zu; i < mask.size(); ++i) {
+                if (mask[i]) {
+                    expected[i] = dpl::bit_cast<E>(~test::make_bitset_t<E>());
+                } else {
+                    expected[i] = lhs[i];
+                }
+            }
+
+            test::unary_transform<abi_t>::template test<E>(
+                lhs,
+                [](vec_t<E> lhs) noexcept {
+                    return dpp::select(alt_cmask_t(), dpp::all_bits, lhs);
                 },
                 expected, test::bitcmp);
         }

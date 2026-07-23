@@ -184,6 +184,9 @@ public:
                     auto const shifteri = [idx](auto... args) {
                         return bwop(args..., idx);
                     };
+                    for (auto i = 0zu; i < expected.size(); ++i) {
+                        expected[i] = expected_op<bwop>(lhs[i], idx);
+                    }
                     if constexpr (idx() % 3 > 0) {
                         if consteval {
                             return;

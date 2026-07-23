@@ -20,7 +20,7 @@ int main() {
     using abi_t = xmm::abi_tag;
 
     static constexpr auto expected = [](auto l, auto m, auto r) {
-        return l * m + r;
+        return -r - l * m;
     };
     using types =
         dpl::type_pack<float, double, dpl::ext::float16, dpl::ext::bfloat16>;

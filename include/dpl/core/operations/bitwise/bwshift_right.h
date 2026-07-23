@@ -45,7 +45,7 @@ template <>
 struct fallback_impl<bwshift_right_t> {
 
     template <typename E>
-    using bitset_t DPL_NODEBUG = bitset<sizeof(E) * char_bit_v>;
+    using bitset_t DPL_NODEBUG = bitset<dpl::type_bit_v<E>>;
 
     template <fixed_width_abi A, simd_element_for<A> LE, simd_element_for<A> RE>
     requires integral<RE> && integral_bitset_type<bitset_t<LE>> &&
@@ -55,10 +55,8 @@ struct fallback_impl<bwshift_right_t> {
         basic_vector<LE, A> lhs, basic_vector<RE, A> rhs) noexcept {
         return internal::transform<basic_vector<LE, A>>(
             [](auto lhs, auto rhs) {
-                if constexpr (signed_integral<LE> && sizeof(LE) < sizeof(int)) {
-                    using bit_type = bit_type_t<sizeof(LE) * char_bit_v>;
-                    return static_cast<LE>(
-                        __DPL bit_cast<bit_type>(lhs) >> rhs);
+                if constexpr (signed_integral<LE>) {
+                    return static_cast<LE>(lhs >> rhs);
                 } else {
                     return __DPL bit_cast<LE>(
                         __DPL bit_cast<bitset_t<LE>>(lhs) >> rhs);
@@ -76,9 +74,8 @@ struct fallback_impl<bwshift_right_t> {
         using bit_type = bit_type_t<sizeof(E) * char_bit_v>;
         return internal::transform<basic_vector<E, A>>(
             [shift](auto lhs) {
-                if constexpr (signed_integral<E> && sizeof(E) < sizeof(int)) {
-                    return static_cast<E>(
-                        __DPL bit_cast<bit_type>(lhs) >> shift);
+                if constexpr (signed_integral<E>) {
+                    return static_cast<E>(lhs >> shift);
                 } else {
                     return __DPL bit_cast<E>(
                         __DPL bit_cast<bitset_t<E>>(lhs) >> shift);
