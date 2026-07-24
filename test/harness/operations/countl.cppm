@@ -15,9 +15,6 @@ namespace dpp = dpl::datapar;
 
 export template <dpp::simd_abi A>
 class countl {
-    using abi_t = A;
-    template <typename E>
-    using vec_t = dpp::basic_vector<E, A>;
     template <typename E>
     using abi_traits = dpp::simd_abi_traits<A, E>;
 

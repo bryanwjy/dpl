@@ -44,13 +44,8 @@ struct fallback_impl<byteswap_t> {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr basic_vector<E, A>
         DPL_VECTORCALL operator()(basic_vector<E, A> val) noexcept {
-        using ubit = unsigned_representation_t<E>;
-        return internal::transform<basic_vector<ubit, A>>(
-            [](auto val) {
-                auto const count = __DPL byteswap(__DPL bit_cast<ubit>(val));
-                return static_cast<ubit>(count);
-            },
-            val);
+        return internal::transform<basic_vector<E, A>>(
+            [](auto val) { return __DPL byteswap(val); }, val);
     }
 };
 
