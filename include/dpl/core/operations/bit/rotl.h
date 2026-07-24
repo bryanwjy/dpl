@@ -61,15 +61,28 @@ struct fallback_impl<rotl_t> {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr basic_vector<E, A>
         DPL_VECTORCALL operator()(
-            basic_vector<E, A> val, size_t size) noexcept {
-        using ubit = unsigned_representation_t<E>;
+            basic_vector<E, A> val, size_t count) noexcept {
+        using ubit = make_unsigned_t<E>;
         // almost always power of 2, so modulus should optimize to bwand
-        constexpr auto digits = sizeof(E) * __DPL char_bit_v;
-        size %= digits;
-        auto const rsize = digits - size;
+        constexpr auto digits = dpl::type_bit_v<E>;
+        count %= digits;
+        auto const rcount = digits - count;
         auto const uval = dx::reinterpret<ubit>(val);
-        auto const result = dx::bwor(
-            dx::bwshift_left(uval, size), dx::bwshift_right(uval, rsize));
+        auto const result = [&]() {
+            if consteval {
+                if (count == 0) {
+                    return val;
+                } else {
+                    return dx::bwor(dx::bwshift_left(uval, count),
+                        dx::bwshift_right(uval, rcount));
+                }
+            } else {
+                return dx::bwor(dx::bwshift_left(uval, count),
+                    dx::bwshift_right(
+                        dx::broadcast<E, A>(count != 0), uval, rcount));
+            }
+        }();
+
         return dx::reinterpret<E>(result);
     }
 
@@ -77,7 +90,7 @@ struct fallback_impl<rotl_t> {
     requires fixed_width_mask<T> && cpo_invocable<to_bitset_t, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr T DPL_VECTORCALL operator()(T val, size_t size) noexcept {
-        using bitset_t = invoke_result_t<to_bitset_t, T>;
+        using bitset_t = cpo_result_t<to_bitset_t, T>;
         return dx::from_bitset<T>(__DPL rotl(dx::to_bitset(val), size));
     }
 
@@ -87,16 +100,31 @@ struct fallback_impl<rotl_t> {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr basic_vector<LE, A>
         DPL_VECTORCALL operator()(
-            basic_vector<LE, A> val, basic_vector<RE, A> size) noexcept {
-        using ubit = unsigned_representation_t<LE>;
-        constexpr auto digits = sizeof(LE) * __DPL char_bit_v;
-        auto const dig = dx::broadcast<RE, A>(static_cast<RE>(digits));
-        size = dx::bwand(size, dx::subtract(dig, 1));
-        auto const rsize = dx::subtract(digits, size);
-        auto const uval = dx::reinterpret<ubit>(val);
-        auto const result = dx::bwor(
-            dx::bwshift_left(uval, size), dx::bwshift_right(uval, rsize));
-        return dx::reinterpret<LE>(result);
+            basic_vector<LE, A> val, basic_vector<RE, A> count) noexcept {
+        if constexpr (signed_integral<RE>) {
+            return operator()(val, dx::reinterpret<make_unsigned_t<RE>>(count));
+        } else {
+            using ubit = make_unsigned_t<LE>;
+            constexpr auto digits = dpl::type_bit_v<LE>;
+            auto const vdigits = dx::broadcast<RE, A>(static_cast<RE>(digits));
+            auto const vone = dx::broadcast<RE, A>(1);
+            auto const mod_mask = dx::subtract(vdigits, vone);
+            count = dx::bwand(count, mod_mask);
+            auto const rcount = dx::subtract(vdigits, count);
+            auto const uval = dx::reinterpret<ubit>(val);
+            auto const result = [&]() {
+                if consteval {
+                    return dx::bwor(dx::bwshift_left(uval, count),
+                        dx::bwshift_right(
+                            dx::select(count == dx::zero, dx::zero, uval),
+                            dx::select(count == dx::zero, dx::zero, rcount)));
+                } else {
+                    return dx::bwor(dx::bwshift_left(uval, count),
+                        dx::bwshift_right(count != dx::zero, uval, rcount));
+                }
+            }();
+            return dx::reinterpret<LE>(result);
+        }
     }
 };
 

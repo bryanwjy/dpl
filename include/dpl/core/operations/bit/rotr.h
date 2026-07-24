@@ -61,15 +61,28 @@ struct fallback_impl<rotr_t> {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr basic_vector<E, A>
         DPL_VECTORCALL operator()(
-            basic_vector<E, A> val, size_t size) noexcept {
+            basic_vector<E, A> val, size_t count) noexcept {
         using ubit = unsigned_representation_t<E>;
-        // almost always power of 2, so modulus should optimize to bwand
-        constexpr auto digits = sizeof(E) * __DPL char_bit_v;
-        size %= digits;
-        auto const rsize = digits - size;
+        // almost always power of 2, so modulus- should optimize to bwand
+        constexpr auto digits = dpl::type_bit_v<E>;
+        count %= digits;
+        auto const rcount = digits - count;
         auto const uval = dx::reinterpret<ubit>(val);
-        auto const result = dx::bwor(
-            dx::bwshift_right(uval, size), dx::bwshift_left(uval, rsize));
+        auto const result = [&]() {
+            if consteval {
+                if (count == 0) {
+                    return val;
+                } else {
+                    return dx::bwor(dx::bwshift_right(uval, count),
+                        dx::bwshift_left(uval, rcount));
+                }
+            } else {
+                return dx::bwor(dx::bwshift_right(uval, count),
+                    dx::bwshift_left(
+                        dx::broadcast<E, A>(count != 0), uval, rcount));
+            }
+        }();
+
         return dx::reinterpret<E>(result);
     }
 
@@ -87,15 +100,24 @@ struct fallback_impl<rotr_t> {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr basic_vector<LE, A>
         DPL_VECTORCALL operator()(
-            basic_vector<LE, A> val, basic_vector<RE, A> size) noexcept {
-        using ubit = unsigned_representation_t<LE>;
-        constexpr auto digits = sizeof(LE) * __DPL char_bit_v;
+            basic_vector<LE, A> val, basic_vector<RE, A> count) noexcept {
+        using ubit = make_unsigned_t<LE>;
+        constexpr auto digits = dpl::type_bit_v<LE>;
         auto const dig = dx::broadcast<RE, A>(static_cast<RE>(digits));
-        size = dx::bwand(size, dx::subtract(dig, 1));
-        auto const rsize = dx::subtract(digits, size);
+        count = dx::bwand(count, dx::subtract(dig, 1));
+        auto const rcount = dx::subtract(digits, count);
         auto const uval = dx::reinterpret<ubit>(val);
-        auto const result = dx::bwor(
-            dx::bwshift_right(uval, size), dx::bwshift_left(uval, rsize));
+        auto const result = [&]() {
+            if consteval {
+                return dx::bwor(dx::bwshift_right(uval, count),
+                    dx::bwshift_left(
+                        dx::select(count == dx::zero, dx::zero, uval),
+                        dx::select(count == dx::zero, dx::zero, rcount)));
+            } else {
+                return dx::bwor(dx::bwshift_right(uval, count),
+                    dx::bwshift_left(count != dx::zero, uval, rcount));
+            }
+        }();
         return dx::reinterpret<LE>(result);
     }
 };
