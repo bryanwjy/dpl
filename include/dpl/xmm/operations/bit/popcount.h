@@ -13,6 +13,7 @@
 
 #    include "dpl/std/type_traits/type_identity.h"
 #    include "dpl/xmm/basic/abi.h"
+#    include "dpl/xmm/basic/broadcast.h"
 
 #    include <immintrin.h>
 #  endif
@@ -48,18 +49,16 @@ inline vector<unsigned_representation_t<E>>
         return _mm_popcnt_epi16(
             +xmm::reinterpret<signed_representation_t<E>>(val));
 #  else
-        using subbit = bit_type_t<char_bit_v * sizeof(E) / 2>;
-        return _mm_maddubs_epi16(+xmm::popcount(xmm::reinterpret<subbit>(val)),
-            _mm_set1_epi16(0x0101));
+        return _mm_maddubs_epi16(+xmm::popcount(xmm::reinterpret<uint8>(val)),
+            +xmm::broadcast<int16>(0x0101));
 #  endif
     } else if constexpr (sizeof(E) == 4) {
 #  if DPL_SIMD_X86_AVX512VPOPCNTDQ && DPL_SIMD_X86_AVX512VL
         return _mm_popcnt_epi32(
             +xmm::reinterpret<signed_representation_t<E>>(val));
 #  else
-        using subbit = bit_type_t<char_bit_v * sizeof(E) / 2>;
-        return _mm_maddubs_epi16(+xmm::popcount(xmm::reinterpret<subbit>(val)),
-            _mm_set1_epi32(0x00010001));
+        return _mm_madd_epi16(+xmm::popcount(xmm::reinterpret<uint16>(val)),
+            +xmm::broadcast<int16>(1));
 #  endif
     } else {
         static_assert(sizeof(E) == 8);
@@ -67,9 +66,8 @@ inline vector<unsigned_representation_t<E>>
         return _mm_popcnt_epi64(
             +xmm::reinterpret<signed_representation_t<E>>(val));
 #  else
-        using subbit = bit_type_t<char_bit_v * sizeof(E) / 8>;
         return _mm_sad_epu8(
-            +xmm::popcount(xmm::reinterpret<subbit>(val)), _mm_setzero_si128());
+            +xmm::popcount(xmm::reinterpret<uint8>(val)), _mm_setzero_si128());
 #  endif
     }
 }

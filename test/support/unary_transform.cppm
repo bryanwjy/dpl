@@ -39,7 +39,7 @@ class unary_transform {
         auto const all_false = dpp::broadcast<E, A>(false);
         auto const alt_mask = (dpp::lane_index<A, E>() & 1) == 0;
         auto const vop = op(arg);
-        auto const vzero = dpp::broadcast<E, A>(dpp::zero);
+        auto const vzero = dpp::broadcast<op_result<Op, E>, A>(dpp::zero);
 
         // merge-masked: active → vop, inactive → src
         {
@@ -128,7 +128,8 @@ public:
 
         auto const vargs = dpp::load<E, A>(args.data());
         auto const vexpected = dpp::load<A>(expected.data());
-        assert(dpp::all_of(cmp(op(vargs), vexpected)));
+        auto const vactual = op(vargs);
+        assert(dpp::all_of(cmp(vactual, vexpected)));
         return true;
     }
 

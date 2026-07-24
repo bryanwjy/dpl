@@ -13,7 +13,7 @@ import dpl.test.harness.operations.bitwise_mask;
 // Tests for dpp::bw* on xmm ABI. Requires SSE4.2 (implied by dpl.xmm).
 //
 // Forms tested:
-//   (1) dpp::bw*(lhs, rhs)                  -- unmasked, always available
+//   (1) dpp::bw*(args...)                  -- unmasked, always available
 
 int main() {
     namespace dpp = dpl::datapar;

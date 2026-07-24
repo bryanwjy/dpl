@@ -39,7 +39,7 @@ class binary_transform {
         auto const all_false = dpp::broadcast<E, A>(false);
         auto const alt_mask = (dpp::lane_index<A, E>() & 1) == 0;
         auto const vop = op(lhs, rhs);
-        auto const vzero = dpp::broadcast<E, A>(dpp::zero);
+        auto const vzero = dpp::broadcast<op_result<Op, E>, A>(dpp::zero);
 
         // merge-masked: active → vop, inactive → src
         {

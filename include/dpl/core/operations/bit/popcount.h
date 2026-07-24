@@ -25,8 +25,8 @@ namespace datapar::internal {
 void popcount(...) noexcept = delete;
 
 struct popcount_t :
-    private bit_manipulation_base<popcount_t>,
-    private maskable_transform_base<popcount_t> {
+    public bit_manipulation_base<popcount_t>,
+    public maskable_transform_base<popcount_t> {
     using operation_base<popcount_t>::operator();
     using maskable_transform_base<popcount_t>::operator();
 
@@ -51,17 +51,19 @@ struct fallback_impl<popcount_t> {
     static constexpr auto DPL_VECTORCALL operator()(
         basic_vector<E, A> val) noexcept {
         using ubit = unsigned_representation_t<E>;
-        return internal::transform<basic_vector<ubit, A>>(val, [](auto val) {
-            auto const count = __DPL popcount(__DPL to_unsigned(val));
-            return static_cast<ubit>(count);
-        });
+        return internal::transform<basic_vector<ubit, A>>(
+            [](auto val) {
+                auto const count = __DPL popcount(__DPL to_unsigned(val));
+                return static_cast<ubit>(count);
+            },
+            val);
     }
 
     template <canonical_mask T>
     requires fixed_width_mask<T> && cpo_invocable<to_bitset_t, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr size_t DPL_VECTORCALL operator()(T val) noexcept {
-        using bitset_t = invoke_result_t<to_bitset_t, T>;
+        using bitset_t = cpo_result_t<to_bitset_t, T>;
         return __DPL popcount(dx::to_bitset(val));
     }
 };
