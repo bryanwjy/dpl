@@ -25,8 +25,8 @@ namespace datapar::internal {
 void byteswap(...) noexcept = delete;
 
 struct byteswap_t :
-    private bit_manipulation_base<byteswap_t>,
-    private maskable_transform_base<byteswap_t> {
+    public bit_manipulation_base<byteswap_t>,
+    public maskable_transform_base<byteswap_t> {
     using operation_base<byteswap_t>::operator();
     using maskable_transform_base<byteswap_t>::operator();
 };

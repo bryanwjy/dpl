@@ -79,19 +79,9 @@ inline vector<E>
         return _mm_sll_epi16(+val, _mm_cvtsi32_si128(shift));
     } else {
         static_assert(sizeof(E) == sizeof(int8));
-        auto const vval = +val;
-        auto const zero = _mm_setzero_si128();
-        auto lower = _mm_unpacklo_epi8(vval, zero);
-        auto upper = _mm_unpackhi_epi8(vval, zero);
-
-        auto const vshift = _mm_cvtsi32_si128(shift);
-        lower = _mm_sll_epi16(lower, vshift);
-        upper = _mm_sll_epi16(upper, vshift);
-
-        auto const mask = _mm_set1_epi16(0x00FF);
-        lower = _mm_and_si128(lower, mask);
-        upper = _mm_and_si128(upper, mask);
-        return _mm_packus_epi16(lower, upper);
+        auto const mask = _mm_set1_epi8(static_cast<char>(0xff << shift));
+        return _mm_and_si128(
+            mask, _mm_sll_epi16(+val, _mm_cvtsi32_si128(shift)));
     }
 }
 
@@ -113,19 +103,8 @@ inline vector<E>
         return _mm_slli_epi16(+val, static_cast<int>(V));
     } else {
         static_assert(sizeof(E) == sizeof(int8));
-        auto const vval = +val;
-        auto const zero = _mm_setzero_si128();
-        auto lower = _mm_unpacklo_epi8(vval, zero);
-        auto upper = _mm_unpackhi_epi8(vval, zero);
-
-        constexpr int shift = static_cast<int>(V);
-        lower = _mm_slli_epi16(lower, shift);
-        upper = _mm_slli_epi16(upper, shift);
-
-        auto const mask = _mm_set1_epi16(0x00FF);
-        lower = _mm_and_si128(lower, mask);
-        upper = _mm_and_si128(upper, mask);
-        return _mm_packus_epi16(lower, upper);
+        auto const mask = _mm_set1_epi8(static_cast<char>(0xff << V));
+        return _mm_and_si128(mask, _mm_slli_epi16(+val, static_cast<int>(V)));
     }
 }
 

@@ -14,6 +14,7 @@
 
 #    include "dpl/std/bit/countl.h"
 #    include "dpl/xmm/basic/abi.h"
+#    include "dpl/xmm/basic/broadcast.h"
 
 #    include <immintrin.h>
 #  endif
@@ -22,35 +23,23 @@ __DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::xmm {
 
+#  if DPL_SIMD_X86_AVX512CD && DPL_SIMD_X86_AVX512VL
 template <common_size_with<int64> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline vector<unsigned_representation_t<E>>
+inline size_vector_t<E>
     DPL_VECTORCALL countl_zero(vector<E> val) noexcept {
-#  if DPL_SIMD_X86_AVX512CD && DPL_SIMD_X86_AVX512VL
     return _mm_lzcnt_epi64(+xmm::reinterpret<signed_representation_t<E>>(val));
-#  else
-    using sint = signed_representation_t<E>;
-    auto const vval = xmm::reinterpret<sint>(val);
-    return xmm::initialize<sint>( __DPL countl_zero(xmm::extract<0>(vval)),
-        __DPL countl_zero(xmm::extract<1>(vval)));
-#  endif
 }
+#  endif
 
+#  if DPL_SIMD_X86_AVX512CD && DPL_SIMD_X86_AVX512VL
 template <common_size_with<int32> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline vector<unsigned_representation_t<E>>
+inline size_vector_t<E>
     DPL_VECTORCALL countl_zero(vector<E> val) noexcept {
-#  if DPL_SIMD_X86_AVX512CD && DPL_SIMD_X86_AVX512VL
     return _mm_lzcnt_epi32(+xmm::reinterpret<signed_representation_t<E>>(val));
-#  else
-    using sint = signed_representation_t<E>;
-    auto const vval = xmm::reinterpret<sint>(val);
-    return xmm::initialize<sint>( __DPL countl_zero(xmm::extract<0>(vval)),
-        __DPL countl_zero(xmm::extract<1>(vval)),
-        __DPL countl_zero(xmm::extract<3>(vval)),
-        __DPL countl_zero(xmm::extract<4>(vval)));
-#  endif
 }
+#  endif
 
 #  if DPL_SIMD_X86_AVX512CD && DPL_SIMD_X86_AVX512VL
 template <imask_t<uint64> M, common_size_with<uint64> E>
@@ -95,7 +84,7 @@ inline vector<uint16>
     vval = _mm_or_si128(vval, _mm_srli_epi16(vval, 2));
     vval = _mm_or_si128(vval, _mm_srli_epi16(vval, 4));
     vval = _mm_or_si128(vval, _mm_srli_epi16(vval, 8));
-    return _mm_sub_epi16(_mm_set1_epi16(16), xmm::popcount(vval));
+    return _mm_sub_epi16(_mm_set1_epi16(16), +xmm::popcount<uint16>(vval));
 }
 
 template <common_size_with<uint8> E>
@@ -103,27 +92,32 @@ DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<uint8>
     DPL_VECTORCALL countl_zero(vector<E> val) noexcept {
     auto vval = +xmm::reinterpret<uint8>(val);
-    vval = _mm_or_si128(vval, _mm_srli_epi16(vval, 1));
-    vval = _mm_or_si128(vval, _mm_srli_epi16(vval, 2));
-    vval = _mm_or_si128(vval, _mm_srli_epi16(vval, 4));
-    return _mm_sub_epi8(_mm_set1_epi8(8), xmm::popcount(vval));
+    vval = _mm_or_si128(
+        vval, _mm_and_si128(_mm_srli_epi16(vval, 1), _mm_set1_epi8(0x7f)));
+    vval = _mm_or_si128(
+        vval, _mm_and_si128(_mm_srli_epi16(vval, 2), _mm_set1_epi8(0x3f)));
+    vval = _mm_or_si128(
+        vval, _mm_and_si128(_mm_srli_epi16(vval, 4), _mm_set1_epi8(0xf)));
+    return _mm_sub_epi8(_mm_set1_epi8(8), +xmm::popcount<uint8>(vval));
 }
 
 template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline vector<unsigned_representation_t<E>>
-    DPL_VECTORCALL countl_one(vector<E> val) noexcept {
-    using sbit = signed_representation_t<E>;
-    auto vval = +xmm::reinterpret<sbit>(val);
+inline size_vector_t<E>
+    DPL_VECTORCALL countl_one(vector<E> val) noexcept
+requires requires { xmm::countl_zero(val); }
+{
+    using ubit = unsigned_representation_t<E>;
+    auto vval = +xmm::reinterpret<ubit>(val);
     return xmm::countl_zero(
-        vector<sbit>(_mm_xor_si128(vval, _mm_cmpeq_epi32(vval, vval))));
+        vector<ubit>(_mm_xor_si128(vval, _mm_cmpeq_epi32(vval, vval))));
 }
 
 template <simd_element E, imask_t<E> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline vector<unsigned_representation_t<E>>
-    DPL_VECTORCALL countl_one(vector<unsigned_representation_t<E>> src,
-        cmask_t<E, M> mask, vector<E> val) noexcept
+inline size_vector_t<E>
+    DPL_VECTORCALL countl_one(
+        size_vector_t<E> src, cmask_t<E, M> mask, vector<E> val) noexcept
 requires requires { xmm::countl_zero(src, mask, src); }
 {
     using ubit = unsigned_representation_t<E>;
@@ -134,12 +128,10 @@ requires requires { xmm::countl_zero(src, mask, src); }
 
 template <simd_element E, imask_t<E> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline vector<unsigned_representation_t<E>>
+inline size_vector_t<E>
     DPL_VECTORCALL countl_one(
         dx::zero_t zero, cmask_t<E, M> mask, vector<E> val) noexcept
-requires requires(vector<unsigned_representation_t<E>> rep) {
-    xmm::countl_zero(zero, mask, rep);
-}
+requires requires(size_vector_t<E> rep) { xmm::countl_zero(zero, mask, rep); }
 {
     using ubit = unsigned_representation_t<E>;
     auto vval = +xmm::reinterpret<ubit>(val);

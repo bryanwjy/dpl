@@ -31,8 +31,8 @@ namespace datapar::internal {
 void rotr(...) noexcept = delete;
 
 struct rotr_t :
-    private bit_manipulation_base<rotr_t>,
-    private maskable_transform_base<rotr_t> {
+    public bit_manipulation_base<rotr_t>,
+    public maskable_transform_base<rotr_t> {
     using operation_base<rotr_t>::operator();
     using maskable_transform_base<rotr_t>::operator();
 

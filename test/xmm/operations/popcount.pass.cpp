@@ -1,5 +1,4 @@
 // Copyright 2025-2026 Bryan Wong
-// Copyright 2025-2026 Bryan Wong
 
 // GCC has a large default
 // @dpl[clang].compile-flags: -fconstexpr-steps=2750000

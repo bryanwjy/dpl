@@ -28,7 +28,7 @@ namespace internal {
 
 template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline vector<unsigned_representation_t<E>>
+inline size_vector_t<E>
     DPL_VECTORCALL popcount(vector<E> val) noexcept {
     if constexpr (sizeof(E) == 1) {
 #  if DPL_SIMD_X86_AVX512BITALG && DPL_SIMD_X86_AVX512VL
@@ -144,7 +144,8 @@ inline vector<uint8>
 
 template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-inline auto DPL_VECTORCALL popcount(abi_tag, vector<E> val) noexcept
+inline size_vector_t<E>
+    DPL_VECTORCALL popcount(abi_tag, vector<E> val) noexcept
 requires requires { xmm::popcount(val); }
 {
     return xmm::popcount(val);
@@ -152,8 +153,9 @@ requires requires { xmm::popcount(val); }
 
 template <simd_element E, imask_t<E> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-inline auto DPL_VECTORCALL popcount(abi_tag, type_identity_t<vector<E>> src,
-    cmask_t<E, M> mask, vector<E> val) noexcept
+inline size_vector_t<E>
+    DPL_VECTORCALL popcount(abi_tag, type_identity_t<vector<E>> src,
+        cmask_t<E, M> mask, vector<E> val) noexcept
 requires requires { xmm::popcount(src, mask, val); }
 {
     return xmm::popcount(src, mask, val);
@@ -161,8 +163,9 @@ requires requires { xmm::popcount(src, mask, val); }
 
 template <simd_element E, imask_t<E> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-inline auto DPL_VECTORCALL popcount(
-    abi_tag, dx::zero_t zero, cmask_t<E, M> mask, vector<E> val) noexcept
+inline size_vector_t<E>
+    DPL_VECTORCALL popcount(
+        abi_tag, dx::zero_t zero, cmask_t<E, M> mask, vector<E> val) noexcept
 requires requires { xmm::popcount(zero, mask, val); }
 {
     return xmm::popcount(zero, mask, val);

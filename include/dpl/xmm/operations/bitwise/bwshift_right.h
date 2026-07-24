@@ -108,21 +108,14 @@ inline vector<E>
         auto const vval = +val;
         auto const vshift = _mm_cvtsi32_si128(shift);
         if constexpr (unsigned_integral<E>) {
-            auto const zero = _mm_setzero_si128();
-            auto lower = _mm_unpacklo_epi8(vval, zero);
-            auto upper = _mm_unpackhi_epi8(vval, zero);
-            lower = _mm_srl_epi16(lower, vshift);
-            upper = _mm_srl_epi16(upper, vshift);
-
-            return _mm_packus_epi16(lower, upper);
+            auto const mask = _mm_set1_epi8(static_cast<char>(0xff >> shift));
+            return _mm_and_si128(_mm_srl_epi16(vval, vshift), mask);
         } else {
             auto const sign = _mm_cmplt_epi8(vval, _mm_setzero_si128());
-            auto lower = _mm_unpacklo_epi8(vval, sign);
-            auto upper = _mm_unpackhi_epi8(vval, sign);
-
-            lower = _mm_sra_epi16(lower, vshift);
-            upper = _mm_sra_epi16(upper, vshift);
-            return _mm_packs_epi16(lower, upper);
+            auto const mask = _mm_set1_epi8(static_cast<char>(0xff >> shift));
+            auto const smask = _mm_andnot_si128(mask, sign);
+            return _mm_or_si128(
+                _mm_and_si128(_mm_sra_epi16(vval, vshift), mask), smask);
         }
     }
 }
@@ -167,21 +160,16 @@ inline vector<E>
         static_assert(sizeof(E) == sizeof(int8));
         auto const vval = +val;
         if constexpr (unsigned_integral<E>) {
-            auto const zero = _mm_setzero_si128();
-            auto lower = _mm_unpacklo_epi8(vval, zero);
-            auto upper = _mm_unpackhi_epi8(vval, zero);
-            lower = _mm_srli_epi16(lower, static_cast<int>(V));
-            upper = _mm_srli_epi16(upper, static_cast<int>(V));
-
-            return _mm_packus_epi16(lower, upper);
+            auto const mask = _mm_set1_epi8(static_cast<char>(0xff >> V));
+            return _mm_and_si128(
+                _mm_srli_epi16(vval, static_cast<int>(V)), mask);
         } else {
             auto const sign = _mm_cmplt_epi8(vval, _mm_setzero_si128());
-            auto lower = _mm_unpacklo_epi8(vval, sign);
-            auto upper = _mm_unpackhi_epi8(vval, sign);
-
-            lower = _mm_srai_epi16(lower, static_cast<int>(V));
-            upper = _mm_srai_epi16(upper, static_cast<int>(V));
-            return _mm_packs_epi16(lower, upper);
+            auto const mask = _mm_set1_epi8(static_cast<char>(0xff >> V));
+            auto const smask = _mm_andnot_si128(mask, sign);
+            return _mm_or_si128(
+                _mm_and_si128(_mm_srai_epi16(vval, static_cast<int>(V)), mask),
+                smask);
         }
     }
 }

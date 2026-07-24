@@ -25,8 +25,8 @@ namespace datapar::internal {
 void countr_zero(...) noexcept = delete;
 
 struct countr_zero_t :
-    private bit_manipulation_base<countr_zero_t>,
-    private maskable_transform_base<countr_zero_t> {
+    public bit_manipulation_base<countr_zero_t>,
+    public maskable_transform_base<countr_zero_t> {
     using operation_base<countr_zero_t>::operator();
     using maskable_transform_base<countr_zero_t>::operator();
 
@@ -51,10 +51,12 @@ struct fallback_impl<countr_zero_t> {
     static constexpr auto DPL_VECTORCALL operator()(
         basic_vector<E, A> val) noexcept {
         using ubit = unsigned_representation_t<E>;
-        return internal::transform<basic_vector<ubit, A>>(val, [](auto val) {
-            auto const count = __DPL countr_zero(__DPL to_unsigned(val));
-            return static_cast<ubit>(count);
-        });
+        return internal::transform<basic_vector<ubit, A>>(
+            [](auto val) {
+                auto const count = __DPL countr_zero(__DPL to_unsigned(val));
+                return static_cast<ubit>(count);
+            },
+            val);
     }
 
     template <canonical_mask T>
