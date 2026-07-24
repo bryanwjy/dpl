@@ -5,13 +5,8 @@ module;
 
 #include <cassert>
 
-export module dpl.test:reinterpretation;
-import :support.dynamic_array;
-import :support.array;
-import :support.unary_transform;
-import :support.span;
-import :support.comparison;
-import :support.data_generator;
+export module dpl.test.harness.operations.reinterpretation;
+export import dpl.test.support;
 
 import dpl;
 

@@ -5,13 +5,8 @@ module;
 
 #include <cassert>
 
-export module dpl.test:division;
-import :support.binary_transform;
-import :support.span;
-import :support.comparison;
-import :support.bitset_helpers;
-import :support.data_generator;
-import :support.math_check;
+export module dpl.test.harness.operations.division;
+export import dpl.test.support;
 
 import dpl;
 

@@ -3,13 +3,13 @@ module;
 #define DPL_MODULES 1
 #include "dpl/config.h"
 
-export module dpl.test:support.array;
-import :support.span;
+export module dpl.test.support:array;
+import :span;
 import dpl;
 
-namespace dpl::test {
-
-export template <dpl::semiregular E, size_t N>
+export namespace dpl::test {
+inline namespace support {
+template <dpl::semiregular E, size_t N>
 class array {
     static_assert(dpl::is_same_v<E, dpl::decay_t<E>>);
 
@@ -65,5 +65,5 @@ span(array<E, N> const&) -> span<E const, N>;
 
 template <typename E0, typename... Es>
 array(E0, Es...) -> array<E0, sizeof...(Es) + 1>;
-
+} // namespace support
 } // namespace dpl::test

@@ -5,14 +5,8 @@ module;
 
 #include <cassert>
 
-export module dpl.test:selection;
-import :support.array;
-import :support.unary_transform;
-import :support.binary_transform;
-import :support.span;
-import :support.comparison;
-import :support.data_generator;
-import :support.bitset_helpers;
+export module dpl.test.harness.operations.selection;
+export import dpl.test.support;
 
 import dpl;
 

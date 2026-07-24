@@ -3,13 +3,13 @@ module;
 #define DPL_MODULES 1
 #include "dpl/config.h"
 
-export module dpl.test:support.dynamic_array;
-import :support.span;
-import :support.array;
+export module dpl.test.support:dynamic_array;
+import :span;
+import :array;
 import dpl;
 
-namespace dpl::test {
-
+export namespace dpl::test {
+inline namespace support {
 template <dpl::semiregular E>
 class dynamic_array {
     static_assert(dpl::is_same_v<E, dpl::decay_t<E>>);
@@ -138,5 +138,5 @@ template <typename E>
 span(dynamic_array<E>&) -> span<E>;
 template <typename E>
 span(dynamic_array<E> const&) -> span<E const>;
-
+} // namespace support
 } // namespace dpl::test

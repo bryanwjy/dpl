@@ -4,7 +4,7 @@
 #include <cassert>
 
 import dpl.xmm;
-import dpl.test;
+import dpl.test.harness.operations.fused_multiply;
 
 // Tests for dpp::fnmadd on xmm ABI. Requires SSE4.2 (implied by dpl.xmm).
 //

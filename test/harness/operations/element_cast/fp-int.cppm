@@ -4,10 +4,10 @@ module;
 #include "dpl/config.h"
 
 #include <cassert>
-export module dpl.test:fp_int;
+export module dpl.test.harness.operations.element_cast:fp_int;
+export import dpl.test.support;
 
 import dpl;
-import :support.comparison;
 
 export namespace dpl::test {
 

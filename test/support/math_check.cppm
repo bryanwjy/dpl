@@ -5,12 +5,12 @@ module;
 
 #include <cassert>
 
-export module dpl.test:support.math_check;
+export module dpl.test.support:math_check;
 
 import dpl;
 
 export namespace dpl::test {
-
+inline namespace support {
 constexpr bool finite_math_only() noexcept {
     if consteval {
         return false;
@@ -30,5 +30,5 @@ constexpr bool ieee_denormal() noexcept {
         return denormal != 0.0f;
     }
 }
-
+} // namespace support
 } // namespace dpl::test

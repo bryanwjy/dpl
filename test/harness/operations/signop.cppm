@@ -5,13 +5,8 @@ module;
 
 #include <cassert>
 
-export module dpl.test:signop;
-import :support.unary_transform;
-import :support.span;
-import :support.comparison;
-import :support.bitset_helpers;
-import :support.data_generator;
-import :support.math_check;
+export module dpl.test.harness.operations.signop;
+export import dpl.test.support;
 
 import dpl;
 

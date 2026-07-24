@@ -5,12 +5,12 @@ module;
 
 #include <cassert>
 
-export module dpl.test:support.span;
+export module dpl.test.support:span;
 
 import dpl;
 
-namespace dpl::test {
-
+export namespace dpl::test {
+inline namespace support {
 inline constexpr size_t dynamic_extent = -1zu;
 
 template <typename E, size_t N = dynamic_extent>
@@ -240,4 +240,5 @@ template <typename P>
 span(P*, size_t) -> span<P>;
 template <typename T, size_t N>
 span(T (&)[N]) -> span<T, N>;
+} // namespace support
 } // namespace dpl::test

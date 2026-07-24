@@ -3,14 +3,14 @@ module;
 #define DPL_MODULES 1
 #include "dpl/config.h"
 
-export module dpl.test:support.comparison;
-import :support.bitset_helpers;
+export module dpl.test.support:comparison;
+import :bitset_helpers;
 import dpl;
 
 export namespace dpl::test {
 
 namespace dpp = dpl::datapar;
-
+inline namespace support {
 inline constexpr struct nancmp_t {
     static constexpr auto operator()(
         dpp::simd_vector auto lhs, dpp::simd_vector auto rhs) noexcept {
@@ -34,5 +34,5 @@ inline constexpr struct bitcmp_t {
             test::to_bitset(lhs) == test::to_bitset(rhs);
     }
 } bitcmp{};
-
+} // namespace support
 } // namespace dpl::test

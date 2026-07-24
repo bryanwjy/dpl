@@ -7,7 +7,7 @@
 #include <cassert>
 
 import dpl.xmm;
-import dpl.test;
+import dpl.test.harness.operations.selection;
 
 // Tests for dpp::select on xmm ABI. Requires SSE4.2 (implied by
 // dpl.xmm).

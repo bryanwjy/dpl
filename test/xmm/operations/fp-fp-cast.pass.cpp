@@ -2,7 +2,7 @@
 #include "../common.h"
 
 import dpl.xmm;
-import dpl.test;
+import dpl.test.harness.operations.element_cast;
 
 int main() {
     using abi_t = dpl::xmm::abi_tag;

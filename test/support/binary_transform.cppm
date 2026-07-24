@@ -6,17 +6,17 @@ module;
 #include <cassert>
 #include <cstdlib>
 
-export module dpl.test:support.binary_transform;
-export import :support.span;
-export import :support.comparison;
-export import :support.bitset_helpers;
+export module dpl.test.support:binary_transform;
+export import :span;
+export import :comparison;
+export import :bitset_helpers;
 
 import dpl;
 
 namespace dpl::test {
 
 namespace dpp = dpl::datapar;
-
+inline namespace support {
 // Generic test infrastructure for binary maskable_transform SIMD operations
 export template <dpp::simd_abi A>
 class binary_transform {
@@ -169,5 +169,5 @@ public:
         return true;
     }
 };
-
+} // namespace support
 } // namespace dpl::test

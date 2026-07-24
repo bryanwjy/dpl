@@ -7,7 +7,7 @@
 #include <cassert>
 
 import dpl.xmm;
-import dpl.test;
+import dpl.test.harness.operations.subtraction;
 
 // Tests for dpp::subtract on xmm ABI. Requires SSE4.2 (implied by dpl.xmm).
 //

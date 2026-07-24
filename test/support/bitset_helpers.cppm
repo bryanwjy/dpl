@@ -3,11 +3,11 @@ module;
 #define DPL_MODULES 1
 #include "dpl/config.h"
 
-export module dpl.test:support.bitset_helpers;
+export module dpl.test.support:bitset_helpers;
 import dpl;
 
-namespace dpl::test {
-
+export namespace dpl::test {
+inline namespace support {
 template <size_t N>
 [[nodiscard]] constexpr auto repeat_byte(unsigned char val) noexcept {
     dpl::bitset<dpl::char_bit_v> const byte(val);
@@ -31,5 +31,5 @@ requires requires { dpl::bit_cast<make_bitset_t<T>>(data); }
 {
     return dpl::bit_cast<make_bitset_t<T>>(data);
 }
-
+} // namespace support
 } // namespace dpl::test

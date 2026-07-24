@@ -6,16 +6,21 @@ module;
 #include <cassert>
 #include <cstdlib>
 
-export module dpl.test:support.data_generator;
+export module dpl.test.support:data_generator;
 import dpl;
-import :support.array;
-import :support.dynamic_array;
-import :support.span;
-import :support.bitset_helpers;
+import :array;
+import :dynamic_array;
+import :span;
+import :bitset_helpers;
 
 namespace dpl::test {
+namespace dpp = dpl::datapar;
+}
 
-export template <dpl::unsigned_integral T, size_t word_size, size_t state_size,
+export namespace dpl::test {
+inline namespace support {
+
+template <dpl::unsigned_integral T, size_t word_size, size_t state_size,
     size_t shift_size, size_t mask_bits, T xor_mask, size_t u, T d, size_t s,
     T b, size_t t, T c, size_t l, T multiplier>
 class mt_engine {
@@ -133,17 +138,15 @@ public:
     }
 };
 
-export using mt19937 = mt_engine<dpl::uint64, 64, 312, 156, 31,
-    0xb5026f5aa96619e9ull, 29, 0x5555555555555555ull, 17, 0x71d67fffeda60000ull,
-    37, 0xfff7eee000000000ull, 43, 6364136223846793005ull>;
-
-namespace dpp = dpl::datapar;
+using mt19937 = mt_engine<dpl::uint64, 64, 312, 156, 31, 0xb5026f5aa96619e9ull,
+    29, 0x5555555555555555ull, 17, 0x71d67fffeda60000ull, 37,
+    0xfff7eee000000000ull, 43, 6364136223846793005ull>;
 
 struct half_range_t {
     explicit constexpr half_range_t() noexcept = default;
 };
 
-export inline constexpr half_range_t half_range{};
+inline constexpr half_range_t half_range{};
 
 template <typename T>
 concept rng_like = requires(T& rng) {
@@ -152,7 +155,7 @@ concept rng_like = requires(T& rng) {
     { rng() } noexcept -> dpl::same_as<typename T::result_type>;
 };
 
-export template <typename E>
+template <typename E>
 class scalar_generator {
     static_assert(dpl::integral<E> || dpl::floating_point_like<E>);
 
@@ -275,7 +278,7 @@ private:
     E max_;
 };
 
-export template <dpp::simd_abi A, dpp::simd_element_for<A> E>
+template <dpp::simd_abi A, dpp::simd_element_for<A> E>
 class array_generator : private scalar_generator<E> {
     using abi_traits = dpp::simd_abi_traits<A, E>;
     using array_t = array<E, abi_traits::size>;
@@ -302,9 +305,10 @@ public:
     }
 };
 
-export template <size_t N>
+template <size_t N>
 class bit_generator;
-export template <size_t N>
+
+template <size_t N>
 requires dpl::integral_bitset_type<dpl::bitset<N>>
 class bit_generator<N> :
     private scalar_generator<typename dpl::bitset<N>::underlying_type> {
@@ -324,7 +328,7 @@ public:
     }
 };
 
-export template <size_t N>
+template <size_t N>
 class bit_generator : private scalar_generator<size_t> {
     using result_type = dpl::bitset<N>;
     using base_type = scalar_generator<size_t>;
@@ -344,4 +348,5 @@ public:
         }(dpl::make_index_sequence<count>{});
     }
 };
+} // namespace support
 } // namespace dpl::test
