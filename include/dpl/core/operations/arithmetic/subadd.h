@@ -6,6 +6,7 @@
 // IWYU pragma: always_keep
 #include "dpl/core/operations/arithmetic/add.h"
 #include "dpl/core/operations/arithmetic/negate.h"
+#include "dpl/core/operations/bitwise/bwand.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/internal/abi.h"
@@ -54,15 +55,21 @@ struct operation_signature<subadd_t> {
 
 template <>
 struct fallback_impl<subadd_t> : binary_broadcasting_fallback<subadd_t> {
-    using mask_t DPL_NODEBUG = cmask_t<0b0101>;
-    static constexpr mask_t mask{};
-
     template <canonical_vector LT, canonical_vector RT>
-    requires cpo_invocable<negate_t, RT, mask_t, RT> &&
-        cpo_invocable<add_t, LT, cpo_result_t<negate_t, RT, mask_t, RT>>
+    requires internal::cpo_invocable<add_t, LT, RT>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(LT lhs, RT rhs) noexcept {
-        return dx::add(lhs, dx::negate(rhs, mask, rhs));
+        if constexpr (fixed_width_abi<common_abi_t<LT, RT>>) {
+            constexpr auto mask = []<size_t... Is>(index_sequence<Is...>) {
+                return cmask_v<__DPL bitset<sizeof...(Is)>(
+                    ((Is & 1) == 1)...)>;
+            }(iota_sequence<LT>);
+            return dx::add(lhs, dx::negate(rhs, mask, rhs));
+        } else {
+            auto const mask =
+                dx::bwand(dx::lane_index<LT>(), dx::one) == dx::one;
+            return dx::add(lhs, dx::negate(rhs, mask, rhs));
+        }
     }
 
     using binary_broadcasting_fallback<subadd_t>::operator();

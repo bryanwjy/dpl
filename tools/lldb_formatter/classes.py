@@ -68,9 +68,11 @@ TYPE_MAP = {
     "unsigned long long":(lldb.eBasicTypeUnsignedLongLong, 8),
     "_Float16":   (lldb.eBasicTypeHalf, 2),
     "__fp16":   (lldb.eBasicTypeHalf, 2),
+    "dpl::ext::float16_t": (lldb.eBasicTypeHalf, 2),
     "float":   (lldb.eBasicTypeFloat, 4),
     "double":  (lldb.eBasicTypeDouble, 8),
     "__bf16": (bf16, 2),
+    "dpl::ext::bfloat16_t": (bf16, 2),
 }
 
 class FormatDispatcher:

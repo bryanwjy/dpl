@@ -37,7 +37,8 @@ class unary_transform {
         vec_t<op_result<Op, E>> const src, Cmp cmp) noexcept {
         auto const all_true = dpp::broadcast<E, A>(true);
         auto const all_false = dpp::broadcast<E, A>(false);
-        auto const alt_mask = (dpp::lane_index<A, E>() & 1) == 0;
+        auto const alt_mask =
+            dpp::cmpeq(dpp::bwand(dpp::lane_index<A, E>(), 1), dpp::zero);
         auto const vop = op(arg);
         auto const vzero = dpp::broadcast<op_result<Op, E>, A>(dpp::zero);
 

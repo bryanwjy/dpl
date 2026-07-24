@@ -19,19 +19,14 @@ int main() {
     namespace xmm = dpl::datapar::xmm;
     using abi_t = xmm::abi_tag;
 
-    static constexpr auto expected = [](auto l, auto m, auto r) {
-        return -r - l * m;
-    };
     using types =
         dpl::type_pack<float, double, dpl::ext::float16, dpl::ext::bfloat16>;
     static_assert([]() {
         dpl::test::mt19937 engine;
-        return dpl::test::fused_multiply<abi_t>::run_all<dpp::fnmsub>(
-            types{}, expected, engine);
+        return dpl::test::fnmsub<abi_t>::run_all(types{}, engine);
     }());
 
     dpl::test::mt19937 engine;
-    assert(dpl::test::fused_multiply<abi_t>::run_all<dpp::fnmsub>(
-        types{}, expected, engine));
+    assert(dpl::test::fnmsub<abi_t>::run_all(types{}, engine));
     return 0;
 }

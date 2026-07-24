@@ -6,6 +6,7 @@
 // IWYU pragma: always_keep
 #include "dpl/core/operations/arithmetic/fmadd.h"
 #include "dpl/core/operations/arithmetic/negate.h"
+#include "dpl/core/operations/bitwise/bwand.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/internal/abi.h"
@@ -43,14 +44,22 @@ struct operation_signature<fmsubadd_t> {
 
 template <>
 struct fallback_impl<fmsubadd_t> : ternary_broadcasting_fallback<fmsubadd_t> {
-    using mask_t DPL_NODEBUG = cmask_t<0b0101>;
-    static constexpr mask_t mask{};
-
     template <canonical_vector AT, canonical_vector BT, canonical_vector CT>
+    requires internal::cpo_invocable<fmadd_t, AT, BT, CT>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(
         AT aval, BT bval, CT cval) noexcept {
-        return dx::fmadd(aval, bval, dx::negate(cval, mask, cval));
+        if constexpr (fixed_width_abi<common_abi_t<AT, BT, CT>>) {
+            constexpr auto mask = []<size_t... Is>(index_sequence<Is...>) {
+                return cmask_v<__DPL bitset<sizeof...(Is)>(
+                    ((Is & 1) == 0)...)>;
+            }(iota_sequence<AT>);
+            return dx::fmadd(aval, bval, dx::negate(cval, mask, cval));
+        } else {
+            auto const mask =
+                dx::bwand(dx::lane_index<AT>(), dx::one) == dx::zero;
+            return dx::fmadd(aval, bval, dx::negate(cval, mask, cval));
+        }
     }
 
     using ternary_broadcasting_fallback<fmsubadd_t>::operator();
