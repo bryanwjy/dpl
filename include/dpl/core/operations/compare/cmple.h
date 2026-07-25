@@ -23,9 +23,9 @@ namespace datapar::internal {
 void cmple(...) noexcept = delete;
 
 struct DPL_EMPTY_BASES cmple_t :
-    private comparison_base<cmple_t>,
-    private maskable_predicate_base<cmple_t>,
-    private binary_broadcastable_operation<cmple_t> {
+    public comparison_base<cmple_t>,
+    public maskable_predicate_base<cmple_t>,
+    public binary_broadcastable_operation<cmple_t> {
     using operation_base<cmple_t>::operator();
     using maskable_predicate_base<cmple_t>::operator();
     using binary_broadcastable_operation<cmple_t>::operator();

@@ -10,6 +10,7 @@ export import :binary_transform;
 export import :unary_transform;
 export import :data_generator;
 export import :comparison;
+export import :predicate;
 export import :span;
 export import :array;
 export import :math_check;

@@ -26,9 +26,9 @@ namespace datapar::internal {
 void cmpeq(...) noexcept = delete;
 
 struct DPL_EMPTY_BASES cmpeq_t :
-    private comparison_base<cmpeq_t>,
-    private maskable_predicate_base<cmpeq_t>,
-    private binary_broadcastable_operation<cmpeq_t> {
+    public comparison_base<cmpeq_t>,
+    public maskable_predicate_base<cmpeq_t>,
+    public binary_broadcastable_operation<cmpeq_t> {
     using operation_base<cmpeq_t>::operator();
     using maskable_predicate_base<cmpeq_t>::operator();
     using binary_broadcastable_operation<cmpeq_t>::operator();

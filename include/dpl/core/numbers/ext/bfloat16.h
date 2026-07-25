@@ -218,13 +218,17 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     friend constexpr bool operator<=(
         bfloat16_t lhs, same_as<bfloat16_t> auto rhs) noexcept {
-        return !(rhs < lhs);
+#  if DPL_SUPPORTS_STORAGE_BFLOAT16
+        return lhs.value <= rhs.value;
+#  else
+        return static_cast<float>(lhs) <= static_cast<float>(rhs);
+#  endif
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     friend constexpr bool operator>=(
         bfloat16_t lhs, same_as<bfloat16_t> auto rhs) noexcept {
-        return !(lhs < rhs);
+        return rhs <= lhs;
     }
 };
 

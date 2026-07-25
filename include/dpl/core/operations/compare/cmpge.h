@@ -22,9 +22,9 @@ namespace datapar::internal {
 void cmpge(...) noexcept = delete;
 
 struct DPL_EMPTY_BASES cmpge_t :
-    private comparison_base<cmpge_t>,
-    private maskable_predicate_base<cmpge_t>,
-    private binary_broadcastable_operation<cmpge_t> {
+    public comparison_base<cmpge_t>,
+    public maskable_predicate_base<cmpge_t>,
+    public binary_broadcastable_operation<cmpge_t> {
     using operation_base<cmpge_t>::operator();
     using maskable_predicate_base<cmpge_t>::operator();
     using binary_broadcastable_operation<cmpge_t>::operator();

@@ -342,13 +342,33 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     friend constexpr bool operator<=(
         float16_t lhs, same_as<float16_t> auto rhs) noexcept {
-        return !(rhs < lhs);
+#  if DPL_SUPPORTS_STORAGE_FLOAT16
+        return lhs.value <= rhs.value;
+#  else
+        constexpr auto exp16 = 0x7b00;
+        constexpr auto man16 = 0x3ff;
+        auto const labs = lhs.value & dx::value_bits_v<int16>;
+        auto const rabs = rhs.value & dx::value_bits_v<int16>;
+
+        if (labs > exp16 || rabs > exp16) {
+            return false;
+        }
+
+        auto const lsign = static_cast<int16>(lhs.value & dx::msb_v<int16>);
+        auto const rsign = static_cast<int16>(rhs.value & dx::msb_v<int16>);
+        auto const lexp = lhs.value & exp16;
+        auto const rexp = rhs.value & exp16;
+        auto const lman = lhs.value & man16;
+        auto const rman = rhs.value & man16;
+        return lsign < rsign ||
+            (lsign == rsign && (lexp < rexp || (lexp == rexp && lman <= rman)));
+#  endif
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     friend constexpr bool operator>=(
         float16_t lhs, same_as<float16_t> auto rhs) noexcept {
-        return !(lhs < rhs);
+        return rhs <= lhs;
     }
 };
 
