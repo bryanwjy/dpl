@@ -95,9 +95,7 @@ public:
         for (auto i = 0zu; i < dpl::type_bit_v<E>; ++i) {
             if consteval {
                 // reduce compile time
-                auto const rand =
-                    ((dpl::test::scalar_generator<shift_t>&)shift_generator)(
-                        engine);
+                auto const rand = shift_generator.scalar(engine);
                 if (rand % 7 > 4) {
                     break;
                 }

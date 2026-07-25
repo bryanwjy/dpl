@@ -11,11 +11,11 @@ import dpl.test.harness.operations.bitrot;
 // dpl.xmm).
 //
 // Forms tested:
-//   (1) dpp::rotr(vec)                  -- unmasked, always available
-//   (2) dpp::rotr(src, mask, vec)       -- merge-masked
-//   (3) dpp::rotr(dpp::zero, mask, vec) -- zero-masked explicit
-//   (4) dpp::rotr(mask, vec)            -- zero-masked alias (== form 3)
-//   (5) dpp::rotr(mask)                 -- unmasked, always available
+//   (1) dpp::rotr(vec, count)                  -- unmasked, always available
+//   (2) dpp::rotr(src, mask, vec, count)       -- merge-masked
+//   (3) dpp::rotr(dpp::zero, mask, vec, count) -- zero-masked explicit
+//   (4) dpp::rotr(mask, vec, count)            -- zero-masked alias (== form 3)
+//   (5) dpp::rotr(mask, count)                 -- unmasked, always available
 
 int main() {
     namespace dpp = dpl::datapar;

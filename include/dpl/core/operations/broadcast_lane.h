@@ -45,7 +45,8 @@ private:
     static consteval auto broadcast_sequence(I) noexcept {
         using L = remove_cvref_t<T>;
         return [&]<size_t... Is>(index_sequence<Is...>) {
-            return __DPL index_sequence<((Is / Is) * I::value)...>{};
+            return __DPL index_sequence<(
+                (Is == Is) ? I::value : I::value)...>{};
         }(iota_sequence<L>);
     }
 
@@ -62,7 +63,7 @@ public:
     requires cpo_invocable<permute_t, L, decltype(broadcast_sequence<L>(idx))>
     {
         constexpr auto seq = broadcast_sequence<L>(idx);
-        static_assert(R::value > 0 && R::value < seq.size());
+        static_assert(R::value >= 0 && R::value < seq.size());
         return dx::permute(__DPL forward<L>(val), seq);
     }
 

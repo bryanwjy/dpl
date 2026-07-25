@@ -16,6 +16,7 @@
 #  include "dpl/core/type_traits/simd_abi_type.h"
 #  include "dpl/core/type_traits/simd_element_type.h"
 #  include "dpl/std/concepts/integer_sequence_like.h"
+#  include "dpl/std/type_traits/remove_cvref.h"
 #  include "dpl/std/type_traits/sequence.h"
 #endif
 
@@ -33,14 +34,14 @@ struct DPL_EMPTY_BASES permute_t :
 template <>
 struct operation_signature<permute_t> {
     template <simd_vector L, typename R>
-    requires index_sequence_like<R> ||
-        (canonical_vector<R> && integral<simd_element_type_t<R>>)
+    requires (canonical_vector<R> && integral<simd_element_type_t<R>>) ||
+        index_sequence_like<R>
     static consteval void operator()(L&&, R) noexcept {}
 };
 
 template <>
 struct fallback_impl<permute_t> {
-    template <canonical_simd_type T, common_size_with<simd_element_type_t<T>> E,
+    template <canonical_vector T, common_size_with<simd_element_type_t<T>> E,
         same_as<simd_abi_type_t<T>> A>
     requires integral<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
@@ -56,7 +57,7 @@ struct fallback_impl<permute_t> {
         }(arg, idx, iota_sequence<T>);
     }
 
-    template <canonical_simd_type T, index_sequence_like I>
+    template <canonical_vector T, index_sequence_like I>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr T DPL_VECTORCALL operator()(T arg, I idx) noexcept {
         static_assert(I::size() <= simd_abi_traits<T>::size());
@@ -70,13 +71,15 @@ struct fallback_impl<permute_t> {
             }(seq, make_index_sequence<D>{});
             return operator()(arg, all);
         } else {
+            static_assert([]<size_t... Is>(index_sequence<Is...>) {
+                return (... && (Is < simd_abi_traits<T>::size()));
+            }(__DPL to_index_sequence(idx)));
             return __DPL apply(
                 [&](auto... i) {
                     constexpr auto simd_size = simd_abi_traits<T>::size();
                     using TE = simd_element_type_t<T>;
                     auto const zero = TE();
-                    return dx::initialize<T>(
-                        (i < simd_size ? arg[i] : zero)...);
+                    return dx::initialize<T>(arg[i]...);
                 },
                 idx);
         }

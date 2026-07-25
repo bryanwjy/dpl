@@ -21,6 +21,7 @@ void get(...) noexcept = delete;
 
 template <typename T>
 concept has_tuple_size = requires {
+    std::tuple_size<remove_cvref_t<T>>::value;
     typename __DPL size_constant<std::tuple_size_v<remove_cvref_t<T>>>;
 };
 

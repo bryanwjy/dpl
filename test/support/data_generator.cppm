@@ -303,6 +303,11 @@ public:
             return data;
         }
     }
+
+    template <rng_like Rng>
+    constexpr E scalar(Rng& rng) const noexcept {
+        return base_type::operator()(rng);
+    }
 };
 
 template <size_t N>
