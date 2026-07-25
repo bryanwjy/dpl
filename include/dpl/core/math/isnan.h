@@ -48,11 +48,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr basic_mask<E, A>
         DPL_VECTORCALL operator()(basic_vector<E, A> val) noexcept {
-        using uint = unsigned_representation_t<E>;
-        auto const inf_bits =
-            dx::reinterpret<uint>(dx::broadcast<E, A>(dx::infinity));
-        auto const abs_val = dx::bwandnot(dx::reinterpret<uint>(val), dx::msb);
-        return dx::cmpgt(abs_val, inf_bits);
+        return dx::cmpneq(val, val);
     }
 
     template <simd_abi A, simd_element_for<A> E>
@@ -61,11 +57,7 @@ public:
     static constexpr basic_mask<E, A>
         DPL_VECTORCALL operator()(
             basic_mask<E, A> mask, basic_vector<E, A> val) noexcept {
-        using uint = unsigned_representation_t<E>;
-        auto const inf_bits =
-            dx::reinterpret<uint>(dx::broadcast<E, A>(dx::infinity));
-        auto const abs_val = dx::bwandnot(dx::reinterpret<uint>(val), dx::msb);
-        return dx::cmpgt(mask, abs_val, inf_bits);
+        return dx::cmpneq(mask, val, val);
     }
 
     template <canonical_vector T, const_mask_for<T> M>
@@ -73,11 +65,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr result_t<T>
         DPL_VECTORCALL operator()(M cmask, T val) noexcept {
-        using uint = unsigned_representation_t<simd_element_type_t<T>>;
-        auto const inf_bits =
-            dx::reinterpret<uint>(dx::broadcast<T>(dx::infinity));
-        auto const abs_val = dx::bwandnot(dx::reinterpret<uint>(val), dx::msb);
-        return dx::cmpgt(cmask, abs_val, inf_bits);
+        return dx::cmpneq(cmask, val, val);
     }
 };
 

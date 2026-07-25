@@ -23,18 +23,64 @@ namespace datapar::internal {
 void min(...) noexcept = delete;
 
 struct DPL_EMPTY_BASES min_t :
-    private primitive_operation_base<min_t>,
-    private maskable_transform_base<min_t>,
-    private binary_broadcastable_operation<min_t> {
+    public primitive_operation_base<min_t>,
+    public maskable_transform_base<min_t>,
+    public binary_broadcastable_operation<min_t> {
     using operation_base<min_t>::operator();
     using maskable_transform_base<min_t>::operator();
     using binary_broadcastable_operation<min_t>::operator();
 
     template <totally_ordered L, totally_ordered_with<L> R = L>
-    requires (!simd_type<L> && !simd_type<R>) && is_scalar_v<L> &&
-        is_arithmetic_v<L> && is_scalar_v<R> && is_arithmetic_v<R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD) static constexpr auto operator()(
-        L lhs, R rhs) noexcept {
+    requires (!simd_type<L> && !simd_type<R>) &&
+        (integral<L> || floating_point_like<L>) &&
+        (integral<R> || floating_point_like<R>) && common_with<L, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD) static constexpr common_type_t<L, R>
+    operator()(L lhs, R rhs) noexcept {
+#if DPL_HAS_BUILTIN(__builtin_fmin)
+        if constexpr (dpl::same_as<double, common_type_t<L, R>>) {
+            return __builtin_fmin(lhs, rhs);
+        } else
+#  if DPL_SUPPORTS_FLOAT64
+            if constexpr (dpl::same_as<float64, common_type_t<L, R>>) {
+            return __builtin_fmin(lhs, rhs);
+        } else
+#  endif
+#endif
+#if DPL_HAS_BUILTIN(__builtin_fminf)
+            if constexpr (dpl::same_as<float, common_type_t<L, R>>) {
+            return __builtin_fminf(lhs, rhs);
+        } else
+#  if DPL_SUPPORTS_FLOAT32
+            if constexpr (dpl::same_as<float32, common_type_t<L, R>>) {
+            return __builtin_fminf(lhs, rhs);
+        } else
+#  endif
+#endif
+            if constexpr (floating_point_like<common_type_t<L, R>>) {
+            using T = common_type_t<L, R>;
+            constexpr auto isnan = [](T val) { return val != val; };
+            constexpr auto signbit = [](T val) {
+                using sint_t = signed_representation_t<T>;
+                if constexpr (__DPL bit_cast<sint_t>(-T(0)) !=
+                    __DPL bit_cast<sint_t>(T(0))) {
+                    return __DPL bit_cast<sint_t>(val) < 0;
+                } else {
+                    return false;
+                }
+            };
+
+            if (isnan(lhs)) {
+                return rhs;
+            }
+            if (isnan(rhs)) {
+                return lhs;
+            }
+
+            if (signbit(lhs) != signbit(rhs)) {
+                return signbit(lhs) ? lhs : rhs;
+            }
+        }
+
         return lhs < rhs ? lhs : rhs;
     }
 };
@@ -49,17 +95,17 @@ struct operation_signature<min_t> {
 template <>
 struct fallback_impl<min_t> : binary_broadcasting_fallback<min_t> {
 
-    template <simd_abi LA, common_abi_with<LA> RA, simd_element_for<LA> E,
-        typename A = common_abi_t<LA, RA>>
-    requires cpo_invocable<cmplt_t, basic_vector<E, LA>, basic_vector<E, RA>> &&
-        cpo_invocable<select_t,
-            invoke_result_t<cmplt_t, basic_vector<E, LA>, basic_vector<E, RA>>,
-            basic_vector<E, LA>, basic_vector<E, RA>>
+    template <fixed_width_abi A, simd_element_for<A> E>
+    requires totally_ordered<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr basic_vector<E, A>
         DPL_VECTORCALL operator()(
-            basic_vector<E, LA> lhs, basic_vector<E, RA> rhs) noexcept {
-        return dx::select(dx::cmplt(lhs, rhs), lhs, rhs);
+            basic_vector<E, A> lhs, basic_vector<E, A> rhs) noexcept {
+        if consteval {
+            return internal::transform<basic_vector<E, A>>(min_t{}, lhs, rhs);
+        } else {
+            return dx::select(dx::cmplt(lhs, rhs), lhs, rhs);
+        }
     }
 
     using binary_broadcasting_fallback<min_t>::operator();
