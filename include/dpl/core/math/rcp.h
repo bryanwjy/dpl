@@ -176,7 +176,7 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto refine(
         basic_vector<E, A> y, basic_vector<E, A> x) noexcept {
-        return y * mx::nmuladd(x, y, 2.0);
+        return y * dx::nmuladd(x, y, 2.0);
     }
 
     template <typename E, simd_abi A>

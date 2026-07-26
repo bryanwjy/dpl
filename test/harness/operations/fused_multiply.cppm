@@ -22,7 +22,9 @@ class fused_multiply {
 
     template <typename E>
     static constexpr E expected_op(E lhs, E mid, E rhs) noexcept {
-        if constexpr (fmop == dpp::fmadd) {
+        if constexpr (!same_as<double, E>) {
+            return expected_op<double>(lhs, mid, rhs);
+        } else if constexpr (fmop == dpp::fmadd) {
             return lhs * mid + rhs;
         } else if constexpr (fmop == dpp::fmsub) {
             return lhs * mid - rhs;

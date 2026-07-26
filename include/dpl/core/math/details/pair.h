@@ -6,7 +6,6 @@
 #include "dpl/core/math/details/fwd.h" // IWYU pragma: export
 
 #include "dpl/core/math/details/floating_point_simd.h"
-#include "dpl/core/math/details/muladd.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/basic_vector.h" // IWYU pragma: export
@@ -16,7 +15,7 @@
 #  include "dpl/core/immediate/constants/ln2.h"
 #  include "dpl/core/immediate/constants/one.h"
 #  include "dpl/core/immediate/constants/zero.h"
-#  include "dpl/core/operations/arithmetic/abs.h"
+#  include "dpl/core/operations/arithmetic.h"
 #  include "dpl/core/operations/select.h"
 #  include "dpl/std/concepts/convertible_to.h"
 #endif
@@ -118,12 +117,12 @@ struct pair {
         this pair self, pair right) noexcept {
         auto t = dx::one / right.upper;
         auto s = self.upper * t;
-        auto u = fmath::mulsub(t, self.upper, s);
-        auto v = fmath::nmuladd(
-            right.lower, t, fmath::nmuladd(right.upper, t, dx::one));
+        auto u = dx::mulsub(t, self.upper, s);
+        auto v =
+            dx::nmuladd(right.lower, t, dx::nmuladd(right.upper, t, dx::one));
         return pair{
             .upper = s,
-            .lower = fmath::muladd(s, v, fmath::muladd(self.lower, t, u)),
+            .lower = dx::muladd(s, v, dx::muladd(self.lower, t, u)),
         };
     }
 
@@ -134,9 +133,9 @@ struct pair {
         auto const s = self.upper * right.upper;
         return pair{
             .upper = s,
-            .lower = fmath::muladd(self.upper, right.lower,
-                fmath::muladd(self.lower, right.upper,
-                    fmath::mulsub(self.upper, right.upper, s))),
+            .lower = dx::muladd(self.upper, right.lower,
+                dx::muladd(self.lower, right.upper,
+                    dx::mulsub(self.upper, right.upper, s))),
         };
     }
 
@@ -146,8 +145,8 @@ struct pair {
         auto const s = self.upper * right;
         return pair{
             .upper = s,
-            .lower = fmath::muladd(
-                self.lower, right, fmath::mulsub(self.upper, right, s)),
+            .lower =
+                dx::muladd(self.lower, right, dx::mulsub(self.upper, right, s)),
         };
     }
 
@@ -157,8 +156,8 @@ struct pair {
         auto const s = left * right.upper;
         return pair{
             .upper = s,
-            .lower = fmath::muladd(
-                left, right.lower, fmath::mulsub(left, right.upper, s)),
+            .lower =
+                dx::muladd(left, right.lower, dx::mulsub(left, right.upper, s)),
         };
     }
 };
@@ -282,10 +281,10 @@ constexpr pair<E, A>
     auto s = arg.upper * arg.upper;
     return pair<E, A>{
         .upper = s,
-        .lower = fmath::muladd(    //
+        .lower = dx::muladd(       //
             arg.upper + arg.upper, //
             arg.lower,             //
-            fmath::mulsub(arg.upper, arg.upper, s)),
+            dx::mulsub(arg.upper, arg.upper, s)),
     };
 }
 
@@ -296,8 +295,8 @@ constexpr pair<E, A>
     auto s = dx::one / arg.upper;
     return pair<E, A>{
         .upper = s,
-        .lower = s *
-            fmath::nmuladd(arg.lower, s, fmath::nmuladd(arg.upper, s, dx::one)),
+        .lower =
+            s * dx::nmuladd(arg.lower, s, dx::nmuladd(arg.upper, s, dx::one)),
     };
 }
 
@@ -380,7 +379,7 @@ struct single<basic_vector<E, A>> {
         auto s = self.value * right;
         return pair<E, A>{
             .upper = s,
-            .lower = fmath::mulsub(self.value, right, s),
+            .lower = dx::mulsub(self.value, right, s),
         };
     }
 
@@ -394,8 +393,8 @@ struct single<basic_vector<E, A>> {
     constexpr auto DPL_VECTORCALL operator*(
         this single self, pair_of<element_type> right) noexcept {
         auto hi = self.value * right.upper;
-        auto lo = fmath::muladd(self.value, right.lower,
-            fmath::mulsub(self.value, right.upper, hi));
+        auto lo = dx::muladd(
+            self.value, right.lower, dx::mulsub(self.value, right.upper, hi));
         return hi + lo;
     }
 };
@@ -407,7 +406,7 @@ constexpr pair_of<T>
     auto s = one_v<T> / arg.value;
     return pair_of<T>{
         .upper = s,
-        .lower = s * fmath::nmuladd(arg.value, s, dx::one),
+        .lower = s * dx::nmuladd(arg.value, s, dx::one),
     };
 }
 
@@ -450,7 +449,7 @@ template <pair_type T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 constexpr
     typename T::element_type DPL_VECTORCALL square(single<T> arg) noexcept {
-    return fmath::muladd(arg.value.upper, arg.value.upper,
+    return dx::muladd(arg.value.upper, arg.value.upper,
         [](auto val) { return val + val; }(arg.value.upper * arg.value.lower));
 }
 

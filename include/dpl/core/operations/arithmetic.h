@@ -27,6 +27,7 @@
 #include "dpl/core/operations/arithmetic/fnmadd.h"
 #include "dpl/core/operations/arithmetic/fnmsub.h"
 #include "dpl/core/operations/arithmetic/multiply.h"
+#include "dpl/core/operations/arithmetic/mulx.h"
 #include "dpl/core/operations/arithmetic/negate.h"
 #include "dpl/core/operations/arithmetic/subadd.h"
 #include "dpl/core/operations/arithmetic/subtract.h"
