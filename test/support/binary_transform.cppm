@@ -4,7 +4,6 @@ module;
 #include "dpl/config.h"
 
 #include <cassert>
-#include <cstdlib>
 
 export module dpl.test.support:binary_transform;
 export import :span;

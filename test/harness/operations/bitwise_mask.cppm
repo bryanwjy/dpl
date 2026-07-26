@@ -4,7 +4,6 @@ module;
 #include "dpl/config.h"
 
 #include <cassert>
-#include <cstdlib>
 
 export module dpl.test.harness.operations.bitwise_mask;
 export import dpl.test.support;

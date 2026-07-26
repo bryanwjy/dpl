@@ -4,7 +4,6 @@ module;
 #include "dpl/config.h"
 
 #include <cassert>
-#include <cstdlib>
 
 export module dpl.test.support:unary_transform;
 import :span;
