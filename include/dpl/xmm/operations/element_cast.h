@@ -958,6 +958,11 @@ inline vector<float> to_float(vector<ext::bfloat16> arg) noexcept {
     return xmm::element_cast<float>(arg);
 }
 
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+inline vector<ext::bfloat16> to_bfloat16(vector<float> arg) noexcept {
+    return xmm::element_cast<ext::bfloat16>(arg);
+}
+
 } // namespace datapar::xmm
 
 __DPL_DEFAULT_NAMESPACE_END

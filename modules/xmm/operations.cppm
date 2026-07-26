@@ -15,7 +15,7 @@ using __DPL datapar::xmm::abs;
 using __DPL datapar::xmm::add;
 // using __DPL datapar::xmm::addsub;
 using __DPL datapar::xmm::divide;
-// using __DPL datapar::xmm::fmadd;
+using __DPL datapar::xmm::fmadd;
 // using __DPL datapar::xmm::fmaddsub;
 // using __DPL datapar::xmm::fmsub;
 // using __DPL datapar::xmm::fmsubadd;

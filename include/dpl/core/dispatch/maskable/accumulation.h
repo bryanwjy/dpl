@@ -132,10 +132,10 @@ protected:
     static constexpr result_t<S, Ts...> operator()(
         S src, M mask, Ts... args) noexcept {
         using R = result_t<S, Ts...>;
-        if constexpr (canonical_cpo_invocable_r<D, S, M, Ts...>) {
+        if constexpr (canonical_cpo_invocable_r<D, S, S, M, Ts...>) {
             if constexpr (all_same_abi<S, Ts...>) {
                 if consteval {
-                    if constexpr (fallback_cpo_invocable_r<D, S, M, Ts...>) {
+                    if constexpr (fallback_cpo_invocable_r<D, S, S, M, Ts...>) {
                         return impl::fallback<D>(src, mask, args...);
                     } else {
                         return fwd::select(
@@ -147,7 +147,7 @@ protected:
             } else {
                 return impl::canonical<D>(src, mask, args...);
             }
-        } else if constexpr (fallback_cpo_invocable_r<D, S, M, Ts...>) {
+        } else if constexpr (fallback_cpo_invocable_r<D, S, S, M, Ts...>) {
             return impl::fallback<D>(src, mask, args...);
         } else {
             return fwd::select(mask, D::operator()(src, args...), src);
@@ -333,7 +333,8 @@ protected:
 
     template <typename M, simd_vector S, typename... Ts>
     requires signature_compatible<D, S, Ts...> && cpo_invocable<D, S, Ts...> &&
-        (exact_mask_for<M, S> || const_mask_for<M, S>) && requires {
+        (exact_mask_for<M, S> || const_mask_for<remove_cvref_t<M>, S>) &&
+        requires {
             operator()(dx::zero, internal::declarg<M>(), internal::declarg<S>(),
                 internal::declarg<Ts>()...);
         }

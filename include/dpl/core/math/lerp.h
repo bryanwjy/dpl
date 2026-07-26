@@ -8,7 +8,7 @@
 #  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/dispatch/broadcastable/ternary.h"
 #  include "dpl/core/dispatch/interface.h"
-#  include "dpl/core/dispatch/maskable/transform.h"
+#  include "dpl/core/dispatch/maskable/accumulation.h"
 #  include "dpl/core/dispatch/operation/math.h"
 #  include "dpl/core/operations/arithmetic.h"
 #  include "dpl/core/type_traits/details/cpo_result.h"
@@ -23,10 +23,10 @@ struct lerp_t;
 
 struct DPL_EMPTY_BASES lerp_t :
     private math_operation_base<lerp_t>,
-    private maskable_transform_base<lerp_t>,
+    private maskable_accumulation_base<lerp_t>,
     private ternary_broadcastable_operation<lerp_t> {
     using operation_base<lerp_t>::operator();
-    using maskable_transform_base<lerp_t>::operator();
+    using maskable_accumulation_base<lerp_t>::operator();
     using ternary_broadcastable_operation<lerp_t>::operator();
 };
 
@@ -41,15 +41,56 @@ template <>
 struct fallback_impl<lerp_t> : ternary_broadcasting_fallback<lerp_t> {
 
     template <canonical_vector AT, canonical_vector BT, canonical_vector CT>
-    requires floating_point<simd_element_type_t<AT>> &&
-        floating_point<simd_element_type_t<BT>> &&
-        floating_point<simd_element_type_t<CT>> &&
-        cpo_invocable<subtract_t, BT, AT> &&
-        cpo_invocable<fmadd_t, CT, cpo_result_t<subtract_t, BT, AT>, AT>
+    requires cpo_invocable<subtract_t, BT, AT> &&
+        cpo_invocable<fmacc_t, AT, cpo_result_t<subtract_t, BT, AT>, CT>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(
         AT start, BT end, CT scale) noexcept {
-        return dx::fmadd(scale, dx::subtract(end, start), start);
+        return dx::fmacc(start, dx::subtract(end, start), scale);
+    }
+
+    template <canonical_vector AT, canonical_mask M, canonical_vector BT,
+        canonical_vector CT>
+    requires cpo_invocable<subtract_t, BT, AT> &&
+        cpo_invocable<fmacc_t, AT, M, cpo_result_t<subtract_t, BT, AT>, CT>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(
+        AT start, M mask, BT end, CT scale) noexcept {
+        return dx::fmacc(start, mask, dx::subtract(end, start), scale);
+    }
+
+    template <canonical_vector AT, const_mask_for<AT> M, canonical_vector BT,
+        canonical_vector CT>
+    requires cpo_invocable<subtract_t, BT, AT> &&
+        cpo_invocable<fmacc_t, AT, M, cpo_result_t<subtract_t, BT, AT>, CT>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(
+        AT start, M mask, BT end, CT scale) noexcept {
+        return dx::fmacc(start, mask, dx::subtract(end, start), scale);
+    }
+
+    template <canonical_vector AT, canonical_mask M, canonical_vector BT,
+        canonical_vector CT>
+    requires cpo_invocable<subtract_t, BT, AT> &&
+        cpo_invocable<fmacc_t, dx::zero_t, M, AT,
+            cpo_result_t<subtract_t, BT, AT>, CT>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(
+        dx::zero_t zero, M mask, AT start, BT end, CT scale) noexcept {
+        return dx::fmacc(zero, mask, start, dx::subtract(end, start), scale);
+    }
+
+    template <canonical_vector AT, canonical_vector BT, canonical_vector CT,
+        typename M>
+    requires cpo_invocable<lerp_t, AT, BT, CT> &&
+        const_mask_for<M, cpo_result_t<lerp_t, AT, BT, CT>> &&
+        cpo_invocable<subtract_t, BT, AT> &&
+        cpo_invocable<fmacc_t, dx::zero_t, M, AT,
+            cpo_result_t<subtract_t, BT, AT>, CT>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(
+        dx::zero_t zero, M mask, AT start, BT end, CT scale) noexcept {
+        return dx::fmacc(zero, mask, start, dx::subtract(end, start), scale);
     }
 
     using ternary_broadcasting_fallback<lerp_t>::operator();
@@ -64,16 +105,25 @@ concept unqualified_canonical_lerp = requires {
     } -> canonical_vector;
 };
 
-template <typename S, typename M, typename AT, typename BT, typename CT,
+template <typename AT, typename M, typename BT, typename CT,
     typename A = common_abi_t<AT, BT, CT>>
 concept unqualified_canonical_mlerp = cpo_invocable<lerp_t, AT, BT, CT> &&
-    (!simd_type<S> ||
-        equivalent_vector_with<S, cpo_result_t<lerp_t, AT, BT, CT>>) &&
-    requires {
+    equivalent_vector_with<AT, cpo_result_t<lerp_t, AT, BT, CT>> && requires {
         {
-            lerp(internal::abi<A>, internal::declarg<S>(),
-                internal::declarg<M>(), internal::declarg<AT>(),
-                internal::declarg<BT>(), internal::declarg<CT>())
+            lerp(internal::abi<A>, internal::declarg<AT>(),
+                internal::declarg<M>(), internal::declarg<BT>(),
+                internal::declarg<CT>())
+        } -> equivalent_vector_with<cpo_result_t<lerp_t, AT, BT, CT>>;
+    };
+
+template <typename AT, typename M, typename BT, typename CT,
+    typename A = common_abi_t<AT, BT, CT>>
+concept unqualified_canonical_zmlerp =
+    cpo_invocable<lerp_t, AT, BT, CT> && requires {
+        {
+            lerp(internal::abi<A>, dx::zero, internal::declarg<M>(),
+                internal::declarg<AT>(), internal::declarg<BT>(),
+                internal::declarg<CT>())
         } -> equivalent_vector_with<cpo_result_t<lerp_t, AT, BT, CT>>;
     };
 
@@ -163,32 +213,29 @@ public:
     template <canonical_vector AT, common_vector_with<AT> BT,
         common_vector_with<BT> CT, typename A = common_abi_t<AT, BT, CT>>
     requires canonical_vector<BT> && canonical_vector<CT> &&
-        unqualified_canonical_mlerp<result_t<AT, BT, CT>, mask_t<AT, BT, CT>,
-            AT, BT, CT, A>
+        unqualified_canonical_mlerp<AT, mask_t<AT, BT, CT>, BT, CT, A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr result_t<AT, BT, CT> operator()(result_t<AT, BT, CT> src,
-        mask_t<AT, BT, CT> mask, AT start, BT end, CT scale) noexcept {
-        return lerp(internal::abi<A>, src, mask, start, end, scale);
+    static constexpr result_t<AT, BT, CT> operator()(
+        AT start, mask_t<AT, BT, CT> mask, BT end, CT scale) noexcept {
+        return lerp(internal::abi<A>, start, mask, end, scale);
     }
 
-    template <canonical_vector AT, common_vector_with<AT> BT,
-        common_vector_with<BT> CT, const_mask_for<result_t<AT, BT, CT>> M,
+    template <canonical_vector AT, const_mask_for<AT> M,
+        common_vector_with<AT> BT, common_vector_with<BT> CT,
         typename A = common_abi_t<AT, BT, CT>>
     requires canonical_vector<BT> && canonical_vector<CT> &&
-        unqualified_canonical_mlerp<result_t<AT, BT, CT>,
-            launder_cmask_t<result_t<AT, BT, CT>, M>, AT, BT, CT, A>
+        unqualified_canonical_mlerp<AT, launder_cmask_t<AT, M>, BT, CT, A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr result_t<AT, BT, CT> operator()(result_t<AT, BT, CT> src,
-        M cmask, AT start, BT end, CT scale) noexcept {
-        return lerp(internal::abi<A>, src,
-            dx::to_const_mask<result_t<AT, BT, CT>>(cmask), start, end, scale);
+    static constexpr result_t<AT, BT, CT> operator()(
+        AT start, M cmask, BT end, CT scale) noexcept {
+        return lerp(internal::abi<A>, start,
+            dx::to_const_mask<result_t<AT, BT, CT>>(cmask), end, scale);
     }
 
     template <canonical_vector AT, common_vector_with<AT> BT,
         common_vector_with<BT> CT, typename A = common_abi_t<AT, BT, CT>>
     requires canonical_vector<BT> && canonical_vector<CT> &&
-        unqualified_canonical_mlerp<dx::zero_t, mask_t<AT, BT, CT>, AT, BT, CT,
-            A>
+        unqualified_canonical_zmlerp<AT, mask_t<AT, BT, CT>, BT, CT, A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr result_t<AT, BT, CT> operator()(dx::zero_t zero,
         mask_t<AT, BT, CT> mask, AT start, BT end, CT scale) noexcept {
@@ -199,8 +246,8 @@ public:
         common_vector_with<BT> CT, const_mask_for<result_t<AT, BT, CT>> M,
         typename A = common_abi_t<AT, BT, CT>>
     requires canonical_vector<BT> && canonical_vector<CT> &&
-        unqualified_canonical_mlerp<dx::zero_t, mask_t<AT, BT, CT>, AT, BT, CT,
-            A>
+        unqualified_canonical_zmlerp<AT,
+            launder_cmask_t<result_t<AT, BT, CT>, M>, BT, CT, A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr result_t<AT, BT, CT> operator()(
         dx::zero_t zero, M cmask, AT start, BT end, CT scale) noexcept {
@@ -218,15 +265,21 @@ concept unqualified_extended_lerp = requires {
     } -> vector_with_common_abi<A>;
 };
 
-template <typename S, typename M, typename AT, typename BT, typename CT>
+template <typename AT, typename M, typename BT, typename CT>
 concept unqualified_extended_mlerp = cpo_invocable<lerp_t, AT, BT, CT> &&
-    (!simd_type<S> ||
-        equivalent_vector_with<S, cpo_result_t<lerp_t, AT, BT, CT>>) &&
-    requires {
+    equivalent_vector_with<AT, cpo_result_t<lerp_t, AT, BT, CT>> && requires {
         {
-            lerp(internal::declarg<S>(), internal::declarg<M>(),
-                internal::declarg<AT>(), internal::declarg<BT>(),
-                internal::declarg<CT>())
+            lerp(internal::declarg<AT>(), internal::declarg<M>(),
+                internal::declarg<BT>(), internal::declarg<CT>())
+        } -> equivalent_vector_with<cpo_result_t<lerp_t, AT, BT, CT>>;
+    };
+
+template <typename AT, typename M, typename BT, typename CT>
+concept unqualified_extended_zmlerp = cpo_invocable<lerp_t, AT, BT, CT> &&
+    equivalent_vector_with<AT, cpo_result_t<lerp_t, AT, BT, CT>> && requires {
+        {
+            lerp(dx::zero, internal::declarg<M>(), internal::declarg<AT>(),
+                internal::declarg<BT>(), internal::declarg<CT>())
         } -> equivalent_vector_with<cpo_result_t<lerp_t, AT, BT, CT>>;
     };
 
@@ -309,38 +362,35 @@ public:
             __DPL forward<CT>(scale));
     }
 
-    template <simd_vector S, exact_mask_for<S> M, simd_vector AT,
-        common_vector_with<AT> BT, common_vector_with<BT> CT,
-        typename A = common_abi_t<AT, BT, CT>>
-    requires (extended_vector<S> || extended_mask<M> || extended_vector<AT> ||
-                 extended_vector<BT> || extended_vector<CT>) &&
-        unqualified_extended_mlerp<S, M, AT, BT, CT>
+    template <simd_vector AT, exact_mask_for<AT> M, common_vector_with<AT> BT,
+        common_vector_with<BT> CT, typename A = common_abi_t<AT, BT, CT>>
+    requires (extended_mask<M> || extended_vector<AT> || extended_vector<BT> ||
+                 extended_vector<CT>) &&
+        unqualified_extended_mlerp<AT, M, BT, CT>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
-        S&& src, M&& mask, AT&& start, BT&& end, CT&& scale) {
-        return lerp(__DPL forward<S>(src), __DPL forward<M>(mask),
-            __DPL forward<AT>(start), __DPL forward<BT>(end),
-            __DPL forward<CT>(scale));
+        AT&& start, M&& mask, BT&& end, CT&& scale) {
+        return lerp(__DPL forward<AT>(start), __DPL forward<M>(mask),
+            __DPL forward<BT>(end), __DPL forward<CT>(scale));
     }
 
-    template <simd_vector S, const_mask_for<S> M, simd_vector AT,
-        common_vector_with<AT> BT, common_vector_with<BT> CT>
-    requires (extended_vector<S> || extended_vector<AT> ||
-                 extended_vector<BT> || extended_vector<CT>) &&
-        unqualified_extended_mlerp<S, launder_cmask_t<S, M>, AT, BT, CT>
+    template <simd_vector AT, const_mask_for<AT> M, common_vector_with<AT> BT,
+        common_vector_with<BT> CT>
+    requires (extended_vector<AT> || extended_vector<BT> ||
+                 extended_vector<CT>) &&
+        unqualified_extended_mlerp<AT, launder_cmask_t<AT, M>, BT, CT>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
-        S&& src, M cmask, AT&& start, BT&& end, CT&& scale) {
-        return lerp(__DPL forward<S>(src), dx::to_const_mask<S>(cmask),
-            __DPL forward<AT>(start), __DPL forward<BT>(end),
-            __DPL forward<CT>(scale));
+        AT&& start, M cmask, BT&& end, CT&& scale) {
+        return lerp(__DPL forward<AT>(start), dx::to_const_mask<AT>(cmask),
+            __DPL forward<BT>(end), __DPL forward<CT>(scale));
     }
 
     template <simd_vector AT, common_vector_with<AT> BT,
         common_vector_with<BT> CT, result_mask_for<lerp_t, AT, BT, CT> M>
     requires (extended_mask<M> || extended_vector<AT> || extended_vector<BT> ||
                  extended_vector<CT>) &&
-        unqualified_extended_mlerp<dx::zero_t, M, AT, BT, CT>
+        unqualified_extended_zmlerp<AT, M, BT, CT>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         dx::zero_t zero, M&& mask, AT&& start, BT&& end, CT&& scale) {
@@ -352,8 +402,8 @@ public:
         common_vector_with<BT> CT, result_cmask_for<lerp_t, AT, BT, CT> M>
     requires (extended_vector<AT> || extended_vector<BT> ||
                  extended_vector<CT>) &&
-        unqualified_extended_mlerp<dx::zero_t,
-            launder_cmask_t<cpo_result_t<lerp_t, AT, BT, CT>, M>, AT, BT, CT>
+        unqualified_extended_zmlerp<AT,
+            launder_cmask_t<cpo_result_t<lerp_t, AT, BT, CT>, M>, BT, CT>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         dx::zero_t zero, M cmask, AT&& start, BT&& end, CT&& scale) {

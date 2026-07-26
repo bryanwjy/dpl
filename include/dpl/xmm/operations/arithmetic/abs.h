@@ -126,8 +126,7 @@ constexpr vector<ext::bfloat16> DPL_VECTORCALL abs(
 
 template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-constexpr vector<E>
-    DPL_VECTORCALL abs(abi_tag, vector<E> val) noexcept
+constexpr vector<E> abs(abi_tag, vector<E> val) noexcept
 requires requires { xmm::abs(val); }
 {
     return xmm::abs(val);

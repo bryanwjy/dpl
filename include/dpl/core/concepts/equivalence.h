@@ -60,6 +60,10 @@ concept common_vector_with = common_simd_type_with<T, U> && simd_vector<T> &&
     simd_vector<U> && atom::equivalent_vector_elements<T, U>;
 
 template <typename T, typename U>
+concept vector_subsumed_by = common_vector_with<T, U> &&
+    same_abi_as<common_abi_t<T, U>, simd_abi_type_t<U>>;
+
+template <typename T, typename U>
 concept common_mask_with = common_simd_type_with<T, U> && simd_mask<T> &&
     simd_mask<U> && atom::equivalent_mask_elements<T, U>;
 

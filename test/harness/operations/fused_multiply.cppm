@@ -100,8 +100,6 @@ public:
     static constexpr bool run_all(dpl::type_pack<Es...> pack, Rng& engine) {
         return dpl::pack::all_of(
             [&]<typename E>(dpl::type_identity<E> tp) {
-                static_assert(
-                    dpp::is_simd_invocable<vec_t<E>, vec_t<E>, vec_t<E>>(fmop));
                 return fused_multiply::template run<E>(engine);
             },
             pack);
@@ -132,7 +130,7 @@ public:
             auto const vactual = fmop(vlhs, vmid, vrhs);
 
             assert(dpp::all_of(vexpected == vactual));
-            dpl::test::ternary_transform<A>::template test_masked<E>(
+            dpl::test::ternary_assignment<A>::template test_masked<E>(
                 lhs, mid, rhs, fmop, src);
 
             if constexpr (dpp::is_simd_canonical_invocable<vec_t<E>, vec_t<E>,
@@ -140,12 +138,14 @@ public:
                 if not consteval {
                     // catostrophic cancellation test
                     {
+                        constexpr auto digitsm1 = dpl::countr_zero(
+                            floating_point_traits<E>::exponent_mask);
+                        // This is equivalent to 2^0 * 2^-digitsm1
                         constexpr auto small_exp =
-                            floating_point_traits<E>::exponent_bias -
-                            (floating_point_traits<E>::digits - 1);
-                        constexpr auto small = make_bitset_t<E>(small_exp)
-                            << dpl::countr_zero(
-                                   floating_point_traits<E>::exponent_mask);
+                            floating_point_traits<E>::exponent_bias - digitsm1;
+                        using bitset_t = dpl::bitset<dpl::type_bit_v<E>>;
+                        constexpr auto small =
+                            dpl::bit_cast<E>(bitset_t(small_exp) << digitsm1);
                         auto const vone = dpp::broadcast<A, E>(1);
                         auto const vsmall = dpp::broadcast<A, E>(small);
                         auto const a = dpp::add(vone, vsmall);
@@ -187,18 +187,18 @@ public:
             expected[i] = expected_op<E>(lhs[i], mid[i], rhs[i]);
         }
 
-        dpl::test::ternary_transform<A>::template test<E>(
+        dpl::test::ternary_assignment<A>::template test<E>(
             lhs, mid, rhs, fmop, expected);
-        dpl::test::ternary_transform<A>::template test_masked<E>(
+        dpl::test::ternary_assignment<A>::template test_masked<E>(
             lhs, mid, rhs, fmop, src);
 
-        dpl::test::ternary_transform<A>::template test<E>(
+        dpl::test::ternary_assignment<A>::template test<E>(
             1, 1, 0, fmop, expected_op<E>(1, 1, 0));
-        dpl::test::ternary_transform<A>::template test<E>(
+        dpl::test::ternary_assignment<A>::template test<E>(
             1, 1, 1, fmop, expected_op<E>(1, 1, 1));
         {
             auto const a = src_generator(engine), b = src_generator(engine);
-            dpl::test::ternary_transform<A>::template test<E>(
+            dpl::test::ternary_assignment<A>::template test<E>(
                 a, b, 0, fmop, expected_op<E>(a, b, 0));
         }
 
@@ -206,40 +206,41 @@ public:
                           vec_t<E>>(dpp::fmadd))
             if not consteval {
                 // catostrophic cancellation test
+                constexpr auto digitsm1 =
+                    dpl::countr_zero(floating_point_traits<E>::exponent_mask);
+                // This is equivalent to 2^0 * 2^-digitsm1
                 constexpr auto small_exp =
-                    floating_point_traits<E>::exponent_bias -
-                    (floating_point_traits<E>::digits - 1);
+                    floating_point_traits<E>::exponent_bias - digitsm1;
                 using bitset_t = dpl::bitset<dpl::type_bit_v<E>>;
-                constexpr auto small = bitset_t(small_exp)
-                    << dpl::countr_zero(
-                           floating_point_traits<E>::exponent_mask);
+                constexpr auto small =
+                    dpl::bit_cast<E>(bitset_t(small_exp) << digitsm1);
 
                 if constexpr (fmop == dpp::fmadd) {
-                    dpl::test::ternary_transform<A>::template test<E>(
+                    dpl::test::ternary_assignment<A>::template test<E>(
                         1 + small, 1 - small, -1, fmop, -small * small);
                     // overflow cancels
-                    dpl::test::ternary_transform<A>::template test<E>(
+                    dpl::test::ternary_assignment<A>::template test<E>(
                         dpp::max_value_v<E>, 2, -dpp::max_value_v<E>, fmop,
                         dpp::max_value_v<E>);
                 } else if constexpr (fmop == dpp::fmsub) {
-                    dpl::test::ternary_transform<A>::template test<E>(
+                    dpl::test::ternary_assignment<A>::template test<E>(
                         1 + small, 1 - small, 1, fmop, -small * small);
                     // overflow cancels
-                    dpl::test::ternary_transform<A>::template test<E>(
+                    dpl::test::ternary_assignment<A>::template test<E>(
                         dpp::max_value_v<E>, 2, dpp::max_value_v<E>, fmop,
                         dpp::max_value_v<E>);
                 } else if constexpr (fmop == dpp::fnmadd) {
-                    dpl::test::ternary_transform<A>::template test<E>(
+                    dpl::test::ternary_assignment<A>::template test<E>(
                         1 + small, 1 - small, 1, fmop, small * small);
                     // overflow cancels
-                    dpl::test::ternary_transform<A>::template test<E>(
+                    dpl::test::ternary_assignment<A>::template test<E>(
                         dpp::max_value_v<E>, 2, dpp::max_value_v<E>, fmop,
                         -dpp::max_value_v<E>);
                 } else if constexpr (fmop == dpp::fnmsub) {
-                    dpl::test::ternary_transform<A>::template test<E>(
+                    dpl::test::ternary_assignment<A>::template test<E>(
                         1 + small, 1 - small, -1, fmop, small * small);
                     // overflow cancels
-                    dpl::test::ternary_transform<A>::template test<E>(
+                    dpl::test::ternary_assignment<A>::template test<E>(
                         dpp::max_value_v<E>, 2, -dpp::max_value_v<E>, fmop,
                         -dpp::max_value_v<E>);
                 }

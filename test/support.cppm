@@ -5,6 +5,7 @@ module;
 #include "dpl/config.h"
 
 export module dpl.test.support;
+export import :ternary_assignment;
 export import :ternary_transform;
 export import :binary_transform;
 export import :unary_transform;

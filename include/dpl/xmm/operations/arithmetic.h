@@ -8,6 +8,7 @@
 #include "dpl/xmm/operations/arithmetic/abs.h"
 #include "dpl/xmm/operations/arithmetic/add.h"
 #include "dpl/xmm/operations/arithmetic/divide.h"
+#include "dpl/xmm/operations/arithmetic/fmadd.h"
 #include "dpl/xmm/operations/arithmetic/multiply.h"
 #include "dpl/xmm/operations/arithmetic/subtract.h"
 // IWYU pragma: end_exports

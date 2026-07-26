@@ -24,5 +24,7 @@ inline vector<To> element_cast(vector<E> src) noexcept;
 
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 inline vector<float> to_float(vector<ext::bfloat16> arg) noexcept;
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+inline vector<ext::bfloat16> to_bfloat16(vector<float> arg) noexcept;
 } // namespace datapar::xmm
 __DPL_DEFAULT_NAMESPACE_END
