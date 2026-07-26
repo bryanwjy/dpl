@@ -5,7 +5,8 @@
 
 #include "dpl/core/math/details/fwd.h" // IWYU pragma: export
 
-#include "dpl/core/math/fma.h"
+#include "dpl/core/math/details/muladd.h"
+
 #if !DPL_MODULES
 #  include "dpl/core/basic/broadcast.h"
 #  include "dpl/core/immediate/constants/digits.h"
@@ -146,7 +147,7 @@ private:
         if constexpr (L == 0) {
             // Leaf
             if constexpr (B + S <= degree) {
-                return dx::fmadd(
+                return fmath::muladd(
                     x[imm<L>], coeffs<E>[imm<B + S>], coeffs<E>[imm<B>]);
             } else {
                 return dx::broadcast<A>(coeffs<E>[imm<B>]);
@@ -161,7 +162,7 @@ private:
             }
 
             // x[L] => x^2^L
-            return dx::fmadd(x[imm<L>], left, right);
+            return fmath::muladd(x[imm<L>], left, right);
         } else {
             if constexpr (B == 2 * S) {
                 // Late initialization of squares for powers greater than 2
@@ -196,9 +197,9 @@ private:
             this auto self, simd result, simd x, immediate<I> = {}) {
             if constexpr (I > 0) {
                 return self(
-                    dx::fmadd(result, x, coeffs<E>[imm<I>]), x, imm<I - 1>);
+                    fmath::muladd(result, x, coeffs<E>[imm<I>]), x, imm<I - 1>);
             } else {
-                return dx::fmadd(result, x, coeffs<E>[imm<I>]);
+                return fmath::muladd(result, x, coeffs<E>[imm<I>]);
             }
         }
         (dx::broadcast<A>(coeffs<E>.back()), x);

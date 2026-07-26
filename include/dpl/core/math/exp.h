@@ -5,9 +5,9 @@
 
 #include "dpl/core/math/details/constants.h"
 #include "dpl/core/math/details/ldexp.h"
+#include "dpl/core/math/details/muladd.h"
 #include "dpl/core/math/details/pair.h"
 #include "dpl/core/math/details/polynomial.h"
-#include "dpl/core/math/fma.h"
 #include "dpl/core/math/round.h"
 
 #if !DPL_MODULES
@@ -180,7 +180,7 @@ public:
         using fpair = fmath::pair<float, A>;
         constexpr auto ln2 = fmath::ln2_v<fpair>;
         auto const s =
-            dx::fnmadd(qf, ln2.lower, dx::fnmadd(qf, ln2.upper, val));
+            mx::nmuladd(qf, ln2.lower, mx::nmuladd(qf, ln2.upper, val));
         constexpr fmath::polynomial<0.5f,
             0.166666671633720397949219f,   //
             0.0416664853692054748535156f,  //
@@ -189,7 +189,7 @@ public:
             0.000198527617612853646278381f>
             polynomial;
         // x2 * f + x + 1
-        auto u = dx::fmadd(dx::multiply(s, s), polynomial(s), s) + dx::one;
+        auto u = mx::muladd(dx::multiply(s, s), polynomial(s), s) + dx::one;
         u = fmath::ldexp(fmath::compliance::speed, u, q);
         u = dx::select(val > 100.0f, dx::infinity, u);
         // underflow
@@ -206,7 +206,7 @@ public:
         using fpair = fmath::pair<double, A>;
         constexpr auto ln2 = fmath::ln2_v<fpair>;
         auto const s =
-            dx::fnmadd(qf, ln2.lower, dx::fnmadd(qf, ln2.upper, val));
+            mx::nmuladd(qf, ln2.lower, mx::nmuladd(qf, ln2.upper, val));
         constexpr fmath::polynomial<0.5, 0.1666666666666669072e+0,
             0.4166666666666602598e-1, 0.8333333333314938210e-2,
             0.1388888888914497797e-2, 0.1984126989855865850e-3,
@@ -214,7 +214,7 @@ public:
             0.2755762628169491192e-6, 0.2511210703042288022e-7,
             0.2081276378237164457e-8>
             polynomial;
-        auto u = dx::fmadd(dx::multiply(s, s), polynomial(s), s) + dx::one;
+        auto u = mx::muladd(dx::multiply(s, s), polynomial(s), s) + dx::one;
         u = fmath::ldexp(fmath::compliance::speed, u, q);
         constexpr auto max_log = 0x1.62e42fefa39efp+9;
         u = dx::select(val > max_log, dx::infinity, u);
@@ -235,14 +235,14 @@ public:
         using fpair = fmath::pair<E, A>;
         constexpr auto ln2 = fmath::ln2_v<fpair>;
         auto const s =
-            dx::fnmadd(qf, ln2.lower, dx::fnmadd(qf, ln2.upper, val));
+            mx::nmuladd(qf, ln2.lower, mx::nmuladd(qf, ln2.upper, val));
         constexpr fmath::polynomial<0.5f,
             0.166666671633720397949219f,   //
             0.0416664853692054748535156f,  //
             0.00833336077630519866943359f, //
             0.00139304355252534151077271f>
             polynomial;
-        auto u = dx::fmadd(dx::multiply(s, s), polynomial(s), s) + dx::one;
+        auto u = mx::muladd(dx::multiply(s, s), polynomial(s), s) + dx::one;
         u = fmath::ldexp(fmath::compliance::speed, u, q);
         if constexpr (same_as<ext::bfloat16>) {
             u = dx::select(val > 100.0f, dx::infinity, u);

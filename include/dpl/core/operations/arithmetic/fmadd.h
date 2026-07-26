@@ -49,16 +49,33 @@ struct operation_signature<fmadd_t> {
 };
 
 template <>
-struct fallback_impl<fmadd_t> : ternary_broadcasting_fallback<fmadd_t> {
+struct operation_signature<fmacc_t> {
+    template <typename AT, typename BT, typename CT>
+    requires simd_vector<AT> || simd_vector<BT> || simd_vector<CT>
+    static consteval void operator()(AT&&, BT&&, CT&&) noexcept {}
+};
 
-    template <canonical_vector AT, vector_subsumed_by<AT> BT,
-        vector_subsumed_by<AT> CT>
-    requires floating_point_like<simd_element_type_t<AT>> &&
-        canonical_vector<BT> && canonical_vector<CT>
+template <>
+struct fallback_impl<fmadd_t> : ternary_broadcasting_fallback<fmadd_t> {
+public:
+    template <__DPL details::numbers::binary_layout_floating_point E,
+        fixed_width_abi A>
+    requires cpo_invocable<canonical_impl<fmadd_t>, basic_vector<E, A>,
+        basic_vector<E, A>, basic_vector<E, A>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr AT DPL_VECTORCALL operator()(
-        AT aval, BT bval, CT cval) noexcept {
-        return dx::add(dx::multiply(aval, bval), cval);
+    static consteval basic_vector<E, A>
+        DPL_VECTORCALL operator()(basic_vector<E, A> lhs,
+            basic_vector<E, A> mid, basic_vector<E, A> rhs) noexcept {
+        return internal::transform<basic_vector<E, A>>(
+            [](double lhs, double mid, double rhs) -> E {
+#if DPL_HAS_CONSTEXPR_BUILTIN(__builtin_fma)
+                return __builtin_fma(lhs, mid, rhs);
+#else
+                // TODO: Do this properly for MSVC
+                return lhs * mid + rhs;
+#endif
+            },
+            lhs, mid, rhs);
     }
 
     using ternary_broadcasting_fallback<fmadd_t>::operator();
@@ -66,14 +83,24 @@ struct fallback_impl<fmadd_t> : ternary_broadcasting_fallback<fmadd_t> {
 
 template <>
 struct fallback_impl<fmacc_t> : ternary_broadcasting_fallback<fmacc_t> {
-    template <canonical_vector CT, vector_subsumed_by<CT> AT,
-        vector_subsumed_by<CT> BT>
-    requires floating_point_like<simd_element_type_t<CT>> &&
-        canonical_vector<AT> && canonical_vector<BT>
+    template <__DPL details::numbers::binary_layout_floating_point E,
+        fixed_width_abi A>
+    requires cpo_invocable<canonical_impl<fmadd_t>, basic_vector<E, A>,
+        basic_vector<E, A>, basic_vector<E, A>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(
-        CT cval, AT aval, BT bval) noexcept {
-        return dx::add(dx::multiply(aval, bval), cval);
+    static consteval basic_vector<E, A>
+        DPL_VECTORCALL operator()(basic_vector<E, A> lhs,
+            basic_vector<E, A> mid, basic_vector<E, A> rhs) noexcept {
+        return internal::transform<basic_vector<E, A>>(
+            [](double lhs, double mid, double rhs) -> E {
+#if DPL_HAS_CONSTEXPR_BUILTIN(__builtin_fma)
+                return __builtin_fma(mid, rhs, lhs);
+#else
+                // TODO: Do this properly for MSVC
+                return lhs + mid * rhs;
+#endif
+            },
+            lhs, mid, rhs);
     }
 
     using ternary_broadcasting_fallback<fmacc_t>::operator();
@@ -436,8 +463,7 @@ public:
     }
 
     template <simd_vector AT, vector_subsumed_by<AT> BT,
-        broadcastable_to<vector_t<AT, BT>> CT,
-        typename A = common_abi_t<AT, BT>>
+        broadcastable_to<AT> CT, typename A = simd_abi_type_t<AT>>
     requires (extended_vector<AT> || extended_vector<BT>) &&
         unqualified_extended_fmadd<AT, BT, CT, A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -447,8 +473,7 @@ public:
     }
 
     template <simd_vector AT, vector_subsumed_by<AT> CT,
-        broadcastable_to<vector_t<AT, CT>> BT,
-        typename A = common_abi_t<AT, CT>>
+        broadcastable_to<AT> BT, typename A = simd_abi_type_t<AT>>
     requires (extended_vector<AT> || extended_vector<CT>) &&
         unqualified_extended_fmadd<AT, BT, CT, A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -552,8 +577,8 @@ private:
         basic_vector<simd_element_type_t<L>, common_abi_t<L, R>>;
 
 public:
-    template <simd_vector AT, common_vector_with<AT> BT,
-        common_vector_with<BT> CT, typename A = common_abi_t<AT, BT, CT>>
+    template <simd_vector AT, vector_subsumed_by<AT> BT,
+        vector_subsumed_by<AT> CT, typename A = simd_abi_type_t<AT>>
     requires (extended_vector<AT> || extended_vector<BT> ||
                  extended_vector<CT>) &&
         unqualified_extended_fmacc<AT, BT, CT, A>
@@ -563,9 +588,8 @@ public:
             __DPL forward<AT>(aval));
     }
 
-    template <simd_vector AT, common_vector_with<AT> BT,
-        broadcastable_to<vector_t<AT, BT>> CT,
-        typename A = common_abi_t<AT, BT>>
+    template <simd_vector AT, vector_subsumed_by<AT> BT,
+        broadcastable_to<AT> CT, typename A = simd_abi_type_t<AT>>
     requires (extended_vector<AT> || extended_vector<BT>) &&
         unqualified_extended_fmacc<AT, BT, CT, A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -574,9 +598,8 @@ public:
             __DPL forward<AT>(aval));
     }
 
-    template <simd_vector AT, common_vector_with<AT> CT,
-        broadcastable_to<vector_t<AT, CT>> BT,
-        typename A = common_abi_t<AT, CT>>
+    template <simd_vector AT, vector_subsumed_by<AT> CT,
+        broadcastable_to<AT> BT, typename A = simd_abi_type_t<AT>>
     requires (extended_vector<AT> || extended_vector<CT>) &&
         unqualified_extended_fmacc<AT, BT, CT, A>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)

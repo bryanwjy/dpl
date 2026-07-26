@@ -17,3 +17,9 @@
 
 #define __DPL_SHOULD_USE_BUILTIN(BUILTIN) \
     (DPL_HAS_BUILTIN(__##BUILTIN) && !DPL_DISABLE_BUILTIN_##BUILTIN)
+
+#ifdef __has_constexpr_builtin
+#  define DPL_HAS_CONSTEXPR_BUILTIN(BUILTIN) __has_constexpr_builtin(BUILTIN)
+#else
+#  define DPL_HAS_CONSTEXPR_BUILTIN(...) 0
+#endif

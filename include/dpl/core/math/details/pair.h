@@ -6,7 +6,7 @@
 #include "dpl/core/math/details/fwd.h" // IWYU pragma: export
 
 #include "dpl/core/math/details/floating_point_simd.h"
-#include "dpl/core/math/fma.h"
+#include "dpl/core/math/details/muladd.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/basic_vector.h" // IWYU pragma: export
@@ -118,12 +118,12 @@ struct pair {
         this pair self, pair right) noexcept {
         auto t = dx::one / right.upper;
         auto s = self.upper * t;
-        auto u = dx::fmsub(t, self.upper, s);
-        auto v =
-            dx::fnmadd(right.lower, t, dx::fnmadd(right.upper, t, dx::one));
+        auto u = fmath::mulsub(t, self.upper, s);
+        auto v = fmath::nmuladd(
+            right.lower, t, fmath::nmuladd(right.upper, t, dx::one));
         return pair{
             .upper = s,
-            .lower = dx::fmadd(s, v, dx::fmadd(self.lower, t, u)),
+            .lower = fmath::muladd(s, v, fmath::muladd(self.lower, t, u)),
         };
     }
 
@@ -134,9 +134,9 @@ struct pair {
         auto const s = self.upper * right.upper;
         return pair{
             .upper = s,
-            .lower = dx::fmadd(self.upper, right.lower,
-                dx::fmadd(self.lower, right.upper,
-                    dx::fmsub(self.upper, right.upper, s))),
+            .lower = fmath::muladd(self.upper, right.lower,
+                fmath::muladd(self.lower, right.upper,
+                    fmath::mulsub(self.upper, right.upper, s))),
         };
     }
 
@@ -146,8 +146,8 @@ struct pair {
         auto const s = self.upper * right;
         return pair{
             .upper = s,
-            .lower =
-                dx::fmadd(self.lower, right, dx::fmsub(self.upper, right, s)),
+            .lower = fmath::muladd(
+                self.lower, right, fmath::mulsub(self.upper, right, s)),
         };
     }
 
@@ -157,8 +157,8 @@ struct pair {
         auto const s = left * right.upper;
         return pair{
             .upper = s,
-            .lower =
-                dx::fmadd(left, right.lower, dx::fmsub(left, right.upper, s)),
+            .lower = fmath::muladd(
+                left, right.lower, fmath::mulsub(left, right.upper, s)),
         };
     }
 };
@@ -282,10 +282,10 @@ constexpr pair<E, A>
     auto s = arg.upper * arg.upper;
     return pair<E, A>{
         .upper = s,
-        .lower = dx::fmadd(        //
+        .lower = fmath::muladd(    //
             arg.upper + arg.upper, //
             arg.lower,             //
-            dx::fmsub(arg.upper, arg.upper, s)),
+            fmath::mulsub(arg.upper, arg.upper, s)),
     };
 }
 
@@ -296,8 +296,8 @@ constexpr pair<E, A>
     auto s = dx::one / arg.upper;
     return pair<E, A>{
         .upper = s,
-        .lower =
-            s * dx::fnmadd(arg.lower, s, dx::fnmadd(arg.upper, s, dx::one)),
+        .lower = s *
+            fmath::nmuladd(arg.lower, s, fmath::nmuladd(arg.upper, s, dx::one)),
     };
 }
 
@@ -380,7 +380,7 @@ struct single<basic_vector<E, A>> {
         auto s = self.value * right;
         return pair<E, A>{
             .upper = s,
-            .lower = dx::fmsub(self.value, right, s),
+            .lower = fmath::mulsub(self.value, right, s),
         };
     }
 
@@ -394,8 +394,8 @@ struct single<basic_vector<E, A>> {
     constexpr auto DPL_VECTORCALL operator*(
         this single self, pair_of<element_type> right) noexcept {
         auto hi = self.value * right.upper;
-        auto lo = dx::fmadd(
-            self.value, right.lower, dx::fmsub(self.value, right.upper, hi));
+        auto lo = fmath::muladd(self.value, right.lower,
+            fmath::mulsub(self.value, right.upper, hi));
         return hi + lo;
     }
 };
@@ -407,7 +407,7 @@ constexpr pair_of<T>
     auto s = one_v<T> / arg.value;
     return pair_of<T>{
         .upper = s,
-        .lower = s * dx::fnmadd(arg.value, s, dx::one),
+        .lower = s * fmath::nmuladd(arg.value, s, dx::one),
     };
 }
 
@@ -450,7 +450,7 @@ template <pair_type T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 constexpr
     typename T::element_type DPL_VECTORCALL square(single<T> arg) noexcept {
-    return dx::fmadd(arg.value.upper, arg.value.upper,
+    return fmath::muladd(arg.value.upper, arg.value.upper,
         [](auto val) { return val + val; }(arg.value.upper * arg.value.lower));
 }
 

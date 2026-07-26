@@ -45,7 +45,8 @@ private:
         basic_vector<E, A> half_x, immediate<N>) noexcept {
         static_assert(N >= 1);
         constexpr E threehalves = 1.5;
-        auto const result = poly * dx::fnmadd(poly * poly, half_x, threehalves);
+        auto const result =
+            poly * fmath::nmuladd(poly * poly, half_x, threehalves);
         return refine(result, half_x, imm<N - 1>);
     }
 
@@ -65,7 +66,8 @@ public:
     static constexpr basic_vector<E, A>
         DPL_VECTORCALL operator()(Tag, basic_vector<E, A> val) noexcept {
         constexpr E two = 2.0;
-        auto poly = polynomial(dx::fmsub(dx::broadcast<A>(two), val, dx::one));
+        auto poly =
+            polynomial(fmath::mulsub(dx::broadcast<A>(two), val, dx::one));
         if constexpr (same_as<accuracy::speed_t, Tag>) {
             return refine(poly, val, imm<digits_v<E> / digits_v<double>>);
         } else {

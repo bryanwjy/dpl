@@ -67,6 +67,7 @@ struct floating_point_traits<ext::bfloat16> {
     static constexpr auto exponent_bias =
         floating_point_traits<float>::exponent_bias;
     static constexpr auto has_hidden_bit = true;
+    static constexpr auto radix = 2zu;
 };
 #endif
 
@@ -100,6 +101,7 @@ struct floating_point_traits<ext::float16> {
     static constexpr auto exponent_bias =
         static_cast<int>(__DPL to_underlying(exponent_mask >> digits));
     static constexpr auto has_hidden_bit = true;
+    static constexpr auto radix = 2zu;
 };
 #endif
 __DPL_DEFAULT_NAMESPACE_END

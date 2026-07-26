@@ -6,6 +6,7 @@
 #include "dpl/core/math/details/gather.h"
 #include "dpl/core/math/details/ilogb.h"
 #include "dpl/core/math/details/ldexp.h"
+#include "dpl/core/math/details/muladd.h"
 #include "dpl/core/math/details/pair.h"
 #include "dpl/core/math/details/polynomial.h"
 #include "dpl/core/math/details/rempi_table.h"
@@ -674,7 +675,8 @@ private:
         auto sb = b * scale;
         auto sc = c * scale;
 
-        return dx::fnmadd(qf, sc, dx::fnmadd(qf, sb, dx::fnmadd(qf, sa, arg)));
+        return mx::nmuladd(
+            qf, sc, mx::nmuladd(qf, sb, mx::nmuladd(qf, sa, arg)));
     }
 
     template <simd_abi A, typename OpMask>
@@ -695,8 +697,8 @@ private:
         auto sc = dx::select(opmask, dx::broadcast<A>(c1), c0);
         auto sd = dx::select(opmask, dx::broadcast<A>(d1), d0);
 
-        return dx::fnmadd(qf, sd,
-            dx::fnmadd(qf, sc, dx::fnmadd(qf, sb, dx::fnmadd(qf, sa, arg))));
+        return mx::nmuladd(qf, sd,
+            mx::nmuladd(qf, sc, mx::nmuladd(qf, sb, mx::nmuladd(qf, sa, arg))));
     }
 
     template <simd_abi A, typename OpMask>
@@ -711,8 +713,8 @@ private:
         auto const scale = dx::select(opmask, fmath::half, dx::one_v<simdf>);
         auto const scaled_pi = fmath::scale(pi_pair<double, A>(), scale);
 
-        return dx::fnmadd(
-            qf, scaled_pi.lower, dx::fnmadd(qf, scaled_pi.upper, arg));
+        return mx::nmuladd(
+            qf, scaled_pi.lower, mx::nmuladd(qf, scaled_pi.upper, arg));
     }
 
     template <simd_abi A, typename OpMask>
@@ -724,7 +726,7 @@ private:
 
         fmath::pair<double, A> const dq{
             .upper = dx::trunc(arg * pi_scale, rounding::no_exc) * upper_scale,
-            .lower = dx::round(dx::fmsub(arg, dx::inv_pi, dq.upper),
+            .lower = dx::round(mx::mulsub(arg, dx::inv_pi, dq.upper),
                 rounding::to_nearest_int | rounding::no_exc),
         };
 
@@ -739,13 +741,13 @@ private:
         auto sc = c * scale;
         auto sd = d * scale;
 
-        return dx::fnmadd(dq.lower + dq.upper, d,
-            dx::fnmadd(dq.lower, c,
-                dx::fnmadd(dq.upper, c,
-                    dx::fnmadd(dq.lower, b,
-                        dx::fnmadd(dq.upper, b,
-                            dx::fnmadd(
-                                dq.lower, a, dx::fnmadd(dq.upper, a, arg)))))));
+        return mx::nmuladd(dq.lower + dq.upper, d,
+            mx::nmuladd(dq.lower, c,
+                mx::nmuladd(dq.upper, c,
+                    mx::nmuladd(dq.lower, b,
+                        mx::nmuladd(dq.upper, b,
+                            mx::nmuladd(dq.lower, a,
+                                mx::nmuladd(dq.upper, a, arg)))))));
     }
 
     template <floating_point E>
@@ -792,7 +794,7 @@ private:
         constexpr auto opt = rounding::to_nearest_int | rounding::no_exc;
         auto y = dx::round(arg * four, opt);
         return {
-            .f = dx::fnmadd(y, inv_four, arg),
+            .f = mx::nmuladd(y, inv_four, arg),
             .i = dx::element_cast<sint>(y - dx::round(arg, opt) * four),
         };
     }
@@ -882,7 +884,7 @@ public:
                 auto const shift =
                     dx::select(opmask, dx::broadcast<T>(half), dx::zero);
                 // when evaluating cosine, minus half
-                auto const qf = dx::round(dx::fmsub(val, dx::inv_pi, shift),
+                auto const qf = dx::round(mx::mulsub(val, dx::inv_pi, shift),
                     rounding::to_nearest_int | rounding::no_exc);
 
                 auto const a = dx::select(opmask, two, one);
@@ -891,7 +893,7 @@ public:
                 // This should be accurate,
                 // since the result is only used when
                 // magnitude of qf is small < (threshold_mid / pi)
-                return dx::fmadd(a, qf, c);
+                return mx::muladd(a, qf, c);
             }
         }();
 
@@ -971,7 +973,7 @@ public:
 
         rem = dx::negate(rem, nmask, rem);
         auto const poly = polynomial<E>(sq_rem);
-        auto const result = dx::fmadd(sq_rem, poly * rem, rem);
+        auto const result = mx::muladd(sq_rem, poly * rem, rem);
         if constexpr (dx::none_of(opmask)) {
             return dx::select(val == dx::msb, val, result);
         } else if constexpr (dx::all_of(opmask)) {
@@ -997,7 +999,7 @@ public:
             auto const shift =
                 dx::select(opmask, dx::broadcast<T>(half), dx::zero);
             // when evaluating cosine, minus half
-            auto const qf = dx::round(dx::fmsub(val, dx::inv_pi, shift),
+            auto const qf = dx::round(mx::mulsub(val, dx::inv_pi, shift),
                 rounding::to_nearest_int | rounding::no_exc);
 
             auto const a = dx::select(opmask, two, one);
@@ -1006,7 +1008,7 @@ public:
             // This should be accurate,
             // since the result is only used when
             // magnitude of qf is small < (threshold_mid / pi)
-            return dx::fmadd(a, qf, c);
+            return mx::muladd(a, qf, c);
         }();
 
         auto const ione = dx::broadcast<simdi>(dx::one);
@@ -1054,7 +1056,8 @@ public:
         }();
 
         rem = dx::negate(rem, nmask, rem);
-        auto const result = dx::fmadd(sq_rem, polynomial<E>(sq_rem) * rem, rem);
+        auto const result =
+            mx::muladd(sq_rem, polynomial<E>(sq_rem) * rem, rem);
         return dx::select(
             val == dx::msb, dx::select(opmask, result, val), result);
     }
