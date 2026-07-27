@@ -5,7 +5,7 @@ module;
 
 #include <cassert>
 
-export module dpl.test.harness.operations.fused_multiply;
+export module dpl.test.harness.operations.combo_multiply;
 export import dpl.test.support;
 
 import dpl;
@@ -13,8 +13,8 @@ import dpl;
 namespace dpl::test {
 namespace dpp = dpl::datapar;
 
-export template <dpp::simd_primitive_operation auto fmop, dpp::simd_abi A>
-class fused_multiply {
+export template <dpp::simd_primitive_operation auto mulop, dpp::simd_abi A>
+class combo_multiply {
     template <typename E>
     using vec_t = dpp::basic_vector<E, A>;
     template <typename E>
@@ -24,22 +24,22 @@ class fused_multiply {
     static constexpr E expected_op(E lhs, E mid, E rhs) noexcept {
         if constexpr (!same_as<double, E>) {
             return expected_op<double>(lhs, mid, rhs);
-        } else if constexpr (fmop == dpp::fmadd) {
+        } else if constexpr (mulop == dpp::muladd) {
             return lhs * mid + rhs;
-        } else if constexpr (fmop == dpp::fmsub) {
+        } else if constexpr (mulop == dpp::mulsub) {
             return lhs * mid - rhs;
-        } else if constexpr (fmop == dpp::fnmadd) {
+        } else if constexpr (mulop == dpp::nmuladd) {
             return rhs - lhs * mid;
-        } else if constexpr (fmop == dpp::fnmsub) {
+        } else if constexpr (mulop == dpp::nmulsub) {
             return -rhs - lhs * mid;
-        } else if constexpr (fmop == dpp::fmacc) {
+        } else if constexpr (mulop == dpp::mulacc) {
             return lhs + mid * rhs;
-        } else if constexpr (fmop == dpp::fmsac) {
+        } else if constexpr (mulop == dpp::mulsac) {
             return mid * rhs - lhs;
-        } else if constexpr (fmop == dpp::fnmacc) {
+        } else if constexpr (mulop == dpp::nmulacc) {
             return lhs - mid * rhs;
         } else {
-            static_assert(fmop == dpp::fnmsac);
+            static_assert(mulop == dpp::nmulsac);
             return -lhs - mid * rhs;
         }
     }
@@ -61,7 +61,7 @@ class fused_multiply {
 
     template <typename E>
     static constexpr auto mixmask() noexcept
-    requires (fmop == dpp::fmaddsub || fmop == dpp::fmaddsac)
+    requires (mulop == dpp::muladdsub || mulop == dpp::muladdsac)
     {
         if constexpr (dpp::fixed_width_abi<A>) {
             constexpr auto lanes = abi_traits<E>::size();
@@ -77,7 +77,7 @@ class fused_multiply {
 
     template <typename E>
     static constexpr auto mixmask() noexcept
-    requires (fmop == dpp::fmsubadd || fmop == dpp::fmsubacc)
+    requires (mulop == dpp::mulsubadd || mulop == dpp::mulsubacc)
     {
         if constexpr (dpp::fixed_width_abi<A>) {
             constexpr auto lanes = abi_traits<E>::size();
@@ -96,32 +96,27 @@ public:
     static constexpr bool run_all(dpl::type_pack<Es...> pack, Rng& engine) {
         return dpl::pack::all_of(
             [&]<typename E>(dpl::type_identity<E> tp) {
-                if constexpr (dpp::is_simd_canonical_invocable<vec_t<E>,
-                                  vec_t<E>, vec_t<E>>(fmop)) {
-                    return fused_multiply::template run<E>(engine);
-                } else {
-                    return true;
-                }
+                return combo_multiply::template run<E>(engine);
             },
             pack);
     }
 
     template <dpl::floating_point_like E, rng_like Rng>
     static constexpr bool run(Rng& engine)
-    requires (fmop == dpp::fmaddsub || fmop == dpp::fmsubadd ||
-        fmop == dpp::fmaddsac || fmop == dpp::fmsubacc)
+    requires (mulop == dpp::muladdsub || mulop == dpp::mulsubadd ||
+        mulop == dpp::muladdsac || mulop == dpp::mulsubacc)
     {
         dpl::test::array_generator<A, E> const data_generator(min<E>, max<E>);
         dpl::test::scalar_generator<E> const src_generator(
             max<E> * max<E> * max<E>, dpp::max_value_v<E>);
         constexpr auto expected_op = [](vec_t<E> vlhs, vec_t<E> vmid,
                                          vec_t<E> vrhs) noexcept {
-            if constexpr (fmop == dpp::fmaddsub || fmop == dpp::fmsubadd) {
-                return dpp::select(mixmask<E>(), dpp::fmadd(vlhs, vmid, vrhs),
-                    dpp::fmsub(vlhs, vmid, vrhs));
+            if constexpr (mulop == dpp::muladdsub || mulop == dpp::mulsubadd) {
+                return dpp::select(mixmask<E>(), dpp::muladd(vlhs, vmid, vrhs),
+                    dpp::mulsub(vlhs, vmid, vrhs));
             } else {
-                return dpp::select(mixmask<E>(), dpp::fmacc(vlhs, vmid, vrhs),
-                    dpp::fmsac(vlhs, vmid, vrhs));
+                return dpp::select(mixmask<E>(), dpp::mulacc(vlhs, vmid, vrhs),
+                    dpp::mulsac(vlhs, vmid, vrhs));
             }
         };
         for (auto i = 0zu; i < 4; ++i) {
@@ -134,11 +129,11 @@ public:
             auto const vrhs = dpp::load<E, A>(rhs.data());
 
             auto const vexpected = expected_op(vlhs, vmid, vrhs);
-            auto const vactual = fmop(vlhs, vmid, vrhs);
+            auto const vactual = mulop(vlhs, vmid, vrhs);
 
             assert(dpp::all_of(vexpected == vactual));
             dpl::test::ternary_assignment<A>::template test_masked<E>(
-                lhs, mid, rhs, fmop, src);
+                lhs, mid, rhs, mulop, src);
 
             if constexpr (dpp::is_simd_canonical_invocable<vec_t<E>, vec_t<E>,
                               vec_t<E>>(dpp::fmadd)) {
@@ -158,13 +153,13 @@ public:
                         auto const a = dpp::add(vone, vsmall);
                         auto const b = dpp::subtract(vone, vsmall);
                         auto const c = dpp::negate(vone, mixmask<E>(), vone);
-                        if constexpr (fmop == dpp::fmaddsub ||
-                            fmop == dpp::fmsubadd) {
+                        if constexpr (mulop == dpp::fmaddsub ||
+                            mulop == dpp::fmsubadd) {
                             assert(dpp::all_of(
-                                expected_op(a, b, c) == fmop(a, b, c)));
+                                expected_op(a, b, c) == mulop(a, b, c)));
                         } else {
                             assert(dpp::all_of(
-                                expected_op(c, a, b) == fmop(c, a, b)));
+                                expected_op(c, a, b) == mulop(c, a, b)));
                         }
                     }
                     {
@@ -173,13 +168,13 @@ public:
                             dpp::broadcast<A, E>(dpp::max_value);
                         auto const c =
                             dpp::negate(vlarge, mixmask<E>(), vlarge);
-                        if constexpr (fmop == dpp::fmaddsub ||
-                            fmop == dpp::fmsubadd) {
+                        if constexpr (mulop == dpp::fmaddsub ||
+                            mulop == dpp::fmsubadd) {
                             assert(dpp::all_of(expected_op(vlarge, vtwo, c) ==
-                                fmop(vlarge, vtwo, c)));
+                                mulop(vlarge, vtwo, c)));
                         } else {
                             assert(dpp::all_of(expected_op(c, vlarge, vtwo) ==
-                                fmop(c, vlarge, vtwo)));
+                                mulop(c, vlarge, vtwo)));
                         }
                     }
                 }
@@ -207,38 +202,44 @@ public:
         }
 
         dpl::test::ternary_assignment<A>::template test<E>(
-            lhs, mid, rhs, fmop, expected);
+            lhs, mid, rhs, mulop, expected);
         dpl::test::ternary_assignment<A>::template test_masked<E>(
-            lhs, mid, rhs, fmop, src);
+            lhs, mid, rhs, mulop, src);
 
         dpl::test::ternary_assignment<A>::template test<E>(
-            1, 1, 1, fmop, expected_op<E>(1, 1, 1));
-        if constexpr (fmop == dpp::fmadd || fmop == dpp::fmsub ||
-            fmop == dpp::fnmadd || fmop == dpp::fnmsub) {
+            1, 1, 1, mulop, expected_op<E>(1, 1, 1));
+        if constexpr (mulop == dpp::muladd || mulop == dpp::mulsub ||
+            mulop == dpp::nmuladd || mulop == dpp::nmulsub) {
             dpl::test::ternary_assignment<A>::template test<E>(
-                1, 1, 0, fmop, expected_op<E>(1, 1, 0));
+                1, 1, 0, mulop, expected_op<E>(1, 1, 0));
             auto const a = src_generator(engine), b = src_generator(engine);
             dpl::test::ternary_assignment<A>::template test<E>(
-                a, b, 0, fmop, expected_op<E>(a, b, 0));
+                a, b, 0, mulop, expected_op<E>(a, b, 0));
         } else {
             dpl::test::ternary_assignment<A>::template test<E>(
-                0, 1, 1, fmop, expected_op<E>(0, 1, 1));
+                0, 1, 1, mulop, expected_op<E>(0, 1, 1));
             auto const a = src_generator(engine), b = src_generator(engine);
             dpl::test::ternary_assignment<A>::template test<E>(
-                0, a, b, fmop, expected_op<E>(0, a, b));
+                0, a, b, mulop, expected_op<E>(0, a, b));
         }
 
         auto const cancellation_tests = []() {
-            auto const range =
-                dpl::popcount(dpl::floating_point_traits<E>::exponent_mask);
-            auto const drange = dpl::popcount(
-                dpl::floating_point_traits<double>::exponent_mask);
-            auto const precision = dpl::floating_point_traits<E>::digits;
-            auto const dprecision = dpl::floating_point_traits<double>::digits;
-            if consteval {
-                return drange > drange && dprecision > precision;
+            if constexpr (dpp::is_simd_canonical_invocable<vec_t<E>, vec_t<E>,
+                              vec_t<E>>(dpp::fmadd)) {
+                auto const range =
+                    dpl::popcount(dpl::floating_point_traits<E>::exponent_mask);
+                auto const drange = dpl::popcount(
+                    dpl::floating_point_traits<double>::exponent_mask);
+                auto const precision = dpl::floating_point_traits<E>::digits;
+                auto const dprecision =
+                    dpl::floating_point_traits<double>::digits;
+                if consteval {
+                    return drange > drange && dprecision > precision;
+                } else {
+                    return true;
+                }
             } else {
-                return true;
+                return false;
             }
         }();
 
@@ -253,33 +254,33 @@ public:
             constexpr auto small =
                 dpl::bit_cast<E>(bitset_t(small_exp) << digitsm1);
 
-            if constexpr (fmop == dpp::fmadd) {
+            if constexpr (mulop == dpp::muladd) {
                 dpl::test::ternary_assignment<A>::template test<E>(
-                    1 + small, 1 - small, -1, fmop, -small * small);
+                    1 + small, 1 - small, -1, mulop, -small * small);
                 // overflow cancels
                 dpl::test::ternary_assignment<A>::template test<E>(
-                    dpp::max_value_v<E>, 2, -dpp::max_value_v<E>, fmop,
+                    dpp::max_value_v<E>, 2, -dpp::max_value_v<E>, mulop,
                     dpp::max_value_v<E>);
-            } else if constexpr (fmop == dpp::fmsub) {
+            } else if constexpr (mulop == dpp::mulsub) {
                 dpl::test::ternary_assignment<A>::template test<E>(
-                    1 + small, 1 - small, 1, fmop, -small * small);
+                    1 + small, 1 - small, 1, mulop, -small * small);
                 // overflow cancels
                 dpl::test::ternary_assignment<A>::template test<E>(
-                    dpp::max_value_v<E>, 2, dpp::max_value_v<E>, fmop,
+                    dpp::max_value_v<E>, 2, dpp::max_value_v<E>, mulop,
                     dpp::max_value_v<E>);
-            } else if constexpr (fmop == dpp::fnmadd) {
+            } else if constexpr (mulop == dpp::nmuladd) {
                 dpl::test::ternary_assignment<A>::template test<E>(
-                    1 + small, 1 - small, 1, fmop, small * small);
+                    1 + small, 1 - small, 1, mulop, small * small);
                 // overflow cancels
                 dpl::test::ternary_assignment<A>::template test<E>(
-                    dpp::max_value_v<E>, 2, dpp::max_value_v<E>, fmop,
+                    dpp::max_value_v<E>, 2, dpp::max_value_v<E>, mulop,
                     -dpp::max_value_v<E>);
-            } else if constexpr (fmop == dpp::fnmsub) {
+            } else if constexpr (mulop == dpp::nmulsub) {
                 dpl::test::ternary_assignment<A>::template test<E>(
-                    1 + small, 1 - small, -1, fmop, small * small);
+                    1 + small, 1 - small, -1, mulop, small * small);
                 // overflow cancels
                 dpl::test::ternary_assignment<A>::template test<E>(
-                    dpp::max_value_v<E>, 2, -dpp::max_value_v<E>, fmop,
+                    dpp::max_value_v<E>, 2, -dpp::max_value_v<E>, mulop,
                     -dpp::max_value_v<E>);
             }
         }
@@ -289,29 +290,29 @@ public:
 };
 
 export template <dpp::simd_abi A>
-using fmadd = fused_multiply<dpp::fmadd, A>;
+using muladd = combo_multiply<dpp::muladd, A>;
 export template <dpp::simd_abi A>
-using fmsub = fused_multiply<dpp::fmsub, A>;
+using mulsub = combo_multiply<dpp::mulsub, A>;
 export template <dpp::simd_abi A>
-using fnmadd = fused_multiply<dpp::fnmadd, A>;
+using nmuladd = combo_multiply<dpp::nmuladd, A>;
 export template <dpp::simd_abi A>
-using fnmsub = fused_multiply<dpp::fnmsub, A>;
+using nmulsub = combo_multiply<dpp::nmulsub, A>;
 export template <dpp::simd_abi A>
-using fmaddsub = fused_multiply<dpp::fmaddsub, A>;
+using muladdsub = combo_multiply<dpp::muladdsub, A>;
 export template <dpp::simd_abi A>
-using fmsubadd = fused_multiply<dpp::fmsubadd, A>;
+using mulsubadd = combo_multiply<dpp::mulsubadd, A>;
 
 export template <dpp::simd_abi A>
-using fmacc = fused_multiply<dpp::fmacc, A>;
+using mulacc = combo_multiply<dpp::mulacc, A>;
 export template <dpp::simd_abi A>
-using fmsac = fused_multiply<dpp::fmsac, A>;
+using mulsac = combo_multiply<dpp::mulsac, A>;
 export template <dpp::simd_abi A>
-using fnmacc = fused_multiply<dpp::fnmacc, A>;
+using nmulacc = combo_multiply<dpp::nmulacc, A>;
 export template <dpp::simd_abi A>
-using fnmsac = fused_multiply<dpp::fnmsac, A>;
+using nmulsac = combo_multiply<dpp::nmulsac, A>;
 export template <dpp::simd_abi A>
-using fmaddsac = fused_multiply<dpp::fmaddsac, A>;
+using muladdsac = combo_multiply<dpp::muladdsac, A>;
 export template <dpp::simd_abi A>
-using fmsubacc = fused_multiply<dpp::fmsubacc, A>;
+using mulsubacc = combo_multiply<dpp::mulsubacc, A>;
 
 } // namespace dpl::test

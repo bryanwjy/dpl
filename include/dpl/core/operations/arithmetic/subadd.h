@@ -62,12 +62,12 @@ struct fallback_impl<subadd_t> : binary_broadcasting_fallback<subadd_t> {
         if constexpr (fixed_width_abi<common_abi_t<LT, RT>>) {
             constexpr auto mask = []<size_t... Is>(index_sequence<Is...>) {
                 return cmask_v<__DPL bitset<sizeof...(Is)>(
-                    ((Is & 1) == 1)...)>;
+                    ((Is & 1) == 0)...)>;
             }(iota_sequence<LT>);
             return dx::add(lhs, dx::negate(rhs, mask, rhs));
         } else {
             auto const mask =
-                dx::bwand(dx::lane_index<LT>(), dx::one) == dx::one;
+                dx::bwand(dx::lane_index<LT>(), dx::one) == dx::zero;
             return dx::add(lhs, dx::negate(rhs, mask, rhs));
         }
     }

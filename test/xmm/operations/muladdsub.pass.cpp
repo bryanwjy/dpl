@@ -8,15 +8,15 @@
 #include <cassert>
 
 import dpl.xmm;
-import dpl.test.harness.operations.fused_multiply;
+import dpl.test.harness.operations.combo_multiply;
 
-// Tests for dpp::fmaddsub on xmm ABI. Requires SSE4.2 (implied by dpl.xmm).
+// Tests for dpp::muladdsub on xmm ABI. Requires SSE4.2 (implied by dpl.xmm).
 //
 // Forms tested:
-//   (1) dpp::fmaddsub(a, b, c)                  -- unmasked, always available
-//   (2) dpp::fmaddsub(src, mask, a, b, c)       -- merge-masked
-//   (3) dpp::fmaddsub(dpp::zero, mask, a, b, c) -- zero-masked explicit
-//   (4) dpp::fmaddsub(mask, a, b, c)            -- zero-masked alias (== form
+//   (1) dpp::muladdsub(a, b, c)                  -- unmasked, always available
+//   (2) dpp::muladdsub(src, mask, a, b, c)       -- merge-masked
+//   (3) dpp::muladdsub(dpp::zero, mask, a, b, c) -- zero-masked explicit
+//   (4) dpp::muladdsub(mask, a, b, c)            -- zero-masked alias (== form
 //   3)
 
 int main() {
@@ -28,10 +28,10 @@ int main() {
         dpl::type_pack<float, double, dpl::ext::float16, dpl::ext::bfloat16>;
     static_assert([]() {
         dpl::test::mt19937 engine;
-        return dpl::test::fmaddsub<abi_t>::run_all(types{}, engine);
+        return dpl::test::muladdsub<abi_t>::run_all(types{}, engine);
     }());
 
     dpl::test::mt19937 engine;
-    assert(dpl::test::fmaddsub<abi_t>::run_all(types{}, engine));
+    assert(dpl::test::muladdsub<abi_t>::run_all(types{}, engine));
     return 0;
 }

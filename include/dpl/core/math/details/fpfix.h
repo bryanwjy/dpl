@@ -9,7 +9,7 @@
 
 #  include "dpl/core/concepts/cpo_invocable.h"
 #  include "dpl/core/immediate/immediate.h"
-#  include "dpl/core/numbers/details/binary_layout_floating_point.h"
+#  include "dpl/core/numbers/binary_layout_floating_point.h"
 #  include "dpl/std/concepts/semiregular.h"
 #  include "dpl/std/utility/forward.h"
 #  include "dpl/std/utility/to_underlying.h"
@@ -85,9 +85,7 @@ inline constexpr bool is_fpclass<fpclass<C>> = true;
 template <typename...>
 class fixup_set;
 
-namespace dxn = __DPL details::numbers;
-
-template <dxn::binary_layout_floating_point E, fpc C>
+template <__DPL binary_layout_floating_point E, fpc C>
 struct fix_case {
 public:
     explicit consteval fix_case() noexcept = default;
@@ -116,7 +114,7 @@ inline constexpr bool is_dependent_result<revert_t> = false;
 template <typename T>
 concept dependent_result = is_dependent_result<T>;
 template <typename T, typename E>
-concept result_type = dxn::binary_layout_floating_point<E> &&
+concept result_type = __DPL binary_layout_floating_point<E> &&
     (__DPL datapar::internal::immediate_like_of<T, E> || dependent_result<T>);
 
 template <fpc C, typename T>
@@ -134,7 +132,7 @@ public:
         }
     }
 
-    template <dxn::binary_layout_floating_point E, fpc CT>
+    template <__DPL binary_layout_floating_point E, fpc CT>
     requires result_type<T, E>
     static consteval auto operator[](fix_case<E, CT>) noexcept {
         static_assert((C & CT) != fpc::none);
@@ -218,7 +216,7 @@ public:
         return (self | ... | fixup_pair<CR, TR>{});
     }
 
-    template <dxn::binary_layout_floating_point E, fpc CT>
+    template <__DPL binary_layout_floating_point E, fpc CT>
     requires (... && result_type<Ts, E>)
     static consteval auto operator[](fix_case<E, CT> arg) noexcept {
         static_assert((all & CT) == CT);

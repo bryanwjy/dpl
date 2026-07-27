@@ -7,9 +7,11 @@
 #include "dpl/core/operations/arithmetic/add.h"
 #include "dpl/core/operations/arithmetic/negate.h"
 #include "dpl/core/operations/bitwise/bwand.h"
+#include "dpl/core/operations/compare/cmpeq.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/internal/abi.h"
+#  include "dpl/core/basic/lane_index.h"
 #  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/concepts/mask_compatibility.h"
 #  include "dpl/core/dispatch/broadcastable/binary.h"
@@ -17,6 +19,7 @@
 #  include "dpl/core/dispatch/maskable/transform.h"
 #  include "dpl/core/dispatch/operation/primitive.h"
 #  include "dpl/core/immediate/const_mask.h"
+#  include "dpl/core/immediate/constants/one.h"
 #endif
 
 __DPL_DEFAULT_NAMESPACE_BEGIN
@@ -106,7 +109,7 @@ struct fallback_impl<addsub_t> : binary_broadcasting_fallback<addsub_t> {
             return dx::add(lhs, dx::negate(rhs, mask, rhs));
         } else {
             auto const mask =
-                dx::bwand(dx::lane_index<LT>(), dx::one) == dx::one;
+                dx::cmpeq(dx::bwand(dx::lane_index<LT>(), dx::one), dx::one);
             return dx::add(lhs, dx::negate(rhs, mask, rhs));
         }
     }

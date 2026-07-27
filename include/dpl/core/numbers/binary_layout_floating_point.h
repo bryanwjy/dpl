@@ -12,9 +12,6 @@
 #endif
 
 __DPL_DEFAULT_NAMESPACE_BEGIN
-
-namespace details::numbers {
-
 template <typename T>
 concept binary_layout_floating_point = floating_point_like<T> && requires {
     floating_point_traits<T>::width;
@@ -37,6 +34,4 @@ concept binary_layout_floating_point = floating_point_like<T> && requires {
         floating_point_traits<T>::exponent_mask>;
     typename bool_constant<floating_point_traits<T>::has_hidden_bit>;
 };
-
-} // namespace details::numbers
 __DPL_DEFAULT_NAMESPACE_END

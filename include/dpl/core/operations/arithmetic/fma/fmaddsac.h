@@ -3,14 +3,19 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/operations/arithmetic/fmadd.h"
+#include "dpl/core/operations/arithmetic/fma/fmacc.h"
+#include "dpl/core/operations/arithmetic/fma/fmaddsub.h"
 #include "dpl/core/operations/arithmetic/negate.h"
+#include "dpl/core/operations/bitwise/bwand.h"
+#include "dpl/core/operations/compare/cmpeq.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/internal/abi.h"
+#  include "dpl/core/basic/lane_index.h"
 #  include "dpl/core/concepts/cpo_invocable.h"
 #  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/dispatch/broadcastable/ternary.h"
+#  include "dpl/core/dispatch/concepts/operation.h"
 #  include "dpl/core/dispatch/interface.h"
 #  include "dpl/core/dispatch/maskable/accumulation.h"
 #  include "dpl/core/dispatch/operation/primitive.h"
@@ -18,19 +23,7 @@
 
 __DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
-void fmaddsub(...) noexcept = delete;
-
-struct fmaddsub_t;
 struct fmaddsac_t;
-
-struct DPL_EMPTY_BASES fmaddsub_t :
-    public arithmetic_base<fmaddsub_t>,
-    public maskable_accumulation_base<fmaddsub_t>,
-    public ternary_broadcastable_operation<fmaddsub_t> {
-    using operation_base<fmaddsub_t>::operator();
-    using maskable_accumulation_base<fmaddsub_t>::operator();
-    using ternary_broadcastable_operation<fmaddsub_t>::operator();
-};
 
 struct DPL_EMPTY_BASES fmaddsac_t :
     public arithmetic_base<fmaddsac_t>,
@@ -42,44 +35,10 @@ struct DPL_EMPTY_BASES fmaddsac_t :
 };
 
 template <>
-struct operation_signature<fmaddsub_t> {
-    template <typename AT, typename BT, typename CT>
-    requires simd_vector<AT> || simd_vector<BT> || simd_vector<CT>
-    static consteval void operator()(AT&&, BT&&, CT&&) noexcept {}
-};
-
-template <>
 struct operation_signature<fmaddsac_t> {
     template <typename AT, typename BT, typename CT>
     requires simd_vector<AT> || simd_vector<BT> || simd_vector<CT>
     static consteval void operator()(AT&&, BT&&, CT&&) noexcept {}
-};
-
-template <>
-struct fallback_impl<fmaddsub_t> : ternary_broadcasting_fallback<fmaddsub_t> {
-
-    template <canonical_vector AT, vector_subsumed_by<AT> BT,
-        vector_subsumed_by<AT> CT>
-    requires floating_point_like<simd_element_type_t<AT>> &&
-        canonical_vector<BT> && canonical_vector<CT> &&
-        simd_invocable<fmadd_t, AT, BT, cpo_result_t<negate_t, CT>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr AT DPL_VECTORCALL operator()(
-        AT aval, BT bval, CT cval) noexcept {
-        if constexpr (fixed_width_abi<simd_abi_type_t<AT>>) {
-            constexpr auto mask = []<size_t... Is>(index_sequence<Is...>) {
-                return cmask_v<__DPL bitset<sizeof...(Is)>(
-                    ((Is & 1) == 1)...)>;
-            }(iota_sequence<AT>);
-            return dx::fmadd(aval, bval, dx::negate(cval, mask, cval));
-        } else {
-            auto const mask =
-                dx::bwand(dx::lane_index<AT>(), dx::one) == dx::one;
-            return dx::fmadd(aval, bval, dx::negate(cval, mask, cval));
-        }
-    }
-
-    using ternary_broadcasting_fallback<fmaddsub_t>::operator();
 };
 
 template <>
@@ -100,46 +59,13 @@ struct fallback_impl<fmaddsac_t> : ternary_broadcasting_fallback<fmaddsac_t> {
             return dx::fmacc(dx::negate(cval, mask, cval), aval, bval);
         } else {
             auto const mask =
-                dx::bwand(dx::lane_index<AT>(), dx::one) == dx::one;
+                dx::cmpeq(dx::bwand(dx::lane_index<AT>(), dx::one), dx::one);
             return dx::fmacc(dx::negate(cval, mask, cval), aval, bval);
         }
     }
 
     using ternary_broadcasting_fallback<fmaddsac_t>::operator();
 };
-
-template <typename AT, typename BT, typename CT,
-    typename A = simd_abi_type_t<AT>>
-concept unqualified_canonical_fmaddsub = requires {
-    {
-        fmaddsub(internal::abi<A>, internal::declarg<AT>(),
-            internal::declarg<BT>(), internal::declarg<CT>())
-    } -> canonical_vector;
-};
-
-template <typename AT, typename M, typename BT, typename CT,
-    typename A = simd_abi_type_t<AT>>
-concept unqualified_canonical_mfmaddsub =
-    cpo_invocable<fmaddsub_t, AT, BT, CT> &&
-    equivalent_vector_with<AT, cpo_result_t<fmaddsub_t, AT, BT, CT>> &&
-    requires {
-        {
-            fmaddsub(internal::abi<A>, internal::declarg<AT>(),
-                internal::declarg<M>(), internal::declarg<BT>(),
-                internal::declarg<CT>())
-        } -> equivalent_vector_with<cpo_result_t<fmaddsub_t, AT, BT, CT>>;
-    };
-
-template <typename M, typename AT, typename BT, typename CT,
-    typename A = simd_abi_type_t<AT>>
-concept unqualified_canonical_zmfmaddsub =
-    cpo_invocable<fmaddsub_t, AT, BT, CT> && requires {
-        {
-            fmaddsub(internal::abi<A>, dx::zero, internal::declarg<M>(),
-                internal::declarg<AT>(), internal::declarg<BT>(),
-                internal::declarg<CT>())
-        } -> equivalent_vector_with<cpo_result_t<fmaddsub_t, AT, BT, CT>>;
-    };
 
 template <typename AT, typename BT, typename CT,
     typename A = simd_abi_type_t<AT>>
@@ -163,127 +89,6 @@ concept unqualified_canonical_mfmaddsac =
                 internal::declarg<M>())
         } -> equivalent_vector_with<cpo_result_t<fmaddsac_t, AT, BT, CT>>;
     };
-
-template <>
-struct canonical_impl<fmaddsub_t> {
-private:
-    template <typename AT>
-    using mask_t DPL_NODEBUG = simd_mask_type_t<AT>;
-
-    template <typename L, typename R>
-    using vector_t DPL_NODEBUG =
-        basic_vector<simd_element_type_t<L>, common_abi_t<L, R>>;
-
-public:
-    template <canonical_vector AT, vector_subsumed_by<AT> BT,
-        vector_subsumed_by<AT> CT, typename A = simd_abi_type_t<AT>>
-    requires canonical_vector<BT> && canonical_vector<CT> &&
-        unqualified_canonical_fmaddsub<AT, BT, CT, A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr AT operator()(AT aval, BT bval, CT cval) noexcept {
-        return fmaddsub(internal::abi<A>, aval, bval, cval);
-    }
-
-    template <canonical_vector AT, vector_subsumed_by<AT> BT,
-        broadcastable_to<AT> CT, typename A = simd_abi_type_t<AT>>
-    requires canonical_vector<BT> &&
-        unqualified_canonical_fmaddsub<AT, BT, CT, A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr AT operator()(AT aval, BT bval, CT&& cval) noexcept {
-        return fmaddsub(internal::abi<A>, aval, bval, __DPL forward<CT>(cval));
-    }
-
-    template <canonical_vector AT, vector_subsumed_by<AT> CT,
-        broadcastable_to<AT> BT, typename A = simd_abi_type_t<AT>>
-    requires canonical_vector<CT> &&
-        unqualified_canonical_fmaddsub<AT, BT, CT, A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr AT operator()(AT aval, BT&& bval, CT cval) noexcept {
-        return fmaddsub(internal::abi<A>, aval, __DPL forward<BT>(bval), cval);
-    }
-
-    template <canonical_vector BT, common_vector_with<BT> CT,
-        broadcastable_to<vector_t<BT, CT>> AT,
-        typename A = common_abi_t<BT, CT>>
-    requires canonical_vector<CT> &&
-        unqualified_canonical_fmaddsub<AT, BT, CT, A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr vector_t<BT, CT> operator()(
-        AT&& aval, BT bval, CT cval) noexcept {
-        return fmaddsub(internal::abi<A>, __DPL forward<AT>(aval), bval, cval);
-    }
-
-    template <canonical_vector AT, broadcastable_to<AT> BT,
-        broadcastable_to<AT> CT, typename A = simd_abi_type_t<AT>>
-    requires unqualified_canonical_fmaddsub<AT, BT, CT, A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr AT operator()(AT aval, BT&& bval, CT&& cval) noexcept {
-        return fmaddsub(internal::abi<A>, aval, __DPL forward<BT>(bval),
-            __DPL forward<CT>(cval));
-    }
-
-    template <canonical_vector BT, broadcastable_to<BT> AT,
-        broadcastable_to<BT> CT, typename A = simd_abi_type_t<BT>>
-    requires unqualified_canonical_fmaddsub<AT, BT, CT, A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr BT operator()(AT&& aval, BT bval, CT&& cval) noexcept {
-        return fmaddsub(internal::abi<A>, __DPL forward<AT>(aval), bval,
-            __DPL forward<CT>(cval));
-    }
-
-    template <canonical_vector CT, broadcastable_to<CT> AT,
-        broadcastable_to<CT> BT, typename A = simd_abi_type_t<CT>>
-    requires unqualified_canonical_fmaddsub<AT, BT, CT, A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr CT operator()(AT&& aval, BT&& bval, CT cval) noexcept {
-        return fmaddsub(internal::abi<A>, __DPL forward<AT>(aval),
-            __DPL forward<BT>(bval), cval);
-    }
-
-    template <canonical_vector AT, vector_subsumed_by<AT> BT,
-        vector_subsumed_by<AT> CT, typename A = simd_abi_type_t<AT>>
-    requires canonical_vector<BT> && canonical_vector<CT> &&
-        unqualified_canonical_mfmaddsub<AT, mask_t<AT>, BT, CT, A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr AT operator()(
-        AT aval, mask_t<AT> mask, BT bval, CT cval) noexcept {
-        return fmaddsub(internal::abi<A>, aval, mask, bval, cval);
-    }
-
-    template <canonical_vector AT, const_mask_for<AT> M,
-        vector_subsumed_by<AT> BT, vector_subsumed_by<BT> CT,
-        typename A = simd_abi_type_t<AT>>
-    requires canonical_vector<BT> && canonical_vector<CT> &&
-        unqualified_canonical_mfmaddsub<AT, launder_cmask_t<AT, M>, BT, CT, A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr AT operator()(
-        AT aval, M cmask, BT bval, CT cval) noexcept {
-        return fmaddsub(
-            internal::abi<A>, aval, dx::to_const_mask<AT>(cmask), bval, cval);
-    }
-
-    template <canonical_vector AT, vector_subsumed_by<AT> BT,
-        vector_subsumed_by<BT> CT, typename A = simd_abi_type_t<AT>>
-    requires canonical_vector<BT> && canonical_vector<CT> &&
-        unqualified_canonical_zmfmaddsub<mask_t<AT>, AT, BT, CT, A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr AT operator()(
-        dx::zero_t zero, mask_t<AT> mask, AT aval, BT bval, CT cval) noexcept {
-        return fmaddsub(internal::abi<A>, zero, mask, aval, bval, cval);
-    }
-
-    template <canonical_vector AT, vector_subsumed_by<AT> BT,
-        vector_subsumed_by<AT> CT, const_mask_for<AT> M,
-        typename A = simd_abi_type_t<AT>>
-    requires canonical_vector<BT> && canonical_vector<CT> &&
-        unqualified_canonical_zmfmaddsub<launder_cmask_t<AT, M>, AT, BT, CT, A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr AT operator()(
-        dx::zero_t zero, M cmask, AT aval, BT bval, CT cval) noexcept {
-        return fmaddsub(internal::abi<A>, zero, dx::to_const_mask<AT>(cmask),
-            aval, bval, cval);
-    }
-};
 
 template <>
 struct canonical_impl<fmaddsac_t> {
@@ -412,35 +217,6 @@ public:
 };
 
 template <typename AT, typename BT, typename CT,
-    typename A = common_abi_t<AT, BT, CT>>
-concept unqualified_extended_fmaddsub = requires {
-    {
-        fmaddsub(internal::declarg<AT>(), internal::declarg<BT>(),
-            internal::declarg<CT>())
-    } -> vector_with_common_abi<A>;
-};
-
-template <typename AT, typename M, typename BT, typename CT>
-concept unqualified_extended_mfmaddsub =
-    cpo_invocable<fmaddsub_t, AT, BT, CT> &&
-    equivalent_vector_with<AT, cpo_result_t<fmaddsub_t, AT, BT, CT>> &&
-    requires {
-        {
-            fmaddsub(internal::declarg<AT>(), internal::declarg<M>(),
-                internal::declarg<BT>(), internal::declarg<CT>())
-        } -> equivalent_vector_with<cpo_result_t<fmaddsub_t, AT, BT, CT>>;
-    };
-
-template <typename M, typename AT, typename BT, typename CT>
-concept unqualified_extended_zmfmaddsub =
-    cpo_invocable<fmaddsub_t, AT, BT, CT> && requires {
-        {
-            fmaddsub(dx::zero, internal::declarg<M>(), internal::declarg<AT>(),
-                internal::declarg<BT>(), internal::declarg<CT>())
-        } -> equivalent_vector_with<cpo_result_t<fmaddsub_t, AT, BT, CT>>;
-    };
-
-template <typename AT, typename BT, typename CT,
     typename A = common_abi_t<BT, CT, AT>>
 concept unqualified_extended_fmaddsac =
     unqualified_extended_fmaddsub<BT, CT, AT, A>;
@@ -459,132 +235,6 @@ concept unqualified_extended_mfmaddsac =
 template <typename M, typename AT, typename BT, typename CT>
 concept unqualified_extended_zmfmaddsac =
     unqualified_extended_zmfmaddsub<M, BT, CT, AT>;
-
-template <>
-struct extended_impl<fmaddsub_t> {
-private:
-    template <typename L, typename R>
-    using vector_t DPL_NODEBUG =
-        basic_vector<simd_element_type_t<L>, common_abi_t<L, R>>;
-
-public:
-    template <simd_vector AT, vector_subsumed_by<AT> BT,
-        vector_subsumed_by<AT> CT, typename A = common_abi_t<AT, BT, CT>>
-    requires (extended_vector<AT> || extended_vector<BT> ||
-                 extended_vector<CT>) &&
-        unqualified_extended_fmaddsub<AT, BT, CT, A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(AT&& aval, BT&& bval, CT&& cval) {
-        return fmaddsub(__DPL forward<AT>(aval), __DPL forward<BT>(bval),
-            __DPL forward<CT>(cval));
-    }
-
-    template <simd_vector AT, vector_subsumed_by<AT> BT,
-        broadcastable_to<AT> CT, typename A = simd_abi_type_t<AT>>
-    requires (extended_vector<AT> || extended_vector<BT>) &&
-        unqualified_extended_fmaddsub<AT, BT, CT, A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(AT&& aval, BT&& bval, CT&& cval) {
-        return fmaddsub(__DPL forward<AT>(aval), __DPL forward<BT>(bval),
-            __DPL forward<CT>(cval));
-    }
-
-    template <simd_vector AT, vector_subsumed_by<AT> CT,
-        broadcastable_to<AT> BT, typename A = simd_abi_type_t<AT>>
-    requires (extended_vector<AT> || extended_vector<CT>) &&
-        unqualified_extended_fmaddsub<AT, BT, CT, A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(AT&& aval, BT&& bval, CT&& cval) {
-        return fmaddsub(__DPL forward<AT>(aval), __DPL forward<BT>(bval),
-            __DPL forward<CT>(cval));
-    }
-
-    template <simd_vector BT, common_vector_with<BT> CT,
-        broadcastable_to<vector_t<BT, CT>> AT,
-        typename A = common_abi_t<BT, CT>>
-    requires (extended_vector<BT> || extended_vector<CT>) &&
-        unqualified_extended_fmaddsub<AT, BT, CT, A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(AT&& aval, BT&& bval, CT&& cval) {
-        return fmaddsub(__DPL forward<AT>(aval), __DPL forward<BT>(bval),
-            __DPL forward<CT>(cval));
-    }
-
-    template <extended_vector AT, broadcastable_to<AT> BT,
-        broadcastable_to<AT> CT, typename A = simd_abi_type_t<AT>>
-    requires unqualified_extended_fmaddsub<AT, BT, CT, A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(AT&& aval, BT&& bval, CT&& cval) {
-        return fmaddsub(__DPL forward<AT>(aval), __DPL forward<BT>(bval),
-            __DPL forward<CT>(cval));
-    }
-
-    template <extended_vector BT, broadcastable_to<BT> AT,
-        broadcastable_to<BT> CT, typename A = simd_abi_type_t<BT>>
-    requires unqualified_extended_fmaddsub<AT, BT, CT, A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(AT&& aval, BT&& bval, CT&& cval) {
-        return fmaddsub(__DPL forward<AT>(aval), __DPL forward<BT>(bval),
-            __DPL forward<CT>(cval));
-    }
-
-    template <extended_vector CT, broadcastable_to<CT> AT,
-        broadcastable_to<CT> BT, typename A = simd_abi_type_t<CT>>
-    requires unqualified_extended_fmaddsub<AT, BT, CT, A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(AT&& aval, BT&& bval, CT&& cval) {
-        return fmaddsub(__DPL forward<AT>(aval), __DPL forward<BT>(bval),
-            __DPL forward<CT>(cval));
-    }
-
-    template <simd_vector AT, exact_mask_for<AT> M, vector_subsumed_by<AT> BT,
-        vector_subsumed_by<AT> CT, typename A = common_abi_t<AT, BT, CT>>
-    requires (extended_mask<M> || extended_vector<AT> || extended_vector<BT> ||
-                 extended_vector<CT>) &&
-        unqualified_extended_mfmaddsub<AT, M, BT, CT>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        AT&& aval, M&& mask, BT&& bval, CT&& cval) {
-        return fmaddsub(__DPL forward<AT>(aval), __DPL forward<M>(mask),
-            __DPL forward<BT>(bval), __DPL forward<CT>(cval));
-    }
-
-    template <simd_vector AT, const_mask_for<AT> M, vector_subsumed_by<AT> BT,
-        vector_subsumed_by<AT> CT>
-    requires (extended_vector<AT> || extended_vector<BT> ||
-                 extended_vector<CT>) &&
-        unqualified_extended_mfmaddsub<AT, launder_cmask_t<AT, M>, BT, CT>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(AT&& aval, M cmask, BT&& bval, CT&& cval) {
-        return fmaddsub(__DPL forward<AT>(aval), dx::to_const_mask<AT>(cmask),
-            __DPL forward<BT>(bval), __DPL forward<CT>(cval));
-    }
-
-    template <simd_vector AT, exact_mask_for<AT> M, vector_subsumed_by<AT> BT,
-        vector_subsumed_by<AT> CT>
-    requires (extended_mask<M> || extended_vector<AT> || extended_vector<BT> ||
-                 extended_vector<CT>) &&
-        unqualified_extended_zmfmaddsub<M, AT, BT, CT>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        dx::zero_t zero, M&& mask, AT&& aval, BT&& bval, CT&& cval) {
-        return fmaddsub(zero, __DPL forward<M>(mask), __DPL forward<AT>(aval),
-            __DPL forward<BT>(bval), __DPL forward<CT>(cval));
-    }
-
-    template <simd_vector AT, const_mask_for<AT> M, vector_subsumed_by<AT> BT,
-        vector_subsumed_by<AT> CT>
-    requires (extended_vector<AT> || extended_vector<BT> ||
-                 extended_vector<CT>) &&
-        unqualified_extended_zmfmaddsub<launder_cmask_t<AT, M>, AT, BT, CT>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        dx::zero_t zero, M cmask, AT&& aval, BT&& bval, CT&& cval) {
-        return fmaddsub(zero, dx::to_const_mask<AT>(cmask),
-            __DPL forward<AT>(aval), __DPL forward<BT>(bval),
-            __DPL forward<CT>(cval));
-    }
-};
 
 template <>
 struct extended_impl<fmaddsac_t> {
@@ -716,7 +366,6 @@ public:
 
 namespace datapar {
 inline namespace cpo {
-inline constexpr internal::fmaddsub_t fmaddsub{};
 inline constexpr internal::fmaddsac_t fmaddsac{};
 } // namespace cpo
 } // namespace datapar
