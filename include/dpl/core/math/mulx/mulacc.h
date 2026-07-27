@@ -34,22 +34,25 @@ struct fallback_impl<mulacc_t> : ternary_broadcasting_fallback<mulacc_t> {
 
     template <simd_vector AT, vector_subsumed_by<AT> BT,
         vector_subsumed_by<AT> CT>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(AT a, BT b, CT c) noexcept(
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(AT&& a, BT&& b, CT&& c) noexcept(
         canonical_vector<AT> && canonical_vector<BT> && canonical_vector<CT>) {
         if constexpr (dx::is_simd_invocable<AT, BT, CT>(dx::fmacc)) {
-            return dx::fmacc(a, b, c);
+            return dx::fmacc(__DPL forward<AT>(a), __DPL forward<BT>(b),
+                __DPL forward<CT>(c));
         } else {
-            return dx::add(dx::multiply(b, c), a);
+            return dx::add(
+                dx::multiply(__DPL forward<BT>(b), __DPL forward<CT>(c)),
+                __DPL forward<AT>(a));
         }
     }
 
-    template <simd_vector AT, vector_subsumed_by<AT> BT,
+    template <canonical_vector AT, vector_subsumed_by<AT> BT,
         vector_subsumed_by<AT> CT>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(AT a,
-        simd_mask_type_t<AT> mask, BT b, CT c) noexcept(canonical_vector<AT> &&
-        canonical_vector<BT> && canonical_vector<CT>) {
+    requires canonical_vector<BT> && canonical_vector<CT>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(
+        AT a, simd_mask_type_t<AT> mask, BT b, CT c) noexcept {
         if constexpr (dx::is_simd_invocable<AT, BT, CT>(dx::fmacc)) {
             return dx::fmacc(a, mask, b, c);
         } else {
@@ -59,14 +62,15 @@ struct fallback_impl<mulacc_t> : ternary_broadcasting_fallback<mulacc_t> {
 
     template <simd_vector AT, const_mask_for<AT> M, vector_subsumed_by<AT> BT,
         vector_subsumed_by<AT> CT>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(
-        AT a, M mask, BT b, CT c) noexcept(canonical_vector<AT> &&
-        canonical_vector<BT> && canonical_vector<CT>) {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(AT&& a, M mask, BT&& b, CT&& c) noexcept(
+        canonical_vector<AT> && canonical_vector<BT> && canonical_vector<CT>) {
         if constexpr (dx::is_simd_invocable<AT, BT, CT>(dx::fmacc)) {
-            return dx::fmacc(a, mask, b, c);
+            return dx::fmacc( __DPL forward<AT>(a), mask, __DPL forward<BT>(b),
+                __DPL forward<CT>(c));
         } else {
-            return dx::add(a, mask, dx::multiply(b, c), a);
+            return dx::add(a, mask,
+                dx::multiply(__DPL forward<BT>(b), __DPL forward<CT>(c)), a);
         }
     }
 
@@ -74,22 +78,23 @@ struct fallback_impl<mulacc_t> : ternary_broadcasting_fallback<mulacc_t> {
         vector_subsumed_by<AT> CT>
     requires (extended_mask<M> || extended_vector<AT> || extended_vector<BT> ||
         extended_vector<CT>)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(AT a, M mask, BT b, CT c) {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(AT&& a, M&& mask, BT&& b, CT&& c) {
         if constexpr (dx::is_simd_invocable<AT, BT, CT>(dx::fmacc)) {
-            return dx::fmacc(a, mask, b, c);
+            return dx::fmacc( __DPL forward<AT>(a), __DPL forward<M>(mask),
+                __DPL forward<BT>(b), __DPL forward<CT>(c));
         } else {
-            return dx::add(a, mask, dx::multiply(b, c), a);
+            return dx::add(a, __DPL forward<M>(mask),
+                dx::multiply(__DPL forward<BT>(b), __DPL forward<CT>(c)), a);
         }
     }
 
-    template <simd_vector AT, vector_subsumed_by<AT> BT,
+    template <canonical_vector AT, vector_subsumed_by<AT> BT,
         vector_subsumed_by<AT> CT>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(dx::zero_t zero,
-        simd_mask_type_t<AT> mask, AT a, BT b,
-        CT c) noexcept(canonical_vector<AT> && canonical_vector<BT> &&
-        canonical_vector<CT>) {
+    requires canonical_vector<BT> && canonical_vector<CT>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(
+        dx::zero_t zero, simd_mask_type_t<AT> mask, AT a, BT b, CT c) noexcept {
         if constexpr (dx::is_simd_invocable<AT, BT, CT>(dx::fmacc)) {
             return dx::fmacc(zero, mask, a, b, c);
         } else {
@@ -99,14 +104,17 @@ struct fallback_impl<mulacc_t> : ternary_broadcasting_fallback<mulacc_t> {
 
     template <simd_vector AT, const_mask_for<AT> M, vector_subsumed_by<AT> BT,
         vector_subsumed_by<AT> CT>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(dx::zero_t zero, M mask,
-        AT a, BT b, CT c) noexcept(canonical_vector<AT> &&
-        canonical_vector<BT> && canonical_vector<CT>) {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(dx::zero_t zero, M mask, AT&& a, BT&& b,
+        CT&& c) noexcept(canonical_vector<AT> && canonical_vector<BT> &&
+        canonical_vector<CT>) {
         if constexpr (dx::is_simd_invocable<AT, BT, CT>(dx::fmacc)) {
-            return dx::fmacc(zero, mask, a, b, c);
+            return dx::fmacc(zero, mask, __DPL forward<AT>(a),
+                __DPL forward<BT>(b), __DPL forward<CT>(c));
         } else {
-            return dx::add(zero, mask, dx::multiply(b, c), a);
+            return dx::add(zero, mask,
+                dx::multiply(__DPL forward<BT>(b), __DPL forward<CT>(c)),
+                __DPL forward<AT>(a));
         }
     }
 
@@ -114,13 +122,16 @@ struct fallback_impl<mulacc_t> : ternary_broadcasting_fallback<mulacc_t> {
         vector_subsumed_by<AT> CT>
     requires (extended_mask<M> || extended_mask<M> || extended_vector<AT> ||
         extended_vector<BT> || extended_vector<CT>)
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(
-        dx::zero_t zero, M mask, AT a, BT b, CT c) {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(
+        dx::zero_t zero, M&& mask, AT&& a, BT&& b, CT&& c) {
         if constexpr (dx::is_simd_invocable<AT, BT, CT>(dx::fmacc)) {
-            return dx::fmacc(zero, mask, a, b, c);
+            return dx::fmacc(zero, __DPL forward<M>(mask), __DPL forward<AT>(a),
+                __DPL forward<BT>(b), __DPL forward<CT>(c));
         } else {
-            return dx::add(zero, mask, dx::multiply(b, c), a);
+            return dx::add(zero, mask,
+                dx::multiply(__DPL forward<BT>(b), __DPL forward<CT>(c)),
+                __DPL forward<AT>(a));
         }
     }
 

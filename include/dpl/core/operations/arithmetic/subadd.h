@@ -55,21 +55,72 @@ struct operation_signature<subadd_t> {
 
 template <>
 struct fallback_impl<subadd_t> : binary_broadcasting_fallback<subadd_t> {
-    template <canonical_vector LT, canonical_vector RT>
-    requires internal::cpo_invocable<add_t, LT, RT>
+
+    template <simd_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(LT lhs, RT rhs) noexcept {
-        if constexpr (fixed_width_abi<common_abi_t<LT, RT>>) {
-            constexpr auto mask = []<size_t... Is>(index_sequence<Is...>) {
+    static constexpr auto make_opmask() noexcept {
+        if constexpr (fixed_width_abi<simd_abi_type_t<T>>) {
+            return []<size_t... Is>(index_sequence<Is...>) {
                 return cmask_v<__DPL bitset<sizeof...(Is)>(
                     ((Is & 1) == 0)...)>;
-            }(iota_sequence<LT>);
-            return dx::add(lhs, dx::negate(rhs, mask, rhs));
+            }(iota_sequence<T>);
         } else {
-            auto const mask =
-                dx::bwand(dx::lane_index<LT>(), dx::one) == dx::zero;
-            return dx::add(lhs, dx::negate(rhs, mask, rhs));
+            return dx::cmpeq(dx::bwand(dx::lane_index<T>(), dx::one), dx::zero);
         }
+    }
+
+    template <canonical_vector LT, common_vector_with<LT> RT>
+    requires canonical_vector<RT>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(LT lhs, RT rhs) noexcept {
+        auto const opmask = make_opmask<RT>();
+        return dx::add(lhs, dx::negate(rhs, opmask, rhs));
+    }
+
+    template <typename L, typename R>
+    using result_t DPL_NODEBUG =
+        cpo_result_t<add_t, L, cpo_result_t<negate_t, R>>;
+
+    template <canonical_vector LT, common_vector_with<LT> RT>
+    requires canonical_vector<RT> &&
+        cpo_invocable<add_t, LT, cpo_result_t<negate_t, RT>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(result_t<LT, RT> src,
+        simd_mask_type_t<result_t<LT, RT>> mask, LT lhs, RT rhs) noexcept {
+        auto const opmask = make_opmask<RT>();
+        return dx::add(src, mask, lhs, dx::negate(rhs, opmask, rhs));
+    }
+
+    template <typename M, canonical_vector LT, common_vector_with<LT> RT>
+    requires canonical_vector<RT> &&
+        cpo_invocable<add_t, LT, cpo_result_t<negate_t, RT>> &&
+        const_mask_for<M, result_t<LT, RT>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(
+        result_t<LT, RT> src, M mask, LT lhs, RT rhs) {
+        auto const opmask = make_opmask<RT>();
+        return dx::add(src, mask, lhs, dx::negate(rhs, opmask, rhs));
+    }
+
+    template <canonical_vector LT, common_vector_with<LT> RT>
+    requires canonical_vector<RT> &&
+        cpo_invocable<add_t, LT, cpo_result_t<negate_t, RT>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(dx::zero_t zero,
+        simd_mask_type_t<result_t<LT, RT>> mask, LT lhs, RT rhs) noexcept {
+        auto const opmask = make_opmask<RT>();
+        return dx::add(zero, mask, lhs, dx::negate(rhs, opmask, rhs));
+    }
+
+    template <typename M, canonical_vector LT, common_vector_with<LT> RT>
+    requires canonical_vector<RT> &&
+        cpo_invocable<add_t, LT, cpo_result_t<negate_t, RT>> &&
+        const_mask_for<M, cpo_result_t<add_t, LT, cpo_result_t<negate_t, RT>>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(
+        dx::zero_t zero, M mask, LT lhs, RT rhs) noexcept {
+        auto const opmask = make_opmask<RT>();
+        return dx::add(zero, mask, lhs, dx::negate(rhs, opmask, rhs));
     }
 
     using binary_broadcasting_fallback<subadd_t>::operator();

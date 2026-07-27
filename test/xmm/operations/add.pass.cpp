@@ -7,7 +7,7 @@
 #include <cassert>
 
 import dpl.xmm;
-import dpl.test.harness.operations.addition;
+import dpl.test.harness.operations.arithmetic;
 
 // Tests for dpp::add on xmm ABI. Requires SSE4.2 (implied by dpl.xmm).
 //

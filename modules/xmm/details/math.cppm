@@ -17,6 +17,11 @@ DPL_DISABLE_WARNING(5244)
 
 // IWYU pragma: begin_exports
 #include "dpl/xmm/math/fmadd.h"
+#include "dpl/xmm/math/fmaddsub.h"
+#include "dpl/xmm/math/fmsub.h"
+#include "dpl/xmm/math/fmsubadd.h"
+#include "dpl/xmm/math/fnmadd.h"
+#include "dpl/xmm/math/fnmsub.h"
 // IWYU pragma: end_exports
 
 DPL_DISABLE_WARNING_POP()
