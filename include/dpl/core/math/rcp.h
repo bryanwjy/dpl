@@ -4,8 +4,8 @@
 #include "dpl/config.h"
 
 #include "dpl/core/math/fixup.h"
-#include "dpl/core/math/fma.h"
 #include "dpl/core/math/fpfix.h"
+#include "dpl/core/math/mulx.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/extended.h"

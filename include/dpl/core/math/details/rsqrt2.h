@@ -8,7 +8,7 @@
 #include "dpl/core/math/details/accuracy.h" // IWYU pragma: export
 #include "dpl/core/math/details/floating_point_simd.h"
 #include "dpl/core/math/details/polynomial.h"
-#include "dpl/core/math/fma.h"
+#include "dpl/core/math/mulx.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/basic_vector.h" // IWYU pragma: keep

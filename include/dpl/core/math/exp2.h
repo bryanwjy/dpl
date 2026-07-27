@@ -7,7 +7,7 @@
 #include "dpl/core/math/details/ldexp.h"
 #include "dpl/core/math/details/pair.h"
 #include "dpl/core/math/details/polynomial.h"
-#include "dpl/core/math/fma.h"
+#include "dpl/core/math/mulx.h"
 #include "dpl/core/math/round.h"
 
 #if !DPL_MODULES

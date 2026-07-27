@@ -7,4 +7,5 @@ module;
 export module dpl.xmm;
 export import :basic;
 export import :operations;
+export import :math;
 export import dpl;

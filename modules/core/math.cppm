@@ -53,6 +53,32 @@ using __DPL datapar::fpfix::condition;
 } // namespace fpfix
 
 inline namespace cpo {
+using __DPL datapar::cpo::fmacc;
+using __DPL datapar::cpo::fmadd;
+using __DPL datapar::cpo::fmaddsac;
+using __DPL datapar::cpo::fmaddsub;
+using __DPL datapar::cpo::fmsac;
+using __DPL datapar::cpo::fmsub;
+using __DPL datapar::cpo::fmsubacc;
+using __DPL datapar::cpo::fmsubadd;
+using __DPL datapar::cpo::fnmacc;
+using __DPL datapar::cpo::fnmadd;
+using __DPL datapar::cpo::fnmsac;
+using __DPL datapar::cpo::fnmsub;
+//
+using __DPL datapar::cpo::mulacc;
+using __DPL datapar::cpo::muladd;
+using __DPL datapar::cpo::muladdsac;
+using __DPL datapar::cpo::muladdsub;
+using __DPL datapar::cpo::mulsac;
+using __DPL datapar::cpo::mulsub;
+using __DPL datapar::cpo::mulsubacc;
+using __DPL datapar::cpo::mulsubadd;
+using __DPL datapar::cpo::nmulacc;
+using __DPL datapar::cpo::nmuladd;
+using __DPL datapar::cpo::nmulsac;
+using __DPL datapar::cpo::nmulsub;
+//
 using __DPL datapar::cpo::ceil;
 using __DPL datapar::cpo::floor;
 using __DPL datapar::cpo::round;
