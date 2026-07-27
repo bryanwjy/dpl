@@ -67,7 +67,7 @@ public:
     }
 
     template <simd_abi A, simd_element_for<A> E>
-    requires floating_point<E>
+    requires floating_point_like<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr basic_mask<E, A>
         DPL_VECTORCALL operator()(basic_vector<E, A> val) noexcept {
@@ -75,7 +75,7 @@ public:
     }
 
     template <simd_abi A, simd_element_for<A> E>
-    requires floating_point<E>
+    requires floating_point_like<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr basic_mask<E, A>
         DPL_VECTORCALL operator()(
@@ -85,7 +85,7 @@ public:
     }
 
     template <canonical_vector T, const_mask_for<T> M>
-    requires floating_point<simd_element_type_t<T>>
+    requires floating_point_like<simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr result_t<T>
         DPL_VECTORCALL operator()(M cmask, T val) noexcept {

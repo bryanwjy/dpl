@@ -16,6 +16,7 @@
 #  include "dpl/core/dispatch/maskable/transform.h"
 #  include "dpl/core/dispatch/operation/math.h"
 #  include "dpl/core/immediate/constants/one.h"
+#  include "dpl/core/numbers/binary_layout_floating_point.h"
 #  include "dpl/core/operations/arithmetic.h"
 #  include "dpl/core/operations/compare.h"
 #  include "dpl/core/operations/select.h"
@@ -301,7 +302,7 @@ public:
 template <>
 struct fallback_impl<ceil_t> {
     template <simd_abi A, simd_element_for<A> E>
-    requires floating_point<E>
+    requires binary_layout_floating_point<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr basic_vector<E, A>
         DPL_VECTORCALL operator()(basic_vector<E, A> val) noexcept {
@@ -315,7 +316,7 @@ struct fallback_impl<ceil_t> {
     }
 
     template <simd_abi A, simd_element_for<A> E>
-    requires floating_point<E>
+    requires binary_layout_floating_point<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A> operator()(
         basic_vector<E, A> val, rounding::no_exc_t) noexcept {

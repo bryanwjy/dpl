@@ -15,6 +15,7 @@
 #  include "dpl/core/dispatch/maskable/transform.h"
 #  include "dpl/core/dispatch/operation/math.h"
 #  include "dpl/core/immediate/constants/one.h"
+#  include "dpl/core/numbers/binary_layout_floating_point.h"
 #  include "dpl/core/operations/arithmetic.h"
 #  include "dpl/core/operations/bitwise/bwandnot.h"
 #  include "dpl/core/operations/compare.h"
@@ -305,12 +306,12 @@ template <>
 struct fallback_impl<trunc_t> {
 private:
     template <typename E>
-    static constexpr auto nonmantissa_v =
-        (sizeof(E) * char_bit_v) - dx::mantissa_width_v<E>;
+    static constexpr auto nonmantissa_v = __DPL type_bit_v<E> -
+        __DPL countr_zero(floating_point_traits<E>::exponent_mask);
 
 public:
     template <simd_abi A, simd_element_for<A> E>
-    requires floating_point<E>
+    requires binary_layout_floating_point<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(
         basic_vector<E, A> val) noexcept {
@@ -327,7 +328,7 @@ public:
     }
 
     template <simd_abi A, simd_element_for<A> E>
-    requires floating_point<E>
+    requires binary_layout_floating_point<E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr basic_vector<E, A> operator()(
         basic_vector<E, A> val, rounding::no_exc_t) noexcept {
