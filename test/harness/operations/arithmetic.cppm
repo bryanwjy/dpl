@@ -15,9 +15,10 @@ namespace dpp = dpl::datapar;
 
 export template <dpp::simd_primitive_operation auto arop, dpp::simd_abi A>
 class arithmetic {
-    using abi_t = A;
     template <typename E>
     using vec_t = dpp::basic_vector<E, A>;
+    template <typename E>
+    using abi_traits = dpp::simd_abi_traits<A, E>;
 
     template <typename E>
     static constexpr E expected_op(E lhs, E rhs) noexcept
@@ -59,10 +60,6 @@ class arithmetic {
 
     template <typename E>
     struct generators_t {
-        constexpr generators_t() noexcept
-            : data(test::half_range)
-            , src(dpp::max_value_v<E> / 4 * 3, dpp::max_value_v<E>) {}
-
         static constexpr E sqrtmax = []() {
             if constexpr (dpl::integral<E>) {
                 constexpr auto shift = dpl::type_bit_v<E> / 2;
@@ -93,7 +90,6 @@ class arithmetic {
         }();
 
         constexpr generators_t() noexcept
-        requires (arop == dpp::multiply || arop == dpp::divide)
             : data(sqrtmin, sqrtmax)
             , src(sqrtmax * sqrtmax, dpp::max_value_v<E>) {}
 
@@ -107,12 +103,10 @@ class arithmetic {
     requires (arop == dpp::add)
     {
         if constexpr (dpl::integral<E>) {
-            test::binary_transform<abi_t>::template test<E>(0, 0, dpp::add, 0);
+            test::binary_transform<A>::template test<E>(0, 0, dpp::add, 0);
             auto const rnd = generators.src(engine);
-            test::binary_transform<abi_t>::template test<E>(
-                rnd, 0, dpp::add, rnd);
-            test::binary_transform<abi_t>::template test<E>(
-                0, rnd, dpp::add, rnd);
+            test::binary_transform<A>::template test<E>(rnd, 0, dpp::add, rnd);
+            test::binary_transform<A>::template test<E>(0, rnd, dpp::add, rnd);
 
             constexpr auto max = dpl::integral_traits<E>::max_value;
             constexpr auto min = dpl::integral_traits<E>::min_value;
@@ -127,47 +121,47 @@ class arithmetic {
                 }
             }();
             if (wraparound_test) {
-                test::binary_transform<abi_t>::template test<E>(
+                test::binary_transform<A>::template test<E>(
                     max, 1, dpp::add, min);
-                test::binary_transform<abi_t>::template test<E>(
+                test::binary_transform<A>::template test<E>(
                     min, -1, dpp::add, max);
-                test::binary_transform<abi_t>::template test<E>(
+                test::binary_transform<A>::template test<E>(
                     max, max, dpp::add, max - 1);
 
-                test::binary_transform<abi_t>::template test<E>(
+                test::binary_transform<A>::template test<E>(
                     min, max, dpp::add, static_cast<E>(-1));
             }
         }
 
         if constexpr (dpl::floating_point_like<E>) {
-            test::binary_transform<abi_t>::template test<E>(
+            test::binary_transform<A>::template test<E>(
                 -0.0, 0.0, dpp::add, 0.0);
-            test::binary_transform<abi_t>::template test<E>(
+            test::binary_transform<A>::template test<E>(
                 0.0, 0.0, dpp::add, 0.0);
-            test::binary_transform<abi_t>::template test<E>(
+            test::binary_transform<A>::template test<E>(
                 -0.0, -0.0, dpp::add, 0.0);
-            test::binary_transform<abi_t>::template test<E>(
+            test::binary_transform<A>::template test<E>(
                 1.0, -1.0, dpp::add, 0.0);
 
             if (!test::finite_math_only()) {
                 constexpr auto inf = dpp::infinity_v<E>;
-                test::binary_transform<abi_t>::template test<E>(
+                test::binary_transform<A>::template test<E>(
                     inf, 1.0, dpp::add, inf);
-                test::binary_transform<abi_t>::template test<E>(
+                test::binary_transform<A>::template test<E>(
                     -inf, -1.0, dpp::add, -inf);
                 if not consteval {
                     // nan producing arithmetic is not allowed at constexpr
-                    test::binary_transform<abi_t>::template test<E>(inf, -inf,
+                    test::binary_transform<A>::template test<E>(inf, -inf,
                         dpp::add, dpp::nan_v<E>, [](auto lhs, auto rhs) {
                             return dpp::isnan(lhs) && dpp::isnan(rhs);
                         });
-                    test::binary_transform<abi_t>::template test<E>(dpp::nan,
-                        1.0, dpp::add, dpp::nan, [](auto lhs, auto rhs) {
+                    test::binary_transform<A>::template test<E>(dpp::nan, 1.0,
+                        dpp::add, dpp::nan, [](auto lhs, auto rhs) {
                             return dpp::isnan(lhs) && dpp::isnan(rhs);
                         });
 
-                    test::binary_transform<abi_t>::template test<E>(1.0,
-                        dpp::nan, dpp::add, dpp::nan, [](auto lhs, auto rhs) {
+                    test::binary_transform<A>::template test<E>(1.0, dpp::nan,
+                        dpp::add, dpp::nan, [](auto lhs, auto rhs) {
                             return dpp::isnan(lhs) && dpp::isnan(rhs);
                         });
                 }
@@ -181,14 +175,14 @@ class arithmetic {
     requires (arop == dpp::subtract)
     {
         if constexpr (dpl::integral<E>) {
-            dpl::test::binary_transform<abi_t>::template test<E>(
+            dpl::test::binary_transform<A>::template test<E>(
                 0, 0, dpp::subtract, 0);
             auto const rnd = generators.src(engine);
-            dpl::test::binary_transform<abi_t>::template test<E>(
+            dpl::test::binary_transform<A>::template test<E>(
                 rnd, 0, dpp::subtract, rnd);
-            dpl::test::binary_transform<abi_t>::template test<E>(
+            dpl::test::binary_transform<A>::template test<E>(
                 0, rnd, dpp::subtract, -rnd);
-            dpl::test::binary_transform<abi_t>::template test<E>(
+            dpl::test::binary_transform<A>::template test<E>(
                 rnd, rnd, dpp::subtract, 0);
 
             constexpr auto max = dpl::integral_traits<E>::max_value;
@@ -204,52 +198,49 @@ class arithmetic {
                 }
             }();
             if (wraparound_test) {
-                dpl::test::binary_transform<abi_t>::template test<E>(
+                dpl::test::binary_transform<A>::template test<E>(
                     min, 1, dpp::subtract, max);
-                dpl::test::binary_transform<abi_t>::template test<E>(
+                dpl::test::binary_transform<A>::template test<E>(
                     max, -1, dpp::subtract, min);
-                dpl::test::binary_transform<abi_t>::template test<E>(
+                dpl::test::binary_transform<A>::template test<E>(
                     min, max, dpp::subtract, 1);
             }
         }
 
         if constexpr (dpl::floating_point_like<E>) {
-            dpl::test::binary_transform<abi_t>::template test<E>(
+            dpl::test::binary_transform<A>::template test<E>(
                 -0.0, 0.0, dpp::subtract, 0.0);
-            dpl::test::binary_transform<abi_t>::template test<E>(
+            dpl::test::binary_transform<A>::template test<E>(
                 0.0, 0.0, dpp::subtract, 0.0);
-            dpl::test::binary_transform<abi_t>::template test<E>(
+            dpl::test::binary_transform<A>::template test<E>(
                 -0.0, -0.0, dpp::subtract, 0.0);
-            dpl::test::binary_transform<abi_t>::template test<E>(
+            dpl::test::binary_transform<A>::template test<E>(
                 1.0, 1.0, dpp::subtract, 0.0);
-            dpl::test::binary_transform<abi_t>::template test<E>(
+            dpl::test::binary_transform<A>::template test<E>(
                 -1.0, -1.0, dpp::subtract, 0.0);
 
             if (!dpl::test::finite_math_only()) {
                 constexpr auto inf = dpp::infinity_v<E>;
-                dpl::test::binary_transform<abi_t>::template test<E>(
+                dpl::test::binary_transform<A>::template test<E>(
                     inf, 1.0, dpp::subtract, inf);
-                dpl::test::binary_transform<abi_t>::template test<E>(
+                dpl::test::binary_transform<A>::template test<E>(
                     -inf, -1.0, dpp::subtract, -inf);
                 if not consteval {
                     // nan producing arithmetic is not allowed at constexpr
-                    dpl::test::binary_transform<abi_t>::template test<E>(-inf,
-                        -inf, dpp::subtract, dpp::nan_v<E>,
-                        [](auto lhs, auto rhs) {
+                    dpl::test::binary_transform<A>::template test<E>(-inf, -inf,
+                        dpp::subtract, dpp::nan_v<E>, [](auto lhs, auto rhs) {
                             return dpp::isnan(lhs) && dpp::isnan(rhs);
                         });
-                    dpl::test::binary_transform<abi_t>::template test<E>(inf,
-                        inf, dpp::subtract, dpp::nan_v<E>,
-                        [](auto lhs, auto rhs) {
+                    dpl::test::binary_transform<A>::template test<E>(inf, inf,
+                        dpp::subtract, dpp::nan_v<E>, [](auto lhs, auto rhs) {
                             return dpp::isnan(lhs) && dpp::isnan(rhs);
                         });
-                    dpl::test::binary_transform<abi_t>::template test<E>(
-                        dpp::nan, 1.0, dpp::subtract, dpp::nan,
-                        [](auto lhs, auto rhs) {
+                    dpl::test::binary_transform<A>::template test<E>(dpp::nan,
+                        1.0, dpp::subtract, dpp::nan, [](auto lhs, auto rhs) {
                             return dpp::isnan(lhs) && dpp::isnan(rhs);
                         });
 
-                    dpl::test::binary_transform<abi_t>::template test<E>(1.0,
+                    dpl::test::binary_transform<A>::template test<E>(1.0,
                         dpp::nan, dpp::subtract, dpp::nan,
                         [](auto lhs, auto rhs) {
                             return dpp::isnan(lhs) && dpp::isnan(rhs);
@@ -265,75 +256,69 @@ class arithmetic {
     requires (arop == dpp::multiply)
     {
         auto const rnd = generators.src(engine);
-        test::binary_transform<abi_t>::template test<E>(
-            rnd, 1, dpp::multiply, rnd);
-        test::binary_transform<abi_t>::template test<E>(
-            1, rnd, dpp::multiply, rnd);
-        test::binary_transform<abi_t>::template test<E>(
-            0, rnd, dpp::multiply, 0);
-        test::binary_transform<abi_t>::template test<E>(
-            rnd, 0, dpp::multiply, 0);
+        test::binary_transform<A>::template test<E>(rnd, 1, dpp::multiply, rnd);
+        test::binary_transform<A>::template test<E>(1, rnd, dpp::multiply, rnd);
+        test::binary_transform<A>::template test<E>(0, rnd, dpp::multiply, 0);
+        test::binary_transform<A>::template test<E>(rnd, 0, dpp::multiply, 0);
 
         if constexpr (dpl::integral<E>) {
             if not consteval {
                 constexpr auto int_min = dpl::integral_traits<E>::min_value;
                 constexpr auto int_max = dpl::integral_traits<E>::max_value;
-                test::binary_transform<abi_t>::template test<E>(
+                test::binary_transform<A>::template test<E>(
                     int_max, 2, dpp::multiply, static_cast<E>(-2));
 
                 if constexpr (dpl::signed_integral<E>) {
-                    test::binary_transform<abi_t>::template test<E>(
+                    test::binary_transform<A>::template test<E>(
                         int_min, 2, dpp::multiply, 0);
                 }
 
-                test::binary_transform<abi_t>::template test<E>(
+                test::binary_transform<A>::template test<E>(
                     int_max, int_max, dpp::multiply, 1);
             }
         }
 
         if constexpr (dpl::floating_point_like<E>) {
-            test::binary_transform<abi_t>::template test<E>(
+            test::binary_transform<A>::template test<E>(
                 -0.0, 1.0, dpp::multiply, 0.0);
-            test::binary_transform<abi_t>::template test<E>(
+            test::binary_transform<A>::template test<E>(
                 0.0, 1.0, dpp::multiply, 0.0);
-            test::binary_transform<abi_t>::template test<E>(
+            test::binary_transform<A>::template test<E>(
                 -0.0, -0.0, dpp::multiply, 0.0);
-            test::binary_transform<abi_t>::template test<E>(
+            test::binary_transform<A>::template test<E>(
                 1.0, -1.0, dpp::multiply, -1.0);
 
             if (test::ieee_denormal()) {
                 using ubit_t = dpp::unsigned_representation_t<E>;
                 auto const denorm = dpl::bit_cast<E>(ubit_t(1));
-                test::binary_transform<abi_t>::template test<E>(
+                test::binary_transform<A>::template test<E>(
                     denorm, denorm, dpp::multiply, 0.0);
-                test::binary_transform<abi_t>::template test<E>(
+                test::binary_transform<A>::template test<E>(
                     denorm, 2.0, dpp::multiply, dpl::bit_cast<E>(ubit_t(2)));
             }
 
             if (!test::finite_math_only()) {
                 constexpr auto inf = dpp::infinity_v<E>;
-                test::binary_transform<abi_t>::template test<E>(
+                test::binary_transform<A>::template test<E>(
                     inf, 2.0, dpp::multiply, inf);
-                test::binary_transform<abi_t>::template test<E>(
+                test::binary_transform<A>::template test<E>(
                     inf, -2.0, dpp::multiply, -inf);
-                test::binary_transform<abi_t>::template test<E>(
+                test::binary_transform<A>::template test<E>(
                     -inf, 2.0, dpp::multiply, -inf);
-                test::binary_transform<abi_t>::template test<E>(
+                test::binary_transform<A>::template test<E>(
                     -inf, -2.0, dpp::multiply, inf);
 
-                test::binary_transform<abi_t>::template test<E>(
+                test::binary_transform<A>::template test<E>(
                     inf, inf, dpp::multiply, inf);
-                test::binary_transform<abi_t>::template test<E>(
+                test::binary_transform<A>::template test<E>(
                     inf, -inf, dpp::multiply, -inf);
-                test::binary_transform<abi_t>::template test<E>(
+                test::binary_transform<A>::template test<E>(
                     -inf, -inf, dpp::multiply, inf);
 
-                test::binary_transform<abi_t>::template test<E>(
-                    dpp::max_value_v<E>, dpp::max_value_v<E>, dpp::multiply,
-                    inf);
-                test::binary_transform<abi_t>::template test<E>(
-                    dpp::max_value_v<E>, -dpp::max_value_v<E>, dpp::multiply,
-                    -inf);
+                test::binary_transform<A>::template test<E>(dpp::max_value_v<E>,
+                    dpp::max_value_v<E>, dpp::multiply, inf);
+                test::binary_transform<A>::template test<E>(dpp::max_value_v<E>,
+                    -dpp::max_value_v<E>, dpp::multiply, -inf);
             }
         }
     }
@@ -344,78 +329,108 @@ class arithmetic {
     requires (arop == dpp::divide)
     {
         auto const rnd = generators.src(engine);
-        test::binary_transform<abi_t>::template test<E>(0, rnd, dpp::divide, 0);
-        test::binary_transform<abi_t>::template test<E>(
-            rnd, 1, dpp::divide, rnd);
-        test::binary_transform<abi_t>::template test<E>(
-            rnd, -1, dpp::divide, -rnd);
+        test::binary_transform<A>::template test<E>(0, rnd, dpp::divide, 0);
+        test::binary_transform<A>::template test<E>(rnd, 1, dpp::divide, rnd);
+        test::binary_transform<A>::template test<E>(rnd, -1, dpp::divide, -rnd);
 
         if (test::ieee_denormal()) {
             using ubit_t = dpp::unsigned_representation_t<E>;
             auto const denorm = dpl::bit_cast<E>(ubit_t(1));
-            test::binary_transform<abi_t>::template test<E>(
+            test::binary_transform<A>::template test<E>(
                 1, denorm, dpp::divide, dpp::infinity_v<E>);
-            test::binary_transform<abi_t>::template test<E>(
+            test::binary_transform<A>::template test<E>(
                 dpl::bit_cast<E>(ubit_t(2)), 2.0, dpp::divide, denorm);
         }
 
         if (!test::finite_math_only()) {
             constexpr auto inf = dpp::infinity_v<E>;
 
-            test::binary_transform<abi_t>::template test<E>(
+            test::binary_transform<A>::template test<E>(
                 inf, 2.0, dpp::divide, inf);
-            test::binary_transform<abi_t>::template test<E>(
+            test::binary_transform<A>::template test<E>(
                 inf, -2.0, dpp::divide, -inf);
-            test::binary_transform<abi_t>::template test<E>(
+            test::binary_transform<A>::template test<E>(
                 -inf, 2.0, dpp::divide, -inf);
-            test::binary_transform<abi_t>::template test<E>(
+            test::binary_transform<A>::template test<E>(
                 -inf, -2.0, dpp::divide, inf);
 
-            test::binary_transform<abi_t>::template test<E>(
+            test::binary_transform<A>::template test<E>(
                 2.0, inf, dpp::divide, 0.0, test::bitcmp);
-            test::binary_transform<abi_t>::template test<E>(
+            test::binary_transform<A>::template test<E>(
                 2.0, -inf, dpp::divide, -0.0, test::bitcmp);
-            test::binary_transform<abi_t>::template test<E>(
+            test::binary_transform<A>::template test<E>(
                 -2.0, inf, dpp::divide, -0.0, test::bitcmp);
-            test::binary_transform<abi_t>::template test<E>(
+            test::binary_transform<A>::template test<E>(
                 -2.0, -inf, dpp::divide, 0.0, test::bitcmp);
 
             if not consteval {
-                test::binary_transform<abi_t>::template test<E>(
+                test::binary_transform<A>::template test<E>(
                     1, 0, dpp::divide, inf);
-                test::binary_transform<abi_t>::template test<E>(
+                test::binary_transform<A>::template test<E>(
                     -1, 0, dpp::divide, -inf);
 
                 auto const cmpunord = [](auto lhs, auto rhs) {
                     return dpp::isnan(lhs) && dpp::isnan(rhs);
                 };
-                test::binary_transform<abi_t>::template test<E>(
+                test::binary_transform<A>::template test<E>(
                     inf, inf, dpp::divide, dpp::nan, cmpunord);
-                test::binary_transform<abi_t>::template test<E>(
+                test::binary_transform<A>::template test<E>(
                     inf, -inf, dpp::divide, dpp::nan, cmpunord);
-                test::binary_transform<abi_t>::template test<E>(
+                test::binary_transform<A>::template test<E>(
                     -inf, inf, dpp::divide, dpp::nan, cmpunord);
-                test::binary_transform<abi_t>::template test<E>(
+                test::binary_transform<A>::template test<E>(
                     -inf, -inf, dpp::divide, dpp::nan, cmpunord);
 
-                test::binary_transform<abi_t>::template test<E>(
+                test::binary_transform<A>::template test<E>(
                     0.0, 0.0, dpp::divide, dpp::nan, cmpunord);
-                test::binary_transform<abi_t>::template test<E>(
+                test::binary_transform<A>::template test<E>(
                     -0.0, 0.0, dpp::divide, dpp::nan, cmpunord);
-                test::binary_transform<abi_t>::template test<E>(
+                test::binary_transform<A>::template test<E>(
                     0.0, -0.0, dpp::divide, dpp::nan, cmpunord);
-                test::binary_transform<abi_t>::template test<E>(
+                test::binary_transform<A>::template test<E>(
                     -0.0, -0.0, dpp::divide, dpp::nan, cmpunord);
 
-                test::binary_transform<abi_t>::template test<E>(
+                test::binary_transform<A>::template test<E>(
                     dpp::nan, 1, dpp::divide, dpp::nan, cmpunord);
-                test::binary_transform<abi_t>::template test<E>(
+                test::binary_transform<A>::template test<E>(
                     1, dpp::nan, dpp::divide, dpp::nan, cmpunord);
-                test::binary_transform<abi_t>::template test<E>(
+                test::binary_transform<A>::template test<E>(
                     inf, dpp::nan, dpp::divide, dpp::nan, cmpunord);
-                test::binary_transform<abi_t>::template test<E>(
+                test::binary_transform<A>::template test<E>(
                     dpp::nan, inf, dpp::divide, dpp::nan, cmpunord);
             }
+        }
+    }
+
+    template <typename E>
+    static constexpr auto mixmask() noexcept
+    requires (arop == dpp::addsub)
+    {
+        if constexpr (dpp::fixed_width_abi<A>) {
+            constexpr auto lanes = abi_traits<E>::size();
+            using bitset_t = dpl::bitset<lanes>;
+            using alt_cmask_t =
+                dpp::const_mask<lanes, test::repeat_byte<lanes>(0x55u)>;
+            return alt_cmask_t();
+        } else {
+            return dpp::cmpeq(
+                dpp::bwand(dpp::lane_index<A, E>(), dpp::one), dpp::zero);
+        }
+    }
+
+    template <typename E>
+    static constexpr auto mixmask() noexcept
+    requires (arop == dpp::subadd)
+    {
+        if constexpr (dpp::fixed_width_abi<A>) {
+            constexpr auto lanes = abi_traits<E>::size();
+            using bitset_t = dpl::bitset<lanes>;
+            using alt_cmask_t =
+                dpp::const_mask<lanes, test::repeat_byte<lanes>(0xAAu)>;
+            return alt_cmask_t();
+        } else {
+            return dpp::cmpeq(
+                dpp::bwand(dpp::lane_index<A, E>(), dpp::one), dpp::one);
         }
     }
 
@@ -432,20 +447,77 @@ public:
     template <dpp::simd_element_for<A> E, rng_like Rng>
     static constexpr bool run(Rng& engine) {
         generators_t<E> const generators;
-        auto const lhs = generators.data(engine);
-        auto const rhs = generators.data(engine);
-        auto const src = generators.src(engine);
-        auto expected = lhs;
-        for (auto i = 0zu; i < expected.size(); ++i) {
-            expected[i] = expected_op(lhs[i], rhs[i]);
+        {
+            auto const lhs = generators.data(engine);
+            auto const rhs = generators.data(engine);
+            auto expected = lhs;
+            for (auto i = 0zu; i < expected.size(); ++i) {
+                expected[i] = expected_op(lhs[i], rhs[i]);
+            }
+
+            test::binary_transform<A>::template test<E>(
+                lhs, rhs, arop, expected, test::bitcmp);
         }
 
-        test::binary_transform<abi_t>::template test<E>(
-            lhs, rhs, arop, expected, test::bitcmp);
-        test::binary_transform<abi_t>::template test_masked<E>(
-            lhs, rhs, arop, src);
+        {
+            auto lhs = generators.data(engine);
+            auto rhs = generators.data(engine);
+            if constexpr (dpl::unsigned_integral<E> && dpp::subtract == arop) {
+                // prevent wraparound from intersecting with src
+                for (auto i = 0zu; i < rhs.size(); ++i) {
+                    if (lhs[i] < rhs[i]) {
+                        dpl::ranges::swap(lhs[i], rhs[i]);
+                    }
+                }
+            }
+            auto const src = generators.src(engine);
+            test::binary_transform<A>::template test_masked<E>(
+                lhs, rhs, arop, src);
+        }
 
         operation_specific_tests<E>(generators, engine);
+
+        return true;
+    }
+
+    template <dpp::simd_element_for<A> E, rng_like Rng>
+    static constexpr bool run(Rng& engine)
+    requires (arop == dpp::addsub || arop == dpp::subadd)
+    {
+        generators_t<E> const generators;
+        constexpr auto expected_op = [](vec_t<E> vlhs, vec_t<E> vrhs) noexcept {
+            return dpp::select(
+                mixmask<E>(), dpp::add(vlhs, vrhs), dpp::subtract(vlhs, vrhs));
+        };
+        for (auto i = 0zu; i < 4; ++i) {
+            {
+                auto const lhs = generators.data(engine);
+                auto const rhs = generators.data(engine);
+                auto const vlhs = dpp::load<E, A>(lhs.data());
+                auto const vrhs = dpp::load<E, A>(rhs.data());
+                auto const vexpected = expected_op(vlhs, vrhs);
+                auto const vactual = arop(vlhs, vrhs);
+
+                assert(dpp::all_of(vexpected == vactual));
+            }
+
+            {
+                auto lhs = generators.data(engine);
+                auto rhs = generators.data(engine);
+                if constexpr (dpl::unsigned_integral<E>) {
+                    // prevent wraparound from intersecting with src
+                    for (auto i = 0zu; i < rhs.size(); ++i) {
+                        if (lhs[i] < rhs[i]) {
+                            dpl::ranges::swap(lhs[i], rhs[i]);
+                        }
+                    }
+                }
+
+                auto const src = generators.src(engine);
+                dpl::test::binary_transform<A>::template test_masked<E>(
+                    lhs, rhs, arop, src);
+            }
+        }
 
         return true;
     }
@@ -459,4 +531,8 @@ export template <dpp::simd_abi A>
 using multiplication = arithmetic<dpp::multiply, A>;
 export template <dpp::simd_abi A>
 using division = arithmetic<dpp::divide, A>;
+export template <dpp::simd_abi A>
+using addsubtraction = arithmetic<dpp::addsub, A>;
+export template <dpp::simd_abi A>
+using subaddition = arithmetic<dpp::subadd, A>;
 } // namespace dpl::test

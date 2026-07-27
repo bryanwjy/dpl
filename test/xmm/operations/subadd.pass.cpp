@@ -1,6 +1,6 @@
 // Copyright 2025-2026 Bryan Wong
-// @dpl[clang].compile-flags: -fconstexpr-steps=2000000
-// @dpl[msvc].compile-flags: /constexpr:steps2000000
+// @dpl[clang].compile-flags: -fconstexpr-steps=7000000
+// @dpl[msvc].compile-flags: /constexpr:steps7000000
 
 #include "dpl/config.h"
 
@@ -9,14 +9,13 @@
 import dpl.xmm;
 import dpl.test.harness.operations.arithmetic;
 
-// Tests for dpp::multiply on xmm ABI. Requires SSE4.2 (implied by dpl.xmm).
+// Tests for dpp::subadd on xmm ABI. Requires SSE4.2 (implied by dpl.xmm).
 //
 // Forms tested:
-//   (1) dpp::multiply(lhs, rhs)                  -- unmasked, always available
-//   (2) dpp::multiply(src, mask, lhs, rhs)       -- merge-masked
-//   (3) dpp::multiply(dpp::zero, mask, lhs, rhs) -- zero-masked explicit
-//   (4) dpp::multiply(mask, lhs, rhs)            -- zero-masked alias (== form
-//   3)
+//   (1) dpp::subadd(lhs, rhs)                  -- unmasked, always available
+//   (2) dpp::subadd(src, mask, lhs, rhs)       -- merge-masked
+//   (3) dpp::subadd(dpp::zero, mask, lhs, rhs) -- zero-masked explicit
+//   (4) dpp::subadd(mask, lhs, rhs)            -- zero-masked alias (== form 3)
 
 int main() {
     namespace dpp = dpl::datapar;
@@ -27,7 +26,7 @@ int main() {
         dpl::ext::float16, dpl::ext::bfloat16>;
     constexpr auto run = []() {
         dpl::test::mt19937 engine;
-        return dpl::test::multiplication<abi_t>::run_all(types{}, engine);
+        return dpl::test::subaddition<abi_t>::run_all(types{}, engine);
     };
 
     static_assert(run());

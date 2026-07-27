@@ -4,13 +4,12 @@
 
 #include "dpl/config.h"
 
-#include "dpl/std/concepts/assignable_from.h"
-#include "dpl/std/concepts/constructible_from.h"
-#include "dpl/std/concepts/convertible_to.h"
-#include "dpl/std/concepts/move_constructible.h"
+#include "dpl/std/concepts/common_reference_with.h"
 
 #if !DPL_MODULES
 #  include "dpl/std/type_traits/extent.h"
+#  include "dpl/std/type_traits/is_assignable.h"
+#  include "dpl/std/type_traits/is_constructible.h"
 #  include "dpl/std/type_traits/is_nothrow_assignable.h"
 #  include "dpl/std/type_traits/is_nothrow_constructible.h"
 #endif
@@ -40,8 +39,8 @@ concept unqualified_swappable_array =
         requires(L (&l)[N], R (&r)[N], swap_t const func) { func(*l, *r); });
 
 template <typename T>
-concept exchangable = !unqualified_swappable<T&, T&> && move_constructible<T> &&
-    assignable_from<T&, T>;
+concept exchangable = !unqualified_swappable<T&, T&> &&
+    is_move_constructible_v<T> && is_move_assignable_v<T>;
 
 struct swap_t {
     template <typename L, typename R>

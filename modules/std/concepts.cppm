@@ -54,8 +54,10 @@ using __DPL tuple_like;
 using __DPL unscoped_enumeration;
 using __DPL unsigned_integral;
 
+namespace ranges {
 using __DPL ranges::get_element;
 using __DPL ranges::swap;
+} // namespace ranges
 // NOLINTEND(misc-unused-using-decls)
 
 __DPL_DEFAULT_NAMESPACE_END
