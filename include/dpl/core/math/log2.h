@@ -167,10 +167,9 @@ struct fallback_impl<log2_t> {
         basic_vector<float, A> val) noexcept {
         using simdf = basic_vector<float, A>;
         using pairf = fmath::pair<float, A>;
-        auto const decomp =
-            dx::frexp(val, frexp_reduced | frexp_floating_point);
+        auto const [fr, exp] = dx::frexp(val, frexp_options::reduced);
         auto const one = fmath::single(dx::broadcast<A, float>(1.0f));
-        pairf const x = (decomp.fr - one) / (one + decomp.fr);
+        pairf const x = (fr - one) / (one + fr);
         auto const x2 = x.upper * x.upper;
         constexpr fmath::polynomial<0.9618012905120f, //
             0.5764790177e+0f,                         //
@@ -179,7 +178,7 @@ struct fallback_impl<log2_t> {
         auto const t = polynomial(x2);
         auto const inv_halfln2 = fmath::make_pair<float, A>(
             2.8853900432586669922f, 3.2734474483568488616e-08f);
-        auto s = decomp.exp + x * inv_halfln2;
+        auto s = exp + x * inv_halfln2;
         s = s + x2 * x * t;
 
         return dx::fixup(val, s.upper + s.lower,
@@ -193,10 +192,9 @@ struct fallback_impl<log2_t> {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(
         basic_vector<double, A> val) noexcept {
-        auto const decomp =
-            dx::frexp(val, frexp_reduced | frexp_floating_point);
+        auto const [fr, exp] = dx::frexp(val, frexp_options::reduced);
         auto const one = fmath::single(dx::broadcast<A, double>(1));
-        auto const x = (decomp.fr - one) / (one + decomp.fr);
+        auto const x = (fr - one) / (one + fr);
         auto const x2 = x.upper * x.upper;
         constexpr fmath::polynomial<0.96179669392608091449,
             0.5770780162997058982, 0.4121985945485324709, 0.3205977477944495502,
@@ -206,7 +204,7 @@ struct fallback_impl<log2_t> {
         auto const inv_halfln2 = fmath::make_pair<double, A>(
             2.885390081777926774, 6.0561604995516736434e-18);
 
-        auto s = decomp.exp + x * inv_halfln2;
+        auto s = exp + x * inv_halfln2;
         s = s + x2 * x * t;
 
         return dx::fixup(val, s.upper + s.lower,
@@ -223,10 +221,10 @@ struct fallback_impl<log2_t> {
     decltype(rounding_opt)> DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(T val) noexcept {
         using simdf = basic_vector<E, A>;
-        auto const decomp =
-            dx::frexp(val, frexp_reduced | frexp_floating_point);
+        auto const [fr, exp] =
+            dx::frexp(val, frexp_options::reduced);
         auto const one = fmath::single(dx::broadcast<A, E>(1));
-        auto const x = (decomp.fr - one) / (one + decomp.fr);
+        auto const x = (fr - one) / (one + fr);
         auto const x2 = x.upper * x.upper;
         constexpr fmath::polynomial<0.9618012905120f, //
             0.5764790177e+0f,                         //
@@ -235,7 +233,7 @@ struct fallback_impl<log2_t> {
         auto const t = polynomial(x2);
         auto const inv_halfln2 = fmath::make_pair<E, A>(
             2.8853900432586669922f, 3.2734474483568488616e-08f);
-        auto s = decomp.exp + x * inv_halfln2;
+        auto s = exp + x * inv_halfln2;
         s = s + x2 * x * t;
         auto result = s.upper + s.lower;
 

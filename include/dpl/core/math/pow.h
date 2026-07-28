@@ -22,6 +22,7 @@
 #  include "dpl/core/operations/arithmetic.h" // IWYU pragma: keep
 #  include "dpl/core/operations/bitwise.h"    // IWYU pragma: keep
 #  include "dpl/core/operations/compare.h"    // IWYU pragma: keep
+#  include "dpl/std/concepts/tuple_like.h"
 #endif
 
 __DPL_DEFAULT_NAMESPACE_BEGIN
@@ -317,15 +318,14 @@ private:
         return s * inv_ln2;
     }
 
-    using frexp_opt_t DPL_NODEBUG =
-        decltype(frexp_reduced | frexp_floating_point);
-
 public:
     template <canonical_vector T>
-    requires cpo_invocable<frexp_t, T, frexp_opt_t> &&
-        requires(T rhs, invoke_result_t<frexp_t, T, frexp_opt_t> result) {
+    requires cpo_invocable<frexp_t, T, frexp_options::reduced_t> &&
+        requires(
+            T rhs, cpo_result_t<frexp_t, T, frexp_options::reduced_t> result) {
             fallback_impl::exp2(
-                rhs * fallback_impl::log2(result.fr) + result.exp);
+                rhs * fallback_impl::log2(ranges::get_element<0>(result)) +
+                ranges::get_element<1>(result));
         }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(T lhs, T rhs) noexcept {
@@ -333,8 +333,7 @@ public:
         using A = simd_abi_type_t<T>;
 
         auto const absl = dx::abs(lhs);
-        auto const [fr, exp] =
-            dx::frexp(absl, frexp_reduced | frexp_floating_point);
+        auto const [fr, exp] = dx::frexp(absl, frexp_options::reduced);
         auto result =
             fallback_impl::exp2(rhs * (fallback_impl::log2(fr) + exp));
 

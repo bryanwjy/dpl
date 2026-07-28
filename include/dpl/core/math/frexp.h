@@ -4,6 +4,7 @@
 #include "dpl/config.h"
 
 #include "dpl/core/math/details/floating_point_simd.h"
+#include "dpl/core/math/details/frexp_options.h"
 #include "dpl/core/math/details/ilogb.h"
 #include "dpl/core/math/details/ldexp.h"
 #include "dpl/core/math/ldexp.h"
@@ -24,272 +25,178 @@
 
 __DPL_DEFAULT_NAMESPACE_BEGIN
 
-namespace datapar {
-
-namespace internal {
-
-enum class fr_sign {
-    copy,
-    abs,
-    positive,
-};
-
-enum class fr_interval {
-    binade,   // [1,2)
-    standard, // [0.5,1)
-    extended, // [0.5,2)
-    reduced   // [0.75,1.5)
-};
-
-enum class frexp_type {
-    integral,
-    floating,
-};
-
-template <different_from<fr_sign> R>
-consteval bool operator==(fr_sign, R) noexcept {
-    return false;
-}
-
-template <different_from<fr_interval> R>
-consteval bool operator==(fr_interval, R) noexcept {
-    return false;
-}
-
-template <different_from<frexp_type> R>
-consteval bool operator==(frexp_type, R) noexcept {
-    return false;
-}
-
-template <scoped_enumeration auto... Vs>
-requires (sizeof...(Vs) > 0 && sizeof...(Vs) <= 3)
-struct frexp_options_t {
-    explicit consteval frexp_options_t() noexcept = default;
-
-    consteval bool operator==(frexp_options_t) noexcept { return true; }
-    consteval bool operator!=(frexp_options_t) noexcept { return false; }
-
-    template <fr_interval I>
-    requires (... && different_from<fr_interval, decltype(Vs)>) &&
-        (sizeof...(Vs) < 3)
-    consteval frexp_options_t<Vs..., I> operator|(
-        this frexp_options_t, frexp_options_t<I>) noexcept {
-        return frexp_options_t<Vs..., I>{};
-    }
-
-    template <fr_sign I>
-    requires (... && different_from<fr_sign, decltype(Vs)>) &&
-        (sizeof...(Vs) < 3)
-    consteval frexp_options_t<Vs..., I> operator|(
-        this frexp_options_t, frexp_options_t<I>) noexcept {
-        return frexp_options_t<Vs..., I>{};
-    }
-
-    template <frexp_type I>
-    requires (... && different_from<frexp_type, decltype(Vs)>) &&
-        (sizeof...(Vs) < 3)
-    consteval frexp_options_t<Vs..., I> operator|(
-        this frexp_options_t, frexp_options_t<I>) noexcept {
-        return frexp_options_t<Vs..., I>{};
-    }
-
-    template <fr_interval I>
-    requires (... && different_from<fr_interval, decltype(Vs)>) &&
-        (sizeof...(Vs) == 2)
-    friend consteval frexp_options_t<I, Vs...> operator|(
-        frexp_options_t<I>, frexp_options_t) noexcept {
-        return frexp_options_t<I, Vs...>{};
-    }
-
-    template <fr_sign I>
-    requires (... && different_from<fr_sign, decltype(Vs)>) &&
-        (sizeof...(Vs) == 2)
-    friend consteval frexp_options_t<I, Vs...> operator|(
-        frexp_options_t<I>, frexp_options_t) noexcept {
-        return frexp_options_t<I, Vs...>{};
-    }
-
-    template <frexp_type I>
-    requires (... && different_from<frexp_type, decltype(Vs)>) &&
-        (sizeof...(Vs) == 2)
-    friend consteval frexp_options_t<I, Vs...> operator|(
-        frexp_options_t<I>, frexp_options_t) noexcept {
-        return frexp_options_t<I, Vs...>{};
-    }
-
-    template <fr_sign V>
-    static consteval bool has(
-        frexp_options_t<V> = frexp_options_t<V>{}) noexcept {
-        if constexpr ((... || (same_as<decltype(Vs), fr_sign>))) {
-            return (... || (Vs == V));
-        } else {
-            return V == fr_sign::copy;
-        }
-    }
-
-    template <fr_interval V>
-    static consteval bool has(
-        frexp_options_t<V> = frexp_options_t<V>{}) noexcept {
-        if constexpr ((... || (same_as<decltype(Vs), fr_interval>))) {
-            return (... || (Vs == V));
-        } else {
-            return V == fr_interval::standard;
-        }
-    }
-
-    template <frexp_type V>
-    static consteval bool has(
-        frexp_options_t<V> = frexp_options_t<V>{}) noexcept {
-        if constexpr ((... || (same_as<decltype(Vs), frexp_type>))) {
-            return (... || (Vs == V));
-        } else {
-            return V == frexp_type::integral;
-        }
-    }
-
-    static constexpr auto type() noexcept {
-        if (frexp_options_t::template has<frexp_type::integral>()) {
-            return frexp_options_t<frexp_type::integral>{};
-        } else {
-            return frexp_options_t<frexp_type::floating>{};
-        }
-    };
-};
-
-using frexp_copysign_t DPL_NODEBUG = frexp_options_t<fr_sign::copy>;
-using frexp_abs_t DPL_NODEBUG = frexp_options_t<fr_sign::abs>;
-using frexp_positive_t DPL_NODEBUG = frexp_options_t<fr_sign::positive>;
-using frexp_binade_t DPL_NODEBUG = frexp_options_t<fr_interval::binade>;
-using frexp_standard_t DPL_NODEBUG = frexp_options_t<fr_interval::standard>;
-using frexp_extended_t DPL_NODEBUG = frexp_options_t<fr_interval::extended>;
-using frexp_reduced_t DPL_NODEBUG = frexp_options_t<fr_interval::reduced>;
-using frexp_integral_t DPL_NODEBUG = frexp_options_t<frexp_type::integral>;
-using frexp_floating_point_t DPL_NODEBUG =
-    frexp_options_t<frexp_type::floating>;
-
-template <typename>
-inline constexpr bool is_frexp_options = false;
-
-template <enumeration auto... Vs>
-inline constexpr bool is_frexp_options<frexp_options_t<Vs...>> = true;
-} // namespace internal
-
-inline constexpr internal::frexp_copysign_t frexp_copysign{};
-inline constexpr internal::frexp_abs_t frexp_abs{};
-inline constexpr internal::frexp_positive_t frexp_positive{};
-inline constexpr internal::frexp_binade_t frexp_binade{};
-inline constexpr internal::frexp_standard_t frexp_standard{};
-inline constexpr internal::frexp_extended_t frexp_extended{};
-inline constexpr internal::frexp_reduced_t frexp_reduced{};
-inline constexpr internal::frexp_integral_t frexp_integral{};
-inline constexpr internal::frexp_floating_point_t frexp_floating_point{};
-inline constexpr auto frexp_default =
-    frexp_copysign | frexp_standard | frexp_integral;
-
-template <typename T>
-concept is_frexp_type = same_as<T, internal::frexp_integral_t> ||
-    same_as<T, internal::frexp_floating_point_t>;
-
-template <fmath::floating_point_simd T, is_frexp_type auto E = frexp_integral>
-struct frexp_result {
-    T fr;
-    T exp;
-};
-
-template <fmath::floating_point_simd T>
-requires requires {
-    typename signed_representation_t<typename T::value_type>;
-    typename rebind_simd_t<T, signed_representation_t<typename T::value_type>>;
-} &&
-    requires(T fr,
-        rebind_simd_t<T, signed_representation_t<typename T::value_type>> exp) {
-        datapar::ldexp(fr, exp);
-    }
-struct frexp_result<T, frexp_integral> {
-    T fr;
-    rebind_simd_t<T, signed_representation_t<typename T::value_type>> exp;
-};
-
-template <typename T>
-concept frexp_options = internal::is_frexp_options<T>;
-} // namespace datapar
+namespace datapar::frexp_options {
+using sign_src_t = fmath::frexp_sign_t<fmath::frexp_sign::src>;
+using sign_zero_t = fmath::frexp_sign_t<fmath::frexp_sign::zero>;
+using sign_nan_t = fmath::frexp_sign_t<fmath::frexp_sign::nan>;
+using standard_t = fmath::frexp_interval_t<fmath::frexp_interval::standard>;
+using binade_t = fmath::frexp_interval_t<fmath::frexp_interval::binade>;
+using extended_t = fmath::frexp_interval_t<fmath::frexp_interval::extended>;
+using reduced_t = fmath::frexp_interval_t<fmath::frexp_interval::reduced>;
+using default_t = fmath::frexp_options_t<fmath::frexp_sign::src,
+    fmath::frexp_interval::standard>;
+inline constexpr sign_src_t sign_src{};
+inline constexpr sign_zero_t sign_zero{};
+inline constexpr sign_nan_t sign_nan{};
+inline constexpr standard_t standard{};
+inline constexpr binade_t binade{};
+inline constexpr extended_t extended{};
+inline constexpr reduced_t reduced{};
+inline constexpr default_t default_v{};
+} // namespace datapar::frexp_options
 
 namespace datapar::internal {
-template <typename L, typename R>
-struct make_frexp {
-    using type DPL_NODEBUG = frexp_result<L, frexp_integral>;
-};
-template <typename L, typename R>
-using make_frexp_t DPL_NODEBUG = typename make_frexp<L, R>::type;
+template <simd_vector T0, simd_vector T1 = T0>
+struct frexp_pair {
+    T0 fr;
+    T1 exp;
 
-template <typename L, typename R>
-requires (R::has(frexp_floating_point))
-struct make_frexp<L, R> {
-    using type DPL_NODEBUG = frexp_result<L, frexp_floating_point>;
-};
-
-template <typename T, typename L, typename R>
-concept frexp_result_type = requires {
-    typename make_frexp_t<L, R>;
-    requires equivalent_simd_type_with<decltype(T::fr), decltype(L::fr)>;
-    requires equivalent_simd_type_with<decltype(T::exp),
-        decltype(make_frexp_t<L, R>::exp)>;
+    template <size_t I>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    friend constexpr __DPL tuple_element_t<I, frexp_pair> get(
+        frexp_pair const& result) noexcept
+    requires (I < 2)
+    {
+        if constexpr (I == 0) {
+            return result.fr;
+        } else {
+            return result.exp;
+        }
+    }
 };
 
 void frexp(...) noexcept = delete;
 
-struct frexp_t : private math_operation_base<frexp_t> {
-    using math_operation_base<frexp_t>::operator();
+template <typename T>
+using simd_native_pair_t DPL_NODEBUG =
+    typename simd_abi_type_t<T>::template native_tuple<simd_element_type_t<T>,
+        2zu>;
+
+struct frexp_t : public math_operation_base<frexp_t> {
+    using operation_base<frexp_t>::operator();
+
+    template <simd_vector T, frexp_options_type O = frexp_options::default_t>
+    requires default_initializable<decay_t<T>> &&
+        (!scalable_abi<simd_abi_type_t<T>>) &&
+        cpo_invocable<frexp_t, T, decay_t<T>&, O>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr frexp_pair<decay_t<T>>
+        DPL_VECTORCALL operator()(T&& val,
+            O opt = frexp_options::default_v) noexcept(canonical_vector<T>) {
+        using A = simd_abi_type_t<T>;
+        frexp_pair<decay_t<T>> pair;
+        pair.fr = operator()(__DPL forward<T>(val), pair.exp, opt);
+        return pair;
+    }
+
+    // scalable abis
+    template <canonical_vector T,
+        frexp_options_type O = frexp_options::default_t>
+    requires same_as<T, simd_native_type_t<T>> &&
+        cpo_invocable<frexp_t, T, T&, O> && requires(T val) {
+            typename simd_native_pair_t<T>;
+            make_tuple(internal::abi<T>, val, val);
+        }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr simd_native_pair_t<T>
+        DPL_VECTORCALL operator()(
+            T val, O opt = frexp_options::default_v) noexcept {
+        using A = simd_abi_type_t<T>;
+        static_assert(scalable_abi<A>);
+        T exp = val;
+        auto fr = operator()(val, exp, opt);
+        return make_tuple(internal::abi<A>, fr, exp);
+    }
 };
 
 template <>
 struct operation_signature<frexp_t> {
-    static constexpr void operator()(simd_vector auto&&) noexcept {}
+    static consteval void operator()(simd_vector auto&&, simd_vector auto&&,
+        frexp_options_type auto) noexcept {}
+    static consteval void operator()(
+        simd_vector auto&&, simd_vector auto&&) noexcept {}
 };
 
-template <typename T, typename O, typename A = typename T::abi_type>
-concept unqualified_canonical_frexp = requires(T val, O opt) {
-    { frexp(internal::abi<A>, val, opt) } -> frexp_result_type<T, O>;
+template <typename T, typename Exp, typename O, typename A = simd_abi_type_t<T>>
+concept unqualified_canonical_frexp = requires(T val, Exp& exp, O opt) {
+    { frexp(internal::abi<A>, val, exp, opt) } -> equivalent_vector_with<T>;
 };
 
 template <>
 struct canonical_impl<frexp_t> {
-    template <canonical_vector T, frexp_options O>
-    requires unqualified_canonical_frexp<T, O>
+    template <typename T>
+    using viexp_t DPL_NODEBUG =
+        rebind_simd_t<T, signed_representation_t<simd_element_type_t<T>>>;
+
+    template <canonical_vector T,
+        frexp_options_type O = frexp_options::default_t>
+    requires unqualified_canonical_frexp<T, T&, O>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T val, O opt) noexcept {
-        return frexp(internal::abi<T>, val, opt);
+    static constexpr auto operator()(T val, type_identity_t<T>& exp,
+        O opt = frexp_options::default_v) noexcept {
+        return frexp(internal::abi<T>, val, exp, opt);
+    }
+
+    template <canonical_vector T,
+        frexp_options_type O = frexp_options::default_t>
+    requires unqualified_canonical_frexp<T, viexp_t<T>&, O>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(
+        T val, viexp_t<T>& exp, O opt = frexp_options::default_v) noexcept {
+        return frexp(internal::abi<T>, val, exp, opt);
     }
 };
 
-template <typename T, typename O, typename A = typename T::abi_type>
-concept unqualified_extended_frexp = requires(T val, O opt) {
-    { frexp(val, opt) } -> frexp_result_type<T, O>;
+template <typename T, typename Exp, typename O, typename A = simd_abi_type_t<T>>
+concept unqualified_extended_frexp = requires(O opt) {
+    {
+        frexp(internal::declarg<T>(), internal::declarg<Exp>(), opt)
+    } -> equivalent_vector_with<T>;
 };
 
 template <>
 struct extended_impl<frexp_t> {
-    template <extended_vector T, frexp_options O>
-    requires unqualified_extended_frexp<T, O>
+    template <simd_vector T, equivalent_vector_with<T> Exp,
+        frexp_options_type O = frexp_options::default_t>
+    requires (extended_vector<T> || extended_vector<Exp>) &&
+        unqualified_extended_frexp<T, Exp, O>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T&& val, O opt) noexcept {
-        return frexp(__DPL forward<T>(val), opt);
+    static constexpr auto operator()(
+        T&& val, Exp&& exp, O opt = frexp_options::default_v) noexcept {
+        return frexp(__DPL forward<T>(val), exp, opt);
+    }
+
+    template <simd_vector T, simd_vector Exp,
+        frexp_options_type O = frexp_options::default_t>
+    requires same_as<signed_representation_t<simd_element_type_t<T>>,
+                 simd_element_type_t<Exp>> &&
+        same_abi_as<simd_abi_type_t<T>, simd_abi_type_t<Exp>> &&
+        (extended_vector<T> || extended_vector<Exp>) &&
+        unqualified_extended_frexp<T, Exp, O>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(
+        T&& val, Exp&& exp, O opt = frexp_options::default_v) noexcept {
+        return frexp(__DPL forward<T>(val), exp, opt);
     }
 };
 
 template <>
 struct fallback_impl<frexp_t> {
 private:
-    template <floating_point E>
-    static constexpr auto denormalizer = []() {
+    template <floating_point_like E>
+    static constexpr auto normalizer = []() {
         if constexpr (dx::digits_v<E> >= dx::digits_v<float>) {
             return static_cast<E>(0x1.p64);
         } else {
             return static_cast<E>(0x1.p12);
         }
     }();
-    template <floating_point E>
-    static constexpr auto subnormal_offset = []() {
+
+    template <typename E>
+    using iexp_t = signed_representation_t<E>;
+
+    template <floating_point_like E>
+    static constexpr iexp_t<E> subnormal_offset = []() {
         if constexpr (dx::digits_v<E> >= dx::digits_v<float>) {
             return 64;
         } else {
@@ -297,132 +204,145 @@ private:
         }
     }();
 
-public:
-    template <floating_point E, simd_abi A, frexp_options Opt>
+    template <canonical_vector T, frexp_options_type Opt,
+        typename E = simd_element_type_t<T>>
+    requires floating_point_like<simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(
-        basic_vector<E, A> val, Opt) noexcept
-    requires (Opt::has(frexp_reduced))
+    static constexpr T DPL_VECTORCALL impl(
+        T val, rebind_simd_t<T, iexp_t<E>>& iexp, Opt) noexcept
+    requires (Opt::contains(frexp_options::reduced))
     {
-        using result_type = make_frexp_t<basic_vector<E, A>, Opt>;
+        using A = simd_abi_type_t<T>;
         constexpr auto fourthirds = static_cast<E>(1.0 / 0.75);
         auto const vfourthirds = dx::broadcast<E, A>(fourthirds);
         auto const issubnormal = [](auto val) {
-            if constexpr (Opt::has(frexp_positive)) {
-                return val < dx::min_value;
+            if constexpr (Opt::contains(frexp_options::sign_nan)) {
+                return dx::cmplt(val, dx::min_value);
             } else {
-                return (val & dx::exponent_bits) == dx::zero;
+                return dx::cmpeq(dx::bwand(val, dx::infinity), dx::zero);
             }
         }(val);
-        auto const dval = [](auto issubnormal, auto val) {
-            auto const dval =
-                dx::select(issubnormal, val * denormalizer<E>, val);
-            if constexpr (Opt::has(frexp_abs)) {
-                return dx::abs(val);
-            } else {
-                return val;
-            }
-        }(issubnormal, val);
 
-        auto const exp =
-            [](auto issubnormal, auto exp) {
-                return dx::select(issubnormal, exp - subnormal_offset<E>, exp);
-            }(issubnormal,
-                fmath::ilogb(fmath::compliance::unsafe, dval * vfourthirds));
-        auto const fr = [](auto val, auto fr) {
-            if constexpr (Opt::has(frexp_positive)) {
-                return dx::select(val < dx::zero, dx::all_bits, fr);
-            } else {
-                return fr;
-            }
-        }(fmath::ldexp(fmath::compliance::unsafe, dval, -exp));
-        if constexpr (Opt::has(frexp_integral)) {
-            return result_type{
-                .fr = fr,
-                .exp = exp,
-            };
+        auto const vnormalizer = dx::broadcast<A>(normalizer<E>);
+        val = dx::multiply(val, issubnormal, val, vnormalizer);
+        if constexpr (Opt::contains(frexp_options::sign_zero)) {
+            val = dx::abs(val);
+        }
+
+        iexp = fmath::ilogb(
+            fmath::compliance::unsafe, dx::multiply(val, vfourthirds));
+        auto const offset = dx::broadcast<A>(subnormal_offset<E>);
+        iexp = dx::subtract(iexp, issubnormal, iexp, offset);
+
+        auto fr = fmath::ldexp(fmath::compliance::unsafe, val,
+            dx::isfinite(val), val, dx::negate(iexp));
+        if constexpr (Opt::contains(frexp_options::sign_nan)) {
+            return dx::select(dx::cmpgt(val, dx::zero), fr, dx::all_bits);
         } else {
-            return result_type{
-                .fr = fr,
-                .exp = dx::element_cast<E>(exp),
-            };
+            return fr;
         }
     }
 
-    template <floating_point E, simd_abi A, frexp_options Opt>
+    template <canonical_vector T, frexp_options_type Opt,
+        typename E = simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(
-        basic_vector<E, A> val, Opt) noexcept
-    requires (Opt::has(frexp_standard))
+    static constexpr auto DPL_VECTORCALL impl(
+        T val, rebind_simd_t<T, iexp_t<E>>& iexp, Opt) noexcept
+    requires (Opt::contains(frexp_options::standard))
     {
-        using result_type = make_frexp_t<basic_vector<E, A>, Opt>;
         auto const issubnormal = [](auto val) {
-            if constexpr (Opt::has(frexp_positive)) {
-                return val < dx::min_value;
+            if constexpr (Opt::contains(frexp_options::sign_nan)) {
+                return dx::cmplt(val, dx::min_value);
             } else {
-                return (val & dx::exponent_bits) == dx::zero;
+                return dx::cmpeq(dx::bwand(val, dx::exponent_bits), dx::zero);
             }
         }(val);
-        using int_type = dx::signed_representation_t<E>;
-        constexpr auto exp_bits =
-            __DPL bit_cast<int_type>(dx::exponent_bits_v<E>);
-        constexpr auto magic_v = exponent_bias_v<E> - 1;
-        constexpr auto magic_exp =
-            __DPL bit_cast<E>(magic_v << dx::mantissa_width_v<E>);
 
-        auto const magic = dx::broadcast<int_type, A>();
-        auto const exp = [&]() {
-            auto const mexp =
-                dx::reinterpret<int_type>(val & dx::exponent_bits);
-            auto const exp_offset = dx::select(
-                mexp == dx::zero || mexp == exp_bits, dx::zero, magic);
-            auto const exp = (mexp >> imm<dx::mantissa_width_v<E>>)-exp_offset;
+        constexpr auto exp_bits = __DPL bit_cast<iexp_t<E>>(
+            floating_point_traits<E>::exponent_mask);
+        constexpr iexp_t<E> magic_v =
+            floating_point_traits<E>::exponent_bias - 1;
+        constexpr auto exp_shift =
+            __DPL countr_zero(floating_point_traits<E>::exponent_mask);
+        constexpr auto all_exp = __DPL bit_cast<iexp_t<E>>(
+            floating_point_traits<E>::exponent_mask >> exp_shift);
 
-            return dx::select(issubnormal, exp - subnormal_offset<E>, exp);
+        using A = simd_abi_type_t<T>;
+        auto const magic = dx::broadcast<A>(magic_v);
+        auto const offset = dx::broadcast<A>(subnormal_offset<E>);
+        iexp = fmath::ilogb(fmath::compliance::unsafe, val);
+        iexp = dx::subtract(iexp, dx::cmpneq(iexp, all_exp), iexp, magic);
+        // perform the select for better ILP
+        iexp = dx::subtract(iexp, dx::select(issubnormal, offset, dx::zero));
+
+        using bitset_t = bitset<__DPL type_bit_v<E>>;
+        constexpr auto magic_exp = [&]() {
+            auto const signctrl = Opt::contains(frexp_options::sign_zero)
+                ? ~floating_point_traits<E>::signbit
+                : ~bitset_t();
+
+            return __DPL bit_cast<E>(
+                (bitset_t(magic_v) << exp_shift) & signctrl);
         }();
-        auto const fr = [&]() {
-            auto const fr = (val & ~exponent_bits) | magic_exp;
-            if constexpr (Opt::has(frexp_positive)) {
-                return dx::select(val < dx::zero, dx::all_bits, fr);
-            } else {
-                return fr;
-            }
-        }();
-        if constexpr (Opt::has(frexp_integral)) {
-            return result_type{
-                .fr = fr,
-                .exp = exp,
-            };
+
+        auto const vnormalizer = dx::broadcast<A>(normalizer<E>);
+        val = dx::multiply(val, issubnormal, val, vnormalizer);
+        auto fr = dx::bwand(val, dx::isfinite(val), val, magic_exp);
+        if constexpr (Opt::contains(frexp_options::sign_nan)) {
+            return dx::select(dx::cmpgt(val, dx::zero), fr, dx::all_bits);
         } else {
-            return result_type{
-                .fr = fr,
-                .exp = dx::element_cast<E>(exp),
-            };
+            return fr;
         }
+    }
+
+public:
+    template <canonical_vector T,
+        frexp_options_type Opt = frexp_options::default_t,
+        typename E = simd_element_type_t<T>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(T val,
+        rebind_simd_t<T, iexp_t<E>>& iexp,
+        Opt opt = frexp_options::default_v) noexcept
+    requires floating_point_like<E> &&
+        requires { fallback_impl::impl(val, iexp, opt); }
+    {
+        return fallback_impl::impl(val, iexp, opt);
+    }
+
+    template <canonical_vector T,
+        frexp_options_type Opt = frexp_options::default_t,
+        typename E = simd_element_type_t<T>>
+    requires floating_point_like<E> &&
+        cpo_invocable<frexp_t, T, rebind_simd_t<T, iexp_t<E>>, Opt>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr T DPL_VECTORCALL operator()(T val,
+        type_identity_t<T>& fexp, Opt opt = frexp_options::default_v) noexcept {
+        rebind_simd_t<T, iexp_t<E>> iexp;
+        auto fr = frexp_t::operator()(val, iexp, opt);
+        fexp = dx::element_cast<E>(iexp);
+        return fr;
     }
 };
 
 } // namespace datapar::internal
 
 namespace datapar {
-
-template <fmath::floating_point_simd Fr, simd_vector Exp,
-    frexp_options Opt = decltype(frexp_default)>
-requires (Opt::has(frexp_integral) && integral<simd_element_type_t<Exp>> &&
-             common_size_with<simd_element_type_t<Fr>,
-                 simd_element_type_t<Exp>>) ||
-    (Opt::has(frexp_floating_point) && same_as<Exp, Fr>)
-DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr auto make_frexp_result(Fr fr, Exp exp, Opt = frexp_default) noexcept {
-    return frexp_result<Fr, Opt::type()>{
-        .fr = fr,
-        .exp = exp,
-    };
-}
-
 inline namespace cpo {
 inline constexpr internal::frexp_t frexp{};
 }
 } // namespace datapar
 
+template <datapar::simd_vector T0, datapar::simd_vector T1>
+struct tuple_size<datapar::internal::frexp_pair<T0, T1>> :
+    size_constant<2zu> {};
+
+template <datapar::simd_vector T0, datapar::simd_vector T1>
+struct tuple_element<0zu, datapar::internal::frexp_pair<T0, T1>> :
+    type_identity<T0> {};
+
+template <datapar::simd_vector T0, datapar::simd_vector T1>
+struct tuple_element<1zu, datapar::internal::frexp_pair<T0, T1>> :
+    type_identity<T1> {};
+
+namespace frexp_options = __DPL datapar::frexp_options;
 __DPL_DEFAULT_NAMESPACE_END

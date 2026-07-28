@@ -21,17 +21,35 @@
 __DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::fmath {
 
-template <floating_point T, simd_abi A>
+template <floating_point_like T, simd_abi A>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 constexpr auto DPL_VECTORCALL ldexp(compliance::unsafe_t,
     basic_vector<T, A> val,
     basic_vector<dx::signed_representation_t<T>, A> exp) noexcept {
     using int_type = dx::signed_representation_t<T>;
-    return dx::reinterpret<T>(
-        dx::reinterpret<int_type>(val) + (exp << imm<dx::mantissa_width_v<T>>));
+    constexpr auto shift =
+        __DPL countr_zero(floating_point_traits<T>::exponent_mask);
+    auto const rhs = dx::bwshift_left(exp, imm<shift>);
+    auto const result = dx::add(dx::reinterpret<int_type>(val), rhs);
+    return dx::reinterpret<T>(result);
 }
 
-template <floating_point T, simd_abi A>
+template <floating_point_like T, simd_abi A>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+constexpr auto DPL_VECTORCALL ldexp(compliance::unsafe_t,
+    basic_vector<T, A> src, simd_mask_type_t<basic_vector<T, A>> mask,
+    basic_vector<T, A> val,
+    basic_vector<dx::signed_representation_t<T>, A> exp) noexcept {
+    using int_type = dx::signed_representation_t<T>;
+    constexpr auto shift =
+        __DPL countr_zero(floating_point_traits<T>::exponent_mask);
+    auto const rhs = dx::bwshift_left(exp, imm<shift>);
+    auto const result = dx::add(dx::reinterpret<int_type>(src), mask,
+        dx::reinterpret<int_type>(val), rhs);
+    return dx::reinterpret<T>(result);
+}
+
+template <floating_point_like T, simd_abi A>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 constexpr auto DPL_VECTORCALL ldexp(compliance::speed_t, basic_vector<T, A> val,
     basic_vector<dx::signed_representation_t<T>, A> exp) noexcept {

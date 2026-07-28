@@ -23,7 +23,7 @@ __DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void bwshift_left(...) noexcept = delete;
 
-struct bwshift_left_t :
+struct DPL_EMPTY_BASES bwshift_left_t :
     public bitwise_base<bwshift_left_t>,
     public maskable_transform_base<bwshift_left_t> {
     using bitwise_base<bwshift_left_t>::operator();

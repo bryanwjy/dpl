@@ -170,11 +170,13 @@ public:
         constexpr auto rsqrt_v = mx::rsqrt2(dx::one);
         auto const inv_sqrt2 = dx::broadcast<E, A>(rsqrt_v);
 
-        auto const decomp = dx::frexp(val);
-        auto const remtwo = decomp.exp & dx::one;
-        auto const reduced = mx::rsqrt2(mx::accuracy::speed, decomp.fr);
-        auto result = mx::ldexp(mx::compliance::unsafe, reduced,
-            -((decomp.exp - dx::one) >> imm<1>));
+        using vexp_t = basic_vector<signed_representation_t<E>, A>;
+        vexp_t exp;
+        auto const fr = dx::frexp(val, exp);
+        auto const remtwo = exp & dx::one;
+        auto const reduced = mx::rsqrt2(mx::accuracy::speed, fr);
+        auto result = mx::ldexp(
+            mx::compliance::unsafe, reduced, -((exp - dx::one) >> imm<1>));
         result = dx::multiply(result, remtwo == dx::zero, result, inv_sqrt2);
         return dx::fixup(val, result,
             fpfix::condition<fpfix::nan, fpfix::revert>       //

@@ -170,13 +170,14 @@ public:
         auto const two = dx::broadcast<E, A>(2.0);
         auto const sqrt8 = dx::broadcast<E, A>(2.8284271247461900976033774484);
 
-        auto const decomp = dx::frexp(val);
-        auto const remtwo = decomp.exp & dx::one;
+        using vexp_t = basic_vector<signed_representation_t<E>, A>;
+        vexp_t exp;
+        auto const fr = dx::frexp(val, exp);
+        auto const remtwo = exp & dx::one;
         auto const ifodd = dx::select(remtwo == dx::zero, sqrt8, two);
-        auto const sig =
-            (ifodd * decomp.fr) * mx::rsqrt2(mx::accuracy::maximum, decomp.fr);
+        auto const sig = (ifodd * fr) * mx::rsqrt2(mx::accuracy::maximum, fr);
         auto const result = mx::ldexp(mx::compliance::unsafe, //
-            sig, (decomp.exp - dx::one) >> imm<1>);
+            sig, (exp - dx::one) >> imm<1>);
 
         return dx::select(dx::isfinite(val) && val != dx::zero,
             dx::select(val < dx::zero, dx::all_bits, result), val);
