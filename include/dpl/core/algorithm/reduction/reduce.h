@@ -61,8 +61,7 @@ private:
         canonical_type_t<cpo_result_t<reduce_t, T, Op>>;
 
     template <typename T, typename Op>
-    using mask_t DPL_NODEBUG = basic_mask<simd_element_type_t<result_t<T, Op>>,
-        simd_abi_type_t<result_t<T, Op>>>;
+    using mask_t DPL_NODEBUG = simd_mask_type_t<result_t<T, Op>>;
 
 public:
     template <canonical_vector T, reduction_operator_for<T> Op>

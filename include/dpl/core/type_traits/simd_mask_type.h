@@ -3,6 +3,7 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/type_traits/canonical_type.h"
 #include "dpl/core/type_traits/enable_simd_mask.h"
 #include "dpl/core/type_traits/enable_simd_vector.h"
 #include "dpl/core/type_traits/simd_abi_type.h"
@@ -44,10 +45,8 @@ struct simd_mask_type<T> {
 template <typename T>
 requires enable_simd_vector<T> &&
     (!details::type_traits::has_mask_type_member<T>)
-struct simd_mask_type<T> {
-    using type DPL_NODEBUG =
-        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
-};
+struct simd_mask_type<T> :
+    make_canonical_mask<simd_element_type_t<T>, simd_abi_type_t<T>> {};
 
 template <typename T>
 requires enable_simd_mask<T>

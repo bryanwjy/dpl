@@ -5,6 +5,7 @@
 
 #include "dpl/core/type_traits/enable_simd_mask.h"
 #include "dpl/core/type_traits/enable_simd_vector.h"
+#include "dpl/core/type_traits/simd_vector_type.h"
 
 __DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
@@ -33,7 +34,7 @@ struct simd_element_type<T> {
 
 template <typename T>
 requires enable_simd_mask<T> && (!enable_simd_vector<T>)
-struct simd_element_type<T> : simd_element_type<typename T::vector_type> {};
+struct simd_element_type<T> : simd_element_type<simd_vector_type_t<T>> {};
 
 } // namespace datapar
 

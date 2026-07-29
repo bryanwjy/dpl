@@ -8,14 +8,12 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/fwd.h"
-
-#  include "dpl/std/utility/ignore.h"
 #endif
 
 __DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 namespace internal {
-template <typename, typename = ignore_t>
+template <typename, typename = void>
 struct broadcast_t;
 }
 

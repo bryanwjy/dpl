@@ -36,11 +36,7 @@ public:
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr size_t size() noexcept {
-        if constexpr (fixed_width_abi<A>) {
-            return abi_traits::size;
-        } else {
-            return abi_traits::size();
-        }
+        return abi_traits::size();
     }
 
     __DPL_HIDE_FROM_ABI constexpr basic_vector() noexcept

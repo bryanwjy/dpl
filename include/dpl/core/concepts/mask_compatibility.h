@@ -14,10 +14,23 @@
 __DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::internal {
+/**
+ * Scalable ABI workaround
+ *
+ * Since scalable backend types cannot be encapsulated,
+ * the mask types may not be differentiated on certain backends,
+ * e.g. ARM SVE
+ */
+template <typename A>
+concept typed_mask = simd_abi<A> &&
+    different_from<make_canonical_mask_t<int8, A>,
+        make_canonical_mask_t<int32, A>>;
+
 template <typename M, typename T>
 concept compatible_mask_with = simd_mask<M> && simd_type<T> &&
     common_abi_with<simd_abi_type_t<M>, simd_abi_type_t<T>> &&
-    common_size_with<simd_element_type_t<M>, simd_element_type_t<T>>;
+    (!typed_mask<simd_abi_type_t<T>> ||
+        common_size_with<simd_element_type_t<M>, simd_element_type_t<T>>);
 
 template <typename M, typename T>
 concept exact_mask_for = compatible_mask_with<M, T> &&

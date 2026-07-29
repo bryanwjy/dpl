@@ -21,8 +21,8 @@ namespace datapar::internal {
 void exscan_sum(...) noexcept = delete;
 
 struct exscan_sum_t :
-    private exclusive_scan_base<exscan_sum_t>,
-    private maskable_transform_base<exscan_sum_t> {
+    public exclusive_scan_base<exscan_sum_t>,
+    public maskable_transform_base<exscan_sum_t> {
     using operation_base<exscan_sum_t>::operator();
     using maskable_transform_base<exscan_sum_t>::operator();
 };
@@ -62,15 +62,14 @@ private:
         canonical_type_t<cpo_result_t<exscan_sum_t, T, V>>;
 
     template <typename T, typename V>
-    using mask_t DPL_NODEBUG = basic_mask<simd_element_type_t<result_t<T, V>>,
-        simd_abi_type_t<result_t<T, V>>>;
+    using mask_t DPL_NODEBUG = simd_mask_type_t<result_t<T, V>>;
 
 public:
     template <canonical_vector T, broadcastable_to<T> V>
     requires unqualified_canonical_exscan_sum<T, V>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(T val, V&& init) noexcept {
-        return exscan(internal::abi<T>, val, __DPL forward<V>(init));
+        return exscan_sum(internal::abi<T>, val, __DPL forward<V>(init));
     }
 
     template <canonical_vector T, broadcastable_to<T> V>
@@ -79,7 +78,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
         result_t<T, V> src, mask_t<T, V> mask, T val, V&& init) noexcept {
-        return exscan(
+        return exscan_sum(
             internal::abi<T>, src, mask, val, __DPL forward<V>(init));
     }
 
@@ -90,7 +89,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
         result_t<T, V> src, M cmask, T val, V&& init) noexcept {
-        return exscan(internal::abi<T>, src,
+        return exscan_sum(internal::abi<T>, src,
             dx::to_const_mask<cpo_result_t<exscan_sum_t, T, V>>(cmask), val,
             __DPL forward<V>(init));
     }
@@ -100,7 +99,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
         dx::zero_t zero, mask_t<T, V> mask, T val, V&& init) noexcept {
-        return exscan(
+        return exscan_sum(
             internal::abi<T>, zero, mask, val, __DPL forward<V>(init));
     }
 
@@ -111,7 +110,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
         dx::zero_t zero, M cmask, T val, V&& init) noexcept {
-        return exscan(internal::abi<T>, zero,
+        return exscan_sum(internal::abi<T>, zero,
             dx::to_const_mask<cpo_result_t<exscan_sum_t, T, V>>(cmask), val,
             __DPL forward<V>(init));
     }
@@ -195,7 +194,8 @@ public:
     template <simd_vector T, broadcastable_to<T> V>
     requires cpo_invocable<exscan_t, T, V, add_t>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T&& val, V&& init) noexcept {
+    static constexpr auto operator()(T&& val, V&& init) noexcept(
+        canonical_vector<T>) {
         return dx::exscan(
             __DPL forward<T>(val), __DPL forward<V>(init), dx::add);
     }
@@ -205,7 +205,8 @@ public:
     requires cpo_invocable<exscan_t, S, M, T, V, add_t>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(
-        S&& src, M&& mask, T&& val, V&& init) {
+        S&& src, M&& mask, T&& val, V&& init) noexcept(canonical_vector<S> &&
+        canonical_mask<M> && canonical_vector<T>) {
         auto const pop = dx::popcount(mask);
         auto const last = simd_abi_traits<S>::size() - 1;
         auto const idx = dx::lane_index<S>();

@@ -3,6 +3,7 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/type_traits/canonical_type.h"
 #include "dpl/core/type_traits/enable_simd_abi.h"
 #include "dpl/core/type_traits/enable_simd_mask.h"
 #include "dpl/core/type_traits/enable_simd_vector.h"
@@ -30,15 +31,11 @@ using rebind_simd_t = typename rebind_simd<T, E, A>::type;
 
 template <typename T, typename E, typename A>
 requires enable_simd_vector<T> && enable_simd_abi<A>
-struct rebind_simd<T, E, A> {
-    using type DPL_NODEBUG = basic_vector<E, A>;
-};
+struct rebind_simd<T, E, A> : make_canonical_vector<E, A> {};
 
 template <typename T, typename E, typename A>
 requires enable_simd_mask<T> && enable_simd_abi<A>
-struct rebind_simd<T, E, A> {
-    using type DPL_NODEBUG = basic_mask<E, A>;
-};
+struct rebind_simd<T, E, A> : make_canonical_mask<E, A> {};
 
 } // namespace datapar
 

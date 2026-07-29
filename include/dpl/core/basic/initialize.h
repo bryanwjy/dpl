@@ -14,7 +14,6 @@
 #  include "dpl/std/concepts/different_from.h"
 #  include "dpl/std/concepts/same_as.h"
 #  include "dpl/std/utility/forward.h"
-#  include "dpl/std/utility/ignore.h"
 #endif
 
 __DPL_DEFAULT_NAMESPACE_BEGIN
@@ -23,7 +22,7 @@ namespace datapar::internal {
 template <typename>
 void initialize(...) noexcept = delete;
 
-template <typename T, typename U = __DPL ignore_t>
+template <typename T, typename U = void>
 struct initialize_t : public basic_operation_base<initialize_t<T, U>> {
     using operation_base<initialize_t<T, U>>::operator();
 };
@@ -31,7 +30,7 @@ struct initialize_t : public basic_operation_base<initialize_t<T, U>> {
 template <typename T, typename U>
 struct operation_signature<initialize_t<T, U>> {
     static consteval void operator()(auto&&, auto&&...) noexcept
-    requires ((same_as<ignore_t, U> && (simd_type<T> || simd_abi<T>)) ||
+    requires ((same_as<void, U> && (simd_type<T> || simd_abi<T>)) ||
         (simd_abi<T> && simd_element_for<U, T>) ||
         (simd_abi<U> && simd_element_for<T, U>))
     {}
@@ -50,7 +49,7 @@ private:
         requires simd_element_for<decay_t<common_type_t<Es...>>, A>;
     }
     using deduced_simd DPL_NODEBUG =
-        basic_vector<decay_t<common_type_t<Es...>>, A>;
+        make_canonical_vector_t<decay_t<common_type_t<Es...>>, A>;
 
 public:
     template <typename... Args>
@@ -63,7 +62,7 @@ public:
     }
 };
 
-template <typename T, different_from<ignore_t> U>
+template <typename T, different_from<void> U>
 requires (simd_abi<T> && simd_element_for<U, T>) ||
     (simd_abi<U> && simd_element_for<T, U>)
 struct canonical_impl<initialize_t<T, U>> {
@@ -75,7 +74,8 @@ public:
     template <convertible_to<E>... Args>
     requires (... && !same_as<bool, Args>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(Args&&... args) noexcept
+    static constexpr make_canonical_vector_t<E, A> operator()(
+        Args&&... args) noexcept
     requires requires {
         initialize<E>(internal::abi<A>, __DPL forward<Args>(args)...);
     }
@@ -87,7 +87,7 @@ public:
 
 namespace datapar {
 inline namespace cpo {
-template <typename T, typename U = ignore_t>
+template <typename T, typename U = void>
 inline constexpr internal::initialize_t<T, U> initialize{};
 }
 } // namespace datapar

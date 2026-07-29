@@ -5,9 +5,10 @@
 
 #include "dpl/core/type_traits/details/fwd.h"
 
+#include "dpl/core/type_traits/enable_simd_abi.h"
+
 #if !DPL_MODULES
 #  include "dpl/core/fwd/basic.h"
-#  include "dpl/core/type_traits/enable_simd_abi.h"
 #  include "dpl/std/type_traits/conditional.h"
 #  include "dpl/std/type_traits/is_function.h"
 #endif
@@ -24,15 +25,15 @@ concept has_representation_for = requires {
 
 template <typename, typename>
 struct simd_abi_size {};
-template <typename T, typename U>
+template <typename A, typename E>
 concept abi_with_functional_size =
-    enable_simd_abi<T> && has_representation_for<U, T> &&
-    is_function_v<decltype(T::template size<U>)>;
+    enable_simd_abi<A> && has_representation_for<E, A> &&
+    is_function_v<decltype(A::template size<E>)>;
 
-template <typename T, typename U>
+template <typename A, typename E>
 concept abi_with_fixed_size =
-    enable_simd_abi<T> && has_representation_for<U, T> &&
-    requires { typename size_constant<T::size>; };
+    enable_simd_abi<A> && has_representation_for<E, A> &&
+    requires { typename size_constant<A::size>; };
 
 template <typename T, typename U>
 requires abi_with_functional_size<T, U> || abi_with_functional_size<U, T>

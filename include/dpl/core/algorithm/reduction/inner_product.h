@@ -42,86 +42,80 @@ concept canonical_inner_product_result = canonical_vector<L> &&
     canonical_vector<R> && canonical_vector<S> && inner_product_result<S, L, R>;
 
 template <typename S, typename L, typename R>
-concept unqualified_canonical_inner_product =
-    canonical_inner_product_result<S, L, R> && requires {
+concept unqualified_canonical_inner_product = requires {
+    {
+        inner_product(internal::abi<S>, internal::declarg<S>(),
+            internal::declarg<L>(), internal::declarg<R>())
+    } -> same_as<S>;
+};
+
+template <typename S, typename M, typename L, typename R>
+concept unqualified_canonical_minner_product =
+    cpo_invocable<inner_product_t, S, L, R> &&
+    same_as<S, cpo_result_t<inner_product_t, S, L, R>> && requires {
         {
-            inner_product(internal::abi<common_abi_t<L, R>>,
+            inner_product(internal::abi<S>, internal::declarg<S>(),
+                internal::declarg<M>(), internal::declarg<L>(),
+                internal::declarg<R>())
+        } -> same_as<S>;
+    };
+
+template <typename M, typename S, typename L, typename R>
+concept unqualified_canonical_mzinner_product =
+    cpo_invocable<inner_product_t, S, L, R> &&
+    same_as<S, cpo_result_t<inner_product_t, S, L, R>> && requires {
+        {
+            inner_product(internal::abi<S>, dx::zero, internal::declarg<M>(),
                 internal::declarg<S>(), internal::declarg<L>(),
                 internal::declarg<R>())
         } -> same_as<S>;
     };
 
-template <typename S, typename M, typename L, typename R>
-concept unqualified_canonical_minner_product =
-    canonical_inner_product_result<S, L, R> &&
-    cpo_invocable<inner_product_t, S, L, R> &&
-    same_as<S, cpo_result_t<inner_product_t, S, L, R>> && requires {
-        {
-            inner_product(internal::abi<cpo_result_t<inner_product_t, S, L, R>>,
-                internal::declarg<S>(), internal::declarg<M>(),
-                internal::declarg<L>(), internal::declarg<R>())
-        } -> same_as<cpo_result_t<inner_product_t, S, L, R>>;
-    };
-
-template <typename M, typename S, typename L, typename R>
-concept unqualified_canonical_mzinner_product =
-    canonical_inner_product_result<S, L, R> &&
-    cpo_invocable<inner_product_t, S, L, R> && requires {
-        {
-            inner_product(internal::abi<cpo_result_t<inner_product_t, S, L, R>>,
-                dx::zero, internal::declarg<M>(), internal::declarg<S>(),
-                internal::declarg<L>(), internal::declarg<R>())
-        } -> same_as<cpo_result_t<inner_product_t, S, L, R>>;
-    };
-
 template <>
 struct canonical_impl<inner_product_t> {
-public:
-    template <typename T>
-    using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
-
 private:
-    template <canonical_vector L, common_vector_with<L> R,
-        canonical_inner_product_result<L, R> S>
-    requires unqualified_canonical_inner_product<S, L, R>
+    template <canonical_vector S, vector_subsumed_by<S> L,
+        vector_subsumed_by<S> R>
+    requires canonical_vector<L> && canonical_vector<R> &&
+        unqualified_canonical_inner_product<S, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr S operator()(S src, L lhs, R rhs) noexcept {
         return inner_product(internal::abi<S>, src, lhs, rhs);
     }
 
-    template <canonical_vector L, common_vector_with<L> R,
-        canonical_inner_product_result<L, R> S>
-    requires unqualified_canonical_minner_product<S, mask_t<S>, L, R>
+    template <canonical_vector S, vector_subsumed_by<S> L,
+        vector_subsumed_by<S> R>
+    requires canonical_vector<L> && canonical_vector<R> &&
+        unqualified_canonical_minner_product<S, simd_mask_type_t<S>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr S operator()(
-        S src, mask_t<S> mask, L lhs, R rhs) noexcept {
+        S src, simd_mask_type_t<S> mask, L lhs, R rhs) noexcept {
         return inner_product(internal::abi<S>, src, mask, lhs, rhs);
     }
 
-    template <canonical_vector L, common_vector_with<L> R,
-        canonical_inner_product_result<L, R> S, const_mask_for<S> M>
-    requires unqualified_canonical_minner_product<S, launder_cmask_t<S, M>, L,
-        R>
+    template <canonical_vector S, const_mask_for<S> M, vector_subsumed_by<S> L,
+        vector_subsumed_by<S> R>
+    requires canonical_vector<L> && canonical_vector<R> &&
+        unqualified_canonical_minner_product<S, launder_cmask_t<S, M>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr S operator()(S src, M cmask, L lhs, R rhs) noexcept {
         return inner_product(internal::abi<common_abi_t<L, R>>, src,
             dx::to_const_mask<S>(cmask), lhs, rhs);
     }
 
-    template <canonical_vector L, common_vector_with<L> R,
-        canonical_inner_product_result<L, R> S>
-    requires canonical_vector<R> &&
-        unqualified_canonical_mzinner_product<mask_t<S>, S, L, R>
+    template <canonical_vector S, vector_subsumed_by<S> L,
+        vector_subsumed_by<S> R>
+    requires canonical_vector<L> && canonical_vector<R> &&
+        unqualified_canonical_mzinner_product<simd_mask_type_t<S>, S, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        dx::zero_t zero, mask_t<S> mask, S src, L lhs, R rhs) noexcept {
+    static constexpr auto operator()(dx::zero_t zero, simd_mask_type_t<S> mask,
+        S src, L lhs, R rhs) noexcept {
         return inner_product(internal::abi<S>, zero, mask, src, lhs, rhs);
     }
 
-    template <canonical_vector L, common_vector_with<L> R,
-        canonical_inner_product_result<L, R> S, const_mask_for<S> M>
-    requires canonical_vector<R> &&
+    template <canonical_vector S, const_mask_for<S> M, vector_subsumed_by<S> L,
+        vector_subsumed_by<S> R>
+    requires canonical_vector<L> && canonical_vector<R> &&
         unqualified_canonical_mzinner_product<launder_cmask_t<S, M>, S, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
@@ -226,6 +220,8 @@ struct fallback_impl<inner_product_t> {
     template <simd_vector S, simd_vector L, simd_vector R>
     requires cpo_invocable<multiply_t, L, R> &&
         cpo_invocable<hsum_t, cpo_result_t<multiply_t, L, R>> &&
+        vector_subsumed_by<cpo_result_t<hsum_t, cpo_result_t<multiply_t, L, R>>,
+            S> &&
         cpo_invocable<add_t, S,
             cpo_result_t<hsum_t, cpo_result_t<multiply_t, L, R>>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -237,6 +233,7 @@ struct fallback_impl<inner_product_t> {
 
     template <simd_vector S, typename M, simd_vector L, simd_vector R>
     requires cpo_invocable<inner_product_t, S, L, R> &&
+        (exact_mask_for<M, S> || const_mask_for<remove_cvref_t<M>, S>) &&
         cpo_invocable<select_t, M, cpo_result_t<inner_product_t, S, L, R>,
             S const&>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
@@ -251,6 +248,7 @@ struct fallback_impl<inner_product_t> {
 
     template <typename M, simd_vector S, simd_vector L, simd_vector R>
     requires cpo_invocable<inner_product_t, S, L, R> &&
+        (exact_mask_for<M, S> || const_mask_for<remove_cvref_t<M>, S>) &&
         cpo_invocable<select_t, M, cpo_result_t<inner_product_t, S, L, R>,
             dx::zero_t>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)

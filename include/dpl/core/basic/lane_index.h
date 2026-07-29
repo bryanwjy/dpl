@@ -13,8 +13,8 @@
 
 #  include "dpl/core/dispatch/interface.h"
 #  include "dpl/core/dispatch/operation/basic.h"
+#  include "dpl/core/type_traits/canonical_type.h"
 #  include "dpl/core/type_traits/representation.h"
-#  include "dpl/std/utility/ignore.h"
 #endif
 
 __DPL_DEFAULT_NAMESPACE_BEGIN
@@ -26,7 +26,7 @@ namespace datapar::internal {
 template <typename>
 void lane_index(...) noexcept = delete;
 
-template <typename T, typename U = __DPL ignore_t>
+template <typename T, typename U = void>
 struct lane_index_t : public basic_operation_base<lane_index_t<T, U>> {
     using operation_base<lane_index_t<T, U>>::operator();
 };
@@ -34,7 +34,7 @@ struct lane_index_t : public basic_operation_base<lane_index_t<T, U>> {
 template <typename T, typename U>
 struct operation_signature<lane_index_t<T, U>> {
     static consteval void operator()() noexcept
-    requires ((same_as<ignore_t, U> && (simd_type<T> || simd_abi<T>)) ||
+    requires ((same_as<void, U> && (simd_type<T> || simd_abi<T>)) ||
         (simd_abi<T> && simd_element_for<U, T>) ||
         (simd_abi<U> && simd_element_for<T, U>))
     {}
@@ -44,13 +44,13 @@ template <typename E, typename A>
 concept unqualified_canonical_lane_index = requires {
     {
         lane_index<E>(internal::abi<A>)
-    } -> same_as<basic_vector<signed_representation_t<E>, A>>;
+    } -> same_as<make_canonical_vector_t<signed_representation_t<E>, A>>;
 };
 
 template <fixed_width_abi A, signed_integral I, I... vals>
 alignas(simd_abi_traits<A>::alignment()) inline constexpr I array[] = {vals...};
 
-template <typename T, different_from<ignore_t> U>
+template <typename T, different_from<void> U>
 requires (simd_abi<T> && simd_element_for<U, T>) ||
     (simd_abi<U> && simd_element_for<T, U>)
 struct canonical_impl<lane_index_t<T, U>> {
@@ -61,14 +61,14 @@ private:
 
 public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr basic_vector<I, A> operator()() noexcept
+    static constexpr make_canonical_vector_t<I, A> operator()() noexcept
     requires unqualified_canonical_lane_index<E, A>
     {
         return lane_index<E>(internal::abi<A>);
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr basic_vector<I, A> operator()() noexcept
+    static constexpr make_canonical_vector_t<I, A> operator()() noexcept
     requires fixed_width_abi<A> && (!unqualified_canonical_lane_index<E, A>)
     {
         return []<size_t... Is>(index_sequence<Is...>) {
@@ -98,7 +98,7 @@ struct canonical_impl<lane_index_t<T>> :
 
 namespace datapar {
 inline namespace cpo {
-template <typename T, typename U = __DPL ignore_t>
+template <typename T, typename U = void>
 inline constexpr internal::lane_index_t<T, U> lane_index{};
 }
 } // namespace datapar

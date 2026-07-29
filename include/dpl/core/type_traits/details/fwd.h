@@ -3,10 +3,6 @@
 
 #include "dpl/config.h"
 
-#if !DPL_MODULES
-#  include "dpl/std/utility/ignore.h"
-#endif
-
 // IWYU pragma: begin_exports
 __DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
@@ -22,7 +18,7 @@ template <typename A, typename E>
 struct simd_element_representation;
 template <typename>
 struct canonical_type;
-template <typename, typename = __DPL ignore_t>
+template <typename, typename = void>
 struct simd_abi_traits;
 } // namespace datapar
 __DPL_DEFAULT_NAMESPACE_END

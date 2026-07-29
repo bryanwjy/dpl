@@ -24,16 +24,16 @@ __DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar {
 namespace atom {
-// Attention: On scalable ABIs, it is currently undefined whether sizeless types
-// are trivially copyable
+// On scalable backends, it is currently undefined whether sizeless
+// types are trivially copyable
 template <typename T>
-concept simd_type = is_object_v<T> && is_trivially_copyable_v<T> && requires {
+concept simd_type = is_object_v<T> && requires {
     typename simd_value_type_t<T>;
     typename simd_abi_type_t<T>;
     typename simd_element_type_t<T>;
     typename simd_native_type_t<T>;
     typename simd_mask_type_t<T>;
-} && simd_abi<simd_abi_type_t<T>>;
+} && simd_abi<simd_abi_type_t<T>> /* && is_trivially_copyable_v<T> */;
 
 template <typename T>
 concept simd_vector = enable_simd_vector<T> &&

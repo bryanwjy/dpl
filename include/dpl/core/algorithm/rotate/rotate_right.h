@@ -91,11 +91,6 @@ concept unqualified_canonical_mrotate_right =
 
 template <>
 struct canonical_impl<rotate_right_t> {
-private:
-    template <typename T>
-    using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
-
 public:
     template <canonical_vector T>
     requires unqualified_canonical_rotate_right<T>
@@ -105,17 +100,15 @@ public:
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mrotate_right<type_identity_t<T>, mask_t<T>,
-        T>
+    requires unqualified_canonical_mrotate_right<T, simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        type_identity_t<T> src, mask_t<T> mask, T val, size_t count) noexcept {
+    static constexpr auto operator()(type_identity_t<T> src,
+        simd_mask_type_t<T> mask, T val, size_t count) noexcept {
         return rotate_right(internal::abi<T>, src, mask, val, count);
     }
 
     template <canonical_vector T, const_mask_for<T> M>
-    requires unqualified_canonical_mrotate_right<type_identity_t<T>,
-        launder_cmask_t<T, M>, T>
+    requires unqualified_canonical_mrotate_right<T, launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         type_identity_t<T> src, M cmask, T val, size_t count) noexcept {
@@ -124,10 +117,11 @@ public:
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mrotate_right<dx::zero_t, mask_t<T>, T>
+    requires unqualified_canonical_mrotate_right<dx::zero_t,
+        simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        dx::zero_t zero, mask_t<T> mask, T val, size_t count) noexcept {
+    static constexpr auto operator()(dx::zero_t zero, simd_mask_type_t<T> mask,
+        T val, size_t count) noexcept {
         return rotate_right(internal::abi<T>, zero, mask, val, count);
     }
 
@@ -151,17 +145,16 @@ public:
 
     template <canonical_vector T, integral_constant_like N>
     requires canonical_vector<T> &&
-        unqualified_canonical_mrotate_right<type_identity_t<T>, mask_t<T>, T, N>
+        unqualified_canonical_mrotate_right<T, simd_mask_type_t<T>, T, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        type_identity_t<T> src, mask_t<T> mask, T val, N count) noexcept {
+    static constexpr auto operator()(type_identity_t<T> src,
+        simd_mask_type_t<T> mask, T val, N count) noexcept {
         return rotate_right(internal::abi<T>, src, mask, val, count);
     }
 
     template <canonical_vector T, const_mask_for<T> M, integral_constant_like N>
     requires canonical_vector<T> &&
-        unqualified_canonical_mrotate_right<type_identity_t<T>,
-            launder_cmask_t<T, M>, T, N>
+        unqualified_canonical_mrotate_right<T, launder_cmask_t<T, M>, T, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         type_identity_t<T> src, M cmask, T val, N count) noexcept {
@@ -170,10 +163,11 @@ public:
     }
 
     template <canonical_vector T, integral_constant_like N>
-    requires unqualified_canonical_mrotate_right<dx::zero_t, mask_t<T>, T, N>
+    requires unqualified_canonical_mrotate_right<dx::zero_t,
+        simd_mask_type_t<T>, T, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
-        dx::zero_t zero, mask_t<T> mask, T val, N count) noexcept {
+        dx::zero_t zero, simd_mask_type_t<T> mask, T val, N count) noexcept {
         return rotate_right(internal::abi<T>, zero, mask, val, count);
     }
 

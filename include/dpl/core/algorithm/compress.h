@@ -26,8 +26,8 @@ namespace datapar::internal {
 void compress(...) noexcept = delete;
 
 struct DPL_EMPTY_BASES compress_t :
-    private algorithm_base<compress_t>,
-    private maskable_transform_base<compress_t> {
+    public algorithm_base<compress_t>,
+    public maskable_transform_base<compress_t> {
     using operation_base<compress_t>::operator();
     using maskable_transform_base<compress_t>::operator();
 };
@@ -49,7 +49,7 @@ struct canonical_impl<compress_t> {
 private:
     template <typename T>
     using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
+        make_canonical_mask_t<simd_element_type_t<T>, simd_abi_type_t<T>>;
 
 public:
     template <simd_vector T>
@@ -161,16 +161,20 @@ public:
         return __DPL forward<T>(val);
     }
 
-    template <simd_vector S, simd_mask M, simd_vector T>
-    requires cpo_invocable<exscan_sum_t, M>
+    template <simd_vector S, exact_mask_for<S> M, vector_subsumed_by<S> T>
+    requires (!fixed_width_vector<S>) &&
+        cpo_invocable<exscan_sum_t, decltype(dx::lane_index<S>()), dx::zero_t>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr S DPL_VECTORCALL operator()(
-        S src, M mask, T val) noexcept {
+    static constexpr S DPL_VECTORCALL operator()(S src, M mask, T val) noexcept(
+        canonical_vector<S> && canonical_mask<M> && canonical_vector<T>) {
         using A = simd_abi_type_t<S>;
-        using I = signed_representation_t<simd_element_type_t<M>>;
+        using I = signed_representation_t<simd_element_type_t<S>>;
         auto const simd_size = simd_abi_traits<I, A>::size();
         auto const idx = dx::lane_index<S>();
-        auto const rank = fwd::exscan_sum(mask);
+        using vidx_t = remove_cvref_t<decltype(idx)>;
+        auto const rank = fwd::exscan_sum(
+            dx::select(mask, dx::broadcast<vidx_t>(dx::one), dx::zero),
+            dx::zero);
         for (auto i = 1zu; i < simd_size; i <<= 1) {
             auto const dist = dx::broadcast<I, A>(static_cast<I>(i));
             auto const perm = idx ^ dist;
@@ -186,14 +190,20 @@ public:
         return dx::select(idx < dx::popcount(mask), val, src);
     }
 
-    template <fixed_width_vector S, fixed_width_mask M, fixed_width_vector T>
-    requires cpo_invocable<exscan_sum_t, M>
+    template <fixed_width_vector S, exact_mask_for<S> M,
+        vector_subsumed_by<S> T>
+    requires cpo_invocable<exscan_sum_t, decltype(dx::lane_index<S>()),
+        dx::zero_t>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(
-        S src, M mask, T val) noexcept {
-        using A = common_abi_t<M, T>;
-        using I = signed_representation_t<simd_element_type_t<M>>;
-        auto const rank = fwd::exscan_sum(mask);
+        S src, M mask, T val) noexcept(canonical_vector<S> &&
+        canonical_mask<M> && canonical_vector<T>) {
+        using A = simd_abi_type_t<S>;
+        using I = signed_representation_t<simd_element_type_t<S>>;
+        using vidx_t = make_canonical_vector_t<I, A>;
+        auto const rank = fwd::exscan_sum(
+            dx::select(mask, dx::broadcast<vidx_t>(dx::one), dx::zero),
+            dx::zero);
         [&val]<size_t J>(this auto self, auto rank, immediate<J>) {
             constexpr auto idx =
                 fallback_impl::template butterfly<J>(iota_sequence<S>);
@@ -212,13 +222,14 @@ public:
             dx::lane_index<I, A>() < dx::popcount(mask), val, src);
     }
 
-    template <simd_vector S, const_mask_for<S> M, simd_vector T>
+    template <simd_vector S, const_mask_for<S> M, vector_subsumed_by<S> T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(
         S src, M mask, T val) noexcept {
         constexpr auto cmask = dx::to_const_mask<S>(mask);
         using A = simd_abi_type_t<S>;
-        using I = signed_representation_t<simd_element_type_t<T>>;
+        using I = signed_representation_t<simd_element_type_t<S>>;
+        using vidx_t = make_canonical_vector_t<I, A>;
         using bitset_t = bitset<simd_abi_traits<S>::size>;
         constexpr auto rank = []<size_t... Is>(M mask, index_sequence<Is...>) {
             constexpr auto set = static_cast<bitset_t>(dx::to_bitset(mask));
@@ -245,7 +256,7 @@ public:
         return dx::select(new_mask, val, src);
     }
 
-    template <simd_mask M, simd_vector R>
+    template <simd_vector R, exact_mask_for<R> M>
     requires requires {
         operator()(internal::declarg<canonical_type_t<R>>(),
             internal::declarg<M>(), internal::declarg<R>());

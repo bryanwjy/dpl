@@ -12,10 +12,10 @@
 #  include "dpl/core/dispatch/interface.h"
 #  include "dpl/core/dispatch/operation/basic.h"
 #  include "dpl/core/immediate/broadcastable_base.h"
+#  include "dpl/core/type_traits/canonical_type.h"
 #  include "dpl/core/type_traits/simd_abi_type.h"
 #  include "dpl/core/type_traits/simd_element_type.h"
 #  include "dpl/std/concepts/integral_constant_like.h"
-#  include "dpl/std/utility/ignore.h"
 #endif
 
 __DPL_DEFAULT_NAMESPACE_BEGIN
@@ -56,7 +56,7 @@ template <simd_type T>
 struct canonical_impl<broadcast_t<T>> :
     canonical_impl<broadcast_t<simd_abi_type_t<T>, simd_element_type_t<T>>> {};
 
-template <typename T, different_from<ignore_t> U>
+template <typename T, different_from<void> U>
 requires (simd_abi<T> && simd_element_for<U, T>) ||
     (simd_abi<U> && simd_element_for<T, U>)
 struct operation_signature<broadcast_t<T, U>> {
@@ -68,7 +68,7 @@ struct operation_signature<broadcast_t<T, U>> {
     static consteval void operator()(integral_constant_like auto) noexcept {}
 };
 
-template <typename T, different_from<ignore_t> U>
+template <typename T, different_from<void> U>
 requires (simd_abi<T> && simd_element_for<U, T>) ||
     (simd_abi<U> && simd_element_for<T, U>)
 struct canonical_impl<broadcast_t<T, U>> {
@@ -76,7 +76,7 @@ struct canonical_impl<broadcast_t<T, U>> {
     using E DPL_NODEBUG = conditional_t<simd_abi<T>, U, T>;
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(E scalar) noexcept
+    static constexpr make_canonical_vector_t<E, A> operator()(E scalar) noexcept
     requires requires { broadcast<E>(internal::abi<A>, scalar); }
     {
         return broadcast<E>(internal::abi<A>, scalar);
@@ -84,12 +84,14 @@ struct canonical_impl<broadcast_t<T, U>> {
 
     template <broadcastable_constant<E> V>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(V scalar) noexcept {
+    static constexpr make_canonical_vector_t<E, A> operator()(V scalar) noexcept
+    requires requires { broadcast<E>(internal::abi<A>, scalar); }
+    {
         return broadcast<E>(internal::abi<A>, scalar);
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr basic_mask<E, A> operator()(
+    static constexpr make_canonical_mask_t<E, A> operator()(
         same_as<bool> auto scalar) noexcept
     requires requires { broadcast<E>(internal::abi<A>, scalar); }
     {
@@ -98,15 +100,15 @@ struct canonical_impl<broadcast_t<T, U>> {
 
     template <bool_constant_like V>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr basic_mask<E, A> operator()(V scalar) noexcept {
+    static constexpr make_canonical_mask_t<E, A> operator()(V scalar) noexcept {
         if constexpr (requires {
                           {
                               broadcast<E>(internal::abi<A>, scalar)
-                          } -> same_as<basic_mask<E, A>>;
+                          } -> same_as<make_canonical_mask_t<E, A>>;
                       }) {
             return broadcast<E>(internal::abi<A>, scalar);
         } else {
-            return broadcast<E>(internal::abi<A>, V::value);
+            return operator()(V::value);
         }
     }
 };
@@ -115,7 +117,7 @@ struct canonical_impl<broadcast_t<T, U>> {
 
 namespace datapar {
 inline namespace cpo {
-template <typename T, typename U = __DPL ignore_t>
+template <typename T, typename U = void>
 inline constexpr internal::broadcast_t<T, U> broadcast{};
 }
 } // namespace datapar

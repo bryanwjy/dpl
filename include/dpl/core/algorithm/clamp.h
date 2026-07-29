@@ -20,9 +20,9 @@ void clamp(...) noexcept = delete;
 struct clamp_t;
 
 struct DPL_EMPTY_BASES clamp_t :
-    private algorithm_base<clamp_t>,
-    private maskable_transform_base<clamp_t>,
-    private ternary_broadcastable_operation<clamp_t> {
+    public algorithm_base<clamp_t>,
+    public maskable_transform_base<clamp_t>,
+    public ternary_broadcastable_operation<clamp_t> {
     using operation_base<clamp_t>::operator();
     using maskable_transform_base<clamp_t>::operator();
     using ternary_broadcastable_operation<clamp_t>::operator();
@@ -39,10 +39,7 @@ template <>
 struct fallback_impl<clamp_t> : ternary_broadcasting_fallback<clamp_t> {
 
     template <canonical_vector AT, canonical_vector BT, canonical_vector CT>
-    requires floating_point<simd_element_type_t<AT>> &&
-        floating_point<simd_element_type_t<BT>> &&
-        floating_point<simd_element_type_t<CT>> &&
-        cpo_invocable<min_t, BT, CT> &&
+    requires cpo_invocable<min_t, BT, CT> &&
         cpo_invocable<max_t, CT, cpo_result_t<min_t, BT, AT>, AT>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(

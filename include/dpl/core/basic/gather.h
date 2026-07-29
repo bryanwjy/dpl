@@ -45,114 +45,117 @@ struct canonical_impl<gather_t> {
 
 private:
     template <typename E, typename A>
-    using vector_t DPL_NODEBUG = basic_vector<E, A>;
-    template <typename E, typename A>
-    using mask_t DPL_NODEBUG = basic_mask<E, A>;
+    using mask_t DPL_NODEBUG = make_canonical_mask_t<E, A>;
 
 public:
-    template <simd_abi A, simd_element_for<A> E>
-    requires unqualified_canonical_gather<A, E const*, vector_t<int, A>>
+    template <canonical_vector I, simd_element_for<simd_abi_type_t<I>> E>
+    requires same_as<int, simd_element_type_t<I>> &&
+        unqualified_canonical_gather<simd_abi_type_t<I>, E const*, I>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr vector_t<E, A> operator()(
-        E const* ptr, vector_t<int, A> idx) noexcept {
-        return gather(internal::abi<A>, ptr, idx);
+    static constexpr rebind_simd_t<I, E> operator()(
+        E const* ptr, I idx) noexcept {
+        return gather(internal::abi<I>, ptr, idx);
     }
 
-    template <simd_abi A, simd_element_for<A> E>
-    requires unqualified_canonical_gather<A, vector_t<E, A>, basic_mask<E, A>,
-        E const*, vector_t<int, A>>
+    template <canonical_vector I, simd_element_for<simd_abi_type_t<I>> E>
+    requires same_as<int, simd_element_type_t<I>> &&
+        unqualified_canonical_gather<simd_abi_type_t<I>, rebind_simd_t<I, E>,
+            mask_t<E, simd_abi_type_t<I>>, E const*, I>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr vector_t<E, A> operator()(vector_t<E, A> src,
-        basic_mask<E, A> mask, E const* ptr, vector_t<int, A> idx) noexcept {
-        return gather(internal::abi<A>, src, mask, ptr, idx);
+    static constexpr rebind_simd_t<I, E> operator()(rebind_simd_t<I, E> src,
+        mask_t<E, simd_abi_type_t<I>> mask, E const* ptr, I idx) noexcept {
+        return gather(internal::abi<I>, src, mask, ptr, idx);
     }
 
-    template <fixed_width_abi A, simd_element_for<A> E,
-        const_mask_for<vector_t<E, A>> M>
-    requires unqualified_canonical_gather<A, vector_t<E, A>,
-        launder_cmask_t<vector_t<E, A>, M>, E const*, vector_t<int, A>>
+    template <canonical_vector I, simd_element_for<simd_abi_type_t<I>> E,
+        const_mask_for<rebind_simd_t<I, E>> M>
+    requires same_as<int, simd_element_type_t<I>> &&
+        unqualified_canonical_gather<simd_abi_type_t<I>, rebind_simd_t<I, E>,
+            launder_cmask_t<rebind_simd_t<I, E>, M>, E const*, I>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr vector_t<E, A> operator()(vector_t<E, A> src, M cmask,
-        E const* ptr, vector_t<int, A> idx) noexcept {
-        return gather(internal::abi<A>, src,
-            dx::to_const_mask<vector_t<E, A>>(cmask), ptr, idx);
+    static constexpr rebind_simd_t<I, E> operator()(
+        rebind_simd_t<I, E> src, M cmask, E const* ptr, I idx) noexcept {
+        return gather(internal::abi<I>, src,
+            dx::to_const_mask<rebind_simd_t<I, E>>(cmask), ptr, idx);
     }
 
-    template <simd_abi A, simd_element_for<A> E>
-    requires unqualified_canonical_gather<A, dx::zero_t, basic_mask<E, A>,
-        E const*, vector_t<int, A>>
+    template <canonical_vector I, simd_element_for<simd_abi_type_t<I>> E>
+    requires same_as<int, simd_element_type_t<I>> &&
+        unqualified_canonical_gather<simd_abi_type_t<I>, dx::zero_t,
+            mask_t<E, simd_abi_type_t<I>>, E const*, I>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr vector_t<E, A> operator()(dx::zero_t zero,
-        basic_mask<E, A> mask, E const* ptr, vector_t<int, A> idx) noexcept {
-        return gather(internal::abi<A>, zero, mask, ptr, idx);
+    static constexpr rebind_simd_t<I, E> operator()(dx::zero_t zero,
+        mask_t<E, simd_abi_type_t<I>> mask, E const* ptr, I idx) noexcept {
+        return gather(internal::abi<I>, zero, mask, ptr, idx);
     }
 
-    template <fixed_width_abi A, simd_element_for<A> E,
-        const_mask_for<vector_t<E, A>> M>
-    requires unqualified_canonical_gather<A, dx::zero_t,
-        launder_cmask_t<vector_t<E, A>, M>, E const*, vector_t<int, A>>
+    template <canonical_vector I, simd_element_for<simd_abi_type_t<I>> E,
+        const_mask_for<rebind_simd_t<I, E>> M>
+    requires unqualified_canonical_gather<simd_abi_type_t<I>, dx::zero_t,
+        launder_cmask_t<rebind_simd_t<I, E>, M>, E const*, I>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr vector_t<E, A> operator()(
-        dx::zero_t zero, M cmask, E const* ptr, vector_t<int, A> idx) noexcept {
-        return gather(internal::abi<A>, zero,
-            dx::to_const_mask<vector_t<E, A>>(cmask), ptr, idx);
+    static constexpr rebind_simd_t<I, E> operator()(
+        dx::zero_t zero, M cmask, E const* ptr, I idx) noexcept {
+        return gather(internal::abi<I>, zero,
+            dx::to_const_mask<rebind_simd_t<I, E>>(cmask), ptr, idx);
     }
 
-    template <simd_abi A, simd_element_for<A> E>
-    requires different_from<ptrdiff_t, int> &&
-        unqualified_canonical_gather<A, E const*, vector_t<ptrdiff_t, A>>
+    template <canonical_vector I, simd_element_for<simd_abi_type_t<I>> E>
+    requires same_as<ptrdiff_t, simd_element_type_t<I>> &&
+        different_from<ptrdiff_t, int> &&
+        unqualified_canonical_gather<simd_abi_type_t<I>, E const*, I>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr vector_t<E, A> operator()(
-        E const* ptr, vector_t<ptrdiff_t, A> idx) noexcept {
-        return gather(internal::abi<A>, ptr, idx);
+    static constexpr rebind_simd_t<I, E> operator()(
+        E const* ptr, I idx) noexcept {
+        return gather(internal::abi<I>, ptr, idx);
     }
 
-    template <simd_abi A, simd_element_for<A> E>
-    requires different_from<ptrdiff_t, int> &&
-        unqualified_canonical_gather<A, vector_t<E, A>, basic_mask<E, A>,
-            E const*, vector_t<ptrdiff_t, A>>
+    template <canonical_vector I, simd_element_for<simd_abi_type_t<I>> E>
+    requires same_as<ptrdiff_t, simd_element_type_t<I>> &&
+        different_from<ptrdiff_t, int> &&
+        unqualified_canonical_gather<simd_abi_type_t<I>, rebind_simd_t<I, E>,
+            mask_t<E, simd_abi_type_t<I>>, E const*, I>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr vector_t<E, A> operator()(vector_t<E, A> src,
-        basic_mask<E, A> mask, E const* ptr,
-        vector_t<ptrdiff_t, A> idx) noexcept {
-        return gather(internal::abi<A>, src, mask, ptr, idx);
+    static constexpr rebind_simd_t<I, E> operator()(rebind_simd_t<I, E> src,
+        mask_t<E, simd_abi_type_t<I>> mask, E const* ptr, I idx) noexcept {
+        return gather(internal::abi<I>, src, mask, ptr, idx);
     }
 
-    template <fixed_width_abi A, simd_element_for<A> E,
-        const_mask_for<vector_t<E, A>> M>
-    requires different_from<ptrdiff_t, int> &&
-        unqualified_canonical_gather<A, vector_t<E, A>,
-            launder_cmask_t<vector_t<E, A>, M>, E const*,
-            vector_t<ptrdiff_t, A>>
+    template <canonical_vector I, simd_element_for<simd_abi_type_t<I>> E,
+        const_mask_for<rebind_simd_t<I, E>> M>
+    requires same_as<ptrdiff_t, simd_element_type_t<I>> &&
+        different_from<ptrdiff_t, int> &&
+        unqualified_canonical_gather<simd_abi_type_t<I>, rebind_simd_t<I, E>,
+            launder_cmask_t<rebind_simd_t<I, E>, M>, E const*, I>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr vector_t<E, A> operator()(vector_t<E, A> src, M cmask,
-        E const* ptr, vector_t<ptrdiff_t, A> idx) noexcept {
-        return gather(internal::abi<A>, src,
-            dx::to_const_mask<vector_t<E, A>>(cmask), ptr, idx);
+    static constexpr rebind_simd_t<I, E> operator()(
+        rebind_simd_t<I, E> src, M cmask, E const* ptr, I idx) noexcept {
+        return gather(internal::abi<I>, src,
+            dx::to_const_mask<rebind_simd_t<I, E>>(cmask), ptr, idx);
     }
 
-    template <simd_abi A, simd_element_for<A> E>
-    requires different_from<ptrdiff_t, int> &&
-        unqualified_canonical_gather<A, dx::zero_t, basic_mask<E, A>, E const*,
-            vector_t<ptrdiff_t, A>>
+    template <canonical_vector I, simd_element_for<simd_abi_type_t<I>> E>
+    requires same_as<ptrdiff_t, simd_element_type_t<I>> &&
+        different_from<ptrdiff_t, int> &&
+        unqualified_canonical_gather<simd_abi_type_t<I>, dx::zero_t,
+            mask_t<E, simd_abi_type_t<I>>, E const*, I>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr vector_t<E, A> operator()(dx::zero_t zero,
-        basic_mask<E, A> mask, E const* ptr,
-        vector_t<ptrdiff_t, A> idx) noexcept {
-        return gather(internal::abi<A>, zero, mask, ptr, idx);
+    static constexpr rebind_simd_t<I, E> operator()(dx::zero_t zero,
+        mask_t<E, simd_abi_type_t<I>> mask, E const* ptr, I idx) noexcept {
+        return gather(internal::abi<I>, zero, mask, ptr, idx);
     }
 
-    template <fixed_width_abi A, simd_element_for<A> E,
-        const_mask_for<vector_t<E, A>> M>
-    requires different_from<ptrdiff_t, int> &&
-        unqualified_canonical_gather<A, dx::zero_t,
-            launder_cmask_t<vector_t<E, A>, M>, E const*,
-            vector_t<ptrdiff_t, A>>
+    template <canonical_vector I, simd_element_for<simd_abi_type_t<I>> E,
+        const_mask_for<rebind_simd_t<I, E>> M>
+    requires same_as<ptrdiff_t, simd_element_type_t<I>> &&
+        different_from<ptrdiff_t, int> &&
+        unqualified_canonical_gather<simd_abi_type_t<I>, dx::zero_t,
+            launder_cmask_t<rebind_simd_t<I, E>, M>, E const*, I>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr vector_t<E, A> operator()(dx::zero_t zero, M cmask,
-        E const* ptr, vector_t<ptrdiff_t, A> idx) noexcept {
-        return gather(internal::abi<A>, zero,
-            dx::to_const_mask<vector_t<E, A>>(cmask), ptr, idx);
+    static constexpr rebind_simd_t<I, E> operator()(
+        dx::zero_t zero, M cmask, E const* ptr, I idx) noexcept {
+        return gather(internal::abi<I>, zero,
+            dx::to_const_mask<rebind_simd_t<I, E>>(cmask), ptr, idx);
     }
 };
 } // namespace datapar::internal

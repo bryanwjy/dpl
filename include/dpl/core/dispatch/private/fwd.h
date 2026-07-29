@@ -24,14 +24,14 @@ struct fselect_t : public operation_base<select_t> {
     using operation_base<select_t>::operator();
 };
 
-template <typename T, typename U = ignore_t>
+template <typename T, typename U = void>
 struct fbroadcast_t : public operation_base<broadcast_t<T, U>> {
     using operation_base<broadcast_t<T, U>>::operator();
 };
 
 inline constexpr fbwand_t bwand;
 inline constexpr fselect_t select;
-template <typename T, typename U = ignore_t>
+template <typename T, typename U = void>
 inline constexpr fbroadcast_t<T, U> broadcast;
 } // namespace fwd
 } // namespace datapar::internal

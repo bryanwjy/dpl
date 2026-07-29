@@ -20,8 +20,8 @@ namespace datapar::internal {
 void scan(...) noexcept = delete;
 
 struct scan_t :
-    private inclusive_scan_base<scan_t>,
-    private maskable_transform_base<scan_t> {
+    public inclusive_scan_base<scan_t>,
+    public maskable_transform_base<scan_t> {
     using operation_base<scan_t>::operator();
     using maskable_transform_base<scan_t>::operator();
 };
@@ -57,8 +57,7 @@ private:
     using result_t DPL_NODEBUG = canonical_type_t<cpo_result_t<scan_t, T, Op>>;
 
     template <typename T, typename Op>
-    using mask_t DPL_NODEBUG = basic_mask<simd_element_type_t<result_t<T, Op>>,
-        simd_abi_type_t<result_t<T, Op>>>;
+    using mask_t DPL_NODEBUG = simd_mask_type_t<result_t<T, Op>>;
 
 public:
     template <canonical_vector T, scan_operator_for<T> Op>

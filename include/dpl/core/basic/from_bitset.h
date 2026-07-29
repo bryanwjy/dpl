@@ -11,6 +11,7 @@
 #  include "dpl/core/concepts/simd_type.h"
 #  include "dpl/core/dispatch/interface.h"
 #  include "dpl/core/dispatch/operation/basic.h"
+#  include "dpl/core/type_traits/canonical_type.h"
 #  include "dpl/core/type_traits/simd_abi_traits.h"
 #  include "dpl/std/bit/char_bit.h"
 #  include "dpl/std/bit/has_single_bit.h"
@@ -25,7 +26,7 @@ namespace datapar::internal {
 template <typename>
 void from_bitset(...) noexcept = delete;
 
-template <typename T, typename U = __DPL ignore_t>
+template <typename T, typename U = void>
 struct from_bitset_t : public basic_operation_base<from_bitset_t<T, U>> {
     using operation_base<from_bitset_t<T, U>>::operator();
 };
@@ -33,7 +34,7 @@ struct from_bitset_t : public basic_operation_base<from_bitset_t<T, U>> {
 template <typename T, typename U>
 struct operation_signature<from_bitset_t<T, U>> {
     static consteval void operator()(auto&&, auto&&...) noexcept
-    requires ((same_as<ignore_t, U> && (simd_type<T> || simd_abi<T>)) ||
+    requires ((same_as<void, U> && (simd_type<T> || simd_abi<T>)) ||
         (simd_abi<T> && simd_element_for<U, T>) ||
         (simd_abi<U> && simd_element_for<T, U>))
     {}
@@ -49,8 +50,8 @@ struct canonical_impl<from_bitset_t<A>> {
 private:
     template <size_t W>
     requires fixed_width_abi<A> && (__DPL has_single_bit(W))
-    using deduced_mask DPL_NODEBUG =
-        basic_mask<unsigned_integral_type_t<(A::size * char_bit_v / W)>, A>;
+    using deduced_mask DPL_NODEBUG = make_canonical_mask_t<
+        unsigned_integral_type_t<(A::size * char_bit_v / W)>, A>;
 
 public:
     template <size_t W>
@@ -62,7 +63,7 @@ public:
     }
 };
 
-template <typename T, different_from<ignore_t> U>
+template <typename T, different_from<void> U>
 requires (simd_abi<T> && simd_element_for<U, T>) ||
     (simd_abi<U> && simd_element_for<T, U>)
 struct canonical_impl<from_bitset_t<T, U>> {
@@ -72,7 +73,7 @@ private:
 
 public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr basic_mask<E, A> operator()(
+    static constexpr make_canonical_mask_t<E, A> operator()(
         bitset<simd_abi_traits<A, E>::size> data) noexcept
     requires fixed_width_abi<A> &&
         requires { from_bitset<E>(internal::abi<A>, data); }
@@ -84,7 +85,7 @@ public:
 
 namespace datapar {
 inline namespace cpo {
-template <typename T, typename U = ignore_t>
+template <typename T, typename U = void>
 inline constexpr internal::from_bitset_t<T, U> from_bitset{};
 }
 } // namespace datapar

@@ -42,11 +42,6 @@ concept unqualified_store =
 
 template <>
 struct canonical_impl<store_t> {
-private:
-    template <simd_vector T>
-    using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
-
 public:
     template <canonical_vector T>
     requires unqualified_store<simd_abi_type_t<T>, T, simd_element_type_t<T>*>
@@ -57,18 +52,17 @@ public:
     }
 
     template <canonical_vector T>
-    requires unqualified_store<simd_abi_type_t<T>, mask_t<T>, T,
+    requires unqualified_store<simd_abi_type_t<T>, simd_mask_type_t<T>, T,
         simd_element_type_t<T>*>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
     static constexpr void operator()(
-        mask_t<T> mask, T src, simd_element_type_t<T>* ptr) noexcept {
+        simd_mask_type_t<T> mask, T src, simd_element_type_t<T>* ptr) noexcept {
         return store(internal::abi<T>, mask, src, ptr);
     }
 
-    template <fixed_width_vector T, const_mask_for<T> M>
-    requires canonical_vector<T> &&
-        unqualified_store<simd_abi_type_t<T>, launder_cmask_t<T, M>, T,
-            simd_element_type_t<T>*>
+    template <canonical_vector T, const_mask_for<T> M>
+    requires unqualified_store<simd_abi_type_t<T>, launder_cmask_t<T, M>, T,
+        simd_element_type_t<T>*>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
     static constexpr void operator()(
         M mask, T src, simd_element_type_t<T>* ptr) noexcept {
@@ -86,18 +80,17 @@ public:
     }
 
     template <canonical_vector T>
-    requires unqualified_store<simd_abi_type_t<T>, mask_t<T>, aligned_t, T,
-        simd_element_type_t<T>*>
+    requires unqualified_store<simd_abi_type_t<T>, simd_mask_type_t<T>,
+        aligned_t, T, simd_element_type_t<T>*>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
-    static constexpr void operator()(mask_t<T> mask, aligned_t aligned, T src,
-        simd_element_type_t<T>* ptr) noexcept {
+    static constexpr void operator()(simd_mask_type_t<T> mask,
+        aligned_t aligned, T src, simd_element_type_t<T>* ptr) noexcept {
         return store(internal::abi<T>, mask, aligned, src, ptr);
     }
 
-    template <fixed_width_vector T, const_mask_for<T> M>
-    requires canonical_vector<T> &&
-        unqualified_store<simd_abi_type_t<T>, launder_cmask_t<T, M>, aligned_t,
-            T, simd_element_type_t<T>*>
+    template <canonical_vector T, const_mask_for<T> M>
+    requires unqualified_store<simd_abi_type_t<T>, launder_cmask_t<T, M>,
+        aligned_t, T, simd_element_type_t<T>*>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
     static constexpr void operator()(M mask, aligned_t aligned, T src,
         simd_element_type_t<T>* ptr) noexcept {

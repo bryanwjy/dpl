@@ -39,12 +39,14 @@ template <canonical_mask T>
 inline constexpr bool is_negated_mask_specialization<negated_mask<T>> = true;
 
 template <canonical_mask T>
+requires different_from<T, simd_native_type_t<T>>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr negated_mask<T> make_negated_mask(T val) noexcept {
     return negated_mask<T>(val);
 }
 
 template <canonical_mask T>
+requires different_from<T, simd_native_type_t<T>>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr auto make_negated_mask(negated_mask<T> const& val) noexcept {
     return !val;
@@ -55,8 +57,8 @@ class negated_mask : public simd_mask_base<negated_mask<T>> {
     using element_type DPL_NODEBUG = simd_element_type_t<T>;
 
 public:
-    using vector_type = typename T::vector_type;
-    using abi_type = typename T::abi_type;
+    using vector_type = simd_vector_type_t<T>;
+    using abi_type = simd_abi_type_t<T>;
     using value_type = bool;
     using result_type = T;
 

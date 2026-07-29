@@ -45,12 +45,13 @@ concept unqualified_canonical_to_bitset = requires {
 template <>
 struct canonical_impl<to_bitset_t> {
 
-    template <fixed_width_abi A, simd_element_for<A> E>
-    requires unqualified_canonical_to_bitset<basic_mask<E, A>>
+    template <canonical_mask M>
+    requires fixed_width_abi<simd_abi_type_t<M>> &&
+        unqualified_canonical_to_bitset<M>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr bitset<simd_abi_traits<A, E>::size> operator()(
-        basic_mask<E, A> val) noexcept {
-        return to_bitset(internal::abi<A>, val);
+    static constexpr bitset<simd_abi_traits<M>::size> operator()(
+        M val) noexcept {
+        return to_bitset(internal::abi<M>, val);
     }
 };
 } // namespace datapar::internal

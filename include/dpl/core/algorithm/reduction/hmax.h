@@ -50,11 +50,6 @@ concept unqualified_canonical_mhmax = cpo_invocable<hmax_t, T> &&
 
 template <>
 struct canonical_impl<hmax_t> {
-private:
-    template <typename T>
-    using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
-
 public:
     template <canonical_vector T>
     requires unqualified_canonical_hmax<T>
@@ -64,16 +59,15 @@ public:
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mhmax<type_identity_t<T>, mask_t<T>, T>
+    requires unqualified_canonical_mhmax<T, simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
-        type_identity_t<T> src, mask_t<T> mask, T val) noexcept {
+        type_identity_t<T> src, simd_mask_type_t<T> mask, T val) noexcept {
         return hmax(internal::abi<T>, src, mask, val);
     }
 
     template <canonical_vector T, const_mask_for<T> M>
-    requires unqualified_canonical_mhmax<type_identity_t<T>,
-        launder_cmask_t<T, M>, T>
+    requires unqualified_canonical_mhmax<T, launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
         type_identity_t<T> src, M cmask, T val) noexcept {
@@ -81,10 +75,10 @@ public:
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mhmax<dx::zero_t, mask_t<T>, T>
+    requires unqualified_canonical_mhmax<dx::zero_t, simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
-        dx::zero_t zero, mask_t<T> mask, T val) noexcept {
+        dx::zero_t zero, simd_mask_type_t<T> mask, T val) noexcept {
         return hmax(internal::abi<T>, zero, mask, val);
     }
 

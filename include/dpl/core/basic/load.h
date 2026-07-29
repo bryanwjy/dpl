@@ -21,7 +21,7 @@ __DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void load(...) noexcept = delete;
 
-template <typename T, typename U = __DPL ignore_t>
+template <typename T, typename U = void>
 struct load_t :
     public basic_operation_base<load_t<T, U>>,
     public maskable_transform_base<load_t<T, U>> {
@@ -32,13 +32,13 @@ struct load_t :
 template <typename T, typename U>
 struct operation_signature<load_t<T, U>> {
     static consteval void operator()(void const*) noexcept
-    requires ((same_as<ignore_t, U> && (simd_type<T> || simd_abi<T>)) ||
+    requires ((same_as<void, U> && (simd_type<T> || simd_abi<T>)) ||
         (simd_abi<T> && simd_element_for<U, T>) ||
         (simd_abi<U> && simd_element_for<T, U>))
     {}
 
     static consteval void operator()(aligned_t, void const*) noexcept
-    requires ((same_as<ignore_t, U> && (simd_type<T> || simd_abi<T>)) ||
+    requires ((same_as<void, U> && (simd_type<T> || simd_abi<T>)) ||
         (simd_abi<T> && simd_element_for<U, T>) ||
         (simd_abi<U> && simd_element_for<T, U>))
     {}
@@ -48,7 +48,7 @@ template <typename A, typename... Ts>
 concept unqualified_load =
     requires { load(internal::abi<A>, internal::declarg<Ts>()...); };
 
-template <typename T, different_from<ignore_t> U>
+template <typename T, different_from<void> U>
 requires (simd_abi<T> && simd_element_for<U, T>) ||
     (simd_abi<U> && simd_element_for<T, U>)
 struct canonical_impl<load_t<T, U>> {
@@ -56,8 +56,8 @@ private:
     using E DPL_NODEBUG = conditional_t<simd_abi<T>, U, T>;
     using A DPL_NODEBUG = conditional_t<simd_abi<T>, T, U>;
 
-    using vector_t DPL_NODEBUG = basic_vector<E, A>;
-    using mask_t DPL_NODEBUG = basic_mask<E, A>;
+    using vector_t DPL_NODEBUG = make_canonical_vector_t<E, A>;
+    using mask_t DPL_NODEBUG = make_canonical_mask_t<E, A>;
 
 public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -68,8 +68,8 @@ public:
     }
 
     template <const_mask_for<vector_t> M>
-    requires unqualified_load<A, basic_vector<E, A>,
-        launder_cmask_t<vector_t, M>, E const*>
+    requires unqualified_load<A, vector_t, launder_cmask_t<vector_t, M>,
+        E const*>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr vector_t operator()(
         vector_t src, M cmask, E const* data) noexcept {
@@ -192,7 +192,7 @@ template <simd_vector T>
 struct canonical_impl<load_t<T>> :
     canonical_impl<load_t<simd_abi_type_t<T>, simd_element_type_t<T>>> {};
 
-template <typename T, typename U = ignore_t>
+template <typename T, typename U = void>
 struct aligned_load_t {
     template <typename E>
     requires cpo_invocable<load_t<T, U>, aligned_t, E const*>
@@ -212,9 +212,9 @@ struct aligned_load_t {
 
 namespace datapar {
 inline namespace cpo {
-template <typename T, typename U = __DPL ignore_t>
+template <typename T, typename U = void>
 inline constexpr internal::load_t<T, U> load{};
-template <typename T, typename U = __DPL ignore_t>
+template <typename T, typename U = void>
 inline constexpr internal::aligned_load_t<T, U> aligned_load{};
 } // namespace cpo
 } // namespace datapar

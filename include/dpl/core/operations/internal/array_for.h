@@ -8,13 +8,12 @@
 #  include "dpl/core/concepts/simd_element.h"
 #  include "dpl/core/concepts/simd_vector.h"
 #  include "dpl/core/type_traits/simd_abi_traits.h"
-#  include "dpl/std/utility/ignore.h"
 #endif
 
 __DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 
-template <typename E, typename = __DPL ignore_t>
+template <typename E, typename = void>
 struct array_for {};
 
 template <typename E, fixed_width_abi A>
@@ -24,7 +23,7 @@ struct alignas(simd_abi_traits<E, A>::alignment) array_for<E, A> {
 };
 
 template <simd_vector T>
-struct alignas(simd_abi_traits<T>::alignment) array_for<T, __DPL ignore_t> {
+struct alignas(simd_abi_traits<T>::alignment) array_for<T, void> {
     simd_element_type_t<T> data[simd_abi_traits<T>::size];
 };
 

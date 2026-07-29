@@ -15,7 +15,6 @@
 
 #  include "dpl/std/type_traits/conditional.h"
 #  include "dpl/std/type_traits/is_function.h"
-#  include "dpl/std/utility/ignore.h"
 #endif
 
 __DPL_DEFAULT_NAMESPACE_BEGIN
@@ -64,7 +63,7 @@ template <internal::has_simd_members T>
 struct simd_abi_traits<T> :
     simd_abi_traits<simd_element_type_t<T>, simd_abi_type_t<T>> {};
 
-template <typename T, different_from<ignore_t> U>
+template <typename T, different_from<void> U>
 requires internal::has_representation_for<U, T> ||
     internal::has_representation_for<T, U>
 struct simd_abi_traits<T, U> : private internal::simd_abi_size<T, U> {

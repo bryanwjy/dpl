@@ -25,8 +25,8 @@ namespace datapar::internal {
 void shift_left(...) noexcept = delete;
 
 struct DPL_EMPTY_BASES shift_left_t :
-    private algorithm_base<shift_left_t>,
-    private maskable_transform_base<shift_left_t> {
+    public algorithm_base<shift_left_t>,
+    public maskable_transform_base<shift_left_t> {
     using operation_base<shift_left_t>::operator();
     using maskable_transform_base<shift_left_t>::operator();
 };
@@ -46,9 +46,9 @@ struct fallback_impl<shift_left_t> {
     static constexpr auto DPL_VECTORCALL operator()(
         T&& val, size_t num) noexcept {
         using traits = simd_abi_traits<remove_cvref_t<T>>;
-        using sint = simd_element_type_t<decltype(dx::lane_index<T>())>;
-        auto const size = static_cast<sint>(traits::size());
-        auto const idx = dx::lane_index<T>() + static_cast<sint>(size);
+        using idx_t = simd_element_type_t<decltype(dx::lane_index<T>())>;
+        auto const size = static_cast<idx_t>(traits::size());
+        auto const idx = dx::lane_index<T>() + static_cast<idx_t>(size);
         return dx::select(
             idx > size, dx::zero, dx::permute(__DPL forward<T>(val), idx));
     }
@@ -90,11 +90,6 @@ concept unqualified_canonical_mshift_left = cpo_invocable<shift_left_t, T, N> &&
 
 template <>
 struct canonical_impl<shift_left_t> {
-private:
-    template <typename T>
-    using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
-
 public:
     template <canonical_vector T>
     requires unqualified_canonical_shift_left<T>
@@ -104,16 +99,15 @@ public:
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mshift_left<type_identity_t<T>, mask_t<T>, T>
+    requires unqualified_canonical_mshift_left<T, simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        type_identity_t<T> src, mask_t<T> mask, T val, size_t count) noexcept {
+    static constexpr auto operator()(type_identity_t<T> src,
+        simd_mask_type_t<T> mask, T val, size_t count) noexcept {
         return shift_left(internal::abi<T>, src, mask, val, count);
     }
 
     template <canonical_vector T, const_mask_for<T> M>
-    requires unqualified_canonical_mshift_left<type_identity_t<T>,
-        launder_cmask_t<T, M>, T>
+    requires unqualified_canonical_mshift_left<T, launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         type_identity_t<T> src, M cmask, T val, size_t count) noexcept {
@@ -122,10 +116,11 @@ public:
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mshift_left<dx::zero_t, mask_t<T>, T>
+    requires unqualified_canonical_mshift_left<dx::zero_t, simd_mask_type_t<T>,
+        T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        dx::zero_t zero, mask_t<T> mask, T val, size_t count) noexcept {
+    static constexpr auto operator()(dx::zero_t zero, simd_mask_type_t<T> mask,
+        T val, size_t count) noexcept {
         return shift_left(internal::abi<T>, zero, mask, val, count);
     }
 
@@ -149,17 +144,16 @@ public:
 
     template <canonical_vector T, integral_constant_like N>
     requires canonical_vector<T> &&
-        unqualified_canonical_mshift_left<type_identity_t<T>, mask_t<T>, T, N>
+        unqualified_canonical_mshift_left<T, simd_mask_type_t<T>, T, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        type_identity_t<T> src, mask_t<T> mask, T val, N count) noexcept {
+    static constexpr auto operator()(type_identity_t<T> src,
+        simd_mask_type_t<T> mask, T val, N count) noexcept {
         return shift_left(internal::abi<T>, src, mask, val, count);
     }
 
     template <canonical_vector T, const_mask_for<T> M, integral_constant_like N>
     requires canonical_vector<T> &&
-        unqualified_canonical_mshift_left<type_identity_t<T>,
-            launder_cmask_t<T, M>, T, N>
+        unqualified_canonical_mshift_left<T, launder_cmask_t<T, M>, T, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         type_identity_t<T> src, M cmask, T val, N count) noexcept {
@@ -168,10 +162,11 @@ public:
     }
 
     template <canonical_vector T, integral_constant_like N>
-    requires unqualified_canonical_mshift_left<dx::zero_t, mask_t<T>, T, N>
+    requires unqualified_canonical_mshift_left<dx::zero_t, simd_mask_type_t<T>,
+        T, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
-        dx::zero_t zero, mask_t<T> mask, T val, N count) noexcept {
+        dx::zero_t zero, simd_mask_type_t<T> mask, T val, N count) noexcept {
         return shift_left(internal::abi<T>, zero, mask, val, count);
     }
 

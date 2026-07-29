@@ -76,11 +76,11 @@ struct canonical_impl<slide_left_t> {
 private:
     template <typename L, typename R>
     using result_t DPL_NODEBUG =
-        basic_vector<simd_element_type_t<L>, common_abi_t<L, R>>;
+        make_canonical_vector_t<simd_element_type_t<L>, common_abi_t<L, R>>;
 
     template <typename L, typename R>
     using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<L>, common_abi_t<L, R>>;
+        make_canonical_mask_t<simd_element_type_t<L>, common_abi_t<L, R>>;
 
 public:
     template <canonical_vector L, common_vector_with<L> R>

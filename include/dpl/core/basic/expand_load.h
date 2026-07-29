@@ -11,8 +11,8 @@
 #  include "dpl/core/dispatch/interface.h"
 #  include "dpl/core/dispatch/maskable/transform.h"
 #  include "dpl/core/dispatch/operation/basic.h"
+#  include "dpl/core/type_traits/canonical_type.h"
 #  include "dpl/std/concepts/same_as.h"
-#  include "dpl/std/utility/ignore.h"
 #  include "dpl/std/utility/unreachable.h"
 #endif
 
@@ -21,7 +21,7 @@ __DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void expand_load(...) noexcept = delete;
 
-template <typename T, typename U = __DPL ignore_t>
+template <typename T, typename U = void>
 struct expand_load_t :
     public basic_operation_base<expand_load_t<T, U>>,
     public maskable_transform_base<expand_load_t<T, U>> {
@@ -32,7 +32,7 @@ struct expand_load_t :
 template <typename T, typename U>
 struct operation_signature<expand_load_t<T, U>> {
     static consteval void operator()(void const*) noexcept
-    requires ((same_as<ignore_t, U> && (simd_type<T> || simd_abi<T>)) ||
+    requires ((same_as<void, U> && (simd_type<T> || simd_abi<T>)) ||
         (simd_abi<T> && simd_element_for<U, T>) ||
         (simd_abi<U> && simd_element_for<T, U>))
     {}
@@ -84,28 +84,32 @@ protected:
 template <simd_abi A, simd_element_for<A> E>
 struct canonical_impl<expand_load_t<A, E>> :
     private fixed_width_expand_canonical<A, E> {
+private:
+    using vector_type DPL_NODEBUG = make_canonical_vector_t<E, A>;
+    using mask_type DPL_NODEBUG = make_canonical_mask_t<E, A>;
+
+public:
     using fixed_width_expand_canonical<A, E>::operator();
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(E const* data) noexcept {
-        static_assert(!simd_vector<basic_vector<E, A>>,
+    static constexpr vector_type operator()(E const* data) noexcept {
+        static_assert(!simd_vector<vector_type>,
             "This overload is uninvocable at evaluated contexts");
         __DPL unreachable();
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(
-        basic_vector<E, A> src, basic_mask<E, A> mask, E const* data) noexcept
-    requires unqualified_expand_load<basic_vector<E, A>, basic_mask<E, A>,
-        E const*>
+    static constexpr vector_type operator()(
+        vector_type src, mask_type mask, E const* data) noexcept
+    requires unqualified_expand_load<vector_type, mask_type, E const*>
     {
         return expand_load(internal::abi<A>, src, mask, data);
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(
-        dx::zero_t zero, basic_mask<E, A> mask, E const* data) noexcept
-    requires unqualified_expand_load<dx::zero_t, basic_mask<E, A>, E const*>
+    static constexpr vector_type operator()(
+        dx::zero_t zero, mask_type mask, E const* data) noexcept
+    requires unqualified_expand_load<dx::zero_t, mask_type, E const*>
     {
         return expand_load(internal::abi<A>, zero, mask, data);
     }
@@ -116,13 +120,15 @@ struct canonical_impl<expand_load_t<A>> {
 private:
     template <typename E>
     using base_type DPL_NODEBUG = expand_load_t<A, E>;
+    template <typename E>
+    using vector_t DPL_NODEBUG = make_canonical_vector_t<E, A>;
 
 public:
     template <simd_element_for<A> E>
     requires cpo_invocable<base_type<E>, E const*>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(E const* data) noexcept {
-        static_assert(!simd_vector<basic_vector<E, A>>,
+    static constexpr vector_t<E> operator()(E const* data) noexcept {
+        static_assert(!simd_vector<vector_t<E>>,
             "This overload is uninvocable at evaluated contexts");
         __DPL unreachable();
     }
@@ -130,7 +136,7 @@ public:
     template <typename S, typename M, simd_element_for<A> E>
     requires cpo_invocable<base_type<E>, S, M, E const*>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(
+    static constexpr vector_t<E> operator()(
         S&& src, M&& mask, E const* data) noexcept {
         return base_type<E>::operator()(
             __DPL forward<S>(src), __DPL forward<M>(mask), data);
@@ -145,7 +151,7 @@ struct canonical_impl<expand_load_t<T>> :
 
 namespace datapar {
 inline namespace cpo {
-template <typename T, typename U = __DPL ignore_t>
+template <typename T, typename U = void>
 inline constexpr internal::expand_load_t<T, U> expand_load{};
 } // namespace cpo
 } // namespace datapar

@@ -86,12 +86,8 @@ private:
     }
 
     template <typename T>
-    using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
-
-    template <typename T>
     using result_t DPL_NODEBUG =
-        basic_vector<decltype(make_result<simd_element_type_t<T>>()),
+        make_canonical_vector_t<decltype(make_result<simd_element_type_t<T>>()),
             simd_abi_type_t<T>>;
 
 public:
@@ -150,13 +146,20 @@ public:
 template <>
 struct fallback_impl<sad_t> : binary_broadcasting_fallback<sad_t> {
 public:
-    template <simd_abi A, integral E>
+    template <canonical_vector T>
+    requires integral<simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        basic_vector<E, A> lhs, basic_vector<E, A> rhs) noexcept {
+    static constexpr auto operator()(T lhs, T rhs) noexcept {
+        using E = simd_element_type_t<T>;
         auto const lower = dx::subtract(dx::max(lhs, rhs), dx::min(lhs, rhs));
-        auto const upper =
-            dx::rotate_left(lower, imm<simd_abi_traits<A, E>::size / 2zu>);
+        auto const upper = [&]() {
+            if constexpr (fixed_width_abi<simd_abi_type_t<T>>) {
+                return dx::rotate_left(
+                    lower, imm<simd_abi_traits<T>::size / 2zu>);
+            } else {
+                return dx::rotate_left(lower, simd_abi_traits<T>::size() / 2zu);
+            }
+        }();
         if constexpr (sizeof(E) == sizeof(int8)) {
             using ToE = conditional_t<is_signed_v<E>, int16, uint16>;
             return dx::add(dx::hsum(dx::element_cast<ToE>(lower)),

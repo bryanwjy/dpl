@@ -21,8 +21,8 @@ namespace datapar::internal {
 void scan_max(...) noexcept = delete;
 
 struct scan_max_t :
-    private inclusive_scan_base<scan_max_t>,
-    private maskable_transform_base<scan_max_t> {
+    public inclusive_scan_base<scan_max_t>,
+    public maskable_transform_base<scan_max_t> {
     using operation_base<scan_max_t>::operator();
     using maskable_transform_base<scan_max_t>::operator();
 };
@@ -56,8 +56,7 @@ private:
     using result_t DPL_NODEBUG = canonical_type_t<cpo_result_t<scan_max_t, T>>;
 
     template <typename T>
-    using mask_t DPL_NODEBUG = basic_mask<simd_element_type_t<result_t<T>>,
-        simd_abi_type_t<result_t<T>>>;
+    using mask_t DPL_NODEBUG = simd_mask_type_t<result_t<T>>;
 
 public:
     template <canonical_vector T>

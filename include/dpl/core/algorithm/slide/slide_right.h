@@ -19,8 +19,8 @@ namespace datapar::internal {
 void slide_right(...) noexcept = delete;
 
 struct DPL_EMPTY_BASES slide_right_t :
-    private algorithm_base<slide_right_t>,
-    private maskable_transform_base<slide_right_t> {
+    public algorithm_base<slide_right_t>,
+    public maskable_transform_base<slide_right_t> {
     using operation_base<slide_right_t>::operator();
     using maskable_transform_base<slide_right_t>::operator();
 };
@@ -95,11 +95,11 @@ struct canonical_impl<slide_right_t> {
 private:
     template <typename L, typename R>
     using result_t DPL_NODEBUG =
-        basic_vector<simd_element_type_t<L>, common_abi_t<L, R>>;
+        make_canonical_vector_t<simd_element_type_t<L>, common_abi_t<L, R>>;
 
     template <typename L, typename R>
     using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<L>, common_abi_t<L, R>>;
+        make_canonical_mask_t<simd_element_type_t<L>, common_abi_t<L, R>>;
 
 public:
     template <canonical_vector L, common_vector_with<L> R>

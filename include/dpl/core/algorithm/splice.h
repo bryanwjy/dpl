@@ -19,7 +19,7 @@ __DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void splice(...) noexcept = delete;
 
-struct DPL_EMPTY_BASES splice_t : private algorithm_base<splice_t> {
+struct DPL_EMPTY_BASES splice_t : public algorithm_base<splice_t> {
     using operation_base<splice_t>::operator();
 };
 
@@ -34,7 +34,7 @@ struct fallback_impl<splice_t> {
 private:
     template <typename L, typename R>
     using vector_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<L>, common_abi_t<L, R>>;
+        make_canonical_vector_t<simd_element_type_t<L>, common_abi_t<L, R>>;
 
 public:
     template <simd_vector L, common_vector_with<L> R,
@@ -69,11 +69,11 @@ struct canonical_impl<splice_t> {
 private:
     template <typename L, typename R>
     using result_t DPL_NODEBUG =
-        basic_vector<simd_element_type_t<L>, common_abi_t<L, R>>;
+        make_canonical_vector_t<simd_element_type_t<L>, common_abi_t<L, R>>;
 
     template <typename L, typename R>
     using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<L>, common_abi_t<L, R>>;
+        make_canonical_mask_t<simd_element_type_t<L>, common_abi_t<L, R>>;
 
 public:
     template <canonical_vector L, common_vector_with<L> R>
