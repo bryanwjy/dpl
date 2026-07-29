@@ -62,11 +62,11 @@ struct floating_point_traits<ext::bfloat16> {
     static constexpr auto signbit = bitset<16>(1u << 15);
     static constexpr auto mantissa_mask =
         __DPL truncate<16>(floating_point_traits<float>::mantissa_mask >> 16);
+    static constexpr auto leading_bit = bitset<16>();
     static constexpr auto exponent_mask =
         __DPL truncate<16>(floating_point_traits<float>::exponent_mask >> 16);
     static constexpr auto exponent_bias =
         floating_point_traits<float>::exponent_bias;
-    static constexpr auto has_hidden_bit = true;
     static constexpr auto radix = 2zu;
 };
 #endif
@@ -97,10 +97,10 @@ struct floating_point_traits<ext::float16> {
     static constexpr auto digits = 11zu;
     static constexpr auto signbit = bitset<16>(1u << 15);
     static constexpr auto mantissa_mask = bitset<16>((1u << (digits - 1)) - 1);
+    static constexpr auto leading_bit = bitset<16>();
     static constexpr auto exponent_mask = ~mantissa_mask ^ signbit;
     static constexpr auto exponent_bias =
         static_cast<int>(__DPL to_underlying(exponent_mask >> digits));
-    static constexpr auto has_hidden_bit = true;
     static constexpr auto radix = 2zu;
 };
 #endif

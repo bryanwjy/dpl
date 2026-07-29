@@ -11,7 +11,6 @@
 #  include "dpl/core/concepts/simd_element.h"
 #  include "dpl/core/numbers/floating_point_traits.h"
 #  include "dpl/std/bit/bit_cast.h"
-#  include "dpl/std/bit/bit_type.h"
 #endif
 
 __DPL_DEFAULT_NAMESPACE_BEGIN
@@ -23,12 +22,7 @@ struct exponent_bias_t : broadcastable_base<exponent_bias_t<T>> {
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     constexpr operator int(this exponent_bias_t) noexcept {
-        using bit_type = bit_type_t<char_bit_v * sizeof(T)>;
-        constexpr auto exp = floating_point_traits<T>::exponent_mask >>
-            (digits_v<T> + !floating_point_traits<T>::has_hidden_bit);
-        constexpr auto width =
-            __DPL popcount(floating_point_traits<T>::exponent_mask);
-        return __DPL to_underlying(__DPL truncate<width>(exp));
+        return floating_point_traits<T>::exponent_bias;
     }
 };
 

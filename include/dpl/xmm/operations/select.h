@@ -142,10 +142,10 @@ inline mask<common_size_type_t<L, R>>
         vector<E>(+xmm::reinterpret<E>(rhs)));
 }
 
-template <bit_type_t<2> V, sized_element<8> E>
+template <imask2_t V, sized_element<8> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<E> select(
-    const_mask<2, V> condition, vector<E> lhs, vector<E> rhs) noexcept {
+    cmask2_t<V> condition, vector<E> lhs, vector<E> rhs) noexcept {
     constexpr auto imm = static_cast<int>(condition());
     if constexpr (same_as<double, E>) {
         return _mm_blend_pd(+rhs, +lhs, imm);
@@ -155,10 +155,10 @@ inline vector<E> select(
     }
 }
 
-template <bit_type_t<4> V, sized_element<4> E>
+template <imask4_t V, sized_element<4> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<E> select(
-    const_mask<4, V> condition, vector<E> lhs, vector<E> rhs) noexcept {
+    cmask4_t<V> condition, vector<E> lhs, vector<E> rhs) noexcept {
     constexpr auto imm = static_cast<int>(condition());
     if constexpr (same_as<float, E>) {
         return _mm_blend_ps(+rhs, +lhs, imm);
@@ -168,10 +168,10 @@ inline vector<E> select(
     }
 }
 
-template <bit_type_t<8> V, sized_element<2> E>
+template <imask8_t V, sized_element<2> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<E> select(
-    const_mask<8, V> condition, vector<E> lhs, vector<E> rhs) noexcept {
+    cmask8_t<V> condition, vector<E> lhs, vector<E> rhs) noexcept {
     constexpr auto imm = static_cast<int>(condition());
     if constexpr (same_as<int16, E>) {
         return _mm_blend_epi16(+rhs, +lhs, imm);
@@ -181,10 +181,10 @@ inline vector<E> select(
     }
 }
 
-template <bit_type_t<16> V, sized_element<1> E>
+template <imask16_t V, sized_element<1> E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<E> select(
-    const_mask<16, V> condition, vector<E> lhs, vector<E> rhs) noexcept {
+    cmask16_t<V> condition, vector<E> lhs, vector<E> rhs) noexcept {
     constexpr auto imm = static_cast<int>(condition());
     if constexpr (same_as<int8, E>) {
         constexpr auto imm = xmm::from_bitset<E>(bitset<16>(V));
@@ -195,31 +195,25 @@ inline vector<E> select(
     }
 }
 
-template <simd_element L, simd_element R,
-    bit_type_t<simd_abi_traits<abi_tag, L>::size> V>
-requires common_size_with<L, R>
+template <simd_element L, common_size_with<L> R, imask_t<L> V>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline mask<common_size_type_t<L, R>> select(
-    const_mask<simd_abi_traits<abi_tag, L>::size, V> condition, mask<L> lhs,
-    mask<R> rhs) noexcept {
+    cmask_t<L, V> condition, mask<L> lhs, mask<R> rhs) noexcept {
     using E = common_size_type_t<L, R>;
     return +xmm::select(condition, vector<E>(+xmm::reinterpret<E>(lhs)),
         vector<E>(+xmm::reinterpret<E>(rhs)));
 }
 
-template <integral auto V, simd_element L, simd_element R>
-requires common_size_with<L, R>
+template <integral auto V, simd_element L, common_size_with<L> R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline auto select(mask<L> lhs, mask<R> rhs) noexcept {
-    using mask_type = const_mask<simd_abi_traits<abi_tag, L>::size, V>;
-    return xmm::select(mask_type(), lhs, rhs);
+    return xmm::select(cmask_t<L, V>(), lhs, rhs);
 }
 
 template <integral auto V, simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline auto select(vector<E> lhs, vector<E> rhs) noexcept {
-    using mask_type = const_mask<simd_abi_traits<abi_tag, E>::size, V>;
-    return xmm::select(mask_type(), lhs, rhs);
+    return xmm::select(cmask_t<E, V>(), lhs, rhs);
 }
 
 template <simd_element C, simd_element E>
@@ -240,21 +234,16 @@ requires requires { xmm::select(condition, lhs, rhs); }
     return xmm::select(condition, lhs, rhs);
 }
 
-template <simd_element L, simd_element R,
-    bit_type_t<simd_abi_traits<abi_tag, L>::size> V>
-requires common_size_with<L, R>
+template <simd_element L, common_size_with<L> R, imask_t<L> V>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline mask<common_size_type_t<L, R>> select(abi_tag tag,
-    const_mask<simd_abi_traits<abi_tag, L>::size, V> condition, mask<L> lhs,
-    mask<R> rhs) noexcept {
-    using E = common_size_type_t<L, R>;
+inline auto select(
+    abi_tag tag, cmask_t<L, V> condition, mask<L> lhs, mask<R> rhs) noexcept {
     return xmm::select(condition, lhs, rhs);
 }
 
-template <simd_element E, bit_type_t<simd_abi_traits<abi_tag, E>::size> V>
+template <simd_element E, imask_t<E> V>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline vector<E> select(abi_tag tag,
-    const_mask<simd_abi_traits<abi_tag, E>::size, V> condition, vector<E> lhs,
+inline vector<E> select(abi_tag tag, cmask_t<E, V> condition, vector<E> lhs,
     vector<E> rhs) noexcept {
     return xmm::select(condition, lhs, rhs);
 }

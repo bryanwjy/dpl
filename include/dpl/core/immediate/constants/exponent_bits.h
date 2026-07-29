@@ -12,7 +12,6 @@
 #  include "dpl/core/numbers/floating_point_traits.h"
 #  include "dpl/core/type_traits/representation.h"
 #  include "dpl/std/bit/bit_cast.h"
-#  include "dpl/std/bit/bit_type.h"
 #  include "dpl/std/concepts/convertible_to.h"
 #  include "dpl/std/utility/to_unsigned.h"
 #endif

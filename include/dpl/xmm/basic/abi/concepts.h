@@ -14,7 +14,6 @@
 #  if !DPL_MODULES
 #    include "dpl/core/concepts/simd_element.h"
 #    include "dpl/core/type_traits/simd_element_representation.h"
-#    include "dpl/std/bit/bit_type.h"
 
 #    include <immintrin.h>
 #  endif

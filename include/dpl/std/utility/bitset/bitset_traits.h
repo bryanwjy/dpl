@@ -3,22 +3,21 @@
 #pragma once
 
 #include "dpl/config.h"
-// IWYU pragma: private, include "dpl/std/utility/bitset.h"
 
 #if !DPL_MODULES
-#  include "dpl/std/bit/bit_type.h"
 #  include "dpl/std/bit/bit_width.h"
 #  include "dpl/std/bit/char_bit.h"
 #  include "dpl/std/bit/has_single_bit.h"
 #  include "dpl/std/concepts/convertible_to.h"
 #  include "dpl/std/concepts/equality_comparable.h"
 #  include "dpl/std/type_traits/structured_bindings.h"
+#  include "dpl/std/type_traits/unsigned_integral_type.h"
 #endif
 
 __DPL_DEFAULT_NAMESPACE_BEGIN
 
 template <size_t W>
-class alignas(W / __DPL char_bit_v) bitset;
+class bitset;
 
 template <size_t W>
 struct tuple_size<bitset<W>> : size_constant<W> {};
@@ -55,21 +54,25 @@ concept bitset_constant_like = requires { T::value; } &&
     equality_comparable_with<T, decltype(T::value)> && (T() == T::value) &&
     (static_cast<decltype(T::value)>(T()) == T::value);
 
-consteval size_t ceil_pow2(size_t val) noexcept {
+consteval size_t ceil_width(size_t val) noexcept {
+    if (val < __DPL char_bit_v) {
+        return __DPL char_bit_v;
+    }
+
     return 1zu << (__DPL bit_width(val) - __DPL has_single_bit(val));
 }
 
 template <size_t W>
 struct bitset_storage {
-    using underlying_type = size_t[W / (sizeof(size_t) * __DPL char_bit_v) +
-        (W % (sizeof(size_t) * __DPL char_bit_v) != 0)];
+    using underlying_type = size_t[W / __DPL type_bit_v<size_t> +
+        (W % (__DPL type_bit_v<size_t>) != 0)];
     underlying_type storage_;
 };
 
 template <size_t W>
-requires requires { typename bit_type_t<utility::ceil_pow2(W)>; }
+requires requires { typename unsigned_integral_type_t<utility::ceil_width(W)>; }
 struct bitset_storage<W> {
-    using underlying_type = bit_type_t<utility::ceil_pow2(W)>;
+    using underlying_type = unsigned_integral_type_t<utility::ceil_width(W)>;
     underlying_type value_;
 };
 

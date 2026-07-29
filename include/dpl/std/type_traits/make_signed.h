@@ -123,4 +123,6 @@ struct make_signed<__int128_t> {
 
 #endif // if __DPL_SHOULD_USE_BUILTIN(make_signed)
 
+using ssize_t = make_signed_t<size_t>;
+
 __DPL_DEFAULT_NAMESPACE_END

@@ -14,6 +14,9 @@ inline namespace bit_literals {
 using __DPL bit_literals::operator""_bits;
 }
 
+using __DPL bit_representation;
+using __DPL bit_representation_t;
+using __DPL bit_tile;
 using __DPL bit_width;
 using __DPL bitset;
 using __DPL bitset_constant_like;
@@ -27,6 +30,7 @@ using __DPL integral_bitset_type;
 using __DPL popcount;
 using __DPL rotl;
 using __DPL rotr;
+using __DPL to_bit_representation;
 // using __DPL to_underlying; // Exported below
 using __DPL truncate;
 //

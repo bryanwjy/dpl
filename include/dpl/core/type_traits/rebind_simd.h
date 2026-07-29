@@ -22,7 +22,7 @@ namespace datapar {
  * It is undefined behaviour to define specializations (partial or otherwise)
  * to rebind basic classes, i.e. basic_vector, basic_mask.
  */
-template <typename T, typename U, typename A = simd_abi_type_t<T>>
+template <typename T, typename E, typename A = simd_abi_type_t<T>>
 struct rebind_simd {};
 
 template <typename T, typename E, typename A = simd_abi_type_t<T>>

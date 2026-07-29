@@ -21,9 +21,9 @@ inline constexpr struct epsilon_t : broadcastable_base<epsilon_t> {
     template <floating_point_like T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     constexpr operator T(this epsilon_t) noexcept {
-        using bit_type = bitset<char_bit_v * sizeof(T)>;
-        constexpr auto one = ~bit_type() >> (bit_type::size() - 1);
-        constexpr auto next = __DPL bit_cast<bit_type>(one_v<T>) | one;
+        using bitset_t = bitset<__DPL type_bit_v<T>>;
+        constexpr auto one = bitset_t(1);
+        constexpr auto next = __DPL bit_cast<bitset_t>(one_v<T>) | one;
         return __DPL bit_cast<T>(next) - one_v<T>;
     }
 } epsilon{};

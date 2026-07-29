@@ -3,7 +3,6 @@
 #pragma once
 
 #include "dpl/config.h"
-// IWYU pragma: private, include "dpl/std/utility/bitset.h"
 
 #include "dpl/std/utility/bitset/concepts.h"
 #include "dpl/std/utility/bitset/integral_bitset.h"
@@ -34,6 +33,26 @@ class bitset : public details::utility::bitset_storage<W> {
 public:
     static constexpr auto width = W;
     using typename base_type::underlying_type;
+
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) static constexpr bitset set_low(
+        size_t n) noexcept {
+        return ~bitset() >> (W - n);
+    }
+
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) static constexpr bitset set_high(
+        size_t n) noexcept {
+        return ~bitset() << (W - n);
+    }
+
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) static constexpr bitset clear_low(
+        size_t n) noexcept {
+        return set_high(W - n);
+    }
+
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) static constexpr bitset clear_high(
+        size_t n) noexcept {
+        return set_low(W - n);
+    }
 
 private:
     template <size_t>

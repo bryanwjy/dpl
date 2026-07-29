@@ -7,11 +7,11 @@
 
 #if !DPL_MODULES
 #  include "dpl/std/bit/bit_cast.h"
-#  include "dpl/std/bit/bit_type.h"
 #  include "dpl/std/bit/char_bit.h"
 #  include "dpl/std/concepts/convertible_to.h"
 #  include "dpl/std/concepts/floating_point.h"
 #  include "dpl/std/concepts/integral.h"
+#  include "dpl/std/type_traits/unsigned_integral_type.h"
 #endif
 
 __DPL_DEFAULT_NAMESPACE_BEGIN
@@ -23,9 +23,9 @@ struct value_bits_t : broadcastable_base<value_bits_t> {
     template <signed_integral T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     constexpr operator T(this value_bits_t) noexcept {
-        using bit_type = bit_type_t<sizeof(T) * char_bit_v>;
+        using uint_t = unsigned_integral_type_t<__DPL type_bit_v<T>>;
         return __DPL bit_cast<T>(
-            static_cast<bit_type>(static_cast<bit_type>(-1) >> 1));
+            static_cast<uint_t>(static_cast<uint_t>(-1) >> 1));
     }
 
     template <unsigned_integral T>
@@ -37,14 +37,7 @@ struct value_bits_t : broadcastable_base<value_bits_t> {
     template <floating_point_like T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     constexpr operator T(this value_bits_t) noexcept {
-        if constexpr (floating_point_traits<T>::has_hidden_bit) {
-            return __DPL bit_cast<T>(floating_point_traits<T>::exponent_mask |
-                floating_point_traits<T>::mantissa_mask);
-        } else {
-            return __DPL bit_cast<T>(floating_point_traits<T>::exponent_mask |
-                (floating_point_traits<T>::mantissa_mask << 1) |
-                floating_point_traits<T>::mantissa_mask);
-        }
+        return __DPL bit_cast<T>(~floating_point_traits<T>::signbit);
     }
 };
 

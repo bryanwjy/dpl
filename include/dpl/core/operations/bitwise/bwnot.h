@@ -36,7 +36,7 @@ struct operation_signature<bwnot_t> {
 template <>
 struct fallback_impl<bwnot_t> {
     template <typename E>
-    using bitset_t DPL_NODEBUG = bitset<sizeof(E) * char_bit_v>;
+    using bitset_t DPL_NODEBUG = bitset<__DPL type_bit_v<E>>;
 
     template <simd_abi A, simd_element_for<A> E>
     requires cpo_invocable<bwandnot_t, all_bits_t, basic_vector<E, A>> ||
@@ -48,7 +48,6 @@ struct fallback_impl<bwnot_t> {
                           basic_vector<E, A>>) {
             return bwandnot_t::operator()(dx::all_bits, val);
         } else {
-            using bit_type = bit_type_t<sizeof(E) * char_bit_v>;
             return internal::transform<basic_vector<E, A>>(
                 [](auto val) {
                     auto const negated = ~__DPL bit_cast<bitset_t<E>>(val);

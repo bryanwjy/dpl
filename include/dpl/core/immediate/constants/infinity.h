@@ -22,13 +22,8 @@ struct infinity_t : broadcastable_base<infinity_t> {
     template <floating_point_like T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     constexpr operator T(this infinity_t) noexcept {
-        if constexpr (floating_point_traits<T>::has_hidden_bit) {
-            return __DPL bit_cast<T>(floating_point_traits<T>::exponent_mask);
-        } else {
-            return __DPL bit_cast<T>(
-                (floating_point_traits<T>::exponent_mask >> 1) |
-                floating_point_traits<T>::exponent_mask);
-        }
+        return __DPL bit_cast<T>(floating_point_traits<T>::exponent_mask |
+            floating_point_traits<T>::leading_bit);
     }
 
     consteval auto operator-(this infinity_t) noexcept;

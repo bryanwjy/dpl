@@ -86,9 +86,11 @@ DPL_DISABLE_WARNING(5244)
 #include "dpl/std/type_traits/remove_reference.h"
 #include "dpl/std/type_traits/remove_volatile.h"
 #include "dpl/std/type_traits/sequence.h"
+#include "dpl/std/type_traits/signed_integral_type.h"
 #include "dpl/std/type_traits/structured_bindings.h"
 #include "dpl/std/type_traits/type_identity.h"
 #include "dpl/std/type_traits/underlying_type.h"
+#include "dpl/std/type_traits/unsigned_integral_type.h"
 #include "dpl/std/type_traits/void_t.h"
 // IWYU pragma: end_exports
 

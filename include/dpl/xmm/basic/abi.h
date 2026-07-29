@@ -42,6 +42,20 @@ struct abi_tag : simd_abi_base<abi_tag> {
 
 inline constexpr abi_tag abi{};
 
+using imask16_t DPL_NODEBUG = imask_t<int8>;
+using imask8_t DPL_NODEBUG = imask_t<int16>;
+using imask4_t DPL_NODEBUG = imask_t<int32>;
+using imask2_t DPL_NODEBUG = imask_t<int64>;
+
+template <imask16_t V>
+using cmask16_t DPL_NODEBUG = dx::const_mask<16, V>;
+template <imask8_t V>
+using cmask8_t DPL_NODEBUG = dx::const_mask<8, V>;
+template <imask4_t V>
+using cmask4_t DPL_NODEBUG = dx::const_mask<4, V>;
+template <imask2_t V>
+using cmask2_t DPL_NODEBUG = dx::const_mask<2, V>;
+
 } // namespace datapar::xmm
 
 __DPL_DEFAULT_NAMESPACE_END

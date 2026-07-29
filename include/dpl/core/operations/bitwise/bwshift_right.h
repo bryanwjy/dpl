@@ -45,7 +45,7 @@ template <>
 struct fallback_impl<bwshift_right_t> {
 
     template <typename E>
-    using bitset_t DPL_NODEBUG = bitset<dpl::type_bit_v<E>>;
+    using bitset_t DPL_NODEBUG = bitset<__DPL type_bit_v<E>>;
 
     template <fixed_width_abi A, simd_element_for<A> LE, simd_element_for<A> RE>
     requires integral<RE> && integral_bitset_type<bitset_t<LE>> &&
@@ -71,7 +71,6 @@ struct fallback_impl<bwshift_right_t> {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(
         basic_vector<E, A> val, size_t shift) noexcept {
-        using bit_type = bit_type_t<sizeof(E) * char_bit_v>;
         return internal::transform<basic_vector<E, A>>(
             [shift](auto lhs) {
                 if constexpr (signed_integral<E>) {

@@ -149,14 +149,13 @@ inline vector<L>
         static_assert(sizeof(L) == sizeof(int8));
         auto xmm0 = +lhs;
         auto xmm1 = +rhs;
-        using i16 = make_signed_t<bit_type_t<sizeof(L) * 2 * char_bit_v>>;
         auto xmm3 = _mm_cvtepi8_epi16(xmm1);
         auto xmm2 = _mm_cvtepi8_epi16(xmm0);
-        xmm2 = +xmm::bwshift_left(vector<i16>(xmm2), vector<i16>(xmm3));
+        xmm2 = +xmm::bwshift_left(vector<int16>(xmm2), vector<int16>(xmm3));
 
         xmm1 = _mm_cvtepi8_epi16(_mm_srli_si128(xmm1, 8));
         xmm0 = _mm_cvtepi8_epi16(_mm_srli_si128(xmm0, 8));
-        xmm0 = +xmm::bwshift_left(vector<i16>(xmm0), vector<i16>(xmm1));
+        xmm0 = +xmm::bwshift_left(vector<int16>(xmm0), vector<int16>(xmm1));
         // broadcast 0x00ff00ff
         xmm1 = _mm_srli_epi16(_mm_cmpeq_epi32(xmm1, xmm1), 8);
 
@@ -200,12 +199,11 @@ inline vector<L>
 
         auto xmm3 = _mm_cvtepi16_epi32(xmm1);
         auto xmm2 = _mm_cvtepi16_epi32(xmm0);
-        using i32 = make_signed_t<bit_type_t<sizeof(L) * 2 * char_bit_v>>;
-        xmm2 = +xmm::bwshift_left(vector<i32>(xmm2), vector<i32>(xmm3));
+        xmm2 = +xmm::bwshift_left(vector<int32>(xmm2), vector<int32>(xmm3));
 
         xmm1 = _mm_cvtepi16_epi32(_mm_srli_si128(xmm1, 8));
         xmm0 = _mm_cvtepi16_epi32(_mm_srli_si128(xmm0, 8));
-        xmm0 = +xmm::bwshift_left(vector<i32>(xmm0), vector<i32>(xmm1));
+        xmm0 = +xmm::bwshift_left(vector<int32>(xmm0), vector<int32>(xmm1));
 
         xmm1 = _mm_xor_si128(xmm1, xmm1); // zero
         constexpr auto mask = 0b01010101;
@@ -216,16 +214,13 @@ inline vector<L>
         static_assert(sizeof(L) == sizeof(int8));
         auto xmm0 = +lhs;
         auto xmm1 = +rhs;
-
-        using i16 = make_signed_t<bit_type_t<sizeof(L) * 2 * char_bit_v>>;
-
         auto xmm3 = _mm_cvtepi8_epi16(xmm1);
         auto xmm2 = _mm_cvtepi8_epi16(xmm0);
-        xmm2 = +bwshift_left(vector<i16>(xmm2), vector<i16>(xmm3));
+        xmm2 = +bwshift_left(vector<int16>(xmm2), vector<int16>(xmm3));
 
         xmm1 = _mm_cvtepi8_epi16(_mm_srli_si128(xmm1, 8));
         xmm0 = _mm_cvtepi8_epi16(_mm_srli_si128(xmm0, 8));
-        xmm0 = +bwshift_left(vector<i16>(xmm0), vector<i16>(xmm1));
+        xmm0 = +bwshift_left(vector<int16>(xmm0), vector<int16>(xmm1));
 
         // broadcast 0x00ff00ff
         xmm1 = _mm_srli_epi16(_mm_cmpeq_epi32(xmm1, xmm1), 8);

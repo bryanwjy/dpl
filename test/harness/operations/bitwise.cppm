@@ -27,21 +27,21 @@ class bitwise {
             Op != dpp::bwnot)
         {
             if constexpr (Op == dpp::bwand) {
-                return dpl::bit_cast<E>(
-                    test::to_bitset(lhs) & test::to_bitset(rhs));
+                return dpl::bit_cast<E>(dpl::to_bit_representation(lhs) &
+                    dpl::to_bit_representation(rhs));
             } else if constexpr (Op == dpp::bwor) {
-                return dpl::bit_cast<E>(
-                    test::to_bitset(lhs) | test::to_bitset(rhs));
+                return dpl::bit_cast<E>(dpl::to_bit_representation(lhs) |
+                    dpl::to_bit_representation(rhs));
             } else if constexpr (Op == dpp::bwandnot) {
-                return dpl::bit_cast<E>(
-                    test::to_bitset(lhs) & ~test::to_bitset(rhs));
+                return dpl::bit_cast<E>(dpl::to_bit_representation(lhs) &
+                    ~dpl::to_bit_representation(rhs));
             } else if constexpr (Op == dpp::bwornot) {
-                return dpl::bit_cast<E>(
-                    test::to_bitset(lhs) | ~test::to_bitset(rhs));
+                return dpl::bit_cast<E>(dpl::to_bit_representation(lhs) |
+                    ~dpl::to_bit_representation(rhs));
             } else {
                 static_assert(Op == dpp::bwxor);
-                return dpl::bit_cast<E>(
-                    test::to_bitset(lhs) ^ test::to_bitset(rhs));
+                return dpl::bit_cast<E>(dpl::to_bit_representation(lhs) ^
+                    dpl::to_bit_representation(rhs));
             }
         }
 
@@ -49,14 +49,14 @@ class bitwise {
         static constexpr E operator()(E arg) noexcept
         requires (Op == dpp::bwnot)
         {
-            return dpl::bit_cast<E>(~test::to_bitset(arg));
+            return dpl::bit_cast<E>(~dpl::to_bit_representation(arg));
         }
 
         template <typename E>
         static constexpr E operator()(E lhs, size_t rhs) noexcept
         requires (Op == dpp::bwshift_left)
         {
-            return dpl::bit_cast<E>(test::to_bitset(lhs) << rhs);
+            return dpl::bit_cast<E>(dpl::to_bit_representation(lhs) << rhs);
         }
 
         template <typename E>
@@ -66,7 +66,7 @@ class bitwise {
             if constexpr (dpl::integral<E>) {
                 return static_cast<E>(lhs >> rhs);
             } else {
-                return dpl::bit_cast<E>(test::to_bitset(lhs) >> rhs);
+                return dpl::bit_cast<E>(dpl::to_bit_representation(lhs) >> rhs);
             }
         }
     };

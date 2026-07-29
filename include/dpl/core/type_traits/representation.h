@@ -6,14 +6,9 @@
 #if !DPL_MODULES
 #  include "dpl/core/fwd.h"
 
-#  include "dpl/std/bit/bit_type.h"
 #  include "dpl/std/bit/char_bit.h"
-#  include "dpl/std/concepts/enumeration.h"
-#  include "dpl/std/type_traits/is_object.h"
-#  include "dpl/std/type_traits/is_trivially_copyable.h"
-#  include "dpl/std/type_traits/make_signed.h"
-#  include "dpl/std/type_traits/make_unsigned.h"
-#  include "dpl/std/type_traits/underlying_type.h"
+#  include "dpl/std/type_traits/signed_integral_type.h"
+#  include "dpl/std/type_traits/unsigned_integral_type.h"
 #endif
 
 __DPL_DEFAULT_NAMESPACE_BEGIN
@@ -25,43 +20,20 @@ struct signed_representation {};
 template <typename T>
 using signed_representation_t = typename signed_representation<T>::type;
 
-template <integral T>
-struct signed_representation<T> {
-    using type DPL_NODEBUG = make_signed_t<T>;
-};
-template <enumeration T>
-struct signed_representation<T> {
-    using type DPL_NODEBUG = make_signed_t<underlying_type_t<T>>;
-};
 template <typename T>
-requires (!integral<T> && !enumeration<T>) && is_object_v<T> &&
-    is_trivially_copyable_v<T> &&
-    requires { typename bit_type_t<sizeof(T) * char_bit_v>; }
-struct signed_representation<T> {
-    using type DPL_NODEBUG = make_signed_t<bit_type_t<sizeof(T) * char_bit_v>>;
-};
+requires requires { typename signed_integral_type_t<__DPL type_bit_v<T>>; }
+struct signed_representation<T> :
+    signed_integral_type<__DPL type_bit_v<T>> {};
 
 template <typename T>
 struct unsigned_representation {};
 template <typename T>
 using unsigned_representation_t = typename unsigned_representation<T>::type;
 
-template <integral T>
-struct unsigned_representation<T> {
-    using type DPL_NODEBUG = make_unsigned_t<T>;
-};
-template <enumeration T>
-struct unsigned_representation<T> {
-    using type DPL_NODEBUG = make_unsigned_t<underlying_type_t<T>>;
-};
 template <typename T>
-requires (!integral<T> && !enumeration<T>) && is_object_v<T> &&
-    is_trivially_copyable_v<T> &&
-    requires { typename bit_type_t<sizeof(T) * char_bit_v>; }
-struct unsigned_representation<T> {
-    using type DPL_NODEBUG =
-        make_unsigned_t<bit_type_t<sizeof(T) * char_bit_v>>;
-};
+requires requires { typename unsigned_integral_type_t<__DPL type_bit_v<T>>; }
+struct unsigned_representation<T> :
+    unsigned_integral_type<__DPL type_bit_v<T>> {};
 } // namespace datapar
 
 __DPL_DEFAULT_NAMESPACE_END

@@ -10,11 +10,11 @@
 #  include "dpl/core/concepts/simd_type.h"
 #  include "dpl/core/type_traits/enable_const_mask.h"
 #  include "dpl/core/type_traits/simd_abi_traits.h"
-#  include "dpl/std/bit/bit_type.h"
 #  include "dpl/std/bit/bit_width.h"
 #  include "dpl/std/bit/countl.h"
 #  include "dpl/std/bit/countr.h"
 #  include "dpl/std/bit/popcount.h"
+#  include "dpl/std/bit/unsigned_integral_type.h"
 #  include "dpl/std/concepts/convertible_to.h"
 #  include "dpl/std/concepts/integral.h"
 #  include "dpl/std/utility/bitset.h"
@@ -24,25 +24,19 @@
 __DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 namespace internal {
+
 template <size_t W>
-struct mask_value {};
+struct mask_value {
+    using type DPL_NODEBUG = bitset<W>;
+};
+
 template <size_t W>
 using mask_value_t DPL_NODEBUG = typename mask_value<W>::type;
 
-#if DPL_SUPPORTS_INT128
-#  define __DPL_MAX_BITS 16
-#else
-#  define __DPL_MAX_BITS 8
-#endif
-
 template <size_t W>
-requires (W <= __DPL_MAX_BITS && __DPL has_single_bit(W))
-struct mask_value<W> : bit_type<W> {};
-
-template <size_t W>
-requires (W > __DPL_MAX_BITS && __DPL has_single_bit(W))
+requires integral_bitset_type<bitset<W>>
 struct mask_value<W> {
-    using type DPL_NODEBUG = bitset<W>;
+    using type DPL_NODEBUG = typename bitset<W>::underlying_type;
 };
 
 #undef __DPL_MAX_BITS
@@ -169,13 +163,13 @@ public:
         return (value & static_cast<value_type>(W - 1)) != 0;
     }
 
-    template <size_t W2, bit_type_t<W2> V2>
+    template <size_t W2, internal::mask_value_t<W2> V2>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     constexpr bool operator==(this const_mask, const_mask<W2, V2>) noexcept {
         return const_mask<W2, V2>::value == value;
     }
 
-    template <size_t W2, bit_type_t<W2> V2>
+    template <size_t W2, internal::mask_value_t<W2> V2>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     constexpr bool operator!=(this const_mask, const_mask<W2, V2>) noexcept {
         return const_mask<W2, V2>::value != value;

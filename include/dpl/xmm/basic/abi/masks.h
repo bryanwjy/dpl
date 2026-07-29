@@ -15,7 +15,7 @@
 #  if !DPL_MODULES
 #    include "dpl/core/immediate/const_mask.h"
 #    include "dpl/core/type_traits/simd_abi_traits.h"
-#    include "dpl/std/bit/bit_type.h"
+#    include "dpl/core/type_traits/unsigned_integral_type.h"
 #    include "dpl/std/utility/bitset.h"
 
 #    include <immintrin.h>
@@ -25,8 +25,10 @@ __DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::xmm {
 
+// imask_t will always be integral
 template <simd_element E>
-using imask_t DPL_NODEBUG = bit_type_t<simd_abi_traits<abi_tag, E>::size>;
+using imask_t DPL_NODEBUG =
+    typename bitset<simd_abi_traits<abi_tag, E>::size>::underlying_type;
 template <simd_element E>
 using bitset_t DPL_NODEBUG = bitset<simd_abi_traits<abi_tag, E>::size>;
 template <simd_element E, imask_t<E> V>

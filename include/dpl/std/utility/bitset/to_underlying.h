@@ -3,7 +3,6 @@
 #pragma once
 
 #include "dpl/config.h"
-// IWYU pragma: private, include "dpl/std/utility/bitset.h"
 
 #include "dpl/std/utility/bitset/bitset_traits.h"
 #include "dpl/std/utility/bitset/concepts.h"

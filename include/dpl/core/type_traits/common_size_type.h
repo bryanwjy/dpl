@@ -4,7 +4,6 @@
 #include "dpl/config.h"
 
 #if !DPL_MODULES
-#  include "dpl/std/bit/bit_type.h"
 #  include "dpl/std/bit/char_bit.h"
 #  include "dpl/std/concepts/common_with.h"
 #  include "dpl/std/concepts/enumeration.h"
@@ -12,7 +11,9 @@
 #  include "dpl/std/type_traits/common_type.h"
 #  include "dpl/std/type_traits/make_signed.h"
 #  include "dpl/std/type_traits/make_unsigned.h"
+#  include "dpl/std/type_traits/signed_integral_type.h"
 #  include "dpl/std/type_traits/underlying_type.h"
+#  include "dpl/std/type_traits/unsigned_integral_type.h"
 #endif
 
 __DPL_DEFAULT_NAMESPACE_BEGIN
@@ -38,10 +39,11 @@ requires (sizeof(A) == sizeof(B))
 struct common_size_type<A, B> {
 private:
     static consteval auto choose_type() noexcept {
+        constexpr auto width = __DPL type_bit_v<A>;
         if constexpr (signed_integral<A> && signed_integral<B>) {
-            return make_signed_t<bit_type_t<sizeof(A) * char_bit_v>>{};
+            return signed_integral_type<width>{};
         } else if constexpr (unsigned_integral<A> && unsigned_integral<B>) {
-            return make_unsigned_t<bit_type_t<sizeof(A) * char_bit_v>>{};
+            return unsigned_integral_type<width>{};
         } else if constexpr (enumeration<A> && enumeration<B>) {
             return common_size_type<underlying_type_t<A>,
                 underlying_type_t<B>>{};
@@ -53,10 +55,10 @@ private:
             if constexpr (sizeof(common_type_t<A, B>) == sizeof(A)) {
                 return common_type<A, B>{};
             } else {
-                return bit_type<sizeof(A) * char_bit_v>{};
+                return unsigned_integral_type<width>{};
             }
         } else {
-            return bit_type<sizeof(A) * char_bit_v>{};
+            return unsigned_integral_type<width>{};
         }
     }
 

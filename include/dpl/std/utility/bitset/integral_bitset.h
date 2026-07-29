@@ -3,13 +3,11 @@
 #pragma once
 
 #include "dpl/config.h"
-// IWYU pragma: private, include "dpl/std/utility/bitset.h"
 
 #include "dpl/std/utility/bitset/bitset_traits.h"
 #include "dpl/std/utility/to_unsigned.h"
 
 #if !DPL_MODULES
-#  include "dpl/std/bit/bit_type.h"
 #  include "dpl/std/bit/bit_width.h"
 #  include "dpl/std/bit/char_bit.h"
 #  include "dpl/std/bit/has_single_bit.h"
@@ -17,6 +15,7 @@
 #  include "dpl/std/type_traits/extent.h"
 #  include "dpl/std/type_traits/is_scalar.h"
 #  include "dpl/std/type_traits/sequence.h"
+#  include "dpl/std/type_traits/unsigned_integral_type.h"
 #endif
 
 #if DPL_HAS_CXX26_EXTENSIONS
@@ -27,10 +26,10 @@ DPL_DISABLE_WARNING("-Wc++26-extensions")
 __DPL_DEFAULT_NAMESPACE_BEGIN
 
 template <size_t W>
-class alignas(W / __DPL char_bit_v) bitset;
+class bitset;
 
 template <size_t W>
-requires requires { typename bit_type_t<details::utility::ceil_pow2(W)>; }
+requires integral<typename details::utility::bitset_storage<W>::underlying_type>
 class bitset<W> : public details::utility::bitset_storage<W> {
     // TODO iterators?
     using base_type DPL_NODEBUG = details::utility::bitset_storage<W>;
@@ -39,6 +38,26 @@ class bitset<W> : public details::utility::bitset_storage<W> {
 public:
     static constexpr auto width = W;
     using typename base_type::underlying_type;
+
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) static constexpr bitset set_low(
+        size_t n) noexcept {
+        return ~bitset() >> (W - n);
+    }
+
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) static constexpr bitset set_high(
+        size_t n) noexcept {
+        return ~bitset() << (W - n);
+    }
+
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) static constexpr bitset clear_low(
+        size_t n) noexcept {
+        return set_high(W - n);
+    }
+
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) static constexpr bitset clear_high(
+        size_t n) noexcept {
+        return set_low(W - n);
+    }
 
 private:
     static constexpr underlying_type one = static_cast<underlying_type>(1);

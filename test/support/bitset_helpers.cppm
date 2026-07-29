@@ -21,15 +21,5 @@ template <size_t N>
         }
     }(dpl::make_index_sequence<bytes>{});
 }
-
-template <typename T>
-using make_bitset_t = dpl::bitset<dpl::type_bit_v<T>>;
-
-template <typename T>
-[[nodiscard]] constexpr make_bitset_t<T> to_bitset(T const& data) noexcept
-requires requires { dpl::bit_cast<make_bitset_t<T>>(data); }
-{
-    return dpl::bit_cast<make_bitset_t<T>>(data);
-}
 } // namespace support
 } // namespace dpl::test

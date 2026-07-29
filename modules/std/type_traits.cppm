@@ -10,6 +10,8 @@ export import :std.details.type_traits;
 
 __DPL_DEFAULT_NAMESPACE_BEGIN
 // NOLINTBEGIN(misc-unused-using-decls)
+using __DPL ssize_t;
+//
 using __DPL bool_constant;
 using __DPL declval;
 using __DPL false_type;
@@ -75,6 +77,11 @@ using __DPL type_identity;
 using __DPL type_identity_t;
 using __DPL underlying_type;
 using __DPL underlying_type_t;
+//
+using __DPL signed_integral_type;
+using __DPL signed_integral_type_t;
+using __DPL unsigned_integral_type;
+using __DPL unsigned_integral_type_t;
 //
 using __DPL extent;
 using __DPL extent_v;

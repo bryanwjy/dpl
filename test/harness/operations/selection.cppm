@@ -99,7 +99,8 @@ class selection {
 
             for (auto i = 0zu; i < mask.size(); ++i) {
                 if (!mask[i]) {
-                    expected[i] = dpl::bit_cast<E>(~test::make_bitset_t<E>());
+                    expected[i] =
+                        dpl::bit_cast<E>(~dpl::bit_representation_t<E>());
                 } else {
                     expected[i] = lhs[i];
                 }
@@ -121,7 +122,8 @@ class selection {
 
             for (auto i = 0zu; i < mask.size(); ++i) {
                 if (mask[i]) {
-                    expected[i] = dpl::bit_cast<E>(~test::make_bitset_t<E>());
+                    expected[i] =
+                        dpl::bit_cast<E>(~dpl::bit_representation_t<E>());
                 } else {
                     expected[i] = lhs[i];
                 }
@@ -193,7 +195,8 @@ class selection {
 
             for (auto i = 0zu; i < mask.size(); ++i) {
                 if (!mask[i]) {
-                    expected[i] = dpl::bit_cast<E>(~test::make_bitset_t<E>());
+                    expected[i] =
+                        dpl::bit_cast<E>(~dpl::bit_representation_t<E>());
                 } else {
                     expected[i] = lhs[i];
                 }
@@ -208,7 +211,8 @@ class selection {
 
             for (auto i = 0zu; i < mask.size(); ++i) {
                 if (mask[i]) {
-                    expected[i] = dpl::bit_cast<E>(~test::make_bitset_t<E>());
+                    expected[i] =
+                        dpl::bit_cast<E>(~dpl::bit_representation_t<E>());
                 } else {
                     expected[i] = lhs[i];
                 }

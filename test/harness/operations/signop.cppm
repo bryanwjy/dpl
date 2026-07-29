@@ -31,7 +31,8 @@ class signop {
                 return arg < E(0) ? static_cast<E>(-static_cast<U>(arg)) : arg;
             } else {
                 constexpr auto signbit = dpl::floating_point_traits<E>::signbit;
-                return dpl::bit_cast<E>(test::to_bitset(arg) & ~signbit);
+                return dpl::bit_cast<E>(
+                    dpl::to_bit_representation(arg) & ~signbit);
             }
         }
 
@@ -43,7 +44,8 @@ class signop {
                 return -arg;
             } else {
                 constexpr auto signbit = dpl::floating_point_traits<E>::signbit;
-                return dpl::bit_cast<E>(test::to_bitset(arg) ^ signbit);
+                return dpl::bit_cast<E>(
+                    dpl::to_bit_representation(arg) ^ signbit);
             }
         }
     };

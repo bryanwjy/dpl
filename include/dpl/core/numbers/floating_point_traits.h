@@ -3,8 +3,6 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/numbers/details/xfp.h"
-
 #if !DPL_MODULES
 #  include "dpl/std/bit/bit_cast.h"
 #  include "dpl/std/bit/char_bit.h"
@@ -24,31 +22,29 @@ struct floating_point_traits<T> {
 
     using type = T;
 
-    static constexpr auto width = sizeof(T) * __DPL char_bit_v;
+    static constexpr auto width = __DPL type_bit_v<T>;
 
     static constexpr auto digits = static_cast<size_t>(
-        __DPL countr_zero(__DPL bit_cast<bitset<width>>(static_cast<T>(1))) +
+        __DPL countr_zero(__DPL to_bit_representation(static_cast<T>(1))) +
         1);
 
-    static constexpr auto signbit = ~bitset<width>() << (width - 1);
+    static constexpr auto signbit = bit_representation_t<T>::set_high(1);
 
-    static constexpr auto mantissa_mask = bitset<width>(~bitset<digits - 1>());
+    static constexpr auto mantissa_mask =
+        bit_representation_t<T>::set_low(digits - 1);
+
+    static constexpr auto leading_bit = bit_representation_t<T>();
 
     static constexpr auto exponent_mask = ~mantissa_mask ^ signbit;
 
     static constexpr auto exponent_bias =
         static_cast<int>(__DPL to_underlying(exponent_mask >> digits));
 
-    static constexpr auto has_hidden_bit = true;
-
     static constexpr auto radix = 2zu;
 };
 
 template <floating_point T>
-requires (sizeof(T) == sizeof(bitset<80>) &&
-    __DPL countr_zero(
-        __DPL bit_cast<details::numbers::xfp<sizeof(T)>>(static_cast<T>(1))
-            .to_bitset()) == 63)
+requires same_as<bit_representation_t<T>, bitset<80>>
 struct floating_point_traits<T> {
     using type = T;
 
@@ -56,16 +52,17 @@ struct floating_point_traits<T> {
 
     static constexpr auto digits = 64zu;
 
-    static constexpr auto signbit = ~bitset<80>() << 79;
+    static constexpr auto signbit = bitset<80>::set_high(1);
 
-    static constexpr auto mantissa_mask = bitset<80>(~bitset<63>());
+    static constexpr auto mantissa_mask = bitset<80>::set_low(63);
 
-    static constexpr auto exponent_mask = ~signbit & ~bitset<80>(~bitset<64>());
+    static constexpr auto leading_bit = bitset<80>::set_low(1) << 63;
+
+    static constexpr auto exponent_mask =
+        ~(signbit | mantissa_mask | leading_bit);
 
     static constexpr auto exponent_bias =
         static_cast<int>(__DPL to_underlying(exponent_mask >> digits));
-
-    static constexpr auto has_hidden_bit = false;
 
     static constexpr auto radix = 2zu;
 };

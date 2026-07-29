@@ -12,11 +12,11 @@
 #  include "dpl/core/dispatch/interface.h"
 #  include "dpl/core/dispatch/operation/basic.h"
 #  include "dpl/core/type_traits/simd_abi_traits.h"
-#  include "dpl/std/bit/bit_type.h"
 #  include "dpl/std/bit/char_bit.h"
 #  include "dpl/std/bit/has_single_bit.h"
 #  include "dpl/std/concepts/different_from.h"
 #  include "dpl/std/concepts/same_as.h"
+#  include "dpl/std/type_traits/unsigned_integral_type.h"
 #  include "dpl/std/utility/bitset.h"
 #endif
 
@@ -50,7 +50,7 @@ private:
     template <size_t W>
     requires fixed_width_abi<A> && (__DPL has_single_bit(W))
     using deduced_mask DPL_NODEBUG =
-        basic_mask<bit_type_t<(A::size * char_bit_v / W)>, A>;
+        basic_mask<unsigned_integral_type_t<(A::size * char_bit_v / W)>, A>;
 
 public:
     template <size_t W>

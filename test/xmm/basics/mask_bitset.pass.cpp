@@ -14,7 +14,8 @@ import dpl.xmm;
 //   (4) dpp::from_bitset<A, E>(b)     -- A and E reordered
 //   (5) dpp::from_bitset<mask_t<E>>(b) -- mask type T
 //   (6) dpp::from_bitset<A>(b)         -- A only, E deduced from bitset width
-//                                          via bit_type_t; unsigned types only
+//                                          via unsigned_integral_type_t;
+//                                          unsigned types only
 //   (7) xmm::from_bitset<E>(b)         -- xmm convenience
 //
 // Test structure:
@@ -102,8 +103,8 @@ constexpr void test_from_bitset() {
     }
 }
 
-// from_bitset<A> only: E is deduced as bit_type_t<register_bits / W>,
-// always an unsigned integer type. Tested separately for each deduced type.
+// from_bitset<A> only: E is deduced as unsigned_integral_type_t<register_bits /
+// W>, always an unsigned integer type. Tested separately for each deduced type.
 template <typename E>
 constexpr void test_from_bitset_abi_deduced() {
     static_assert(dpl::integral<E>);

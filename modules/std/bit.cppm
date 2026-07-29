@@ -13,8 +13,6 @@ __DPL_DEFAULT_NAMESPACE_BEGIN
 // NOLINTBEGIN(misc-unused-using-decls)
 using __DPL bit_cast;
 using __DPL bit_ceil;
-using __DPL bit_type;
-using __DPL bit_type_t;
 using __DPL bit_width;
 using __DPL byteswap;
 using __DPL char_bit_v;

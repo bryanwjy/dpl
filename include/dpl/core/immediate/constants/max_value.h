@@ -11,7 +11,6 @@
 #if !DPL_MODULES
 #  include "dpl/core/numbers/floating_point_traits.h"
 #  include "dpl/std/bit/bit_cast.h"
-#  include "dpl/std/bit/bit_type.h"
 #  include "dpl/std/concepts/convertible_to.h"
 #  include "dpl/std/concepts/integral.h"
 #endif
@@ -39,11 +38,8 @@ struct max_value_t : broadcastable_base<max_value_t> {
 
         constexpr auto biased_exp = __DPL to_underlying(exp >> shift);
         constexpr auto result_exp = bitset<width>(biased_exp - 1) << shift;
-        if constexpr (floating_point_traits<T>::has_hidden_bit) {
-            return __DPL bit_cast<T>(result_exp | mantissa);
-        } else {
-            return __DPL bit_cast<T>(result_exp | mantissa | (mantissa << 1));
-        }
+        return __DPL bit_cast<T>(
+            result_exp | mantissa | floating_point_traits<T>::leading_bit);
     }
 };
 

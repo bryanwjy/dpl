@@ -4,8 +4,10 @@
 
 #include "dpl/config.h"
 
-#include "dpl/std/bit/bit_type.h"
 #include "dpl/std/bit/char_bit.h"
+#if !DPL_MODULES
+#  include "dpl/std/type_traits/unsigned_integral_type.h"
+#endif
 
 __DPL_DEFAULT_NAMESPACE_BEGIN
 
@@ -26,7 +28,7 @@ constexpr T byteswap(T val) noexcept {
 }
 
 template <integral T>
-requires (sizeof(T) * char_bit_v == 16)
+requires (type_bit_v<T> == 16)
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr T byteswap(T val) noexcept {
     if constexpr (unsigned_integral<T>) {
@@ -41,7 +43,7 @@ constexpr T byteswap(T val) noexcept {
 }
 
 template <integral T>
-requires (sizeof(T) * char_bit_v == 32)
+requires (type_bit_v<T> == 32)
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr auto byteswap(T val) noexcept {
     if constexpr (unsigned_integral<T>) {
@@ -57,7 +59,7 @@ constexpr auto byteswap(T val) noexcept {
 }
 
 template <integral T>
-requires (sizeof(T) * char_bit_v == 64)
+requires (type_bit_v<T> == 64)
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr auto byteswap(T val) noexcept {
     if constexpr (unsigned_integral<T>) {
@@ -88,7 +90,7 @@ constexpr T byteswap(T val) noexcept {
 
 #  if DPL_HAS_BUILTIN(__builtin_bswap16)
 template <integral T>
-requires (sizeof(T) * char_bit_v == 16)
+requires (type_bit_v<T> == 16)
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr T byteswap(T val) noexcept {
     return __builtin_bswap16(val);
@@ -97,7 +99,7 @@ constexpr T byteswap(T val) noexcept {
 
 #  if DPL_HAS_BUILTIN(__builtin_bswap32)
 template <integral T>
-requires (sizeof(T) * char_bit_v == 32)
+requires (type_bit_v<T> == 32)
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr T byteswap(T val) noexcept {
     return __builtin_bswap32(val);
@@ -106,7 +108,7 @@ constexpr T byteswap(T val) noexcept {
 
 #  if DPL_HAS_BUILTIN(__builtin_bswap64)
 template <integral T>
-requires (sizeof(T) * char_bit_v == 64)
+requires (type_bit_v<T> == 64)
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr T byteswap(T val) noexcept {
     return __builtin_bswap64(val);
@@ -115,17 +117,17 @@ constexpr T byteswap(T val) noexcept {
 
 #  if DPL_SUPPORTS_INT128
 template <integral T>
-requires (sizeof(T) * char_bit_v == 128)
+requires (type_bit_v<T> == 128)
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr T byteswap(T val) noexcept {
 #    if DPL_HAS_BUILTIN(__builtin_bswap128)
     return __builtin_bswap128(val);
 #    else
     return (static_cast<T>( __DPL details::bit::byteswap(
-                static_cast<bit_type_t<64>>(val)))
+                static_cast<unsigned_integral_type_t<64>>(val)))
                << 64) |
         static_cast<T>(__DPL details::bit::byteswap(
-            static_cast<bit_type_t<64>>(val >> 64)));
+            static_cast<unsigned_integral_type_t<64>>(val >> 64)));
 #    endif
 }
 #  endif

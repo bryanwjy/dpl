@@ -31,7 +31,7 @@ inline constexpr struct bitcmp_t {
     requires dpl::is_scalar_v<L> && dpl::is_scalar_v<R>
     static constexpr auto operator()(L lhs, R rhs) noexcept {
         return sizeof(L) == sizeof(R) &&
-            test::to_bitset(lhs) == test::to_bitset(rhs);
+            dpl::to_bit_representation(lhs) == dpl::to_bit_representation(rhs);
     }
 } bitcmp{};
 } // namespace support

@@ -346,8 +346,10 @@ public:
         constexpr auto count = N / dpl::type_bit_v<size_t> + remainder > 0;
         return [&]<size_t... Is>(dpl::index_sequence<Is..., count - 1>) {
             return result_type{
-                make_bitset_t<decltype(Is)>(base_type::operator()(rng))...,
-                make_bitset_t<size_t>(base_type::operator()(rng) % remainder),
+                bit_representation_t<decltype(Is)>(
+                    base_type::operator()(rng))...,
+                bit_representation_t<size_t>(
+                    base_type::operator()(rng) % remainder),
             };
         }(dpl::make_index_sequence<count>{});
     }

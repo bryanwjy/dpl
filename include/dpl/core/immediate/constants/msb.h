@@ -6,11 +6,11 @@
 #include "dpl/core/immediate/broadcastable_base.h"
 
 #if !DPL_MODULES
-#  include "dpl/std/bit/bit_type.h"
 #  include "dpl/std/bit/char_bit.h"
 #  include "dpl/std/concepts/convertible_to.h"
 #  include "dpl/std/concepts/floating_point.h"
 #  include "dpl/std/concepts/integral.h"
+#  include "dpl/std/type_traits/unsigned_integral_type.h"
 #endif
 
 __DPL_DEFAULT_NAMESPACE_BEGIN
@@ -22,8 +22,9 @@ struct msb_t : broadcastable_base<msb_t> {
     template <integral T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     constexpr operator T(this msb_t) noexcept {
-        constexpr auto width = char_bit_v * sizeof(T);
-        auto const result = static_cast<bit_type_t<width>>(1) << (width - 1);
+        constexpr auto width = __DPL type_bit_v<T>;
+        using uint_t = unsigned_integral_type_t<width>;
+        auto const result = static_cast<uint_t>(1) << (width - 1);
         return static_cast<T>(result);
     }
 

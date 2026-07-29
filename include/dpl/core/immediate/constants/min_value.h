@@ -8,8 +8,7 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/numbers/floating_point_traits.h"
-#  include "dpl/std/bit/bit_cast.h"
-#  include "dpl/std/bit/bit_type.h"
+#  include "dpl/std/bit/char_bit.h"
 #  include "dpl/std/concepts/convertible_to.h"
 #  include "dpl/std/concepts/integral.h"
 #endif
@@ -24,7 +23,7 @@ struct min_value_t : broadcastable_base<min_value_t> {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     constexpr operator T(this min_value_t) noexcept {
         if constexpr (signed_integral<T>) {
-            constexpr auto shift = char_bit_v * sizeof(T) - 1;
+            constexpr auto shift = __DPL type_bit_v<T> - 1;
             return static_cast<T>(static_cast<T>(1) << shift);
         } else {
             return 0;
@@ -34,9 +33,10 @@ struct min_value_t : broadcastable_base<min_value_t> {
     template <floating_point_like T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     constexpr operator T(this min_value_t) noexcept {
-        using bit_type = bit_type_t<sizeof(T) * char_bit_v>;
-        auto const mask = static_cast<bit_type>(1) << mantissa_width_v<T>;
-        return __DPL bit_cast<T>(static_cast<bit_type>(mask));
+        constexpr auto shift =
+            __DPL countr_zero(floating_point_traits<T>::exponent_mask);
+        auto const exp = floating_point_traits<T>::signbit >> shift;
+        return __DPL bit_cast<T>(exp | floating_point_traits<T>::leading_bit);
     }
 };
 

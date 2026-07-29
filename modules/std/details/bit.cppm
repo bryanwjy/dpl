@@ -18,7 +18,6 @@ DPL_DISABLE_WARNING(5244)
 // IWYU pragma: begin_exports
 #include "dpl/std/bit/bit_cast.h"
 #include "dpl/std/bit/bit_ceil.h"
-#include "dpl/std/bit/bit_type.h"
 #include "dpl/std/bit/bit_width.h"
 #include "dpl/std/bit/byteswap.h"
 #include "dpl/std/bit/char_bit.h"

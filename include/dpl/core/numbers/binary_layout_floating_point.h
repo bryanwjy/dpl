@@ -18,9 +18,9 @@ concept binary_layout_floating_point = floating_point_like<T> && requires {
     floating_point_traits<T>::digits;
     floating_point_traits<T>::signbit;
     floating_point_traits<T>::mantissa_mask;
+    floating_point_traits<T>::leading_bit;
     floating_point_traits<T>::exponent_mask;
     floating_point_traits<T>::exponent_bias;
-    floating_point_traits<T>::has_hidden_bit;
     floating_point_traits<T>::radix;
     requires (floating_point_traits<T>::radix == 2);
     typename size_constant<floating_point_traits<T>::width>;
@@ -32,6 +32,7 @@ concept binary_layout_floating_point = floating_point_like<T> && requires {
         floating_point_traits<T>::mantissa_mask>;
     typename integral_constant<bitset<floating_point_traits<T>::width>,
         floating_point_traits<T>::exponent_mask>;
-    typename bool_constant<floating_point_traits<T>::has_hidden_bit>;
+    typename integral_constant<bitset<floating_point_traits<T>::width>,
+        floating_point_traits<T>::leading_bit>;
 };
 __DPL_DEFAULT_NAMESPACE_END
