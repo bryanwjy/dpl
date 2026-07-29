@@ -35,6 +35,7 @@ DPL_DISABLE_WARNING(5244)
 #include "dpl/core/type_traits/simd_element_type.h"
 #include "dpl/core/type_traits/simd_expression_result.h"
 #include "dpl/core/type_traits/simd_mask_type.h"
+#include "dpl/core/type_traits/simd_native_tuple.h"
 #include "dpl/core/type_traits/simd_native_type.h"
 #include "dpl/core/type_traits/simd_value_type.h"
 #include "dpl/core/type_traits/simd_vector_type.h"

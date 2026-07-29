@@ -20,6 +20,24 @@
 __DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
 
+namespace internal {
+template <typename A, typename E, size_t N>
+struct simd_abi_tuple {};
+
+template <typename A, typename E, size_t N>
+requires requires {
+    typename A::template native_tuple<simd_element_representation_t<A, E>, N>;
+}
+struct simd_abi_tuple<A, E, N> {
+    using type DPL_NODEBUG =
+        typename A::template native_tuple<simd_element_representation_t<A, E>,
+            N>;
+};
+
+template <typename A, typename E, size_t N>
+using simd_abi_tuple_t DPL_NODEBUG = typename simd_abi_tuple<A, E, N>::type;
+} // namespace internal
+
 template <typename, typename>
 struct simd_abi_traits {};
 
@@ -27,10 +45,16 @@ template <internal::has_simd_abi A>
 requires (!internal::has_simd_element<A>)
 struct simd_abi_traits<A> {
 
+    template <typename E, size_t N>
+    requires requires { typename internal::simd_abi_tuple_t<A, E, N>; }
+    using native_tuple = internal::simd_abi_tuple_t<A, E, N>;
+
     template <typename E>
-    using native_vector = typename A::template native_vector<E>;
+    using native_vector =
+        typename A::template native_vector<simd_element_representation_t<A, E>>;
     template <typename E>
-    using native_mask = typename A::template native_mask<E>;
+    using native_mask =
+        typename A::template native_mask<simd_element_representation_t<A, E>>;
 
     using type = A;
     static constexpr A value = A{};
@@ -77,10 +101,10 @@ public:
     using type = A;
     using element_type = E;
     using representation_type = simd_element_representation_t<A, E>;
-    using native_vector =
-        typename base_type::template native_vector<representation_type>;
-    using native_mask =
-        typename base_type::template native_mask<representation_type>;
+    using native_vector = typename base_type::template native_vector<E>;
+    using native_mask = typename base_type::template native_mask<E>;
+    template <size_t N>
+    using native_tuple = typename base_type::template native_tuple<E, N>;
 
     consteval operator simd_abi_traits<A>(this simd_abi_traits) noexcept {
         return {};

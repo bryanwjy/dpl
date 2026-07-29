@@ -33,6 +33,8 @@ using __DPL datapar::simd_expression_result_t;
 using __DPL datapar::simd_mask_base;
 using __DPL datapar::simd_mask_type;
 using __DPL datapar::simd_mask_type_t;
+using __DPL datapar::simd_native_tuple;
+using __DPL datapar::simd_native_tuple_t;
 using __DPL datapar::simd_native_type;
 using __DPL datapar::simd_native_type_t;
 using __DPL datapar::simd_value_type;

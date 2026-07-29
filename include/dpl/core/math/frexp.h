@@ -20,6 +20,7 @@
 #  include "dpl/core/operations/cast.h"
 #  include "dpl/core/operations/compare.h"
 #  include "dpl/core/operations/select.h"
+#  include "dpl/core/type_traits/simd_native_tuple.h"
 #  include "dpl/std/concepts/integral.h"
 #endif
 
@@ -67,11 +68,6 @@ struct frexp_pair {
 
 void frexp(...) noexcept = delete;
 
-template <typename T>
-using simd_native_pair_t DPL_NODEBUG =
-    typename simd_abi_type_t<T>::template native_tuple<simd_element_type_t<T>,
-        2zu>;
-
 struct frexp_t : public math_operation_base<frexp_t> {
     using operation_base<frexp_t>::operator();
 
@@ -94,11 +90,11 @@ struct frexp_t : public math_operation_base<frexp_t> {
         frexp_options_type O = frexp_options::default_t>
     requires same_as<T, simd_native_type_t<T>> &&
         cpo_invocable<frexp_t, T, T&, O> && requires(T val) {
-            typename simd_native_pair_t<T>;
+            typename simd_native_tuple_t<T, 2>;
             make_tuple(internal::abi<T>, val, val);
         }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr simd_native_pair_t<T>
+    static constexpr simd_native_tuple_t<T, 2>
         DPL_VECTORCALL operator()(
             T val, O opt = frexp_options::default_v) noexcept {
         using A = simd_abi_type_t<T>;
