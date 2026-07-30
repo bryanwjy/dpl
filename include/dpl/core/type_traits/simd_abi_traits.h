@@ -6,6 +6,7 @@
 #include "dpl/core/type_traits/details/has_simd_members.h"
 #include "dpl/core/type_traits/details/simd_abi_size.h"
 #include "dpl/core/type_traits/enable_simd_abi.h"
+#include "dpl/core/type_traits/enable_simd_tuple.h"
 #include "dpl/core/type_traits/simd_abi_type.h"
 #include "dpl/core/type_traits/simd_element_representation.h"
 #include "dpl/core/type_traits/simd_element_type.h"
@@ -86,6 +87,11 @@ struct simd_abi_traits<A> {
 template <internal::has_simd_members T>
 struct simd_abi_traits<T> :
     simd_abi_traits<simd_element_type_t<T>, simd_abi_type_t<T>> {};
+
+template <typename T>
+requires enable_simd_tuple<T>
+struct simd_abi_traits<T> :
+    simd_abi_traits<simd_value_type_t<T>, simd_abi_type_t<T>> {};
 
 template <typename T, different_from<void> U>
 requires internal::has_representation_for<U, T> ||

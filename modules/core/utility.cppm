@@ -1,31 +1,20 @@
-// Copyright 2026 Bryan Wong
+// Copyright 2025 Bryan Wong
 module;
 
 #define DPL_MODULES 1
 #include "dpl/config.h"
 
 export module dpl:core.utility;
-export import :core.fwd;
-import :core.type_traits;
-import :std.concepts;
-import :std.bit;
-import :std.type_traits;
-import :std.utility;
-import :core.basic;
-import :core.concepts;
-import :core.immediate;
-import :core.operations;
-import :core.type_traits;
+import :core.details.utility;
 
-DPL_DISABLE_WARNING_PUSH()
-#if DPL_COMPILER_MSVC
-DPL_DISABLE_WARNING(5244)
-#endif
-
-// IWYU pragma: begin_exports
-#include "dpl/core/utility/to_canonical.h"
-#include "dpl/core/utility/to_signed.h"
-#include "dpl/core/utility/to_unsigned.h"
-// IWYU pragma: end_exports
-
-DPL_DISABLE_WARNING_POP()
+__DPL_DEFAULT_NAMESPACE_BEGIN
+namespace datapar {
+// NOLINTBEGIN(misc-unused-using-decls)
+using __DPL datapar::swap;
+using __DPL datapar::to_canonical;
+using __DPL datapar::to_signed;
+using __DPL datapar::to_tuple_like;
+using __DPL datapar::to_unsigned;
+// NOLINTEND(misc-unused-using-decls)
+} // namespace datapar
+__DPL_DEFAULT_NAMESPACE_END

@@ -38,6 +38,7 @@ DPL_DISABLE_WARNING(5244)
 #include "dpl/core/basic/to_bitset.h"
 #include "dpl/core/basic/to_canonical.h"
 #include "dpl/core/basic/to_native_type.h"
+#include "dpl/core/basic/tuple_access.h"
 // IWYU pragma: end_exports
 
 DPL_DISABLE_WARNING_POP()

@@ -21,6 +21,7 @@
 #  include "dpl/core/operations/arithmetic.h" // IWYU pragma: keep
 #  include "dpl/core/operations/bitwise.h"    // IWYU pragma: keep
 #  include "dpl/core/operations/compare.h"    // IWYU pragma: keep
+#  include "dpl/core/utility/to_tuple_like.h"
 #endif
 
 __DPL_DEFAULT_NAMESPACE_BEGIN
@@ -167,7 +168,8 @@ struct fallback_impl<log2_t> {
         basic_vector<float, A> val) noexcept {
         using simdf = basic_vector<float, A>;
         using pairf = fmath::pair<float, A>;
-        auto const [fr, exp] = dx::frexp(val, frexp_options::reduced);
+        auto const [fr, exp] =
+            dx::to_tuple_like(dx::frexp(val, frexp_options::reduced));
         auto const one = fmath::single(dx::broadcast<A, float>(1.0f));
         pairf const x = (fr - one) / (one + fr);
         auto const x2 = x.upper * x.upper;
@@ -192,7 +194,8 @@ struct fallback_impl<log2_t> {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(
         basic_vector<double, A> val) noexcept {
-        auto const [fr, exp] = dx::frexp(val, frexp_options::reduced);
+        auto const [fr, exp] =
+            dx::to_tuple_like(dx::frexp(val, frexp_options::reduced));
         auto const one = fmath::single(dx::broadcast<A, double>(1));
         auto const x = (fr - one) / (one + fr);
         auto const x2 = x.upper * x.upper;
@@ -222,7 +225,7 @@ struct fallback_impl<log2_t> {
     static constexpr auto DPL_VECTORCALL operator()(T val) noexcept {
         using simdf = basic_vector<E, A>;
         auto const [fr, exp] =
-            dx::frexp(val, frexp_options::reduced);
+            dx::to_tuple_like(dx::frexp(val, frexp_options::reduced));
         auto const one = fmath::single(dx::broadcast<A, E>(1));
         auto const x = (fr - one) / (one + fr);
         auto const x2 = x.upper * x.upper;

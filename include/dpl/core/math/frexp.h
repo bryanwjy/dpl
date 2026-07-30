@@ -271,7 +271,7 @@ private:
         // perform the select for better ILP
         iexp = dx::subtract(iexp, dx::select(issubnormal, offset, dx::zero));
 
-        using bitset_t = bitset<__DPL type_bit_v<E>>;
+        using bitset_t = bit_representation_t<E>;
         constexpr auto magic_exp = [&]() {
             auto const signctrl = Opt::contains(frexp_options::sign_zero)
                 ? ~floating_point_traits<E>::signbit

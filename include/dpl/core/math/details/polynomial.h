@@ -41,6 +41,7 @@ union optional {
 template <size_t S, floating_point_like E, simd_abi A>
 class vpowers : protected vpowers<S - 1, E, A> {
     using base_type DPL_NODEBUG = vpowers<S - 1, E, A>;
+    using vector_type = make_canonical_vector_t<E, A>;
 
 public:
     __DPL_HIDE_FROM_ABI constexpr vpowers() noexcept = default;
@@ -184,6 +185,15 @@ private:
         // This results in lower register pressures and register
         // lifetimes reductions for large polynomials, e.g. 18th degree, on
         // clang
+
+        // TODO scalable ABIs:
+        // Possible solution: template recursion to allocate vectors on the
+        // stack and then store them as references in vpowers.
+        // E.g.
+        //   func<N>(x)
+        // -> func<N - 1>(x, undef1)
+        // -> func<N - 2>(x, undef1, undef2)...
+        // -> make_vpowers(x, undefs...);
         return eval_estrin<E, A>(estrin::vpowers<depth, E, A>(x));
     }
 

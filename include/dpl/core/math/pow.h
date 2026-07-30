@@ -333,7 +333,8 @@ public:
         using A = simd_abi_type_t<T>;
 
         auto const absl = dx::abs(lhs);
-        auto const [fr, exp] = dx::frexp(absl, frexp_options::reduced);
+        auto const [fr, exp] =
+            dx::to_tuple_like(dx::frexp(absl, frexp_options::reduced));
         auto result =
             fallback_impl::exp2(rhs * (fallback_impl::log2(fr) + exp));
 

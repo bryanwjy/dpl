@@ -5,6 +5,7 @@
 
 #include "dpl/core/type_traits/enable_simd_abi.h"
 #include "dpl/core/type_traits/enable_simd_mask.h"
+#include "dpl/core/type_traits/enable_simd_tuple.h"
 #include "dpl/core/type_traits/enable_simd_vector.h"
 
 __DPL_DEFAULT_NAMESPACE_BEGIN
@@ -27,7 +28,9 @@ template <typename T>
 using simd_abi_type_t = typename simd_abi_type<T>::type;
 
 template <typename T>
-requires (enable_simd_vector<T> || enable_simd_mask<T>) && (!enable_simd_abi<T>)
+requires (enable_simd_vector<T> || enable_simd_mask<T> ||
+             enable_simd_tuple<T>) &&
+    (!enable_simd_abi<T>)
 struct simd_abi_type<T> {
     using type DPL_NODEBUG = typename T::abi_type;
 };

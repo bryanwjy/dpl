@@ -31,6 +31,7 @@ DPL_DISABLE_WARNING(5244)
 #include "dpl/core/concepts/simd_element.h"
 #include "dpl/core/concepts/simd_expression.h"
 #include "dpl/core/concepts/simd_mask.h"
+#include "dpl/core/concepts/simd_tuple.h"
 #include "dpl/core/concepts/simd_type.h"
 #include "dpl/core/concepts/simd_vector.h"
 // IWYU pragma: end_exports

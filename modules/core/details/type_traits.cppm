@@ -26,6 +26,7 @@ DPL_DISABLE_WARNING(5244)
 #include "dpl/core/type_traits/enable_const_mask.h"
 #include "dpl/core/type_traits/enable_simd_abi.h"
 #include "dpl/core/type_traits/enable_simd_mask.h"
+#include "dpl/core/type_traits/enable_simd_tuple.h"
 #include "dpl/core/type_traits/enable_simd_vector.h"
 #include "dpl/core/type_traits/rebind_simd.h"
 #include "dpl/core/type_traits/representation.h"

@@ -183,6 +183,8 @@ concept pair_type = is_pair<T> && requires {
         basic_vector<typename T::value_type, typename T::abi_type>>;
 };
 
+// TODO: Scalable ABIs, hook into simd_tuple APIs
+
 template <simd_vector T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 constexpr pair_of<T>

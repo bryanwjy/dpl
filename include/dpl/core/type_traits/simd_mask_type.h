@@ -5,6 +5,7 @@
 
 #include "dpl/core/type_traits/canonical_type.h"
 #include "dpl/core/type_traits/enable_simd_mask.h"
+#include "dpl/core/type_traits/enable_simd_tuple.h"
 #include "dpl/core/type_traits/enable_simd_vector.h"
 #include "dpl/core/type_traits/simd_abi_type.h"
 #include "dpl/core/type_traits/simd_element_type.h"
@@ -53,6 +54,11 @@ requires enable_simd_mask<T>
 struct simd_mask_type<T> {
     using type DPL_NODEBUG = T;
 };
+
+// No mask for tuples
+template <typename T>
+requires enable_simd_tuple<T>
+struct simd_mask_type<T> {};
 
 } // namespace datapar
 

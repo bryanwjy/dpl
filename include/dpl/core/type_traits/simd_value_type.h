@@ -31,6 +31,10 @@ requires (enable_simd_vector<T> || enable_simd_mask<T>) &&
 struct simd_value_type<T> {
     using type DPL_NODEBUG = typename T::value_type;
 };
+
+template <typename T>
+requires enable_simd_tuple<T>
+struct simd_value_type<T> : simd_value_type<simd_element_type_t<T>> {};
 } // namespace datapar
 
 __DPL_DEFAULT_NAMESPACE_END

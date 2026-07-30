@@ -38,6 +38,13 @@ struct simd_native_type<T> {
     using type DPL_NODEBUG = typename simd_abi_traits<T>::native_mask;
 };
 
+template <typename T>
+requires enable_simd_tuple<T>
+struct simd_native_type<T> {
+    using type DPL_NODEBUG = typename simd_abi_traits<T>::template native_tuple<
+        std::tuple_size_v<T>>;
+};
+
 } // namespace datapar
 
 __DPL_DEFAULT_NAMESPACE_END

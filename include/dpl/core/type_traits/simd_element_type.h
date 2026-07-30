@@ -4,6 +4,7 @@
 #include "dpl/config.h"
 
 #include "dpl/core/type_traits/enable_simd_mask.h"
+#include "dpl/core/type_traits/enable_simd_tuple.h"
 #include "dpl/core/type_traits/enable_simd_vector.h"
 #include "dpl/core/type_traits/simd_vector_type.h"
 
@@ -30,6 +31,13 @@ template <typename T>
 requires enable_simd_vector<T>
 struct simd_element_type<T> {
     using type DPL_NODEBUG = typename T::value_type;
+};
+
+template <typename T>
+requires enable_simd_tuple<T>
+struct simd_element_type<T> {
+    // simd tuples are homogeneous!
+    using type DPL_NODEBUG = std::tuple_element_t<0, T>;
 };
 
 template <typename T>
