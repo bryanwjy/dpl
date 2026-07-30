@@ -6,16 +6,22 @@
 // IWYU pragma: always_keep
 
 #include "dpl/core/operations/arithmetic/negate.h"
+#include "dpl/core/operations/bitwise/bwandnot.h"
 #include "dpl/core/operations/compare/max.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/internal/abi.h"
+#  include "dpl/core/concepts/canonical.h"
 #  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_element.h"
 #  include "dpl/core/dispatch/interface.h"
 #  include "dpl/core/dispatch/maskable/transform.h"
 #  include "dpl/core/dispatch/operation/primitive.h"
+#  include "dpl/core/immediate/constants/zero.h"
+#  include "dpl/core/numbers/binary_layout_floating_point.h"
+#  include "dpl/core/numbers/floating_point_traits.h"
+#  include "dpl/core/type_traits/simd_mask_type.h"
 #  include "dpl/std/type_traits/type_identity.h"
 #endif
 
@@ -37,23 +43,29 @@ struct operation_signature<abs_t> {
 
 template <>
 struct fallback_impl<abs_t> {
-    template <fixed_width_abi A, simd_element_for<A> E>
-    requires signed_integral<E> &&
-        cpo_invocable<max_t, basic_vector<E, A>,
-            cpo_result_t<negate_t, basic_vector<E, A>>>
+    template <canonical_vector T>
+    requires signed_integral<simd_element_type_t<T>> &&
+        cpo_invocable<negate_t, T> && cpo_invocable<max_t, T, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_vector<E, A>
-        DPL_VECTORCALL operator()(basic_vector<E, A> val) noexcept {
-        // Due to issues with nans, inf, signed zeros,
-        // this is only allowed for ints
+    static constexpr T DPL_VECTORCALL operator()(T val) noexcept {
         return dx::max(val, dx::negate(val));
     }
 
-    template <fixed_width_abi A, simd_element_for<A> E>
-    requires unsigned_integral<E>
+    template <canonical_vector T>
+    requires binary_layout_floating_point<simd_element_type_t<T>> &&
+        cpo_invocable<bwandnot_t, T, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_vector<E, A>
-        DPL_VECTORCALL operator()(basic_vector<E, A> val) noexcept {
+    static constexpr T DPL_VECTORCALL operator()(T val) noexcept {
+        using E = simd_element_type_t<T>;
+        constexpr auto signbit =
+            __DPL bit_cast<E>(floating_point_traits<E>::signbit);
+        return dx::bwandnot(val, signbit);
+    }
+
+    template <canonical_vector T>
+    requires unsigned_integral<simd_element_type_t<T>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr T DPL_VECTORCALL operator()(T val) noexcept {
         return val;
     }
 };
@@ -69,32 +81,25 @@ concept unqualified_canonical_mabs = cpo_invocable<abs_t, T> &&
 
 template <>
 struct canonical_impl<abs_t> {
-private:
-    template <typename T>
-    using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
-
 public:
-    template <simd_abi A, simd_element_for<A> E>
+    template <canonical_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(
-        basic_vector<E, A> val) noexcept
-    requires requires { abs(internal::abi<A>, val); }
+    static constexpr T operator()(T val) noexcept
+    requires requires { abs(internal::abi<T>, val); }
     {
-        return abs(internal::abi<A>, val);
+        return abs(internal::abi<T>, val);
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mabs<type_identity_t<T>, mask_t<T>, T>
+    requires unqualified_canonical_mabs<T, simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
-        type_identity_t<T> src, mask_t<T> mask, T val) noexcept {
+        type_identity_t<T> src, simd_mask_type_t<T> mask, T val) noexcept {
         return abs(internal::abi<T>, src, mask, val);
     }
 
     template <canonical_vector T, const_mask_for<T> M>
-    requires unqualified_canonical_mabs<type_identity_t<T>,
-        launder_cmask_t<T, M>, T>
+    requires unqualified_canonical_mabs<T, launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
         type_identity_t<T> src, M cmask, T val) noexcept {
@@ -102,10 +107,10 @@ public:
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mabs<dx::zero_t, mask_t<T>, T>
+    requires unqualified_canonical_mabs<dx::zero_t, simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
-        dx::zero_t zero, mask_t<T> mask, T val) noexcept {
+        dx::zero_t zero, simd_mask_type_t<T> mask, T val) noexcept {
         return abs(internal::abi<T>, zero, mask, val);
     }
 

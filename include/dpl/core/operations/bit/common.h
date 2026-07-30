@@ -8,6 +8,7 @@
 #  include "dpl/core/concepts/common_abi_with.h"
 #  include "dpl/core/concepts/common_size_with.h"
 #  include "dpl/core/concepts/simd_vector.h"
+#  include "dpl/core/type_traits/representation.h"
 #  include "dpl/core/type_traits/simd_abi_type.h"
 #  include "dpl/core/type_traits/simd_element_type.h"
 #  include "dpl/std/concepts/integral.h"
@@ -15,6 +16,10 @@
 
 __DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
+
+template <typename T>
+using count_vector_t =
+    rebind_simd_t<T, unsigned_representation_t<simd_element_type_t<T>>>;
 
 template <typename T, typename L>
 concept vrot_vector_for = simd_vector<T> && integral<simd_element_type_t<T>> &&

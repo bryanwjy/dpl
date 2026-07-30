@@ -21,16 +21,17 @@ namespace datapar::internal {
  * the mask types may not be differentiated on certain backends,
  * e.g. ARM SVE
  */
-template <typename A>
-concept typed_mask = simd_abi<A> &&
-    different_from<make_canonical_mask_t<int8, A>,
-        make_canonical_mask_t<int32, A>>;
+template <typename M, typename T>
+concept common_mask_elements_with =
+    common_abi_with<simd_abi_type_t<M>, simd_abi_type_t<T>> &&
+    (common_size_with<simd_element_type_t<M>, simd_element_type_t<T>> ||
+        same_as<
+            make_canonical_mask_t<simd_element_type_t<M>, common_abi_t<M, T>>,
+            make_canonical_mask_t<simd_element_type_t<T>, common_abi_t<M, T>>>);
 
 template <typename M, typename T>
-concept compatible_mask_with = simd_mask<M> && simd_type<T> &&
-    common_abi_with<simd_abi_type_t<M>, simd_abi_type_t<T>> &&
-    (!typed_mask<simd_abi_type_t<T>> ||
-        common_size_with<simd_element_type_t<M>, simd_element_type_t<T>>);
+concept compatible_mask_with =
+    simd_mask<M> && simd_type<T> && common_mask_elements_with<M, T>;
 
 template <typename M, typename T>
 concept exact_mask_for = compatible_mask_with<M, T> &&

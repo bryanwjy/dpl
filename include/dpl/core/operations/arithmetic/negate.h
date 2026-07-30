@@ -9,6 +9,7 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/internal/abi.h"
+#  include "dpl/core/concepts/canonical.h"
 #  include "dpl/core/concepts/cpo_invocable.h"
 #  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/concepts/simd_abi.h"
@@ -17,6 +18,7 @@
 #  include "dpl/core/dispatch/maskable/transform.h"
 #  include "dpl/core/dispatch/operation/primitive.h"
 #  include "dpl/core/immediate/constants/zero.h"
+#  include "dpl/core/type_traits/simd_mask_type.h"
 #  include "dpl/std/type_traits/type_identity.h"
 #endif
 
@@ -58,11 +60,6 @@ concept unqualified_canonical_mnegate = cpo_invocable<negate_t, T> &&
 
 template <>
 struct canonical_impl<negate_t> {
-private:
-    template <typename T>
-    using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
-
 public:
     template <simd_abi A, simd_element_for<A> E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -74,16 +71,15 @@ public:
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mnegate<type_identity_t<T>, mask_t<T>, T>
+    requires unqualified_canonical_mnegate<T, simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
-        type_identity_t<T> src, mask_t<T> mask, T val) noexcept {
+        type_identity_t<T> src, simd_mask_type_t<T> mask, T val) noexcept {
         return negate(internal::abi<T>, src, mask, val);
     }
 
     template <canonical_vector T, const_mask_for<T> M>
-    requires unqualified_canonical_mnegate<type_identity_t<T>,
-        launder_cmask_t<T, M>, T>
+    requires unqualified_canonical_mnegate<T, launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
         type_identity_t<T> src, M cmask, T val) noexcept {
@@ -91,10 +87,10 @@ public:
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mnegate<dx::zero_t, mask_t<T>, T>
+    requires unqualified_canonical_mnegate<dx::zero_t, simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
-        dx::zero_t zero, mask_t<T> mask, T val) noexcept {
+        dx::zero_t zero, simd_mask_type_t<T> mask, T val) noexcept {
         return negate(internal::abi<T>, zero, mask, val);
     }
 
@@ -123,11 +119,6 @@ concept unqualified_extended_mnegate = cpo_invocable<negate_t, T> &&
 
 template <>
 struct extended_impl<negate_t> {
-private:
-    template <typename T>
-    using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
-
 public:
     template <extended_vector T>
     requires unqualified_extended_negate<T>

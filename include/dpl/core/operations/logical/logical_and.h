@@ -35,20 +35,11 @@ struct operation_signature<logical_and_t> {
 
 template <>
 struct fallback_impl<logical_and_t> {
-    template <canonical_mask L, canonical_mask R>
-    requires common_abi_with<simd_abi_type_t<L>, simd_abi_type_t<R>> &&
-        cpo_invocable<bwand_t, L, R>
+    template <simd_mask L, common_mask_with<L> R>
+    requires cpo_invocable<bwand_t, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr basic_mask<simd_element_type_t<R>, common_abi_t<L, R>>
-        DPL_VECTORCALL operator()(L lhs, R rhs) noexcept {
-        return dx::bwand(lhs, rhs);
-    }
-
-    template <simd_mask L, simd_mask R>
-    requires (extended_mask<L> || extended_mask<R>) &&
-        cpo_invocable<bwand_t, L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(L&& lhs, R&& rhs) {
+    static constexpr auto DPL_VECTORCALL operator()(L&& lhs, R&& rhs) noexcept(
+        canonical_mask<L> && canonical_mask<R>) {
         return dx::bwand(__DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 };

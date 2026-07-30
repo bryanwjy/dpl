@@ -27,8 +27,8 @@ namespace datapar::internal {
 void select(...) noexcept = delete;
 
 struct select_t :
-    private primitive_operation_base<select_t>,
-    private selection_broadcastable_operation<select_t> {
+    public primitive_operation_base<select_t>,
+    public selection_broadcastable_operation<select_t> {
     using operation_base<select_t>::operator();
     using selection_broadcastable_operation<select_t>::operator();
 };
@@ -65,47 +65,49 @@ private:
         using operation_base<bwornot_t>::operator();
     };
 
+    template <typename L, typename R>
+    using common_mask_t DPL_NODEBUG = make_canonical_mask_t<
+        common_size_type_t<simd_element_type_t<L>, simd_element_type_t<R>>,
+        common_abi_t<L, R>>;
+
 public:
     using selection_broadcasting_fallback<select_t>::operator();
 
-    template <fixed_width_abi A, simd_element_for<A> ME, simd_element_for<A> E>
-    requires common_size_with<E, ME>
+    template <canonical_vector T>
+    requires fixed_width_abi<simd_abi_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(basic_mask<ME, A> mask,
-        basic_vector<E, A> tval, basic_vector<E, A> fval) noexcept {
-        return internal::transform<basic_vector<E, A>>(
+    static constexpr auto DPL_VECTORCALL operator()(
+        simd_mask_type_t<T> mask, T tval, T fval) noexcept {
+        using E = simd_element_type_t<T>;
+        return internal::transform<T>(
             [](bool cond, E tval, E fval) {
                 return static_cast<E>(cond ? tval : fval);
             },
             mask, tval, fval);
     }
 
-    template <fixed_width_abi A, simd_element_for<A> ME, simd_element_for<A> LE,
-        simd_element_for<A> RE>
-    requires common_size_with<ME, LE> && common_size_with<ME, RE> &&
-        common_size_with<LE, RE> &&
-        cpo_invocable<bwand_t, basic_mask<ME, A>, basic_mask<LE, A>> &&
-        cpo_invocable<bwandnot_t, basic_mask<RE, A>, basic_mask<ME, A>> &&
-        cpo_invocable<bwor_t,
-            cpo_result_t<bwand_t, basic_mask<ME, A>, basic_mask<LE, A>>,
-            cpo_result_t<bwandnot_t, basic_mask<RE, A>, basic_mask<ME, A>>>
+    template <canonical_mask L, common_mask_with<L> R>
+    requires cpo_invocable<bwand_t, common_mask_t<L, R>, L> &&
+        cpo_invocable<bwandnot_t, R, common_mask_t<L, R>> &&
+        cpo_invocable<bwor_t, cpo_result_t<bwand_t, common_mask_t<L, R>, L>,
+            cpo_result_t<bwandnot_t, R, common_mask_t<L, R>>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_mask<common_size_type_t<LE, RE>, A>
-        DPL_VECTORCALL operator()(basic_mask<ME, A> mask, basic_mask<LE, A> lhs,
-            basic_mask<RE, A> rhs) noexcept {
+    static constexpr common_mask_t<L, R>
+        DPL_VECTORCALL operator()(
+            common_mask_t<L, R> mask, L lhs, R rhs) noexcept {
         constexpr auto bwand = sbwand{};
         constexpr auto bwandnot = sbwandnot{};
         constexpr auto bwor = sbwor{};
-        return bwor(bwand(mask, lhs), bwand(rhs, mask));
+        return bwor(bwand(mask, lhs), bwandnot(rhs, mask));
     }
 
-    template <fixed_width_abi A, simd_element_for<A> E,
-        const_mask_for<basic_vector<E, A>> M>
+    template <canonical_vector T, const_mask_for<T> M>
+    requires fixed_width_abi<simd_abi_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(
-        M mask, basic_vector<E, A> lhs, basic_vector<E, A> rhs) noexcept {
-        using T = basic_vector<E, A>;
+        M mask, T lhs, T rhs) noexcept {
         constexpr auto cmask = dx::to_const_mask<T>(mask);
+        using E = simd_element_type_t<T>;
         return internal::itransform<T>(
             [cmask](auto idx, E lhs, E rhs) {
                 return static_cast<E>(cmask[idx] ? lhs : rhs);
@@ -113,22 +115,20 @@ public:
             lhs, rhs);
     }
 
-    template <typename M, fixed_width_abi A, simd_element_for<A> LE,
-        common_size_with<LE> RE, typename E = common_size_type_t<LE, RE>>
-    requires const_mask_for<M, basic_vector<E, A>> && simd_element_for<RE, A>
+    template <canonical_mask L, equivalent_mask_with<L> R, const_mask_for<L> M>
+    requires fixed_width_abi<simd_abi_type_t<L>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(
-        M mask, basic_mask<LE, A> lhs, basic_mask<RE, A> rhs) noexcept {
-        using T = basic_vector<E, A>;
-        constexpr auto cmask = dx::to_const_mask<T>(mask);
-        return internal::itransform<basic_mask<E, A>>(
+        M mask, L lhs, R rhs) noexcept {
+        constexpr auto cmask = dx::to_const_mask<L>(mask);
+        return internal::itransform<common_mask_t<L, R>>(
             [cmask](auto idx, bool lhs, bool rhs) {
                 return cmask[idx] ? lhs : rhs;
             },
             lhs, rhs);
     }
 
-    template <simd_mask M, common_mask_with<M> L>
+    template <simd_mask L, compatible_mask_with<L> M>
     requires cpo_invocable<bwand_t, M, L>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M&& mask, L&& lhs, dx::zero_t) noexcept(
@@ -137,7 +137,7 @@ public:
         return bwand( __DPL forward<M>(mask), __DPL forward<L>(lhs));
     }
 
-    template <simd_mask M, common_mask_with<M> R>
+    template <simd_mask R, compatible_mask_with<R> M>
     requires cpo_invocable<bwandnot_t, R, M>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M&& mask, dx::zero_t, R&& rhs) noexcept(
@@ -146,7 +146,7 @@ public:
         return bwandnot( __DPL forward<R>(rhs), __DPL forward<M>(mask));
     }
 
-    template <simd_mask M, common_mask_with<M> L>
+    template <simd_mask L, compatible_mask_with<L> M>
     requires cpo_invocable<bwornot_t, L, M>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M&& mask, L&& lhs,
@@ -155,7 +155,7 @@ public:
         return bwornot( __DPL forward<L>(lhs), __DPL forward<M>(mask));
     }
 
-    template <simd_mask M, common_mask_with<M> R>
+    template <simd_mask R, compatible_mask_with<R> M>
     requires cpo_invocable<bwor_t, M, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M&& mask, dx::all_bits_t, R rhs) noexcept(
@@ -214,10 +214,13 @@ struct canonical_impl<select_t> {
 private:
     template <typename L, typename R>
     using vresult_t DPL_NODEBUG =
-        basic_vector<simd_element_type_t<L>, common_abi_t<L, R>>;
+        make_canonical_vector_t<simd_element_type_t<L>, common_abi_t<L, R>>;
 
     template <typename L, typename R>
-    using mask_t DPL_NODEBUG = basic_mask<
+    using vmask_t DPL_NODEBUG = simd_mask_type_t<vresult_t<L, R>>;
+
+    template <typename L, typename R>
+    using common_mask_t DPL_NODEBUG = make_canonical_mask_t<
         common_size_type_t<simd_element_type_t<L>, simd_element_type_t<R>>,
         common_abi_t<L, R>>;
 
@@ -226,7 +229,7 @@ public:
     requires canonical_vector<R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr vresult_t<L, R> operator()(
-        mask_t<L, R> mask, L lhs, R rhs) noexcept
+        vmask_t<L, R> mask, L lhs, R rhs) noexcept
     requires requires {
         select(internal::abi<common_abi_t<L, R>>, mask, lhs, rhs);
     }
@@ -234,59 +237,46 @@ public:
         return select(internal::abi<common_abi_t<L, R>>, mask, lhs, rhs);
     }
 
-    template <canonical_vector L, compatible_mask_with<L> M>
-    requires canonical_mask<M>
+    template <canonical_vector L>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr vresult_t<L, M> operator()(
-        M mask, L lhs, dx::zero_t zero) noexcept
-    requires requires {
-        select(internal::abi<common_abi_t<M, L>>, mask, lhs, zero);
-    }
+    static constexpr L operator()(
+        simd_mask_type_t<L> mask, L lhs, dx::zero_t zero) noexcept
+    requires requires { select(internal::abi<L>, mask, lhs, zero); }
     {
-        return select(internal::abi<common_abi_t<M, L>>, mask, lhs, zero);
+        return select(internal::abi<L>, mask, lhs, zero);
     }
 
-    template <canonical_vector R, compatible_mask_with<R> M>
-    requires canonical_mask<M>
+    template <canonical_vector R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr vresult_t<R, M> operator()(
-        M mask, dx::zero_t zero, R rhs) noexcept
-    requires requires {
-        select(internal::abi<common_abi_t<M, R>>, mask, zero, rhs);
-    }
+    static constexpr R operator()(
+        simd_mask_type_t<R> mask, dx::zero_t zero, R rhs) noexcept
+    requires requires { select(internal::abi<R>, mask, zero, rhs); }
     {
-        return select(internal::abi<common_abi_t<M, R>>, mask, zero, rhs);
+        return select(internal::abi<R>, mask, zero, rhs);
     }
 
-    template <canonical_vector L, compatible_mask_with<L> M>
-    requires canonical_mask<M>
+    template <canonical_vector L>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr vresult_t<L, M> operator()(
-        M mask, L lhs, dx::all_bits_t all_bits) noexcept
-    requires requires {
-        select(internal::abi<common_abi_t<M, L>>, mask, lhs, all_bits);
-    }
+    static constexpr L operator()(
+        simd_mask_type_t<L> mask, L lhs, dx::all_bits_t all_bits) noexcept
+    requires requires { select(internal::abi<L>, mask, lhs, all_bits); }
     {
-        return select(internal::abi<common_abi_t<M, L>>, mask, lhs, all_bits);
+        return select(internal::abi<L>, mask, lhs, all_bits);
     }
 
-    template <canonical_vector R, compatible_mask_with<R> M>
-    requires canonical_mask<M>
+    template <canonical_vector R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr vresult_t<R, M> operator()(
-        M mask, dx::all_bits_t all_bits, R rhs) noexcept
-    requires requires {
-        select(internal::abi<common_abi_t<M, R>>, mask, all_bits, rhs);
-    }
+    static constexpr R operator()(
+        simd_mask_type_t<R> mask, dx::all_bits_t all_bits, R rhs) noexcept
+    requires requires { select(internal::abi<R>, mask, all_bits, rhs); }
     {
-        return select(internal::abi<common_abi_t<M, R>>, mask, all_bits, rhs);
+        return select(internal::abi<R>, mask, all_bits, rhs);
     }
 
     template <canonical_mask L, common_mask_with<L> R>
-    requires canonical_mask<R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr mask_t<L, R> operator()(
-        mask_t<L, R> mask, L lhs, R rhs) noexcept
+    static constexpr common_mask_t<L, R> operator()(
+        common_mask_t<L, R> mask, L lhs, R rhs) noexcept
     requires requires {
         select(internal::abi<common_abi_t<L, R>>, mask, lhs, rhs);
     }
@@ -294,32 +284,26 @@ public:
         return select(internal::abi<common_abi_t<L, R>>, mask, lhs, rhs);
     }
 
-    template <canonical_vector L, broadcastable_to<L> R,
-        compatible_mask_with<L> M>
-    requires canonical_mask<M>
+    template <canonical_vector L, broadcastable_to<L> R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr vresult_t<L, M> operator()(M mask, L lhs, R&& rhs) noexcept
+    static constexpr L operator()(
+        simd_mask_type_t<L> mask, L lhs, R&& rhs) noexcept
     requires requires {
-        select(internal::abi<common_abi_t<M, L>>, mask, lhs,
-            internal::declarg<R>());
+        select(internal::abi<L>, mask, lhs, internal::declarg<R>());
     }
     {
-        return select(internal::abi<common_abi_t<M, L>>, mask, lhs,
-            __DPL forward<R>(rhs));
+        return select(internal::abi<L>, mask, lhs, __DPL forward<R>(rhs));
     }
 
-    template <canonical_vector R, broadcastable_to<R> L,
-        compatible_mask_with<R> M>
-    requires canonical_mask<M>
+    template <canonical_vector R, broadcastable_to<R> L>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr vresult_t<R, M> operator()(M mask, L&& lhs, R rhs) noexcept
+    static constexpr R operator()(
+        simd_mask_type_t<R> mask, L&& lhs, R rhs) noexcept
     requires requires {
-        select(internal::abi<common_abi_t<M, L>>, mask, internal::declarg<L>(),
-            rhs);
+        select(internal::abi<R>, mask, internal::declarg<L>(), rhs);
     }
     {
-        return select(internal::abi<common_abi_t<M, L>>, mask,
-            __DPL forward<L>(lhs), rhs);
+        return select(internal::abi<R>, mask, __DPL forward<L>(lhs), rhs);
     }
     ///
 
@@ -337,15 +321,16 @@ public:
     }
 
     template <canonical_mask L, common_mask_with<L> R,
-        const_mask_for<mask_t<L, R>> M>
+        const_mask_for<common_mask_t<L, R>> M>
     requires canonical_mask<R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr mask_t<L, R> operator()(M mask, L lhs, R rhs) noexcept
-    requires requires(launder_cmask_t<mask_t<L, R>, M> cmask) {
+    static constexpr common_mask_t<L, R> operator()(
+        M mask, L lhs, R rhs) noexcept
+    requires requires(launder_cmask_t<common_mask_t<L, R>, M> cmask) {
         select(internal::abi<common_abi_t<L, R>>, cmask, lhs, rhs);
     }
     {
-        constexpr auto cmask = dx::to_const_mask<mask_t<L, R>>(mask);
+        constexpr auto cmask = dx::to_const_mask<common_mask_t<L, R>>(mask);
         return select(internal::abi<common_abi_t<L, R>>, cmask, lhs, rhs);
     }
 
@@ -405,7 +390,7 @@ public:
         return select(internal::abi<L>, cmask, lhs, all_bits);
     }
 
-    template <canonical_vector R, const_mask_for<R> M>
+    template <canonical_simd_type R, const_mask_for<R> M>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr R operator()(
         M mask, dx::all_bits_t all_bits, R rhs) noexcept
@@ -437,17 +422,17 @@ template <>
 struct extended_impl<select_t> {
 private:
     template <typename L, typename R>
-    using mask_t DPL_NODEBUG = basic_mask<
+    using common_mask_t DPL_NODEBUG = make_canonical_mask_t<
         common_size_type_t<simd_element_type_t<L>, simd_element_type_t<R>>,
         common_abi_t<L, R>>;
 
     template <typename L, typename R>
     using vresult_t DPL_NODEBUG =
-        basic_vector<simd_element_type_t<L>, common_abi_t<L, R>>;
+        make_canonical_vector_t<simd_element_type_t<L>, common_abi_t<L, R>>;
 
 public:
     template <simd_vector L, common_vector_with<L> R,
-        equivalent_mask_with<mask_t<L, R>> M>
+        exact_mask_for<vresult_t<L, R>> M>
     requires (extended_mask<M> || extended_vector<L> || extended_vector<R>) &&
         unqualified_extended_select<M, L, R>
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -457,7 +442,7 @@ public:
             __DPL forward<R>(rhs));
     }
 
-    template <simd_vector L, compatible_mask_with<L> M>
+    template <simd_vector L, exact_mask_for<L> M>
     requires (extended_mask<M> || extended_vector<L>) &&
         unqualified_extended_select<M, L, dx::zero_t, common_abi_t<M, L>>
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -466,7 +451,7 @@ public:
         return select(__DPL forward<M>(mask), __DPL forward<L>(lhs), zero);
     }
 
-    template <simd_vector R, compatible_mask_with<R> M>
+    template <simd_vector R, exact_mask_for<R> M>
     requires (extended_mask<M> || extended_vector<R>) &&
         unqualified_extended_select<M, dx::zero_t, R, common_abi_t<M, R>>
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -475,7 +460,7 @@ public:
         return select(__DPL forward<M>(mask), zero, __DPL forward<R>(rhs));
     }
 
-    template <simd_vector L, compatible_mask_with<L> M>
+    template <simd_vector L, exact_mask_for<L> M>
     requires (extended_mask<M> || extended_vector<L>) &&
         unqualified_extended_select<M, L, dx::all_bits_t, common_abi_t<M, L>>
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -484,7 +469,7 @@ public:
         return select(__DPL forward<M>(mask), __DPL forward<L>(lhs), all_bits);
     }
 
-    template <simd_vector R, compatible_mask_with<R> M>
+    template <simd_vector R, exact_mask_for<R> M>
     requires (extended_mask<M> || extended_vector<R>) &&
         unqualified_extended_select<M, dx::all_bits_t, R, common_abi_t<M, R>>
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -493,81 +478,82 @@ public:
         return select(__DPL forward<M>(mask), all_bits, __DPL forward<R>(rhs));
     }
 
-    template <simd_mask L, simd_mask R, equivalent_mask_with<mask_t<L, R>> M>
+    template <simd_mask L, common_mask_with<L> R,
+        exact_mask_for<common_mask_t<L, R>> M>
     requires (extended_mask<M> || extended_mask<L> || extended_mask<R>) &&
         unqualified_extended_select<M, L, R>
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M&& mask, L&& lhs, R&& rhs)
-        -> common_mask_with<M> auto {
+        -> common_mask_with<common_mask_t<L, R>> auto {
         return select(__DPL forward<M>(mask), __DPL forward<L>(lhs),
             __DPL forward<R>(rhs));
     }
 
-    template <simd_mask L, common_mask_with<L> M>
+    template <simd_mask L, exact_mask_for<L> M>
     requires (extended_mask<M> || extended_mask<L>) &&
         unqualified_extended_select<M, L, dx::zero_t, common_abi_t<M, L>>
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M&& mask, L&& lhs, dx::zero_t zero)
-        -> common_mask_with<mask_t<L, M>> auto {
+        -> common_mask_with<L> auto {
         return select(__DPL forward<M>(mask), __DPL forward<L>(lhs), zero);
     }
 
-    template <simd_mask R, common_mask_with<R> M>
+    template <simd_mask R, exact_mask_for<R> M>
     requires (extended_mask<M> || extended_mask<R>) &&
         unqualified_extended_select<M, dx::zero_t, R, common_abi_t<M, R>>
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M&& mask, dx::zero_t zero, R&& rhs)
-        -> common_mask_with<mask_t<R, M>> auto {
+        -> common_mask_with<R> auto {
         return select(__DPL forward<M>(mask), zero, __DPL forward<R>(rhs));
     }
 
-    template <simd_mask L, common_mask_with<L> M>
+    template <simd_mask L, exact_mask_for<L> M>
     requires (extended_mask<M> || extended_mask<L>) &&
         unqualified_extended_select<M, L, dx::all_bits_t, common_abi_t<M, L>>
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M&& mask, L&& lhs, dx::all_bits_t all_bits)
-        -> common_mask_with<mask_t<L, M>> auto {
+        -> common_mask_with<L> auto {
         return select(__DPL forward<M>(mask), __DPL forward<L>(lhs), all_bits);
     }
 
-    template <simd_mask R, common_mask_with<R> M>
+    template <simd_mask R, exact_mask_for<R> M>
     requires (extended_mask<M> || extended_mask<R>) &&
         unqualified_extended_select<M, dx::all_bits_t, R, common_abi_t<M, R>>
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M&& mask, dx::all_bits_t all_bits, R&& rhs)
-        -> common_mask_with<mask_t<R, M>> auto {
+        -> common_mask_with<R> auto {
         return select(__DPL forward<M>(mask), all_bits, __DPL forward<R>(rhs));
     }
 
-    template <simd_vector L, compatible_mask_with<L> M, broadcastable_to<L> R>
+    template <simd_vector L, exact_mask_for<L> M, broadcastable_to<L> R>
     requires (extended_mask<M> || extended_vector<L>) &&
         unqualified_extended_select<M, L, R, common_abi_t<M, L>>
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M&& mask, L&& lhs, R&& rhs)
-        -> common_mask_with<mask_t<M, L>> auto {
+        -> common_vector_with<L> auto {
         return select(__DPL forward<M>(mask), __DPL forward<L>(lhs),
             __DPL forward<R>(rhs));
     }
 
-    template <simd_vector R, compatible_mask_with<R> M, broadcastable_to<R> L>
+    template <simd_vector R, exact_mask_for<R> M, broadcastable_to<R> L>
     requires (extended_mask<M> || extended_vector<R>) &&
         unqualified_extended_select<M, L, R, common_abi_t<M, R>>
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M&& mask, L&& lhs, R&& rhs)
-        -> common_mask_with<mask_t<M, R>> auto {
+        -> common_vector_with<R> auto {
         return select(__DPL forward<M>(mask), __DPL forward<L>(lhs),
             __DPL forward<R>(rhs));
     }
     ///
 
     template <simd_vector L, common_vector_with<L> R,
-        const_mask_for<mask_t<L, R>> M>
+        const_mask_for<vresult_t<L, R>> M>
     requires (extended_vector<L> || extended_vector<R>) &&
-        unqualified_extended_select<launder_cmask_t<mask_t<L, R>, M>, L, R>
+        unqualified_extended_select<launder_cmask_t<vresult_t<L, R>, M>, L, R>
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, L&& lhs, R&& rhs)
         -> common_vector_with<vresult_t<L, R>> auto {
-        constexpr auto cmask = dx::to_const_mask<mask_t<L, R>>(mask);
+        constexpr auto cmask = dx::to_const_mask<vresult_t<L, R>>(mask);
         return select(cmask, __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 
@@ -652,13 +638,14 @@ public:
     }
 
     template <simd_mask L, common_mask_with<L> R,
-        const_mask_for<mask_t<L, R>> M>
+        const_mask_for<common_mask_t<L, R>> M>
     requires (extended_mask<L> || extended_mask<R>) &&
-        unqualified_extended_select<launder_cmask_t<mask_t<L, R>, M>, L, R>
+        unqualified_extended_select<launder_cmask_t<common_mask_t<L, R>, M>, L,
+            R>
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, L&& lhs, R&& rhs)
-        -> common_mask_with<mask_t<L, R>> auto {
-        constexpr auto cmask = dx::to_const_mask<mask_t<L, R>>(mask);
+        -> common_mask_with<common_mask_t<L, R>> auto {
+        constexpr auto cmask = dx::to_const_mask<common_mask_t<L, R>>(mask);
         return select(cmask, __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 

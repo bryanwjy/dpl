@@ -52,6 +52,7 @@ struct fallback_impl<cmplt_t> : binary_broadcasting_fallback<cmplt_t> {
 
     using binary_broadcasting_fallback<cmplt_t>::operator();
 };
+
 template <typename L, typename R, typename A = common_abi_t<L, R>,
     typename E = simd_element_type_t<L>>
 concept unqualified_canonical_cmplt = requires {
@@ -74,12 +75,7 @@ struct canonical_impl<cmplt_t> {
 private:
     template <typename L, typename R>
     using result_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<L>, common_abi_t<L, R>>;
-
-    template <typename L, typename R>
-    using mresult_t DPL_NODEBUG = basic_mask<
-        common_size_type_t<simd_element_type_t<L>, simd_element_type_t<R>>,
-        common_abi_t<L, R>>;
+        make_canonical_mask_t<simd_element_type_t<L>, common_abi_t<L, R>>;
 
     template <typename L, typename R>
     using mask_t DPL_NODEBUG = cpo_result_t<cmplt_t, L, R>;

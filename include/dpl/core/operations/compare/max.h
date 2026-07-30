@@ -134,11 +134,10 @@ struct canonical_impl<max_t> {
 private:
     template <typename L, typename R>
     using result_t DPL_NODEBUG =
-        basic_vector<simd_element_type_t<L>, common_abi_t<L, R>>;
+        make_canonical_vector_t<simd_element_type_t<L>, common_abi_t<L, R>>;
 
     template <typename L, typename R>
-    using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<L>, common_abi_t<L, R>>;
+    using mask_t DPL_NODEBUG = simd_mask_type_t<result_t<L, R>>;
 
 public:
     template <canonical_vector L, common_vector_with<L> R>
@@ -224,11 +223,6 @@ concept unqualified_extended_mmax = cpo_invocable<max_t, L, R> &&
 
 template <>
 struct extended_impl<max_t> {
-private:
-    template <typename L, typename R>
-    using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<L>, common_abi_t<L, R>>;
-
 public:
     template <simd_vector L, common_vector_with<L> R>
     requires (extended_vector<L> || extended_vector<R>) &&

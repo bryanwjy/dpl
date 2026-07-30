@@ -10,6 +10,7 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/internal/abi.h"
+#  include "dpl/core/concepts/canonical.h"
 #  include "dpl/core/concepts/cpo_invocable.h"
 #  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/concepts/mask_compatibility.h"
@@ -18,6 +19,7 @@
 #  include "dpl/core/dispatch/maskable/transform.h"
 #  include "dpl/core/dispatch/operation/primitive.h"
 #  include "dpl/core/immediate/const_mask.h"
+#  include "dpl/core/type_traits/simd_mask_type.h"
 #endif
 
 __DPL_DEFAULT_NAMESPACE_BEGIN
@@ -149,11 +151,10 @@ struct canonical_impl<subadd_t> {
 private:
     template <typename L, typename R>
     using result_t DPL_NODEBUG =
-        basic_vector<simd_element_type_t<L>, common_abi_t<L, R>>;
+        make_canonical_vector_t<simd_element_type_t<L>, common_abi_t<L, R>>;
 
     template <typename L, typename R>
-    using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<L>, common_abi_t<L, R>>;
+    using mask_t DPL_NODEBUG = simd_mask_type_t<result_t<L, R>>;
 
 public:
     template <canonical_vector L, common_vector_with<L> R>

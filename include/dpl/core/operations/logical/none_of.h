@@ -14,6 +14,7 @@
 #  include "dpl/core/dispatch/interface.h"
 #  include "dpl/core/dispatch/operation/primitive.h"
 #  include "dpl/core/immediate/const_mask.h"
+#  include "dpl/core/type_traits/details/cpo_result.h"
 #  include "dpl/std/concepts/convertible_to.h"
 #endif
 
@@ -42,7 +43,7 @@ struct fallback_impl<none_of_t> {
         requires(T val) { dx::to_bitset(val); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr bool DPL_VECTORCALL operator()(T val) noexcept {
-        using bitset_t = invoke_result_t<to_bitset_t, T>;
+        using bitset_t = cpo_result_t<to_bitset_t, T>;
         return bitset_t() == dx::to_bitset(val);
     }
 

@@ -9,10 +9,12 @@
 #  include "dpl/core/basic/internal/abi.h"
 #  include "dpl/core/basic/to_bitset.h"
 #  include "dpl/core/concepts/canonical.h"
+#  include "dpl/core/concepts/cpo_invocable.h"
 #  include "dpl/core/concepts/simd_mask.h"
 #  include "dpl/core/dispatch/interface.h"
 #  include "dpl/core/dispatch/operation/primitive.h"
 #  include "dpl/core/immediate/const_mask.h"
+#  include "dpl/core/type_traits/details/cpo_result.h"
 #  include "dpl/std/concepts/convertible_to.h"
 #endif
 

@@ -4,7 +4,7 @@
 #include "dpl/config.h"
 
 #include "dpl/core/operations/arithmetic/subtract.h"
-#include "dpl/core/operations/bit/vrot_vector_for.h"
+#include "dpl/core/operations/bit/common.h"
 #include "dpl/core/operations/bitwise.h"
 #include "dpl/core/operations/reinterpret.h"
 
@@ -13,6 +13,7 @@
 #  include "dpl/core/basic/from_bitset.h"
 #  include "dpl/core/basic/internal/abi.h"
 #  include "dpl/core/basic/to_bitset.h"
+#  include "dpl/core/concepts/canonical.h"
 #  include "dpl/core/concepts/cpo_invocable.h"
 #  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/concepts/simd_abi.h"
@@ -21,6 +22,7 @@
 #  include "dpl/core/dispatch/operation/primitive.h"
 #  include "dpl/core/type_traits/representation.h"
 #  include "dpl/core/type_traits/simd_abi_type.h"
+#  include "dpl/core/type_traits/simd_mask_type.h"
 #  include "dpl/std/bit/rotate.h"
 #  include "dpl/std/type_traits/type_identity.h"
 #  include "dpl/std/utility/bitset.h"
@@ -56,18 +58,18 @@ struct operation_signature<rotr_t> {
 
 template <>
 struct fallback_impl<rotr_t> {
-    template <fixed_width_abi A, simd_element_for<A> E>
-    requires integral<E>
+    template <canonical_vector T>
+    requires integral<simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_vector<E, A>
-        DPL_VECTORCALL operator()(
-            basic_vector<E, A> val, size_t count) noexcept {
-        using ubit = unsigned_representation_t<E>;
+    static constexpr T DPL_VECTORCALL operator()(T val, size_t count) noexcept {
+        using E = simd_element_type_t<T>;
+        using A = simd_abi_type_t<T>;
+        using uint_t = make_unsigned_t<E>;
         // almost always power of 2, so modulus- should optimize to bwand
-        constexpr auto digits = dpl::type_bit_v<E>;
+        constexpr auto digits = dpl::type_bit_v<uint_t>;
         count %= digits;
         auto const rcount = digits - count;
-        auto const uval = dx::reinterpret<ubit>(val);
+        auto const uval = dx::reinterpret<uint_t>(val);
         auto const result = [&]() {
             if consteval {
                 if (count == 0) {
@@ -94,31 +96,40 @@ struct fallback_impl<rotr_t> {
         return dx::from_bitset<T>(__DPL rotr(dx::to_bitset(val), size));
     }
 
-    template <simd_abi A, simd_element_for<A> LE, simd_element_for<A> RE>
-    requires integral<LE> && integral<RE> && common_size_with<LE, RE> &&
-        (__DPL has_single_bit(sizeof(LE)) && __DPL has_single_bit(sizeof(RE)))
+    template <canonical_vector L, canonical_vector R>
+    requires integral<simd_element_type_t<L>> &&
+        integral<simd_element_type_t<R>> &&
+        same_abi_as<simd_abi_type_t<L>, simd_abi_type_t<R>> &&
+        common_size_with<simd_element_type_t<L>, simd_element_type_t<R>> &&
+        (__DPL has_single_bit(sizeof(simd_element_type_t<L>)) &&
+            __DPL has_single_bit(sizeof(simd_element_type_t<R>)))
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_vector<LE, A>
-        DPL_VECTORCALL operator()(
-            basic_vector<LE, A> val, basic_vector<RE, A> count) noexcept {
-        using ubit = make_unsigned_t<LE>;
-        constexpr auto digits = dpl::type_bit_v<LE>;
-        auto const dig = dx::broadcast<RE, A>(static_cast<RE>(digits));
-        count = dx::bwand(count, dx::subtract(dig, 1));
-        auto const rcount = dx::subtract(digits, count);
-        auto const uval = dx::reinterpret<ubit>(val);
-        auto const result = [&]() {
-            if consteval {
-                return dx::bwor(dx::bwshift_right(uval, count),
-                    dx::bwshift_left(
-                        dx::select(count == dx::zero, dx::zero, uval),
-                        dx::select(count == dx::zero, dx::zero, rcount)));
-            } else {
-                return dx::bwor(dx::bwshift_right(uval, count),
-                    dx::bwshift_left(count != dx::zero, uval, rcount));
-            }
-        }();
-        return dx::reinterpret<LE>(result);
+    static constexpr L DPL_VECTORCALL operator()(L val, R count) noexcept {
+        using RE = simd_element_type_t<R>;
+        if constexpr (signed_integral<RE>) {
+            return operator()(val, dx::reinterpret<make_unsigned_t<RE>>(count));
+        } else {
+            using A = simd_abi_type_t<L>;
+            using LE = simd_element_type_t<L>;
+            using uint_t = make_unsigned_t<LE>;
+            constexpr auto digits = dpl::type_bit_v<LE>;
+            auto const dig = dx::broadcast<RE, A>(static_cast<RE>(digits));
+            count = dx::bwand(count, dx::subtract(dig, 1));
+            auto const rcount = dx::subtract(digits, count);
+            auto const uval = dx::reinterpret<uint_t>(val);
+            auto const result = [&]() {
+                if consteval {
+                    return dx::bwor(dx::bwshift_right(uval, count),
+                        dx::bwshift_left(
+                            dx::select(count == dx::zero, dx::zero, uval),
+                            dx::select(count == dx::zero, dx::zero, rcount)));
+                } else {
+                    return dx::bwor(dx::bwshift_right(uval, count),
+                        dx::bwshift_left(count != dx::zero, uval, rcount));
+                }
+            }();
+            return dx::reinterpret<LE>(result);
+        }
     }
 };
 
@@ -126,7 +137,14 @@ template <typename T, typename N = size_t, typename A = simd_abi_type_t<T>>
 concept unqualified_canonical_rotr = requires {
     {
         rotr(internal::abi<A>, internal::declarg<T>(), internal::declarg<N>())
-    } -> same_as<basic_vector<simd_element_type_t<T>, A>>;
+    } -> same_as<rebind_simd_t<T, simd_element_type_t<T>, A>>;
+};
+
+template <typename T, typename N = size_t>
+concept unqualified_canonical_mask_rotr = requires {
+    {
+        rotr(internal::abi<T>, internal::declarg<T>(), internal::declarg<N>())
+    } -> same_as<T>;
 };
 
 template <typename S, typename M, typename T, typename N = size_t>
@@ -142,37 +160,38 @@ concept unqualified_canonical_mrotr = cpo_invocable<rotr_t, T, N> &&
 template <>
 struct canonical_impl<rotr_t> {
 private:
-    template <typename T>
-    using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
-
     template <typename L, typename R>
     using vresult_t DPL_NODEBUG =
-        basic_vector<simd_element_type_t<L>, common_abi_t<L, R>>;
+        make_canonical_vector_t<simd_element_type_t<L>, common_abi_t<L, R>>;
 
     template <typename L, typename R>
-    using vmask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<L>, common_abi_t<L, R>>;
+    using vmask_t DPL_NODEBUG = simd_mask_type_t<vresult_t<L, R>>;
 
 public:
-    template <canonical_simd_type T>
+    template <canonical_vector T>
     requires unqualified_canonical_rotr<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(T val, size_t count) noexcept {
         return rotr(internal::abi<T>, val, count);
     }
 
-    template <canonical_vector T>
-    requires unqualified_canonical_mrotr<type_identity_t<T>, mask_t<T>, T>
+    template <canonical_mask T>
+    requires unqualified_canonical_mask_rotr<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(
-        type_identity_t<T> src, mask_t<T> mask, T val, size_t count) noexcept {
+    static constexpr T operator()(T val, size_t count) noexcept {
+        return rotr(internal::abi<T>, val, count);
+    }
+
+    template <canonical_vector T>
+    requires unqualified_canonical_mrotr<T, simd_mask_type_t<T>, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(type_identity_t<T> src,
+        simd_mask_type_t<T> mask, T val, size_t count) noexcept {
         return rotr(internal::abi<T>, src, mask, val, count);
     }
 
     template <canonical_vector T, const_mask_for<T> M>
-    requires unqualified_canonical_mrotr<type_identity_t<T>,
-        launder_cmask_t<T, M>, T>
+    requires unqualified_canonical_mrotr<T, launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
         type_identity_t<T> src, M cmask, T val, size_t count) noexcept {
@@ -181,10 +200,10 @@ public:
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mrotr<dx::zero_t, mask_t<T>, T>
+    requires unqualified_canonical_mrotr<dx::zero_t, simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(
-        dx::zero_t zero, mask_t<T> mask, T val, size_t count) noexcept {
+    static constexpr T operator()(dx::zero_t zero, simd_mask_type_t<T> mask,
+        T val, size_t count) noexcept {
         return rotr(internal::abi<T>, zero, mask, val, count);
     }
 
@@ -206,23 +225,22 @@ public:
     }
 
     template <canonical_mask T, integral_constant_like N>
-    requires unqualified_canonical_rotr<T, N>
+    requires unqualified_canonical_mask_rotr<T, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(T val, N count) noexcept {
         return rotr(internal::abi<T>, val, count);
     }
 
     template <canonical_vector T, integral_constant_like N>
-    requires unqualified_canonical_mrotr<type_identity_t<T>, mask_t<T>, T, N>
+    requires unqualified_canonical_mrotr<T, simd_mask_type_t<T>, T, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(
-        type_identity_t<T> src, mask_t<T> mask, T val, N count) noexcept {
+    static constexpr T operator()(type_identity_t<T> src,
+        simd_mask_type_t<T> mask, T val, N count) noexcept {
         return rotr(internal::abi<T>, src, mask, val, count);
     }
 
     template <canonical_vector T, const_mask_for<T> M, integral_constant_like N>
-    requires unqualified_canonical_mrotr<type_identity_t<T>,
-        launder_cmask_t<T, M>, T, N>
+    requires unqualified_canonical_mrotr<T, launder_cmask_t<T, M>, T, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
         type_identity_t<T> src, M cmask, T val, N count) noexcept {
@@ -231,10 +249,10 @@ public:
     }
 
     template <canonical_vector T, integral_constant_like N>
-    requires unqualified_canonical_mrotr<dx::zero_t, mask_t<T>, T, N>
+    requires unqualified_canonical_mrotr<dx::zero_t, simd_mask_type_t<T>, T, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
-        dx::zero_t zero, mask_t<T> mask, T val, N count) noexcept {
+        dx::zero_t zero, simd_mask_type_t<T> mask, T val, N count) noexcept {
         return rotr(internal::abi<T>, zero, mask, val, count);
     }
 

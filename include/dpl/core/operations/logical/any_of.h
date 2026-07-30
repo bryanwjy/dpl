@@ -9,12 +9,13 @@
 #  include "dpl/core/basic/internal/abi.h"
 #  include "dpl/core/basic/to_bitset.h"
 #  include "dpl/core/concepts/canonical.h"
+#  include "dpl/core/concepts/cpo_invocable.h"
 #  include "dpl/core/concepts/simd_mask.h"
 #  include "dpl/core/dispatch/interface.h"
 #  include "dpl/core/dispatch/operation/primitive.h"
 #  include "dpl/core/immediate/const_mask.h"
+#  include "dpl/core/type_traits/details/cpo_result.h"
 #  include "dpl/std/concepts/convertible_to.h"
-#  include "dpl/std/concepts/invocable.h"
 #endif
 
 __DPL_DEFAULT_NAMESPACE_BEGIN
@@ -38,11 +39,11 @@ template <>
 struct fallback_impl<any_of_t> {
 
     template <canonical_mask T>
-    requires fixed_width_mask<T> && regular_invocable<to_bitset_t, T> &&
+    requires fixed_width_mask<T> && cpo_invocable<to_bitset_t, T> &&
         requires(T val) { dx::to_bitset(val); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr bool DPL_VECTORCALL operator()(T val) noexcept {
-        using bitset_t = invoke_result_t<to_bitset_t, T>;
+        using bitset_t = cpo_result_t<to_bitset_t, T>;
         return bitset_t() != dx::to_bitset(val);
     }
 

@@ -25,8 +25,8 @@ void element_cast(...) noexcept = delete;
 
 template <typename E>
 struct element_cast_t :
-    private cast_operation_base<element_cast_t<E>>,
-    private maskable_transform_base<element_cast_t<E>> {
+    public cast_operation_base<element_cast_t<E>>,
+    public maskable_transform_base<element_cast_t<E>> {
     static_assert(is_object_v<E> && !is_const_v<E> && !is_volatile_v<E>);
     using operation_base<element_cast_t<E>>::operator();
     using maskable_transform_base<element_cast_t<E>>::operator();
@@ -40,10 +40,10 @@ struct operation_signature<element_cast_t<ToE>> {
 template <typename ToE>
 struct fallback_impl<element_cast_t<ToE>> {
 public:
-    template <fixed_width_abi A>
-    requires simd_element_for<ToE, A>
+    template <canonical_vector T>
+    requires same_as<simd_element_type_t<T>, ToE>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(basic_vector<ToE, A> val) noexcept {
+    static constexpr T operator()(T val) noexcept {
         return val;
     }
 
@@ -82,11 +82,11 @@ template <typename ToE>
 struct canonical_impl<element_cast_t<ToE>> {
 private:
     template <typename T>
-    using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
+    using result_t DPL_NODEBUG =
+        make_canonical_vector_t<ToE, simd_abi_type_t<T>>;
 
     template <typename T>
-    using result_t DPL_NODEBUG = basic_vector<ToE, simd_abi_type_t<T>>;
+    using mask_t DPL_NODEBUG = simd_mask_type_t<result_t<T>>;
 
 public:
     template <canonical_vector T>
@@ -161,11 +161,6 @@ concept unqualified_extended_melement_cast =
 
 template <typename ToE>
 struct extended_impl<element_cast_t<ToE>> {
-private:
-    template <typename T>
-    using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
-
 public:
     template <extended_vector T>
     requires unqualified_extended_element_cast<ToE, T>

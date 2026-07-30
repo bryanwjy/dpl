@@ -100,33 +100,31 @@ struct canonical_impl<bwand_t> {
 private:
     template <typename L, typename R>
     using result_t DPL_NODEBUG =
-        basic_vector<simd_element_type_t<L>, common_abi_t<L, R>>;
+        make_canonical_vector_t<simd_element_type_t<L>, common_abi_t<L, R>>;
 
     template <typename L, typename R>
-    using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<L>, common_abi_t<L, R>>;
+    using mask_t DPL_NODEBUG = simd_mask_type_t<result_t<L, R>>;
+
+    template <typename L, typename R>
+    using mresult_t DPL_NODEBUG = make_canonical_mask_t<
+        common_size_type_t<simd_element_type_t<L>, simd_element_type_t<R>>,
+        common_abi_t<L, R>>;
 
 public:
-    template <simd_abi LA, common_abi_with<LA> RA, simd_element_for<LA> E,
-        simd_abi A = common_abi_t<LA, RA>>
-    requires simd_element_for<E, RA>
+    template <canonical_vector L, common_vector_with<L> R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(
-        basic_vector<E, LA> lhs, basic_vector<E, RA> rhs) noexcept
-    requires requires { bwand(internal::abi<A>, lhs, rhs); }
+    static constexpr result_t<L, R> operator()(L lhs, R rhs) noexcept
+    requires requires { bwand(internal::abi<common_abi_t<L, R>>, lhs, rhs); }
     {
-        return bwand(internal::abi<A>, lhs, rhs);
+        return bwand(internal::abi<common_abi_t<L, R>>, lhs, rhs);
     }
 
-    template <simd_abi LA, common_abi_with<LA> RA, simd_element_for<LA> LE,
-        simd_element_for<RA> RE, simd_abi A = common_abi_t<LA, RA>>
-    requires common_size_with<LE, RE>
+    template <canonical_mask L, common_mask_with<L> R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_mask<common_size_type_t<LE, RE>, A> operator()(
-        basic_mask<LE, LA> lhs, basic_mask<RE, RA> rhs) noexcept
-    requires requires { bwand(internal::abi<A>, lhs, rhs); }
+    static constexpr mresult_t<L, R> operator()(L lhs, R rhs) noexcept
+    requires requires { bwand(internal::abi<common_abi_t<L, R>>, lhs, rhs); }
     {
-        return bwand(internal::abi<A>, lhs, rhs);
+        return bwand(internal::abi<common_abi_t<L, R>>, lhs, rhs);
     }
 
     template <canonical_vector L, broadcastable_to<L> R>
@@ -212,11 +210,6 @@ concept unqualified_extended_mbwand = cpo_invocable<bwand_t, L, R> &&
 
 template <>
 struct extended_impl<bwand_t> {
-private:
-    template <typename L, typename R>
-    using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<L>, common_abi_t<L, R>>;
-
 public:
     template <simd_mask L, simd_mask R>
     requires (extended_mask<L> || extended_mask<R>) &&
@@ -256,8 +249,8 @@ public:
             __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 
-    template <fixed_width_vector S, const_mask_for<S> M,
-        common_vector_with<S> L, common_vector_with<L> R>
+    template <simd_vector S, const_mask_for<S> M, common_vector_with<S> L,
+        common_vector_with<L> R>
     requires (extended_vector<S> || extended_vector<L> || extended_vector<R>) &&
         unqualified_extended_mbwand<S, launder_cmask_t<S, M>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)

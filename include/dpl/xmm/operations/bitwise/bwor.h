@@ -42,10 +42,17 @@ inline vector<E>
 }
 
 template <simd_element L, simd_element R>
+requires common_size_with<L, R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline mask<common_size_type_t<L, R>>
     DPL_VECTORCALL bwor(mask<L> lhs, mask<R> rhs) noexcept {
-    return +xmm::bwor(vector<L>(+lhs), vector<R>(+rhs));
+    if constexpr (same_as<L, R>) {
+        return +xmm::bwor(vector<L>(+lhs), vector<R>(+rhs));
+    } else {
+        using uint_t = unsigned_representation_t<L>;
+        return xmm::bwor(
+            xmm::reinterpret<uint_t>(lhs), xmm::reinterpret<uint_t>(rhs));
+    }
 }
 
 template <simd_element E>

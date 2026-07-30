@@ -26,7 +26,7 @@ template <typename>
 void abi_cast(...) noexcept = delete;
 void abi_cast(...) noexcept = delete;
 template <typename A>
-struct abi_cast_t : private cast_operation_base<abi_cast_t<A>> {
+struct abi_cast_t : public cast_operation_base<abi_cast_t<A>> {
     static_assert(is_object_v<A> && !is_const_v<A> && !is_volatile_v<A>);
     using operation_base<abi_cast_t<A>>::operator();
 };
@@ -38,17 +38,17 @@ struct operation_signature<abi_cast_t<A>> {
 
 template <simd_abi ToA>
 struct fallback_impl<abi_cast_t<ToA>> {
-    template <simd_element_for<ToA> E>
+    template <canonical_vector T>
+    requires same_as<simd_abi_type_t<T>, ToA>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, ToA> operator()(
-        basic_vector<E, ToA> val) noexcept {
+    static constexpr T operator()(T val) noexcept {
         return val;
     }
 
-    template <simd_element_for<ToA> E>
+    template <canonical_mask T>
+    requires same_as<simd_abi_type_t<T>, ToA>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_mask<E, ToA> operator()(
-        basic_mask<E, ToA> val) noexcept {
+    static constexpr T operator()(T val) noexcept {
         return val;
     }
 

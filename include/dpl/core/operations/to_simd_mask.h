@@ -102,8 +102,7 @@ struct canonical_impl<to_simd_mask_t> {
 
     template <canonical_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>
-    operator()(T val) noexcept
+    static constexpr simd_mask_type_t<T> operator()(T val) noexcept
     requires requires { to_simd_mask(internal::abi<T>, val); }
     {
         return to_simd_mask(internal::abi<T>, val);

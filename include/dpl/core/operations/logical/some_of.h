@@ -11,12 +11,12 @@
 #if !DPL_MODULES
 #  include "dpl/core/basic/internal/abi.h"
 #  include "dpl/core/concepts/canonical.h"
+#  include "dpl/core/concepts/cpo_invocable.h"
 #  include "dpl/core/concepts/simd_mask.h"
 #  include "dpl/core/dispatch/interface.h"
 #  include "dpl/core/dispatch/operation/primitive.h"
 #  include "dpl/core/immediate/const_mask.h"
 #  include "dpl/std/concepts/convertible_to.h"
-#  include "dpl/std/concepts/invocable.h"
 #endif
 
 __DPL_DEFAULT_NAMESPACE_BEGIN
@@ -39,7 +39,7 @@ struct operation_signature<some_of_t> {
 template <>
 struct fallback_impl<some_of_t> {
     template <simd_type T>
-    requires regular_invocable<any_of_t, T> && regular_invocable<all_of_t, T>
+    requires cpo_invocable<any_of_t, T> && cpo_invocable<all_of_t, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr bool DPL_VECTORCALL operator()(T&& val) noexcept(
         canonical_simd_type<T>) {

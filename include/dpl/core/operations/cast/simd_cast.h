@@ -47,7 +47,8 @@ struct fallback_impl<simd_cast_t<To>> {
         cpo_invocable<abi_cast_t<simd_abi_type_t<To>>, From> &&
         same_as<cpo_result_t<abi_cast_t<simd_abi_type_t<To>>, From>, To>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr To operator()(From&& from) noexcept {
+    static constexpr To operator()(From&& from) noexcept(
+        canonical_simd_type<From>) {
         return dx::abi_cast<simd_abi_type_t<To>>( __DPL forward<From>(from));
     }
 
@@ -56,8 +57,10 @@ struct fallback_impl<simd_cast_t<To>> {
         cpo_invocable<element_cast_t<simd_element_type_t<To>>, From> &&
         same_as<cpo_result_t<element_cast_t<simd_element_type_t<To>>, From>, To>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr To operator()(From from) noexcept {
-        return dx::element_cast<simd_element_type_t<To>>(from);
+    static constexpr To operator()(From&& from) noexcept(
+        canonical_simd_type<From>) {
+        return dx::element_cast<simd_element_type_t<To>>(
+            __DPL forward<From>(from));
     }
 };
 

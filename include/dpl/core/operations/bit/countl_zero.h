@@ -3,11 +3,13 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/operations/bit/common.h"
 #include "dpl/core/operations/internal/transform.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/internal/abi.h"
 #  include "dpl/core/basic/to_bitset.h"
+#  include "dpl/core/concepts/canonical.h"
 #  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/concepts/mask_compatibility.h"
 #  include "dpl/core/concepts/simd_abi.h"
@@ -15,6 +17,7 @@
 #  include "dpl/core/dispatch/maskable/transform.h"
 #  include "dpl/core/dispatch/operation/primitive.h"
 #  include "dpl/core/type_traits/representation.h"
+#  include "dpl/core/type_traits/simd_mask_type.h"
 #  include "dpl/std/bit/countl.h"
 #  include "dpl/std/utility/to_unsigned.h"
 #endif
@@ -45,16 +48,17 @@ struct operation_signature<countl_zero_t> {
 
 template <>
 struct fallback_impl<countl_zero_t> {
-    template <fixed_width_abi A, simd_element_for<A> E>
-    requires integral<E>
+    template <canonical_vector T>
+    requires fixed_width_abi<simd_abi_type_t<T>> &&
+        integral<simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(
-        basic_vector<E, A> val) noexcept {
-        using ubit = unsigned_representation_t<E>;
-        return internal::transform<basic_vector<ubit, A>>(
+    static constexpr count_vector_t<T>
+        DPL_VECTORCALL operator()(T val) noexcept {
+        return internal::transform<count_vector_t<T>>(
             [](auto val) {
+                using uint_t = make_unsigned_t<simd_element_type_t<T>>;
                 auto const count = __DPL countl_zero(__DPL to_unsigned(val));
-                return static_cast<ubit>(count);
+                return static_cast<uint_t>(count);
             },
             val);
     }
@@ -67,6 +71,10 @@ struct fallback_impl<countl_zero_t> {
     }
 };
 
+template <typename T>
+concept unqualified_canonical_countl_zero =
+    requires(T val) { countl_zero(internal::abi<T>, val); };
+
 template <typename S, typename M, typename T>
 concept unqualified_canonical_mcountl_zero = cpo_invocable<countl_zero_t, T> &&
     (!simd_type<S> || same_as<S, cpo_result_t<countl_zero_t, T>>) &&
@@ -78,48 +86,46 @@ concept unqualified_canonical_mcountl_zero = cpo_invocable<countl_zero_t, T> &&
 
 template <>
 struct canonical_impl<countl_zero_t> {
-private:
-    template <typename T>
-    using result_t DPL_NODEBUG = conditional_t<simd_mask<T>, size_t,
-        basic_vector<unsigned_representation_t<simd_element_type_t<T>>,
-            simd_abi_type_t<T>>>;
-
-    template <typename T>
-    using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
-
 public:
-    template <canonical_simd_type T>
+    template <canonical_vector T>
+    requires unqualified_canonical_countl_zero<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr result_t<T> operator()(T val) noexcept
-    requires requires { countl_zero(internal::abi<T>, val); }
-    {
+    static constexpr count_vector_t<T> operator()(T val) noexcept {
+        return countl_zero(internal::abi<T>, val);
+    }
+
+    template <canonical_mask T>
+    requires unqualified_canonical_countl_zero<T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr size_t operator()(T val) noexcept {
         return countl_zero(internal::abi<T>, val);
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mcountl_zero<result_t<T>, mask_t<T>, T>
+    requires unqualified_canonical_mcountl_zero<count_vector_t<T>,
+        simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr result_t<T> operator()(
-        result_t<T> src, mask_t<T> mask, T val) noexcept {
+    static constexpr count_vector_t<T> operator()(
+        count_vector_t<T> src, simd_mask_type_t<T> mask, T val) noexcept {
         return countl_zero(internal::abi<T>, src, mask, val);
     }
 
     template <canonical_vector T, const_mask_for<T> M>
-    requires unqualified_canonical_mcountl_zero<result_t<T>,
+    requires unqualified_canonical_mcountl_zero<count_vector_t<T>,
         launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr result_t<T> operator()(
-        result_t<T> src, M cmask, T val) noexcept {
+    static constexpr count_vector_t<T> operator()(
+        count_vector_t<T> src, M cmask, T val) noexcept {
         return countl_zero(
             internal::abi<T>, src, dx::to_const_mask<T>(cmask), val);
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mcountl_zero<dx::zero_t, mask_t<T>, T>
+    requires unqualified_canonical_mcountl_zero<dx::zero_t, simd_mask_type_t<T>,
+        T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr result_t<T> operator()(
-        dx::zero_t zero, mask_t<T> mask, T val) noexcept {
+    static constexpr count_vector_t<T> operator()(
+        dx::zero_t zero, simd_mask_type_t<T> mask, T val) noexcept {
         return countl_zero(internal::abi<T>, zero, mask, val);
     }
 
@@ -127,7 +133,7 @@ public:
     requires unqualified_canonical_mcountl_zero<dx::zero_t,
         launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr result_t<T> operator()(
+    static constexpr count_vector_t<T> operator()(
         dx::zero_t zero, M cmask, T val) noexcept {
         return countl_zero(
             internal::abi<T>, zero, dx::to_const_mask<T>(cmask), val);

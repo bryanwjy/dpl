@@ -7,6 +7,7 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/internal/abi.h"
+#  include "dpl/core/concepts/canonical.h"
 #  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/concepts/mask_compatibility.h"
 #  include "dpl/core/concepts/simd_abi.h"
@@ -15,6 +16,7 @@
 #  include "dpl/core/dispatch/operation/primitive.h"
 #  include "dpl/core/type_traits/representation.h"
 #  include "dpl/core/type_traits/simd_abi_type.h"
+#  include "dpl/core/type_traits/simd_mask_type.h"
 #  include "dpl/std/bit/bit_cast.h"
 #  include "dpl/std/bit/byteswap.h"
 #  include "dpl/std/type_traits/type_identity.h"
@@ -39,8 +41,7 @@ struct operation_signature<byteswap_t> {
 
 template <>
 struct fallback_impl<byteswap_t> {
-    template <fixed_width_abi A, simd_element_for<A> E>
-    requires integral<E>
+    template <fixed_width_abi A, integral E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr basic_vector<E, A>
         DPL_VECTORCALL operator()(basic_vector<E, A> val) noexcept {
@@ -60,27 +61,22 @@ concept unqualified_canonical_mbyteswap = cpo_invocable<byteswap_t, T> &&
 
 template <>
 struct canonical_impl<byteswap_t> {
-private:
-    template <typename T>
-    using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
-
 public:
-    template <simd_abi A, simd_element_for<A> E>
+    template <canonical_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(
-        basic_vector<E, A> val) noexcept
-    requires integral<E> && requires { byteswap(internal::abi<A>, val); }
+    static constexpr T operator()(T val) noexcept
+    requires integral<simd_element_type_t<T>> &&
+        requires { byteswap(internal::abi<T>, val); }
     {
-        return byteswap(internal::abi<A>, val);
+        return byteswap(internal::abi<T>, val);
     }
 
     template <canonical_vector T>
     requires integral<simd_element_type_t<T>> &&
-        unqualified_canonical_mbyteswap<T, mask_t<T>, T>
+        unqualified_canonical_mbyteswap<T, simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
-        type_identity_t<T> src, mask_t<T> mask, T val) noexcept {
+        type_identity_t<T> src, simd_mask_type_t<T> mask, T val) noexcept {
         return byteswap(internal::abi<T>, src, mask, val);
     }
 
@@ -95,10 +91,10 @@ public:
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mbyteswap<dx::zero_t, mask_t<T>, T>
+    requires unqualified_canonical_mbyteswap<dx::zero_t, simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
-        dx::zero_t zero, mask_t<T> mask, T val) noexcept {
+        dx::zero_t zero, simd_mask_type_t<T> mask, T val) noexcept {
         return byteswap(internal::abi<T>, zero, mask, val);
     }
 

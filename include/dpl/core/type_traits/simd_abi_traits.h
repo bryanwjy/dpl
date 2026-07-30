@@ -10,6 +10,7 @@
 #include "dpl/core/type_traits/simd_abi_type.h"
 #include "dpl/core/type_traits/simd_element_representation.h"
 #include "dpl/core/type_traits/simd_element_type.h"
+#include "dpl/core/type_traits/simd_value_type.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/fwd.h"

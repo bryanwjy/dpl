@@ -5,6 +5,8 @@
 
 // IWYU pragma: always_keep
 
+#include "dpl/core/operations/bitwise/bwnot.h"
+#include "dpl/core/operations/bitwise/bwxor.h"
 #include "dpl/core/operations/internal/transform.h"
 
 #if !DPL_MODULES
@@ -54,16 +56,12 @@ struct fallback_impl<cmpeq_t> : binary_broadcasting_fallback<cmpeq_t> {
             [](auto lhs, auto rhs) -> bool { return lhs == rhs; }, lhs, rhs);
     }
 
-    template <fixed_width_abi A, simd_element_for<A> LE, simd_element_for<A> RE>
-    requires common_size_with<LE, RE> &&
-        cpo_invocable<to_bitset_t, basic_mask<LE, A>> &&
-        cpo_invocable<to_bitset_t, basic_mask<RE, A>>
+    template <canonical_mask L, common_mask_with<L> R>
+    requires cpo_invocable<bwxor_t, L, R> &&
+        cpo_invocable<bwnot_t, cpo_result_t<bwxor_t, L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(
-        basic_mask<LE, A> lhs, basic_mask<RE, A> rhs) noexcept {
-        using T = common_size_type_t<LE, RE>;
-        return dx::from_bitset<T, A>(
-            (dx::to_bitset(lhs) ^ dx::to_bitset(rhs)).invert());
+    static constexpr auto DPL_VECTORCALL operator()(L lhs, R rhs) noexcept {
+        return dx::bwnot(dx::bwxor(lhs, rhs));
     }
 
     using binary_broadcasting_fallback<cmpeq_t>::operator();
@@ -91,10 +89,10 @@ struct canonical_impl<cmpeq_t> {
 private:
     template <typename L, typename R>
     using result_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<L>, common_abi_t<L, R>>;
+        make_canonical_mask_t<simd_element_type_t<L>, common_abi_t<L, R>>;
 
     template <typename L, typename R>
-    using mresult_t DPL_NODEBUG = basic_mask<
+    using mresult_t DPL_NODEBUG = make_canonical_mask_t<
         common_size_type_t<simd_element_type_t<L>, simd_element_type_t<R>>,
         common_abi_t<L, R>>;
 

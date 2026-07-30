@@ -33,18 +33,25 @@ inline vector<E>
     } else if constexpr (is_same_v<__m128d, native_vector_t<E>>) {
         return _mm_xor_pd(+lhs, +rhs);
     } else {
-        using rep = unsigned_representation_t<E>;
+        using uint_t = unsigned_representation_t<E>;
         auto const result = _mm_xor_si128(
-            +xmm::reinterpret<rep>(lhs), +xmm::reinterpret<rep>(rhs));
-        return xmm::reinterpret<E>(vector<rep>(result));
+            +xmm::reinterpret<uint_t>(lhs), +xmm::reinterpret<uint_t>(rhs));
+        return xmm::reinterpret<E>(vector<uint_t>(result));
     }
 }
 
 template <simd_element L, simd_element R>
+requires common_size_with<L, R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline mask<common_size_type_t<L, R>>
     DPL_VECTORCALL bwxor(mask<L> lhs, mask<R> rhs) noexcept {
-    return mask<L>(+xmm::bwxor(vector<L>(+lhs), vector<R>(+rhs)));
+    if constexpr (same_as<L, R>) {
+        return mask<L>(+xmm::bwxor(vector<L>(+lhs), vector<R>(+rhs)));
+    } else {
+        using uint_t = unsigned_representation_t<L>;
+        return xmm::bwxor(
+            xmm::reinterpret<uint_t>(lhs), xmm::reinterpret<uint_t>(rhs));
+    }
 }
 
 template <simd_element E>

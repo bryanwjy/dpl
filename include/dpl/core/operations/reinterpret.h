@@ -58,8 +58,8 @@ struct fallback_impl<reinterpret_t<ToE>> {
     template <simd_type T>
     requires same_as<simd_element_type_t<T>, ToE>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T&& val) noexcept(
-        is_nothrow_constructible_v<remove_cvref_t<T>, T>) {
+    static constexpr decay_t<T> operator()(T&& val) noexcept(
+        is_nothrow_constructible_v<decay_t<T>, T>) {
         return __DPL forward<T>(val);
     }
 
@@ -106,25 +106,21 @@ struct fallback_impl<reinterpret_t<ToE>> {
 
 template <typename ToE>
 struct canonical_impl<reinterpret_t<ToE>> {
-    template <simd_abi A, simd_element_for<A> FromE>
-    requires (simd_element_for<ToE, A> &&
-        (sizeof(basic_vector<FromE, A>) == sizeof(basic_vector<ToE, A>)))
+    template <canonical_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<ToE, A> operator()(
-        basic_vector<FromE, A> val) noexcept
-    requires requires { reinterpret<ToE>(internal::abi<A>, val); }
+    static constexpr rebind_simd_t<T, ToE> operator()(T val) noexcept
+    requires requires { reinterpret<ToE>(internal::abi<T>, val); }
     {
-        return reinterpret<ToE>(internal::abi<A>, val);
+        return reinterpret<ToE>(internal::abi<T>, val);
     }
 
-    template <fixed_width_abi A, simd_element_for<A> FromE>
-    requires (simd_element_for<ToE, A> && common_size_with<FromE, ToE>)
+    template <canonical_mask T>
+    requires common_size_with<simd_element_type_t<T>, ToE>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_mask<ToE, A> operator()(
-        basic_mask<FromE, A> val) noexcept
-    requires requires { reinterpret<ToE>(internal::abi<A>, val); }
+    static constexpr rebind_simd_t<T, ToE> operator()(T val) noexcept
+    requires requires { reinterpret<ToE>(internal::abi<T>, val); }
     {
-        return reinterpret<ToE>(internal::abi<A>, val);
+        return reinterpret<ToE>(internal::abi<T>, val);
     }
 };
 

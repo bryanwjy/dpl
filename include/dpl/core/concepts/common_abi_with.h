@@ -58,10 +58,10 @@ requires common_abi_with<A, B>
 inline constexpr bool is_common_abi_with<A, B, Cs...> =
     is_common_abi_with<common_abi_t<A, B>, Cs...>;
 
-} // namespace internal
-
 template <typename... Ts>
 concept all_common_abi = internal::is_common_abi_with<Ts...>;
+
+} // namespace internal
 
 } // namespace datapar
 

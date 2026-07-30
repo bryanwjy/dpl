@@ -1,8 +1,8 @@
 // Copyright 2025-2026 Bryan Wong
 
 // GCC has a large default
-// @dpl[clang].compile-flags: -fconstexpr-steps=4000000
-// @dpl[msvc].compile-flags: /constexpr:steps4000000
+// @dpl[clang].compile-flags: -fconstexpr-steps=6000000
+// @dpl[msvc].compile-flags: /constexpr:steps6000000
 #include "../common.h"
 
 import dpl.xmm;
