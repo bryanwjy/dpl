@@ -5,6 +5,7 @@
 
 // IWYU pragma: always_keep
 #include "dpl/core/operations/arithmetic/subtract.h"
+#include "dpl/core/operations/bitwise/bwxor.h"
 #include "dpl/core/operations/internal/transform.h"
 
 #if !DPL_MODULES
@@ -40,12 +41,26 @@ struct operation_signature<negate_t> {
 
 template <>
 struct fallback_impl<negate_t> {
-    template <simd_abi A, simd_element_for<A> E>
+    template <canonical_vector T>
+    requires integral<simd_element_type_t<T>> &&
+        fixed_width_abi<simd_abi_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(
-        basic_vector<E, A> val) noexcept {
-        return internal::transform<basic_vector<E, A>>(
-            [](E val) -> E { return -val; }, val);
+    static constexpr T DPL_VECTORCALL operator()(T val) noexcept {
+        using E = simd_element_type_t<T>;
+        return internal::transform<T>([](E val) -> E { return -val; }, val);
+    }
+
+    template <canonical_vector T>
+    requires floating_point_like<simd_element_type_t<T>> &&
+        requires { floating_point_traits<simd_element_type_t<T>>::signbit; } &&
+        cpo_invocable<bwxor_t, T, simd_element_type_t<T>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr T DPL_VECTORCALL operator()(T val) noexcept {
+        using E = simd_element_type_t<T>;
+        // signbit must be bit_representation_t<E>
+        constexpr auto signbit =
+            __DPL bit_cast<E>(floating_point_traits<E>::signbit);
+        return dx::bwxor(val, signbit);
     }
 };
 

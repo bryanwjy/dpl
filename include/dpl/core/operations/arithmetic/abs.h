@@ -52,11 +52,13 @@ struct fallback_impl<abs_t> {
     }
 
     template <canonical_vector T>
-    requires binary_layout_floating_point<simd_element_type_t<T>> &&
-        cpo_invocable<bwandnot_t, T, T>
+    requires floating_point_like<simd_element_type_t<T>> &&
+        requires { floating_point_traits<simd_element_type_t<T>>::signbit; } &&
+        cpo_invocable<bwandnot_t, T, simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr T DPL_VECTORCALL operator()(T val) noexcept {
         using E = simd_element_type_t<T>;
+        // signbit must be bit_representation_t<E>
         constexpr auto signbit =
             __DPL bit_cast<E>(floating_point_traits<E>::signbit);
         return dx::bwandnot(val, signbit);
