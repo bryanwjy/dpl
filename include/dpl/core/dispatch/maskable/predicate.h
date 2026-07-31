@@ -46,19 +46,19 @@ class maskable_predicate_base : public maskable_operation_base<D> {
     template <typename... Ts>
     using result_t DPL_NODEBUG = cpo_result_t<D, Ts...>;
     template <typename... Ts>
-    using basic_mask_t DPL_NODEBUG = result_t<Ts...>;
+    using canonical_mask_t DPL_NODEBUG = result_t<Ts...>;
 
 protected:
     template <canonical_ornot_simd... Ts>
     requires signature_compatible<D, Ts...> && has_simd_vector<Ts...> &&
-        cpo_invocable<D, Ts...> && simd_mask<result_t<Ts...>> &&
-        cpo_invocable<bwand_t, basic_mask_t<Ts...>, result_t<Ts...>>
+        cpo_invocable<D, Ts...> && canonical_mask<result_t<Ts...>> &&
+        cpo_invocable<bwand_t, canonical_mask_t<Ts...>, result_t<Ts...>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr result_t<Ts...> operator()(
-        basic_mask_t<Ts...> mask, Ts... args) noexcept {
-        using M = basic_mask_t<Ts...>;
+        canonical_mask_t<Ts...> mask, Ts... args) noexcept {
+        using M = canonical_mask_t<Ts...>;
         if constexpr (canonical_cpo_invocable_r<D, M, M, Ts...>) {
-            if constexpr (all_same_abi<basic_mask_t<Ts...>, Ts...>) {
+            if constexpr (all_same_abi<canonical_mask_t<Ts...>, Ts...>) {
                 if consteval {
                     if constexpr (fallback_cpo_invocable_r<D, M, M, Ts...>) {
                         return impl::fallback<D>(mask, args...);
@@ -80,7 +80,7 @@ protected:
 
     template <typename M, canonical_ornot_simd... Ts>
     requires signature_compatible<D, Ts...> && has_simd_vector<Ts...> &&
-        cpo_invocable<D, Ts...> && simd_mask<result_t<Ts...>> &&
+        cpo_invocable<D, Ts...> && canonical_mask<result_t<Ts...>> &&
         const_mask_for<M, result_t<Ts...>> &&
         cpo_invocable<select_t, M, result_t<Ts...>, dx::zero_t>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)

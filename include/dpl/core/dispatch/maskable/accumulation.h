@@ -50,9 +50,7 @@ class maskable_accumulation_base : public maskable_operation_base<D> {
     template <typename S, typename... Ts>
     using result_t DPL_NODEBUG = cpo_result_t<D, S, Ts...>;
     template <typename S, typename... Ts>
-    using basic_mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<result_t<S, Ts...>>,
-            simd_abi_type_t<result_t<S, Ts...>>>;
+    using canonical_mask_t DPL_NODEBUG = simd_mask_type_t<result_t<S, Ts...>>;
     using this_type = maskable_accumulation_base;
 
 protected:
@@ -60,11 +58,12 @@ protected:
     requires signature_compatible<D, S, Ts...> && cpo_invocable<D, S, Ts...> &&
         canonical_vector<result_t<S, Ts...>> &&
         same_as<S, result_t<S, Ts...>> &&
-        cpo_invocable<select_t, basic_mask_t<S, Ts...>, result_t<S, Ts...>, S>
+        cpo_invocable<select_t, canonical_mask_t<S, Ts...>, result_t<S, Ts...>,
+            S>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr result_t<S, Ts...> operator()(
-        S src, basic_mask_t<S, Ts...> mask, Ts... args) noexcept {
-        using M = basic_mask_t<S, Ts...>;
+        S src, canonical_mask_t<S, Ts...> mask, Ts... args) noexcept {
+        using M = canonical_mask_t<S, Ts...>;
         if constexpr (canonical_cpo_invocable_r<D, S, S, M, Ts...>) {
             if constexpr (all_same_abi<S, M, Ts...>) {
                 if consteval {
@@ -91,12 +90,12 @@ protected:
     requires signature_compatible<D, S, Ts...> && cpo_invocable<D, S, Ts...> &&
         canonical_vector<result_t<S, Ts...>> &&
         same_as<S, result_t<S, Ts...>> &&
-        cpo_invocable<select_t, basic_mask_t<S, Ts...>, result_t<S, Ts...>,
+        cpo_invocable<select_t, canonical_mask_t<S, Ts...>, result_t<S, Ts...>,
             zero_t>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr result_t<S, Ts...> operator()(dx::zero_t zero,
-        basic_mask_t<S, Ts...> mask, S src, Ts... args) noexcept {
-        using M = basic_mask_t<S, Ts...>;
+        canonical_mask_t<S, Ts...> mask, S src, Ts... args) noexcept {
+        using M = canonical_mask_t<S, Ts...>;
         if constexpr (canonical_cpo_invocable_r<D, S, dx::zero_t, M, S,
                           Ts...>) {
             if constexpr (all_same_abi<M, S, Ts...>) {
