@@ -95,7 +95,7 @@ private:
 
     template <typename L, typename R>
     using vector_t DPL_NODEBUG =
-        basic_vector<simd_element_type_t<L>, common_abi_t<L, R>>;
+        make_canonical_vector_t<simd_element_type_t<L>, common_abi_t<L, R>>;
 
 public:
     template <canonical_vector AT, vector_subsumed_by<AT> BT,
@@ -237,7 +237,7 @@ struct extended_impl<fmsub_t> {
 private:
     template <typename L, typename R>
     using vector_t DPL_NODEBUG =
-        basic_vector<simd_element_type_t<L>, common_abi_t<L, R>>;
+        make_canonical_vector_t<simd_element_type_t<L>, common_abi_t<L, R>>;
 
 public:
     template <simd_vector AT, vector_subsumed_by<AT> BT,

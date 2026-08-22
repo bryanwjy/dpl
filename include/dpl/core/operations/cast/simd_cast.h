@@ -25,7 +25,7 @@ template <typename>
 void simd_cast(...) noexcept = delete;
 
 template <typename T>
-struct simd_cast_t : private cast_operation_base<simd_cast_t<T>> {
+struct simd_cast_t : public cast_operation_base<simd_cast_t<T>> {
     static_assert(is_object_v<T> && !is_const_v<T> && !is_volatile_v<T>);
     using operation_base<simd_cast_t<T>>::operator();
 };

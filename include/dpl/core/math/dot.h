@@ -40,8 +40,8 @@ namespace datapar::internal {
  */
 void dot_product(...) noexcept = delete;
 struct dot_product_t :
-    private math_operation_base<dot_product_t>,
-    private maskable_accumulation_base<dot_product_t> {
+    public math_operation_base<dot_product_t>,
+    public maskable_accumulation_base<dot_product_t> {
     using math_operation_base<dot_product_t>::operator();
     using maskable_accumulation_base<dot_product_t>::operator();
 };
@@ -96,11 +96,6 @@ concept unqualified_canonical_mzdot_product =
 template <>
 struct canonical_impl<dot_product_t> {
 public:
-    template <typename T>
-    using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
-
-private:
     template <canonical_vector L, common_vector_with<L> R,
         canonical_dot_product_result<L, R> S>
     requires unqualified_canonical_dot_product<S, L, R>
@@ -111,10 +106,10 @@ private:
 
     template <canonical_vector L, common_vector_with<L> R,
         canonical_dot_product_result<L, R> S>
-    requires unqualified_canonical_mdot_product<S, mask_t<S>, L, R>
+    requires unqualified_canonical_mdot_product<S, simd_mask_type_t<S>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr S operator()(
-        S src, mask_t<S> mask, L lhs, R rhs) noexcept {
+        S src, simd_mask_type_t<S> mask, L lhs, R rhs) noexcept {
         return dot_product(internal::abi<S>, src, mask, lhs, rhs);
     }
 
@@ -130,10 +125,10 @@ private:
     template <canonical_vector L, common_vector_with<L> R,
         canonical_dot_product_result<L, R> S>
     requires canonical_vector<R> &&
-        unqualified_canonical_mzdot_product<mask_t<S>, S, L, R>
+        unqualified_canonical_mzdot_product<simd_mask_type_t<S>, S, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        dx::zero_t zero, mask_t<S> mask, S src, L lhs, R rhs) noexcept {
+    static constexpr auto operator()(dx::zero_t zero, simd_mask_type_t<S> mask,
+        S src, L lhs, R rhs) noexcept {
         return dot_product(internal::abi<S>, zero, mask, src, lhs, rhs);
     }
 
@@ -239,18 +234,17 @@ public:
 
 template <>
 struct fallback_impl<dot_product_t> {
-    template <simd_abi A>
+    template <canonical_vector S, canonical_vector T>
+    requires same_abi_as<simd_abi_type_t<S>, simd_abi_type_t<T>> &&
+        same_as<float, simd_element_type_t<S>> &&
+        same_as<ext::bfloat16, simd_element_type_t<S>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_vector<float, A>
-        DPL_VECTORCALL operator()(basic_vector<float, A> src,
-            basic_vector<ext::bfloat16, A> lhs,
-            basic_vector<ext::bfloat16, A> rhs) noexcept {
-        auto const idx = dx::lane_index<ext::bfloat16, A>();
-        auto const lower_half = idx < basic_vector<float, A>::size();
+    static constexpr S DPL_VECTORCALL operator()(S src, T lhs, T rhs) noexcept {
+        auto const idx = dx::lane_index<T>();
+        auto const lower_half = idx < simd_abi_traits<S>::size();
         auto const even = dx::bwshift_left(lower_half, idx, imm<1zu>);
         auto const odd = dx::add(lower_half, even,
-            dx::broadcast<decltype(dx::lane_index<ext::bfloat16, A>())>(
-                dx::one));
+            dx::broadcast<decltype(dx::lane_index<T>())>(dx::one));
         auto const odd_vals =
             dx::multiply(dx::element_cast<float>(dx::permute(lhs, odd)),
                 dx::element_cast<float>(dx::permute(rhs, odd)));

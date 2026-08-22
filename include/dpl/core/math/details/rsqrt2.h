@@ -11,7 +11,6 @@
 #include "dpl/core/math/mulx.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/basic/basic_vector.h" // IWYU pragma: keep
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/immediate/constants/one.h"
 #  include "dpl/core/operations/arithmetic.h"
@@ -32,28 +31,28 @@ private:
         0.05385400159427293>
         polynomial;
 
-    template <floating_point E, simd_abi A>
+    template <canonical_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto refine(basic_vector<E, A> poly,
-        basic_vector<E, A> half_x, immediate<0>) noexcept {
+    static constexpr T refine(T poly, T, immediate<0>) noexcept {
         return poly;
     }
 
-    template <floating_point E, simd_abi A, int N>
+    template <canonical_vector T, int N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL refine(basic_vector<E, A> poly,
-        basic_vector<E, A> half_x, immediate<N>) noexcept {
+    static constexpr T DPL_VECTORCALL refine(
+        T poly, T half_x, immediate<N>) noexcept {
         static_assert(N >= 1);
-        constexpr E threehalves = 1.5;
-        auto const result =
-            poly * dx::nmuladd(poly * poly, half_x, threehalves);
+        constexpr simd_element_type_t<T> threehalves = 1.5;
+        auto result = dx::multiply(poly, poly);
+        result = dx::nmuladd(result, half_x, threehalves);
+        result = dx::multiply(result, poly);
         return refine(result, half_x, imm<N - 1>);
     }
 
     struct one : broadcastable_base<one> {
         __DPL_HIDE_FROM_ABI explicit constexpr one() noexcept = default;
 
-        template <floating_point T>
+        template <floating_point_like T>
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
         constexpr operator T(this one_t) noexcept {
             return 0.7071067811865475244008443;
@@ -61,16 +60,22 @@ private:
     };
 
 public:
-    template <simd_abi A, simd_floating_point_for<A> E, accuracy_tag Tag>
+    template <canonical_vector T, accuracy_tag Tag>
+    requires floating_point_like<simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_vector<E, A>
-        DPL_VECTORCALL operator()(Tag, basic_vector<E, A> val) noexcept {
-        constexpr E two = 2.0;
-        auto poly = polynomial(dx::mulsub(dx::broadcast<A>(two), val, dx::one));
-        if constexpr (same_as<accuracy::speed_t, Tag>) {
-            return refine(poly, val, imm<digits_v<E> / digits_v<double>>);
+    static constexpr T DPL_VECTORCALL operator()(Tag, T val) noexcept {
+        constexpr simd_element_type_t<T> two = 2.0;
+        auto const vtwo = dx::broadcast<T>(two);
+        auto const vone = dx::broadcast<T>(dx::one);
+        auto poly = polynomial(dx::mulsub(vtwo, val, vone));
+        if constexpr (is_same_v<accuracy::speed_t, Tag>) {
+            constexpr auto steps =
+                digits_v<simd_element_type_t<T>> / digits_v<double>;
+            return refine(poly, val, imm<steps>);
         } else {
-            return refine(poly, val, imm<digits_v<E> / digits_v<float>>);
+            constexpr auto steps =
+                digits_v<simd_element_type_t<T>> / digits_v<float>;
+            return refine(poly, val, imm<steps>);
         }
     }
 

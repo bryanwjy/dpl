@@ -25,6 +25,18 @@ void logical_and(...) noexcept = delete;
 
 struct logical_and_t : private logical_base<logical_and_t> {
     using operation_base<logical_and_t>::operator();
+
+    template <simd_mask L, common_mask_with<L> R, common_mask_with<L>... Ts>
+    requires cpo_invocable<logical_and_t, L, R> &&
+        cpo_invocable<logical_and_t, cpo_result_t<logical_and_t, L, R>, Ts...>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    constexpr auto DPL_VECTORCALL operator()(
+        L&& lhs, R&& rhs, Ts&&... tail) noexcept(canonical_mask<L> &&
+        canonical_mask<R> && (... && canonical_mask<Ts>)) {
+        return operator()(operator()(
+                              __DPL forward<L>(lhs), __DPL forward<R>(rhs)),
+            __DPL forward<Ts>(tail)...);
+    }
 };
 
 template <>
@@ -44,38 +56,6 @@ struct fallback_impl<logical_and_t> {
     }
 };
 
-template <>
-struct canonical_impl<logical_and_t> {
-    template <canonical_mask L, canonical_mask R>
-    requires common_abi_with<simd_abi_type_t<L>, simd_abi_type_t<R>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_mask<simd_element_type_t<R>, common_abi_t<L, R>>
-    operator()(L lhs, R rhs) noexcept
-    requires requires {
-        logical_and(internal::abi<common_abi_t<L, R>>, lhs, rhs);
-    }
-    {
-        return logical_and(internal::abi<common_abi_t<L, R>>, lhs, rhs);
-    }
-};
-
-template <typename L, typename R, typename A = common_abi_t<L, R>>
-concept unqualified_extended_logical_and = requires(L lhs, R rhs) {
-    {
-        logical_and(internal::declarg<L>(), internal::declarg<R>())
-    } -> mask_with_common_abi<A>;
-};
-
-template <>
-struct extended_impl<logical_and_t> {
-    template <simd_mask L, simd_mask R>
-    requires (extended_mask<L> || extended_mask<R>) &&
-        unqualified_extended_logical_and<L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L&& lhs, R&& rhs) {
-        return logical_and(__DPL forward<L>(lhs), __DPL forward<R>(rhs));
-    }
-};
 } // namespace datapar::internal
 
 namespace datapar {

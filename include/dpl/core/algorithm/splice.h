@@ -33,8 +33,7 @@ template <>
 struct fallback_impl<splice_t> {
 private:
     template <typename L, typename R>
-    using vector_t DPL_NODEBUG =
-        make_canonical_vector_t<simd_element_type_t<L>, common_abi_t<L, R>>;
+    using vector_t DPL_NODEBUG = common_canonical_simd_t<L, R>;
 
 public:
     template <simd_vector L, common_vector_with<L> R,
@@ -68,12 +67,10 @@ template <>
 struct canonical_impl<splice_t> {
 private:
     template <typename L, typename R>
-    using result_t DPL_NODEBUG =
-        make_canonical_vector_t<simd_element_type_t<L>, common_abi_t<L, R>>;
+    using result_t DPL_NODEBUG = common_canonical_simd_t<L, R>;
 
     template <typename L, typename R>
-    using mask_t DPL_NODEBUG =
-        make_canonical_mask_t<simd_element_type_t<L>, common_abi_t<L, R>>;
+    using mask_t DPL_NODEBUG = simd_mask_type_t<common_canonical_simd_t<L, R>>;
 
 public:
     template <canonical_vector L, common_vector_with<L> R>
@@ -104,21 +101,14 @@ public:
 
 template <typename M, typename L, typename R, typename A = common_abi_t<L, R>>
 concept unqualified_extended_splice = requires(M mask, L lhs, R rhs) {
-    {
-        splice(mask, lhs, rhs)
-    } -> equivalent_vector_with<basic_vector<simd_element_type_t<L>, A>>;
+    { splice(mask, lhs, rhs) } -> vector_with<simd_element_type_t<L>, A>;
 };
 
 template <>
 struct extended_impl<splice_t> {
 private:
     template <typename L, typename R>
-    using vector_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<L>, common_abi_t<L, R>>;
-
-    template <typename L, typename R>
-    using imask_t DPL_NODEBUG = mask_value_t<
-        simd_abi_traits<simd_element_type_t<L>, common_abi_t<L, R>>::size>;
+    using vector_t DPL_NODEBUG = common_canonical_simd_t<L, R>;
 
 public:
     template <simd_vector L, common_vector_with<L> R,

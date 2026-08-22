@@ -10,7 +10,7 @@
 	{
 		"tab_size": 4,
 		"ClangFormat": {
-			"binary": "clang-format-21",
+			"binary": "clang-format",
 		    "style": "File",
 		    "format_on_save": true,
 		    "languages": ["C", "C++", "C++11", "C++20"],

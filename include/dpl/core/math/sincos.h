@@ -36,20 +36,20 @@ void cos(...) noexcept = delete;
 void sincos(...) noexcept = delete;
 
 struct DPL_EMPTY_BASES sin_t :
-    private math_operation_base<sin_t>,
-    private maskable_transform_base<sin_t> {
+    public math_operation_base<sin_t>,
+    public maskable_transform_base<sin_t> {
     using math_operation_base<sin_t>::operator();
     using maskable_transform_base<sin_t>::operator();
 };
 struct DPL_EMPTY_BASES cos_t :
-    private math_operation_base<cos_t>,
-    private maskable_transform_base<cos_t> {
+    public math_operation_base<cos_t>,
+    public maskable_transform_base<cos_t> {
     using math_operation_base<cos_t>::operator();
     using maskable_transform_base<cos_t>::operator();
 };
 struct DPL_EMPTY_BASES sincos_t :
-    private math_operation_base<sincos_t>,
-    private maskable_transform_base<sincos_t> {
+    public math_operation_base<sincos_t>,
+    public maskable_transform_base<sincos_t> {
     using math_operation_base<sincos_t>::operator();
     using maskable_transform_base<sincos_t>::operator();
 };
@@ -67,7 +67,7 @@ struct operation_signature<cos_t> {
 template <>
 struct operation_signature<sincos_t> {
     template <simd_vector T, typename O>
-    requires exact_mask_for<O, T> || const_mask_for<O, T>
+    requires convertible_to<O, simd_mask_type_t<T>> || const_mask_for<O, T>
     static consteval void operator()(T&&, O&&) noexcept {}
 };
 
@@ -132,32 +132,25 @@ concept unqualified_canonical_msin = cpo_invocable<sin_t, T> &&
 
 template <>
 struct canonical_impl<sin_t> {
-private:
-    template <typename T>
-    using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
-
 public:
-    template <simd_abi A, simd_element_for<A> E>
+    template <canonical_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(
-        basic_vector<E, A> val) noexcept
-    requires requires { sin(internal::abi<A>, val); }
+    static constexpr T operator()(T val) noexcept
+    requires requires { sin(internal::abi<T>, val); }
     {
-        return sin(internal::abi<A>, val);
+        return sin(internal::abi<T>, val);
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_msin<type_identity_t<T>, mask_t<T>, T>
+    requires unqualified_canonical_msin<T, simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
-        type_identity_t<T> src, mask_t<T> mask, T val) noexcept {
+        type_identity_t<T> src, simd_mask_type_t<T> mask, T val) noexcept {
         return sin(internal::abi<T>, src, mask, val);
     }
 
     template <canonical_vector T, const_mask_for<T> M>
-    requires unqualified_canonical_msin<type_identity_t<T>,
-        launder_cmask_t<T, M>, T>
+    requires unqualified_canonical_msin<T, launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
         type_identity_t<T> src, M cmask, T val) noexcept {
@@ -165,10 +158,10 @@ public:
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_msin<dx::zero_t, mask_t<T>, T>
+    requires unqualified_canonical_msin<dx::zero_t, simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
-        dx::zero_t zero, mask_t<T> mask, T val) noexcept {
+        dx::zero_t zero, simd_mask_type_t<T> mask, T val) noexcept {
         return sin(internal::abi<T>, zero, mask, val);
     }
 
@@ -252,32 +245,25 @@ concept unqualified_canonical_mcos = cpo_invocable<cos_t, T> &&
 
 template <>
 struct canonical_impl<cos_t> {
-private:
-    template <typename T>
-    using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
-
 public:
-    template <simd_abi A, simd_element_for<A> E>
+    template <canonical_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(
-        basic_vector<E, A> val) noexcept
-    requires requires { cos(internal::abi<A>, val); }
+    static constexpr T operator()(T val) noexcept
+    requires requires { cos(internal::abi<T>, val); }
     {
-        return cos(internal::abi<A>, val);
+        return cos(internal::abi<T>, val);
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mcos<type_identity_t<T>, mask_t<T>, T>
+    requires unqualified_canonical_mcos<T, simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
-        type_identity_t<T> src, mask_t<T> mask, T val) noexcept {
+        type_identity_t<T> src, simd_mask_type_t<T> mask, T val) noexcept {
         return cos(internal::abi<T>, src, mask, val);
     }
 
     template <canonical_vector T, const_mask_for<T> M>
-    requires unqualified_canonical_mcos<type_identity_t<T>,
-        launder_cmask_t<T, M>, T>
+    requires unqualified_canonical_mcos<T, launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
         type_identity_t<T> src, M cmask, T val) noexcept {
@@ -285,10 +271,10 @@ public:
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mcos<dx::zero_t, mask_t<T>, T>
+    requires unqualified_canonical_mcos<dx::zero_t, simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
-        dx::zero_t zero, mask_t<T> mask, T val) noexcept {
+        dx::zero_t zero, simd_mask_type_t<T> mask, T val) noexcept {
         return cos(internal::abi<T>, zero, mask, val);
     }
 
@@ -367,23 +353,15 @@ concept unqualified_canonical_sincos = requires(T val, O opmask) {
 };
 
 template <typename S, typename M, typename T, typename O>
-concept unqualified_canonical_msincos = cpo_invocable<sincos_t, T, O> &&
-    (!simd_type<S> || same_as<S, cpo_result_t<sincos_t, T, O>>) &&
-    requires(S src, M mask, T val, O opmask) {
-        {
-            sincos(internal::abi<T>, src, mask, val, opmask)
-        } -> same_as<cpo_result_t<sincos_t, T, O>>;
+concept unqualified_canonical_msincos =
+    cpo_invocable<sincos_t, T, O> && requires(S src, M mask, T val, O opmask) {
+        { sincos(internal::abi<T>, src, mask, val, opmask) } -> same_as<T>;
     };
 
 template <>
 struct canonical_impl<sincos_t> {
-private:
-    template <typename T>
-    using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
-
 public:
-    template <fixed_width_vector T, const_mask_for<T> O>
+    template <canonical_vector T, const_mask_for<T> O>
     requires unqualified_canonical_sincos<T, O>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(T val, O ops) noexcept {
@@ -391,20 +369,20 @@ public:
         return sincos(internal::abi<T>, val, opmask);
     }
 
-    template <fixed_width_vector T, const_mask_for<T> O>
-    requires unqualified_canonical_msincos<type_identity_t<T>, mask_t<T>, T,
+    template <canonical_vector T, const_mask_for<T> O>
+    requires unqualified_canonical_msincos<T, simd_mask_type_t<T>, T,
         launder_cmask_t<T, O>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(
-        type_identity_t<T> src, mask_t<T> mask, T val, O ops) noexcept {
+    static constexpr T operator()(type_identity_t<T> src,
+        simd_mask_type_t<T> mask, T val, O ops) noexcept {
 
         constexpr auto opmask = dx::to_const_mask<T>(ops);
         return sincos(internal::abi<T>, src, mask, val, opmask);
     }
 
     template <canonical_vector T, const_mask_for<T> M, const_mask_for<T> O>
-    requires unqualified_canonical_msincos<type_identity_t<T>,
-        launder_cmask_t<T, M>, T, launder_cmask_t<T, O>>
+    requires unqualified_canonical_msincos<T, launder_cmask_t<T, M>, T,
+        launder_cmask_t<T, O>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
         type_identity_t<T> src, M cmask, T val, O ops) noexcept {
@@ -413,17 +391,17 @@ public:
             internal::abi<T>, src, dx::to_const_mask<T>(cmask), val, opmask);
     }
 
-    template <fixed_width_vector T, const_mask_for<T> O>
-    requires unqualified_canonical_msincos<dx::zero_t, mask_t<T>, T,
+    template <canonical_vector T, const_mask_for<T> O>
+    requires unqualified_canonical_msincos<dx::zero_t, simd_mask_type_t<T>, T,
         launder_cmask_t<T, O>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
-        dx::zero_t zero, mask_t<T> mask, T val, O ops) noexcept {
+        dx::zero_t zero, simd_mask_type_t<T> mask, T val, O ops) noexcept {
         constexpr auto opmask = dx::to_const_mask<T>(ops);
         return sincos(internal::abi<T>, zero, mask, val, opmask);
     }
 
-    template <fixed_width_vector T, const_mask_for<T> M, const_mask_for<T> O>
+    template <canonical_vector T, const_mask_for<T> M, const_mask_for<T> O>
     requires canonical_vector<T> &&
         unqualified_canonical_msincos<dx::zero_t, launder_cmask_t<T, M>, T,
             launder_cmask_t<T, O>>
@@ -436,48 +414,49 @@ public:
     }
 
     ///
-    template <fixed_width_vector T, exact_mask_for<T> O>
-    requires unqualified_canonical_sincos<T, O>
+    template <canonical_vector T>
+    requires unqualified_canonical_sincos<T, simd_mask_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(T val, O opmask) noexcept {
+    static constexpr T operator()(T val, simd_mask_type_t<T> opmask) noexcept {
         return sincos(internal::abi<T>, val, opmask);
     }
 
-    template <canonical_vector T, exact_mask_for<T> O>
-    requires canonical_mask<O> &&
-        unqualified_canonical_msincos<type_identity_t<T>, mask_t<T>, T, O>
+    template <canonical_vector T>
+    requires unqualified_canonical_msincos<T, simd_mask_type_t<T>, T,
+        simd_mask_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(
-        type_identity_t<T> src, mask_t<T> mask, T val, O opmask) noexcept {
+    static constexpr T operator()(type_identity_t<T> src,
+        simd_mask_type_t<T> mask, T val, simd_mask_type_t<T> opmask) noexcept {
         return sincos(internal::abi<T>, src, mask, val, opmask);
     }
 
-    template <fixed_width_vector T, const_mask_for<T> M, exact_mask_for<T> O>
-    requires canonical_vector<T> && canonical_mask<O> &&
-        unqualified_canonical_msincos<type_identity_t<T>, launder_cmask_t<T, M>,
-            T, O>
+    template <canonical_vector T, const_mask_for<T> M>
+    requires canonical_vector<T> &&
+        unqualified_canonical_msincos<T, launder_cmask_t<T, M>, T,
+            simd_mask_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(
-        type_identity_t<T> src, M cmask, T val, O opmask) noexcept {
+    static constexpr T operator()(type_identity_t<T> src, M cmask, T val,
+        simd_mask_type_t<T> opmask) noexcept {
         return sincos(
             internal::abi<T>, src, dx::to_const_mask<T>(cmask), val, opmask);
     }
 
-    template <canonical_vector T, exact_mask_for<T> O>
-    requires canonical_mask<O> &&
-        unqualified_canonical_msincos<dx::zero_t, mask_t<T>, T, O>
+    template <canonical_vector T>
+    requires unqualified_canonical_msincos<dx::zero_t, simd_mask_type_t<T>, T,
+        simd_mask_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(
-        dx::zero_t zero, mask_t<T> mask, T val, O opmask) noexcept {
+    static constexpr T operator()(dx::zero_t zero, simd_mask_type_t<T> mask,
+        T val, simd_mask_type_t<T> opmask) noexcept {
         return sincos(internal::abi<T>, zero, mask, val, opmask);
     }
 
-    template <fixed_width_vector T, const_mask_for<T> M, exact_mask_for<T> O>
-    requires canonical_vector<T> && canonical_mask<O> &&
-        unqualified_canonical_msincos<dx::zero_t, launder_cmask_t<T, M>, T, O>
+    template <canonical_vector T, const_mask_for<T> M>
+    requires canonical_vector<T> &&
+        unqualified_canonical_msincos<dx::zero_t, launder_cmask_t<T, M>, T,
+            simd_mask_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
-        dx::zero_t zero, M cmask, T val, O opmask) noexcept {
+        dx::zero_t zero, M cmask, T val, simd_mask_type_t<T> opmask) noexcept {
         return sincos(
             internal::abi<T>, zero, dx::to_const_mask<T>(cmask), val, opmask);
     }
@@ -620,275 +599,264 @@ public:
 template <>
 struct fallback_impl<sincos_t> {
 private:
-    template <floating_point E, simd_abi A>
+    static constexpr auto round_opt =
+        rounding::to_nearest_int | rounding::no_exc;
+    template <canonical_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr fmath::pair<E, A>
-        DPL_VECTORCALL pi_pair() noexcept {
+    static constexpr fmath::pair_type_t<T>
+        DPL_VECTORCALL make_pi_pair() noexcept {
         // NOLINTBEGIN
-        if constexpr (same_as<float, E>) {
-            return fmath::make_pair(                          //
-                dx::broadcast<A>(3.1415927410125732422f),     //
-                dx::broadcast<A>(-8.7422776573475857731e-08f) //
+        if constexpr (is_same_v<double, simd_element_type_t<T>>) {
+            return fmath::make_pair(                        //
+                dx::broadcast<T>(3.141592653589793116),     //
+                dx::broadcast<T>(1.2246467991473532072e-16) //
             );
         } else {
-            static_assert(same_as<double, E>);
-            return fmath::make_pair(                        //
-                dx::broadcast<A>(3.141592653589793116),     //
-                dx::broadcast<A>(1.2246467991473532072e-16) //
+            return fmath::make_pair(                          //
+                dx::broadcast<T>(3.1415927410125732422f),     //
+                dx::broadcast<T>(-8.7422776573475857731e-08f) //
             );
         }
         // NOLINTEND
     }
 
-    template <floating_point T>
-    static constexpr auto polynomial = []() {
+    template <canonical_vector T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr T DPL_VECTORCALL solve_poly(T arg) noexcept {
         // NOLINTBEGIN
-        if constexpr (same_as<float, T>) {
-            return fmath::polynomial<-0.166666597127914428710938f, //
+        if constexpr (is_same_v<double, simd_element_type_t<T>>) {
+            mx::polynomial<0.00833333333333332974823815, //
+                -0.000198412698412696162806809,          //
+                2.75573192239198747630416e-06,           //
+                -2.50521083763502045810755e-08,          //
+                1.60590430605664501629054e-10,           //
+                -7.64712219118158833288484e-13,          //
+                2.81009972710863200091251e-15,           //
+                -7.97255955009037868891952e-18>
+                poly;
+            return poly(arg);
+        } else {
+            constexpr mx::polynomial<-0.166666597127914428710938f, //
                 0.00833307858556509017944336f,                     //
                 -0.0001981069071916863322258f,                     //
-                2.6083159809786593541503e-06f>{};
-        } else {
-            static_assert(same_as<double, T>);
-            return fmath::polynomial<0.00833333333333332974823815, //
-                -0.000198412698412696162806809,                    //
-                2.75573192239198747630416e-06,                     //
-                -2.50521083763502045810755e-08,                    //
-                1.60590430605664501629054e-10,                     //
-                -7.64712219118158833288484e-13,                    //
-                2.81009972710863200091251e-15,                     //
-                -7.97255955009037868891952e-18>{};
+                2.6083159809786593541503e-06f>
+                poly;
+            return poly(arg);
         }
         // NOLINTEND
-    }();
-
-    template <simd_abi A, typename OpMask>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_vector<float, A> rempi_low(basic_vector<float, A> qf,
-        basic_vector<float, A> arg, OpMask opmask) noexcept {
-        constexpr float a = 3.1414794921875f;           // NOLINT
-        constexpr float b = 0.00011315941810607910156f; // NOLINT
-        constexpr float c = 1.9841872589410058936e-09f; // NOLINT
-        using simdf = basic_vector<float, A>;
-        auto scale = dx::select(opmask, fmath::half, dx::one_v<simdf>);
-        auto sa = a * scale;
-        auto sb = b * scale;
-        auto sc = c * scale;
-
-        return dx::nmuladd(
-            qf, sc, dx::nmuladd(qf, sb, dx::nmuladd(qf, sa, arg)));
     }
 
-    template <simd_abi A, typename OpMask>
+    template <canonical_vector T>
+    using vquadrant_t DPL_NODEBUG =
+        rebind_simd_t<T, signed_representation_t<simd_element_type_t<T>>>;
+
+    template <canonical_vector T, typename OpMask>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_vector<float, A> rempi_mid(basic_vector<float, A> qf,
-        basic_vector<float, A> arg, OpMask opmask) noexcept {
+    static constexpr T rempi_low(T qf, T arg, OpMask opmask) noexcept {
+        if constexpr (is_same_v<simd_element_type_t<T>, double>) {
+            constexpr double a = 3.141592653589793116;      // NOLINT
+            constexpr double b = 1.2246467991473532072e-16; // NOLINT
+
+            auto const scale = dx::select(opmask, mx::half, dx::one_v<T>);
+            auto const scaled_pi = fmath::scale(make_pi_pair<T>(), scale);
+
+            return dx::nmuladd(
+                qf, scaled_pi.lower, dx::nmuladd(qf, scaled_pi.upper, arg));
+        } else {
+            constexpr float a = 3.1414794921875f;           // NOLINT
+            constexpr float b = 0.00011315941810607910156f; // NOLINT
+            constexpr float c = 1.9841872589410058936e-09f; // NOLINT
+            auto scale = dx::select(opmask, mx::half, dx::one_v<T>);
+            auto sa = a * scale;
+            auto sb = b * scale;
+            auto sc = c * scale;
+
+            return dx::nmuladd(
+                qf, sc, dx::nmuladd(qf, sb, dx::nmuladd(qf, sa, arg)));
+        }
+    }
+
+    template <canonical_vector T, typename OpMask>
+    requires same_as<simd_element_type_t<T>, float>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr T rempi_mid(T qf, T arg, OpMask opmask) noexcept {
         constexpr float a0 = 3.140625f;               // NOLINT
         constexpr float b0 = 0.0009675025939941406f;  // NOLINT
         constexpr float c0 = 1.7881393432617188e-07f; // NOLINT
         constexpr float d0 = -2.781813535079891e-08f; // NOLINT
+
+        // somehow these constants is more well behaved for cosf
         constexpr float a1 = 1.5703125f;              // NOLINT
         constexpr float b1 = 0.0004837512969970703f;  // NOLINT
         constexpr float c1 = 5.960464477539063e-08f;  // NOLINT
         constexpr float d1 = 1.5893254712295857e-08f; // NOLINT
-        using simdf = basic_vector<float, A>;
-        auto sa = dx::select(opmask, dx::broadcast<A>(a1), a0);
-        auto sb = dx::select(opmask, dx::broadcast<A>(b1), b0);
-        auto sc = dx::select(opmask, dx::broadcast<A>(c1), c0);
-        auto sd = dx::select(opmask, dx::broadcast<A>(d1), d0);
+
+        auto sa =
+            dx::select(opmask, dx::broadcast<T>(a1), dx::broadcast<T>(a0));
+        auto sb =
+            dx::select(opmask, dx::broadcast<T>(b1), dx::broadcast<T>(b0));
+        auto sc =
+            dx::select(opmask, dx::broadcast<T>(c1), dx::broadcast<T>(c0));
+        auto sd =
+            dx::select(opmask, dx::broadcast<T>(d1), dx::broadcast<T>(d0));
 
         return dx::nmuladd(qf, sd,
             dx::nmuladd(qf, sc, dx::nmuladd(qf, sb, dx::nmuladd(qf, sa, arg))));
     }
 
-    template <simd_abi A, typename OpMask>
+    template <canonical_vector T, typename OpMask>
+    requires same_as<simd_element_type_t<T>, double>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_vector<double, A> rempi_low(
-        basic_vector<double, A> qf, basic_vector<double, A> arg,
-        OpMask opmask) noexcept {
-        constexpr double a = 3.141592653589793116;      // NOLINT
-        constexpr double b = 1.2246467991473532072e-16; // NOLINT
-        using simdf = basic_vector<float, A>;
-
-        auto const scale = dx::select(opmask, fmath::half, dx::one_v<simdf>);
-        auto const scaled_pi = fmath::scale(pi_pair<double, A>(), scale);
-
-        return dx::nmuladd(
-            qf, scaled_pi.lower, dx::nmuladd(qf, scaled_pi.upper, arg));
-    }
-
-    template <simd_abi A, typename OpMask>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_vector<double, A> rempi_mid(
-        basic_vector<double, A> arg, OpMask opmask) noexcept {
-        constexpr auto upper_scale = static_cast<double>(1 << 24);
+    static constexpr T rempi_mid(T arg, OpMask opmask) noexcept {
+        constexpr auto upper_scale =
+            static_cast<double>(1ll << floating_point_traits<double>::digits);
         constexpr auto pi_scale = dx::inv_pi_v<double> / upper_scale;
 
-        fmath::pair<double, A> const dq{
-            .upper = dx::trunc(arg * pi_scale, rounding::no_exc) * upper_scale,
-            .lower = dx::round(dx::mulsub(arg, dx::inv_pi, dq.upper),
-                rounding::to_nearest_int | rounding::no_exc),
-        };
+        auto const dq = [&]() {
+            auto const upper = dx::multiply(
+                dx::trunc(dx::multiply(arg, pi_scale), rounding::no_exc),
+                upper_scale);
+            return mx::make_pair(upper,
+                dx::round(dx::mulsub(arg, dx::inv_pi, upper), round_opt));
+        }();
 
-        constexpr double a = 3.1415926218032836914;     // NOLINT
-        constexpr double b = 3.1786509424591713469e-08; // NOLINT
-        constexpr double c = 1.2246467864107188502e-16; // NOLINT
-        constexpr double d = 1.2736634327021899816e-24; // NOLINT
-        using simdf = basic_vector<float, A>;
-        auto scale = dx::select(opmask, fmath::half, dx::one_v<simdf>);
-        auto sa = a * scale;
-        auto sb = b * scale;
-        auto sc = c * scale;
-        auto sd = d * scale;
+        constexpr double a0 = 3.14159262180328369141e+00; // NOLINT
+        constexpr double b0 = 3.17865094245917134685e-08; // NOLINT
+        constexpr double c0 = 1.22464678641071885020e-16; // NOLINT
+        constexpr double d0 = 1.27366343270218998159e-24; // NOLINT
+        auto scale = dx::select(opmask, fmath::half, dx::one_v<T>);
+        auto sa = a0 * scale;
+        auto sb = b0 * scale;
+        auto sc = c0 * scale;
+        auto sd = d0 * scale;
 
-        return dx::nmuladd(dq.lower + dq.upper, d,
-            dx::nmuladd(dq.lower, c,
-                dx::nmuladd(dq.upper, c,
-                    dx::nmuladd(dq.lower, b,
-                        dx::nmuladd(dq.upper, b,
-                            dx::nmuladd(dq.lower, a,
-                                dx::nmuladd(dq.upper, a, arg)))))));
+        auto const [upper, lower] = dq;
+        return dx::nmuladd(mx::recombine(dq), sd,
+            dx::nmuladd(lower, sc,
+                dx::nmuladd(upper, sc,
+                    dx::nmuladd(lower, sb,
+                        dx::nmuladd(upper, sb,
+                            dx::nmuladd(
+                                lower, sa, dx::nmuladd(upper, sa, arg)))))));
     }
 
-    template <floating_point E>
+    template <floating_point_like E>
     static constexpr E threshold_low = []() {
-        if constexpr (same_as<float, E>) {
+        if constexpr (is_same_v<float, E>) {
             return 125.0f; // NOLINT
         } else {
-            static_assert(same_as<double, E>);
+            static_assert(is_same_v<double, E>);
             return 15.0; // NOLINT
         }
     }();
 
-    template <floating_point E>
+    template <floating_point_like E>
     static constexpr E threshold_mid = []() {
-        if constexpr (same_as<float, E>) {
+        if constexpr (is_same_v<float, E>) {
             return 8.0e6f; // NOLINT
         } else {
-            static_assert(same_as<double, E>);
+            static_assert(is_same_v<double, E>);
             return 1.0e14; // NOLINT
         }
     }();
 
-    template <floating_point E, simd_abi A>
-    struct rempi_single {
-        basic_vector<E, A> f;
-        basic_vector<signed_representation_t<E>, A> i;
-    };
-    template <floating_point E, simd_abi A>
-    struct rempi_pair {
-        fmath::pair<E, A> df;
-        basic_vector<signed_representation_t<E>, A> i;
-    };
-
-    template <floating_point E, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr rempi_single<E, A> quantize_quarters(
-        basic_vector<E, A> arg) noexcept {
+    template <canonical_vector T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T quantize_quarters(
+        T arg, mx::exponent_vector_t<T>& idx) noexcept {
         // It breaks a value down into its proximity to the nearest quarter
         // (0.25) and identifies which quarter-step it belongs to relative to
         // the nearest whole integer.
-        using sint = signed_representation_t<E>;
-        constexpr E four = 4.0;
-        constexpr E inv_four = 0.25;
-        constexpr auto opt = rounding::to_nearest_int | rounding::no_exc;
-        auto y = dx::round(arg * four, opt);
-        return {
-            .f = dx::nmuladd(y, inv_four, arg),
-            .i = dx::element_cast<sint>(y - dx::round(arg, opt) * four),
-        };
+        using sint_t = simd_element_type_t<mx::exponent_vector_t<T>>;
+        auto const vfour = dx::broadcast<T>(4.0);
+        auto const vquart = dx::broadcast<T>(0.25);
+        auto const y = dx::round(dx::multiply(arg, vfour), round_opt);
+        auto const rarg = dx::round(arg, round_opt);
+        idx = dx::element_cast<sint_t>(dx::nmuladd(rarg, vfour, y));
+        return dx::nmuladd(y, vquart, arg);
     }
 
-    template <floating_point E, simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr rempi_pair<E, A> rempi(basic_vector<E, A> arg) noexcept {
-        using sint = signed_representation_t<E>;
-        using simdi = basic_vector<sint, A>;
+    template <canonical_vector T>
+    requires same_as<simd_element_type_t<T>, float> ||
+        same_as<simd_element_type_t<T>, double>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T rempi(T arg, mx::exponent_vector_t<T>& idx) noexcept {
+        using exp_t = simd_element_type_t<mx::exponent_vector_t<T>>;
+        using E = simd_element_type_t<T>;
+        constexpr exp_t exp_scale = is_same_v<E, double> ? 55 : 25;
+        constexpr exp_t q_scale = is_same_v<E, double> ? (700 - 55) : (90 - 25);
+        auto const n64 = dx::broadcast<exp_t>(-64);
+        auto exp = mx::ilogb(mx::compliance::unsafe, arg) - exp_scale;
+        arg = mx::ldexp(
+            mx::compliance::unsafe, arg, dx::cmpgt(exp, q_scale), arg, n64);
+        exp = dx::bwshift_left(dx::cmpgt(exp, dx::zero), exp, imm<2>);
 
-        struct expq {
-            simdi exp;
-            simdi q;
-        };
+        return [&idx](T const arg, mx::exponent_vector_t<T> const exp) {
+            auto x = mx::single(arg) * mx::gather(mx::rempi_table<E>, exp);
+            auto y = mx::single(arg) * mx::gather(mx::rempi_table<E> + 1, exp);
 
-        auto const [exp, q] = [](basic_vector<E, A> arg) {
-            auto const n64 = dx::broadcast<sint, A>(-64);
-            if constexpr (same_as<E, double>) {
-                auto exp = fmath::ilogb(fmath::compliance::unsafe, arg) - 55;
-                return expq{
-                    .exp = exp,
-                    .q = dx::select(exp > (700 - 55), n64, dx::zero),
-                };
-            } else {
-                static_assert(same_as<E, float>);
-                auto exp = fmath::ilogb(fmath::compliance::unsafe, arg) - 25;
-                return expq{
-                    .exp = exp,
-                    .q = dx::select(exp > (90 - 25), n64, dx::zero),
-                };
-            }
-        }(arg);
-
-        return [](basic_vector<sint, A> q, basic_vector<E, A> const arg,
-                   basic_vector<sint, A> const exp) {
-            auto x =
-                fmath::single(arg) * mx::gather(fmath::rempi_table<E>, exp);
-            auto di = quantize_quarters(x.upper);
-            q = di.i;
-            x.upper = di.f;
-            x = fmath::normalize(x);
-
-            auto y =
-                fmath::single(arg) * mx::gather(fmath::rempi_table<E> + 1, exp);
+            mx::exponent_vector_t<T> qidx; // TODO undefined value
+            auto dif = quantize_quarters(dx::get_element<0>(x), qidx);
+            x = mx::normalize(dx::set_element<0>(x, dif));
             x = x + y;
-            di = quantize_quarters(x.upper);
-            q += di.i;
-            x.upper = di.f;
-            x = fmath::normalize(x);
 
-            using pair = fmath::pair<E, A>;
-            y = pair{
-                .upper = mx::gather(fmath::rempi_table<E> + 2, exp),
-                .lower = mx::gather(fmath::rempi_table<E> + 3, exp),
-            };
-            y = y * arg;
-            x = x + y;
-            x = fmath::normalize(x);
-            x = x * fmath::scale(pi_pair<E, A>(), 2.0);
-            x = fmath::select(dx::abs(arg) < 0.7, fmath::make_pair(arg), x);
-            return rempi_pair<E, A>{
-                .df = x,
-                .i = q,
-            };
-        }(q, fmath::ldexp(fmath::compliance::unsafe, arg, q),
-                   dx::select(exp < dx::zero, dx::zero, exp) << imm<2>);
+            idx = qidx;
+            dif = quantize_quarters(dx::get_element<0>(x), qidx);
+            x = mx::normalize(dx::set_element<0>(x, dif));
+
+            idx = dx::add(idx, qidx); // Write to result
+
+            y = mx::make_pair( //
+                mx::gather(mx::rempi_table<E> + 2, exp),
+                mx::gather(mx::rempi_table<E> + 3, exp));
+            y = mx::pair_ref{y} * arg;
+
+            x = mx::normalize(x + y);
+            x = x * mx::scale(make_pi_pair<T>(), 2.0);
+            x = mx::select(dx::cmplt(dx::abs(arg), 0.7), mx::make_pair(arg), x);
+            return x;
+        }(arg, exp);
     }
 
 public:
-    template <canonical_vector T, const_mask_for<T> O>
-    requires floating_point<simd_element_type_t<T>>
+    template <canonical_vector T, typename O>
+    requires (canonical_mask<O> && exact_mask_for<O, T> ||
+                 const_mask_for<O, T>) &&
+        (same_as<simd_element_type_t<T>, float> ||
+            same_as<simd_element_type_t<T>, double>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(T val, O ops) noexcept {
         using E = simd_element_type_t<T>;
-        using A = simd_abi_type_t<T>;
-        using sint = signed_representation_t<E>;
-        using simdi = basic_vector<sint, A>;
-        constexpr auto opmask = dx::to_const_mask<T>(ops);
-        auto const qf = [&val, &opmask]() {
-            if constexpr (dx::none_of(opmask)) {
-                return dx::round(val * dx::inv_pi,
-                    rounding::to_nearest_int | rounding::no_exc);
-            } else {
-                constexpr E half = 0.5;
-                constexpr E two = 2.0;
-                auto const one = dx::broadcast<T>(dx::one);
-                auto const shift =
-                    dx::select(opmask, dx::broadcast<T>(half), dx::zero);
-                // when evaluating cosine, minus half
-                auto const qf = dx::round(dx::mulsub(val, dx::inv_pi, shift),
-                    rounding::to_nearest_int | rounding::no_exc);
+        using vexp_t = mx::exponent_vector_t<T>;
+        using sint_t = simd_element_type_t<vexp_t>;
+        constexpr auto const_opmask = requires {
+            requires const_mask_like<O> &&
+                !dx::some_of(dx::to_const_mask<T>(ops));
+        };
 
-                auto const a = dx::select(opmask, two, one);
-                auto const c = dx::select(opmask, one, dx::zero);
+        auto const qf = [&]() {
+            if constexpr (const_opmask) {
+                constexpr auto opmask = dx::to_const_mask<T>(ops);
+                if constexpr (dx::none_of(opmask)) {
+                    return dx::round(dx::multiply(val, dx::inv_pi), round_opt);
+                } else {
+                    auto const vhalf = dx::broadcast<T>(0.5);
+                    auto const vtwo = dx::broadcast<T>(2.0);
+                    auto const vone = dx::broadcast<T>(dx::one);
+                    auto const qf = dx::round(
+                        dx::mulsub(val, dx::inv_pi, vhalf), round_opt);
+                    return dx::muladd(vtwo, qf, vone);
+                }
+            } else {
+                auto const vhalf = dx::broadcast<T>(0.5);
+                auto const vtwo = dx::broadcast<T>(2.0);
+                auto const vone = dx::broadcast<T>(dx::one);
+                auto const shift = dx::select(ops, vhalf, dx::zero);
+                // when evaluating cosine, minus half
+                auto const qf =
+                    dx::round(dx::mulsub(val, dx::inv_pi, shift), round_opt);
+                auto const a = dx::select(ops, vtwo, vone);
+                auto const c = dx::select(ops, vone, dx::zero);
                 // when evaluating cos, 2q + 1, when sin, q + 0 (== q)
                 // This should be accurate,
                 // since the result is only used when
@@ -897,61 +865,71 @@ public:
             }
         }();
 
-        auto q = dx::element_cast<sint>(qf);
-        auto rem = rempi_low(qf, val, opmask);
+        auto q = dx::element_cast<sint_t>(qf);
+        auto rem = rempi_low(qf, val, ops);
         if (auto is_below = dx::abs(val) < threshold_low<E>;
             !dx::all_of(is_below)) {
-            rem = dx::select(is_below, rem, rempi_mid(qf, val, opmask));
+            rem = dx::select(is_below, rem, rempi_mid(qf, val, ops));
             if (is_below = dx::abs(val) < threshold_mid<E>;
                 !dx::all_of(is_below)) {
-                auto dfi = rempi(val);
-                auto q2 = dfi.i & 3;
-                q2 = q2 + q2 + [&]() {
-                    auto const condition = dx::cmple(dfi.df.upper, dx::zero);
-                    if constexpr (dx::none_of(opmask)) {
-                        auto const base = dx::broadcast<simdi>(2);
-                        return dx::subtract(base, condition, base, dx::one);
-                    } else if constexpr (dx::all_of(opmask)) {
-                        auto const base = dx::broadcast<simdi>(8);
-                        return dx::subtract(base, condition, base, dx::one);
-                    } else {
-                        auto const base = dx::select(opmask,
-                            dx::broadcast<simdi>(8), dx::broadcast<simdi>(2));
-                        return dx::subtract(base, condition, base, dx::one);
-                    }
-                }();
-                q2 = [&]() {
-                    if constexpr (dx::none_of(opmask)) {
-                        return q2 >> imm<2>;
-                    } else if constexpr (dx::all_of(opmask)) {
-                        return q2 >> imm<1>;
-                    } else {
-                        return dx::select(opmask, q2 >> imm<1>, q2 >> imm<2>);
-                    }
-                }();
+                mx::exponent_vector_t<T> rempi_i; // TODO undefined value
+                auto rempi_df = rempi(val, rempi_i);
+                auto q2 = dx::bwand(rempi_i, 3);
+                q2 = dx::add(q2, q2);
 
-                auto const nhalfpi =
-                    fmath::scale(pi_pair<E, A>(), static_cast<E>(-0.5));
-                auto const x = dfi.df +
-                    fmath::make_pair(                          //
-                        dx::sign(nhalfpi.upper, dfi.df.upper), //
-                        dx::sign(nhalfpi.lower, dfi.df.upper)  //
+                {
+                    auto const condition =
+                        dx::cmple(dx::get_element<0>(rempi_df), dx::zero);
+                    if constexpr (const_opmask) {
+                        constexpr auto opmask = dx::to_const_mask<T>(ops);
+                        if constexpr (dx::none_of(opmask)) {
+                            auto const base = dx::broadcast<vexp_t>(2);
+                            q2 = dx::add(q2,
+                                dx::subtract(base, condition, base, dx::one));
+                            q2 = dx::bwshift_right(q2, imm<2zu>);
+                        } else {
+                            static_assert(dx::all_of(opmask));
+                            auto const base = dx::broadcast<vexp_t>(8);
+                            q2 = dx::add(q2,
+                                dx::subtract(base, condition, base, dx::one));
+                            q2 = dx::bwshift_right(q2, imm<1zu>);
+                        }
+                    } else {
+                        auto const base = dx::select(ops,
+                            dx::broadcast<vexp_t>(8), dx::broadcast<vexp_t>(2));
+                        q2 = dx::add(
+                            q2, dx::subtract(base, condition, base, dx::one));
+                        q2 = dx::select(ops, dx::bwshift_right(q2, imm<1zu>),
+                            dx::bwshift_right(q2, imm<2zu>));
+                    }
+                }
+
+                auto const [nhalfpi_u, nhalfpi_l] = dx::to_tuple_like(
+                    mx::scale(make_pi_pair<T>(), static_cast<E>(-0.5)));
+                auto const x = mx::pair_ref{rempi_df} +
+                    mx::make_pair(                                         //
+                        dx::sign(nhalfpi_u, dx::get_element<0>(rempi_df)), //
+                        dx::sign(nhalfpi_l, dx::get_element<0>(rempi_df))  //
                     );
+
                 auto const isoddeven = [&]() {
-                    if constexpr (dx::none_of(opmask)) {
-                        return (dfi.i & dx::one) == dx::one;
-                    } else if constexpr (dx::all_of(opmask)) {
-                        return (dfi.i & dx::one) == dx::zero;
+                    if constexpr (const_opmask) {
+                        constexpr auto opmask = dx::to_const_mask<T>(ops);
+                        if constexpr (dx::none_of(opmask)) {
+                            return dx::bwand(rempi_i, dx::one) == dx::one;
+                        } else {
+                            return dx::bwand(rempi_i, dx::one) == dx::zero;
+                        }
                     } else {
                         auto const rhs =
-                            dx::select(opmask, dx::zero, dx::one_v<simdi>);
-                        return (dfi.i & dx::one) == rhs;
+                            dx::select(ops, dx::zero, dx::one_v<vexp_t>);
+                        return dx::bwand(rempi_i, dx::one) == rhs;
                     }
                 }();
 
-                dfi.df = fmath::select(isoddeven, x, dfi.df);
+                rempi_df = mx::select(isoddeven, x, rempi_df);
                 auto const result = dx::select(
-                    dx::isfinite(val), dfi.df.upper + dfi.df.lower, dx::nan);
+                    dx::isfinite(val), mx::recombine(rempi_df), dx::nan);
                 q = dx::select(is_below, q, q2);
                 rem = dx::select(is_below, rem, result);
             }
@@ -959,138 +937,69 @@ public:
 
         auto const sq_rem = dx::multiply(rem, rem);
         auto const nmask = [&]() {
-            if constexpr (dx::none_of(opmask)) {
-                return (q & dx::one) == dx::one;
-            } else if constexpr (dx::all_of(opmask)) {
-                return (q & dx::broadcast<simdi>(2)) == dx::zero;
+            if constexpr (const_opmask) {
+                constexpr auto opmask = dx::to_const_mask<T>(ops);
+                if constexpr (dx::none_of(opmask)) {
+                    return dx::cmpeq(dx::bwand(q, dx::one), dx::one);
+                } else {
+                    return dx::cmpeq(
+                        dx::bwand(q, dx::broadcast<vexp_t>(2)), dx::zero);
+                }
             } else {
                 auto const m =
-                    dx::select(opmask, dx::broadcast<simdi>(2), dx::one);
-                auto const rhs = dx::select(opmask, dx::zero_v<simdi>, dx::one);
-                return (q & m) == rhs;
+                    dx::select(ops, dx::broadcast<vexp_t>(2), dx::one);
+                auto const rhs = dx::select(ops, dx::zero_v<vexp_t>, dx::one);
+                return dx::cmpeq(dx::bwand(q, m), rhs);
             }
         }();
 
         rem = dx::negate(rem, nmask, rem);
-        auto const poly = polynomial<E>(sq_rem);
-        auto const result = dx::muladd(sq_rem, poly * rem, rem);
-        if constexpr (dx::none_of(opmask)) {
-            return dx::select(val == dx::msb, val, result);
-        } else if constexpr (dx::all_of(opmask)) {
-            return result;
+        auto const poly = solve_poly(sq_rem);
+        auto const result = dx::muladd(sq_rem, dx::multiply(poly, rem), rem);
+        if constexpr (const_opmask) {
+            constexpr auto opmask = dx::to_const_mask<T>(ops);
+            if constexpr (dx::none_of(opmask)) {
+                return dx::select(dx::cmpeq(val, dx::zero), dx::zero, result);
+            } else {
+                return result;
+            }
         } else {
             return dx::select(
-                val == dx::msb, dx::select(opmask, result, val), result);
+                dx::cmpeq(val, dx::zero), dx::select(ops, result, val), result);
         }
-    }
-
-    template <canonical_vector T, exact_mask_for<T> O>
-    requires floating_point<simd_element_type_t<T>> && canonical_mask<O>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(T val, O opmask) noexcept {
-        using E = simd_element_type_t<T>;
-        using A = simd_abi_type_t<T>;
-        using sint = signed_representation_t<E>;
-        using simdi = basic_vector<sint, A>;
-        auto const qf = [&val, &opmask]() {
-            constexpr E half = 0.5;
-            constexpr E two = 2.0;
-            auto const one = dx::broadcast<T>(dx::one);
-            auto const shift =
-                dx::select(opmask, dx::broadcast<T>(half), dx::zero);
-            // when evaluating cosine, minus half
-            auto const qf = dx::round(dx::mulsub(val, dx::inv_pi, shift),
-                rounding::to_nearest_int | rounding::no_exc);
-
-            auto const a = dx::select(opmask, two, one);
-            auto const c = dx::select(opmask, one, dx::zero);
-            // when evaluating cos, 2q + 1, when sin, q + 0 (== q)
-            // This should be accurate,
-            // since the result is only used when
-            // magnitude of qf is small < (threshold_mid / pi)
-            return dx::muladd(a, qf, c);
-        }();
-
-        auto const ione = dx::broadcast<simdi>(dx::one);
-        auto const itwo = dx::broadcast<simdi>(2);
-        auto q = dx::element_cast<sint>(qf);
-        auto rem = rempi_low(qf, val, opmask);
-        if (auto is_below = dx::abs(val) < threshold_low<E>;
-            !dx::all_of(is_below)) {
-            rem = dx::select(is_below, rem, rempi_mid(qf, val, opmask));
-            if (is_below = dx::abs(val) < threshold_mid<E>;
-                !dx::all_of(is_below)) {
-                auto dfi = rempi(val);
-                auto q2 = dfi.i & 3;
-                q2 = q2 + q2 + [&]() {
-                    auto const condition = dx::cmple(dfi.df.upper, dx::zero);
-                    auto const base =
-                        dx::select(opmask, dx::broadcast<simdi>(8), itwo);
-                    return dx::subtract(base, condition, base, ione);
-                }();
-                q2 = dx::select(opmask, q2 >> imm<1>, q2 >> imm<2>);
-
-                auto const nhalfpi =
-                    fmath::scale(pi_pair<E, A>(), static_cast<E>(-0.5));
-                auto const x = dfi.df +
-                    fmath::make_pair(                          //
-                        dx::sign(nhalfpi.upper, dfi.df.upper), //
-                        dx::sign(nhalfpi.lower, dfi.df.upper)  //
-                    );
-                auto const isoddeven =
-                    (dfi.i & ione) == dx::select(opmask, dx::zero, ione);
-
-                dfi.df = fmath::select(isoddeven, x, dfi.df);
-                auto const result = dx::select(dx::isfinite(val),
-                    dfi.df.upper + dfi.df.lower, dx::all_bits);
-                q = dx::select(is_below, q, q2);
-                rem = dx::select(is_below, rem, result);
-            }
-        }
-
-        auto const sq_rem = dx::multiply(rem, rem);
-        auto const nmask = [&]() {
-            auto const m = dx::select(opmask, itwo, ione);
-            auto const rhs = dx::select(opmask, dx::zero, dx::one_v<simdi>);
-            return (q & m) == rhs;
-        }();
-
-        rem = dx::negate(rem, nmask, rem);
-        auto const result =
-            dx::muladd(sq_rem, polynomial<E>(sq_rem) * rem, rem);
-        return dx::select(
-            val == dx::msb, dx::select(opmask, result, val), result);
     }
 };
 
 template <>
 struct fallback_impl<sin_t> {
-    template <floating_point E, simd_abi A>
+    template <canonical_vector T>
+    requires same_as<simd_element_type_t<T>, float> ||
+        same_as<simd_element_type_t<T>, double>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(
-        basic_vector<E, A> val) noexcept {
-        if constexpr (fixed_width_abi<A>) {
-            return fallback_impl<sincos_t>::operator()(val, imm<0b0>);
+    static constexpr T operator()(T val) noexcept {
+        if constexpr (fixed_width_abi<simd_abi_type_t<T>>) {
+            constexpr make_const_mask_t<T, 0> op;
+            return fallback_impl<sincos_t>::operator()(val, op);
         } else {
             return fallback_impl<sincos_t>::operator()(
-                val, dx::broadcast<E, A>(false_type{}));
+                val, dx::broadcast<T>(false_type{}));
         }
     }
 };
 
 template <>
 struct fallback_impl<cos_t> {
-    template <floating_point E, simd_abi A>
+    template <canonical_vector T>
+    requires same_as<simd_element_type_t<T>, float> ||
+        same_as<simd_element_type_t<T>, double>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(
-        basic_vector<E, A> val) noexcept {
-        if constexpr (fixed_width_abi<A>) {
-            constexpr auto op =
-                dx::to_const_mask<basic_vector<E, A>>(dx::all_bits);
+    static constexpr T operator()(T val) noexcept {
+        if constexpr (fixed_width_abi<simd_abi_type_t<T>>) {
+            constexpr make_const_mask_t<T, -1> op;
             return fallback_impl<sincos_t>::operator()(val, op);
         } else {
             return fallback_impl<sincos_t>::operator()(
-                val, dx::broadcast<E, A>(true_type{}));
+                val, dx::broadcast<T>(true_type{}));
         }
     }
 };

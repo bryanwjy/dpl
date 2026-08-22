@@ -22,8 +22,8 @@ namespace datapar::internal {
 void rotate_right(...) noexcept = delete;
 
 struct DPL_EMPTY_BASES rotate_right_t :
-    private algorithm_base<rotate_right_t>,
-    private maskable_transform_base<rotate_right_t> {
+    public algorithm_base<rotate_right_t>,
+    public maskable_transform_base<rotate_right_t> {
     using operation_base<rotate_right_t>::operator();
     using maskable_transform_base<rotate_right_t>::operator();
 };

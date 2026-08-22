@@ -30,8 +30,8 @@ namespace datapar::internal {
 void exp2(...) noexcept = delete;
 
 struct DPL_EMPTY_BASES exp2_t :
-    private math_operation_base<exp2_t>,
-    private maskable_transform_base<exp2_t> {
+    public math_operation_base<exp2_t>,
+    public maskable_transform_base<exp2_t> {
     using math_operation_base<exp2_t>::operator();
     using maskable_transform_base<exp2_t>::operator();
 };
@@ -52,32 +52,24 @@ concept unqualified_canonical_mexp2 = cpo_invocable<exp2_t, T> &&
 
 template <>
 struct canonical_impl<exp2_t> {
-private:
-    template <typename T>
-    using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
-
-public:
-    template <simd_abi A, simd_element_for<A> E>
+    template <canonical_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(
-        basic_vector<E, A> val) noexcept
-    requires requires { exp2(internal::abi<A>, val); }
+    static constexpr T operator()(T val) noexcept
+    requires requires { exp2(internal::abi<T>, val); }
     {
-        return exp2(internal::abi<A>, val);
+        return exp2(internal::abi<T>, val);
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mexp2<type_identity_t<T>, mask_t<T>, T>
+    requires unqualified_canonical_mexp2<T, simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
-        type_identity_t<T> src, mask_t<T> mask, T val) noexcept {
+        type_identity_t<T> src, simd_mask_type_t<T> mask, T val) noexcept {
         return exp2(internal::abi<T>, src, mask, val);
     }
 
     template <canonical_vector T, const_mask_for<T> M>
-    requires unqualified_canonical_mexp2<type_identity_t<T>,
-        launder_cmask_t<T, M>, T>
+    requires unqualified_canonical_mexp2<T, launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
         type_identity_t<T> src, M cmask, T val) noexcept {
@@ -85,10 +77,10 @@ public:
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mexp2<dx::zero_t, mask_t<T>, T>
+    requires unqualified_canonical_mexp2<dx::zero_t, simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
-        dx::zero_t zero, mask_t<T> mask, T val) noexcept {
+        dx::zero_t zero, simd_mask_type_t<T> mask, T val) noexcept {
         return exp2(internal::abi<T>, zero, mask, val);
     }
 
@@ -125,7 +117,7 @@ public:
         return exp2(__DPL forward<T>(val));
     }
 
-    template <simd_vector S, exact_mask_for<S> M, common_vector_with<S> T>
+    template <simd_vector S, exact_mask_for<S> M, equivalent_vector_with<S> T>
     requires (extended_vector<S> || extended_mask<M> || extended_vector<T>) &&
         unqualified_extended_mexp2<S, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -134,7 +126,7 @@ public:
             __DPL forward<T>(val));
     }
 
-    template <simd_vector S, const_mask_for<S> M, common_vector_with<S> T>
+    template <simd_vector S, const_mask_for<S> M, equivalent_vector_with<S> T>
     requires (extended_vector<S> || extended_vector<T>) &&
         unqualified_extended_mexp2<S, launder_cmask_t<S, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -151,10 +143,9 @@ public:
         return exp2(zero, __DPL forward<M>(mask), __DPL forward<T>(val));
     }
 
-    template <simd_vector T, result_cmask_for<exp2_t, T> M>
-    requires extended_vector<T> &&
-        unqualified_extended_mexp2<dx::zero_t,
-            launder_cmask_t<cpo_result_t<exp2_t, T>, M>, T>
+    template <extended_vector T, result_cmask_for<exp2_t, T> M>
+    requires unqualified_extended_mexp2<dx::zero_t,
+        launder_cmask_t<cpo_result_t<exp2_t, T>, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(dx::zero_t zero, M cmask, T&& val) {
         return exp2(zero, dx::to_const_mask<cpo_result_t<exp2_t, T>>(cmask),
@@ -167,57 +158,53 @@ struct fallback_impl<exp2_t> {
 private:
     static constexpr auto rounding_opt =
         rounding::no_exc | rounding::to_nearest_int;
-
-public:
-    template <simd_abi A>
+    template <canonical_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(
-        basic_vector<float, A> val) noexcept {
-        using sint = signed_representation_t<float>;
-        auto const qf = dx::round(
-            val * fmath::inv_ln2, rounding::no_exc | rounding::to_nearest_int);
-        auto const q = dx::element_cast<sint>(qf);
-        using fpair = fmath::pair<float, A>;
-        constexpr auto ln2 = fmath::ln2_v<fpair>;
-        auto const s =
-            dx::nmuladd(qf, ln2.lower, dx::nmuladd(qf, ln2.upper, val));
-        static constexpr fmath::polynomial<0.6931471825f, //
-            0.2402264476f,                                //
-            0.5550347269e-1f,                             //
-            0.9618384764e-2f,                             //
-            0.1339262701e-2f,                             //
-            0.1535920892e-3f>
-            polynomial;
-        auto u = dx::muladd(polynomial(s), s, dx::one);
-        u = fmath::ldexp(fmath::compliance::speed, u, q);
-        u = dx::select(val >= 128.0f, dx::infinity, u);
-        // underflow
-        return dx::select(val >= -149.0f, u, dx::zero);
+    static constexpr T DPL_VECTORCALL solve_poly(T val) noexcept {
+        if constexpr (is_same_v<T, double>) {
+            constexpr fmath::polynomial<0.6931471805599452862,
+                0.2402265069591012214e+0, 0.5550410866482046596e-1,
+                0.9618129107597600536e-2, 0.1333355814670499073e-2,
+                0.1540353045101147808e-3, 0.1525273353517584730e-4,
+                0.1321543872511327615e-5, 0.1017819260921760451e-6,
+                0.7073164598085707425e-8, 0.4434359082926529454e-9>
+                poly;
+            return poly(val);
+        } else {
+            constexpr fmath::polynomial<0.6931471825f, //
+                0.2402264476f,                         //
+                0.5550347269e-1f,                      //
+                0.9618384764e-2f,                      //
+                0.1339262701e-2f,                      //
+                0.1535920892e-3f>
+                poly;
+            return poly(val);
+        }
     }
 
-    template <simd_abi A>
+public:
+    template <canonical_vector T>
+    requires same_as<simd_element_type_t<T>, double> ||
+        same_as<simd_element_type_t<T>, float>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(
-        basic_vector<double, A> val) noexcept {
-        using sint = signed_representation_t<double>;
-        auto const q = dx::element_cast<sint>(val * fmath::inv_ln2);
-        auto const qf = dx::element_cast<double>(q);
-        using fpair = fmath::pair<double, A>;
-        constexpr auto ln2 = fmath::ln2_v<fpair>;
+    static constexpr T DPL_VECTORCALL operator()(T val) noexcept {
+        using E = simd_element_type_t<T>;
+        using sint_t = signed_representation_t<E>;
+        using pair = mx::pair_type_t<T>;
+        auto const qf = dx::round(dx::multiply(val, mx::inv_ln2), rounding_opt);
+        auto const q = dx::element_cast<sint_t>(qf);
+
+        using fpair = mx::pair_type_t<T>;
+        auto const [ln2upper, ln2lower] = dx::to_tuple_like(mx::ln2_v<fpair>);
         auto const s =
-            dx::nmuladd(qf, ln2.lower, dx::nmuladd(qf, ln2.upper, val));
-        static constexpr fmath::polynomial<0.6931471805599452862,
-            0.2402265069591012214e+0, 0.5550410866482046596e-1,
-            0.9618129107597600536e-2, 0.1333355814670499073e-2,
-            0.1540353045101147808e-3, 0.1525273353517584730e-4,
-            0.1321543872511327615e-5, 0.1017819260921760451e-6,
-            0.7073164598085707425e-8, 0.4434359082926529454e-9>
-            polynomial;
-        auto u = dx::muladd(polynomial(s), s, dx::one);
+            dx::nmuladd(qf, ln2lower, dx::nmuladd(qf, ln2upper, val));
+
+        auto u = dx::muladd(solve_poly(s), s, dx::one);
         u = fmath::ldexp(fmath::compliance::speed, u, q);
-        u = dx::select(val >= 1024.0, dx::infinity, u);
-        // underflow
-        return dx::select(val >= -1074.0, u, dx::zero);
+        constexpr E upper_bound = is_same_v<E, double> ? 1024.0 : 128.0;
+        constexpr E lower_bound = is_same_v<E, double> ? -1074.0 : -149.0;
+        u = dx::select(dx::cmpge(val, upper_bound), dx::infinity, u);
+        return dx::select(dx::cmpge(val, lower_bound), u, dx::zero);
     }
 
     /*

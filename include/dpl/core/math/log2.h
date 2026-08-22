@@ -29,8 +29,8 @@ namespace datapar::internal {
 void log2(...) noexcept = delete;
 
 struct DPL_EMPTY_BASES log2_t :
-    private math_operation_base<log2_t>,
-    private maskable_transform_base<log2_t> {
+    public math_operation_base<log2_t>,
+    public maskable_transform_base<log2_t> {
     using math_operation_base<log2_t>::operator();
     using maskable_transform_base<log2_t>::operator();
 };
@@ -51,32 +51,25 @@ concept unqualified_canonical_mlog2 = cpo_invocable<log2_t, T> &&
 
 template <>
 struct canonical_impl<log2_t> {
-private:
-    template <typename T>
-    using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
-
 public:
-    template <simd_abi A, simd_element_for<A> E>
+    template <canonical_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(
-        basic_vector<E, A> val) noexcept
-    requires requires { log2(internal::abi<A>, val); }
+    static constexpr T operator()(T val) noexcept
+    requires requires { log2(internal::abi<T>, val); }
     {
-        return log2(internal::abi<A>, val);
+        return log2(internal::abi<T>, val);
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mlog2<type_identity_t<T>, mask_t<T>, T>
+    requires unqualified_canonical_mlog2<T, simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
-        type_identity_t<T> src, mask_t<T> mask, T val) noexcept {
+        type_identity_t<T> src, simd_mask_type_t<T> mask, T val) noexcept {
         return log2(internal::abi<T>, src, mask, val);
     }
 
     template <canonical_vector T, const_mask_for<T> M>
-    requires unqualified_canonical_mlog2<type_identity_t<T>,
-        launder_cmask_t<T, M>, T>
+    requires unqualified_canonical_mlog2<T, launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
         type_identity_t<T> src, M cmask, T val) noexcept {
@@ -84,10 +77,10 @@ public:
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mlog2<dx::zero_t, mask_t<T>, T>
+    requires unqualified_canonical_mlog2<dx::zero_t, simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
-        dx::zero_t zero, mask_t<T> mask, T val) noexcept {
+        dx::zero_t zero, simd_mask_type_t<T> mask, T val) noexcept {
         return log2(internal::abi<T>, zero, mask, val);
     }
 
@@ -124,7 +117,7 @@ public:
         return log2(__DPL forward<T>(val));
     }
 
-    template <simd_vector S, exact_mask_for<S> M, common_vector_with<S> T>
+    template <simd_vector S, exact_mask_for<S> M, equivalent_vector_with<S> T>
     requires (extended_vector<S> || extended_mask<M> || extended_vector<T>) &&
         unqualified_extended_mlog2<S, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -133,7 +126,7 @@ public:
             __DPL forward<T>(val));
     }
 
-    template <simd_vector S, const_mask_for<S> M, common_vector_with<S> T>
+    template <simd_vector S, const_mask_for<S> M, equivalent_vector_with<S> T>
     requires (extended_vector<S> || extended_vector<T>) &&
         unqualified_extended_mlog2<S, launder_cmask_t<S, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -162,91 +155,59 @@ public:
 
 template <>
 struct fallback_impl<log2_t> {
-    template <simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(
-        basic_vector<float, A> val) noexcept {
-        using simdf = basic_vector<float, A>;
-        using pairf = fmath::pair<float, A>;
-        auto const [fr, exp] =
-            dx::to_tuple_like(dx::frexp(val, frexp_options::reduced));
-        auto const one = fmath::single(dx::broadcast<A, float>(1.0f));
-        pairf const x = (fr - one) / (one + fr);
-        auto const x2 = x.upper * x.upper;
-        constexpr fmath::polynomial<0.9618012905120f, //
-            0.5764790177e+0f,                         //
-            0.4374550283e+0f>
-            polynomial;
-        auto const t = polynomial(x2);
-        auto const inv_halfln2 = fmath::make_pair<float, A>(
-            2.8853900432586669922f, 3.2734474483568488616e-08f);
-        auto s = exp + x * inv_halfln2;
-        s = s + x2 * x * t;
-
-        return dx::fixup(val, s.upper + s.lower,
-            fpfix::condition<fpfix::negative, dx::nan> |
-                fpfix::condition<fpfix::zero, -dx::infinity> |
-                fpfix::condition<fpfix::infinity, fpfix::revert> |
-                fpfix::condition<fpfix::nan, fpfix::revert>);
-    }
-
-    template <simd_abi A>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(
-        basic_vector<double, A> val) noexcept {
-        auto const [fr, exp] =
-            dx::to_tuple_like(dx::frexp(val, frexp_options::reduced));
-        auto const one = fmath::single(dx::broadcast<A, double>(1));
-        auto const x = (fr - one) / (one + fr);
-        auto const x2 = x.upper * x.upper;
-        constexpr fmath::polynomial<0.96179669392608091449,
-            0.5770780162997058982, 0.4121985945485324709, 0.3205977477944495502,
-            0.2623708057488514656, 0.2200768693152277689, 0.2211941750456081490>
-            polynomial;
-        auto const t = polynomial(x2);
-        auto const inv_halfln2 = fmath::make_pair<double, A>(
-            2.885390081777926774, 6.0561604995516736434e-18);
-
-        auto s = exp + x * inv_halfln2;
-        s = s + x2 * x * t;
-
-        return dx::fixup(val, s.upper + s.lower,
-            fpfix::condition<fpfix::negative, dx::nan> |
-                fpfix::condition<fpfix::zero, -dx::infinity> |
-                fpfix::condition<fpfix::infinity, fpfix::revert> |
-                fpfix::condition<fpfix::nan, fpfix::revert>);
-    }
-
-    /*
+private:
     template <canonical_vector T>
-    requires (same_as<ext::float16, simd_element_type_t<T>> ||
-    same_as<ext::bfloat16, simd_element_type_t<T>>) && cpo_invocable<round_t, T,
-    decltype(rounding_opt)> DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(T val) noexcept {
-        using simdf = basic_vector<E, A>;
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr T DPL_VECTORCALL solve_poly(T val) noexcept {
+        if constexpr (is_same_v<simd_element_type_t<T>, double>) {
+            constexpr fmath::polynomial<0.96179669392608091449,
+                0.5770780162997058982, 0.4121985945485324709,
+                0.3205977477944495502, 0.2623708057488514656,
+                0.2200768693152277689, 0.2211941750456081490>
+                poly;
+            return poly(val);
+        } else {
+            constexpr fmath::polynomial<0.9618012905120f, //
+                0.5764790177f,                            //
+                0.4374550283f>
+                poly;
+            return poly(val);
+        }
+    }
+
+public:
+    template <canonical_vector T>
+    requires same_as<simd_element_type_t<T>, float> ||
+        same_as<simd_element_type_t<T>, double>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr T DPL_VECTORCALL operator()(T val) noexcept {
         auto const [fr, exp] =
             dx::to_tuple_like(dx::frexp(val, frexp_options::reduced));
-        auto const one = fmath::single(dx::broadcast<A, E>(1));
-        auto const x = (fr - one) / (one + fr);
-        auto const x2 = x.upper * x.upper;
-        constexpr fmath::polynomial<0.9618012905120f, //
-            0.5764790177e+0f,                         //
-            0.4374550283e+0f>
-            polynomial;
-        auto const t = polynomial(x2);
-        auto const inv_halfln2 = fmath::make_pair<E, A>(
-            2.8853900432586669922f, 3.2734474483568488616e-08f);
-        auto s = exp + x * inv_halfln2;
-        s = s + x2 * x * t;
-        auto result = s.upper + s.lower;
 
-        return dx::fixup(val, result,
+        auto const one = dx::broadcast<T>(dx::one);
+        auto const x = (fr - fmath::single(one)) / (fmath::single(one) + fr);
+        auto const x2 = dx::multiply(dx::get_element<0>(x));
+        auto const t = solve_poly(x2);
+
+        auto const inv_halfln2 = []() {
+            if constexpr (is_same_v<simd_element_type_t<T>, double>) {
+                return mx::make_pair(dx::broadcast<T>(2.885390081777926774),
+                    dx::broadcast<T>(6.0561604995516736434e-18));
+            } else {
+                return mx::make_pair(dx::broadcast<T>(2.8853900432586669922f),
+                    dx::broadcast<T>(3.2734474483568488616e-08f));
+            }
+        }();
+        auto const x3 = x2 * mx::pair_ref{x};
+        auto s = exp + mx::pair_ref{x} * inv_halfln2;
+        s = s + mx::pair_ref{x3} * t;
+
+        return dx::fixup(val, mx::recombine(s),
             fpfix::condition<fpfix::negative, dx::nan> |
                 fpfix::condition<fpfix::zero, -dx::infinity> |
                 fpfix::condition<fpfix::infinity, fpfix::revert> |
                 fpfix::condition<fpfix::nan, fpfix::revert>);
     }
-    */
 };
 } // namespace datapar::internal
 

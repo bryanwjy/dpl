@@ -112,7 +112,7 @@ concept concatable =
     concat_target_t<simd_abi_type_t<T>>::size ==
         (T::abi_type::size + ... + Ts::abi_type::size);
 
-struct concat_t : private primitive_operation_base<concat_t> {
+struct concat_t : public primitive_operation_base<concat_t> {
     using primitive_operation_base<concat_t>::operator();
 };
 

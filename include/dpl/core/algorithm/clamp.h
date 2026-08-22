@@ -38,13 +38,14 @@ struct operation_signature<clamp_t> {
 template <>
 struct fallback_impl<clamp_t> : ternary_broadcasting_fallback<clamp_t> {
 
-    template <canonical_vector AT, canonical_vector BT, canonical_vector CT>
-    requires cpo_invocable<min_t, BT, CT> &&
-        cpo_invocable<max_t, CT, cpo_result_t<min_t, BT, AT>, AT>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    template <simd_vector T, vector_subsumed_by<T> Lo, vector_subsumed_by<T> Hi>
+    requires cpo_invocable<min_t, T, Hi> &&
+        cpo_invocable<max_t, Lo, cpo_result_t<min_t, T, Hi>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(
-        AT val, BT low, CT high) noexcept {
-        return dx::max(low, dx::min(val, high));
+        T&& val, Lo&& low, Hi&& high) noexcept {
+        return dx::max(__DPL forward<Lo>(low),
+            dx::min(__DPL forward<T>(val), __DPL forward<Hi>(high)));
     }
 
     using ternary_broadcasting_fallback<clamp_t>::operator();
@@ -53,103 +54,91 @@ struct fallback_impl<clamp_t> : ternary_broadcasting_fallback<clamp_t> {
 template <>
 struct canonical_impl<clamp_t> {
 
-    template <simd_abi AA, common_abi_with<AA> BA, common_abi_with<BA> CA,
-        simd_element_for<AA> E, simd_abi A = common_abi_t<AA, BA, CA>>
-    requires simd_element_for<E, BA> && simd_element_for<E, CA> &&
-        simd_element_for<E, A>
-        DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-        static constexpr basic_vector<E, A> operator()(basic_vector<E, AA> val,
-            basic_vector<E, BA> low, basic_vector<E, CA> high) noexcept
-    requires requires { clamp(internal::abi<A>, val, low, high); }
-    {
-        return clamp(internal::abi<A>, val, low, high);
-    }
-
-    template <simd_abi AA, common_abi_with<AA> BA, simd_element_for<AA> E,
-        typename CT, typename A = common_abi_t<AA, BA>>
-    requires simd_element_for<E, BA> &&
-        broadcastable_to<CT, basic_vector<E, A>>
-        DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-        static constexpr basic_vector<E, A> operator()(basic_vector<E, AA> val,
-            basic_vector<E, BA> low, CT&& high) noexcept
-    requires requires {
-        clamp(internal::abi<A>, val, low, __DPL forward<CT>(high));
-    }
-    {
-        return clamp(internal::abi<A>, val, low, __DPL forward<CT>(high));
-    }
-
-    template <simd_abi AA, common_abi_with<AA> CA, simd_element_for<AA> E,
-        typename BT, typename A = common_abi_t<AA, CA>>
-    requires simd_element_for<E, CA> &&
-        broadcastable_to<BT, basic_vector<E, A>>
-        DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-        static constexpr basic_vector<E, A> operator()(basic_vector<E, AA> val,
-            BT&& low, basic_vector<E, CA> high) noexcept
-    requires requires {
-        clamp(internal::abi<A>, val, __DPL forward<BT>(low), high);
-    }
-    {
-        return clamp(internal::abi<A>, val, __DPL forward<BT>(low), high);
-    }
-
-    template <simd_abi BA, common_abi_with<BA> CA, simd_element_for<BA> E,
-        typename AT, typename A = common_abi_t<BA, CA>>
-    requires simd_element_for<E, CA> &&
-        broadcastable_to<AT, basic_vector<E, A>>
-        DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-        static constexpr basic_vector<E, A> operator()(AT&& val,
-            basic_vector<E, BA> low, basic_vector<E, CA> high) noexcept
-    requires requires {
-        clamp(internal::abi<A>, __DPL forward<AT>(val), low, high);
-    }
-    {
-        return clamp(internal::abi<A>, __DPL forward<AT>(val), low, high);
-    }
-
-    template <simd_abi A, simd_element_for<A> E,
-        broadcastable_to<basic_vector<E, A>> BT,
-        broadcastable_to<basic_vector<E, A>> CT>
+    template <canonical_vector T, vector_subsumed_by<T> Lo,
+        vector_subsumed_by<T> Hi>
+    requires (canonical_vector<Lo> && canonical_vector<Hi>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(
-        basic_vector<E, A> val, BT&& low, CT&& high) noexcept
-    requires requires {
-        clamp(internal::abi<A>, val, __DPL forward<BT>(low),
-            __DPL forward<CT>(high));
-    }
+    static constexpr T operator()(T val, Lo low, Hi high) noexcept
+    requires requires { clamp(internal::abi<T>, val, low, high); }
     {
-        return clamp(internal::abi<A>, val, __DPL forward<BT>(low),
-            __DPL forward<CT>(high));
+        return clamp(internal::abi<T>, val, low, high);
     }
 
-    template <simd_abi A, simd_element_for<A> E,
-        broadcastable_to<basic_vector<E, A>> AT,
-        broadcastable_to<basic_vector<E, A>> CT>
+    template <canonical_vector T, vector_subsumed_by<T> Lo,
+        broadcastable_to<T> Hi>
+    requires canonical_vector<Lo>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(
-        AT&& val, basic_vector<E, A> low, CT&& high) noexcept
+    static constexpr T operator()(T val, Lo low, Hi&& high) noexcept
     requires requires {
-        clamp(internal::abi<A>, __DPL forward<AT>(val), low,
-            __DPL forward<CT>(high));
+        clamp(internal::abi<T>, val, low, __DPL forward<Hi>(high));
     }
     {
-        return clamp(internal::abi<A>, __DPL forward<AT>(val), low,
-            __DPL forward<CT>(high));
+        return clamp(internal::abi<T>, val, low, __DPL forward<Hi>(high));
     }
 
-    template <simd_abi A, simd_element_for<A> E,
-        broadcastable_to<basic_vector<E, A>> AT,
-        broadcastable_to<basic_vector<E, A>> BT>
+    template <canonical_vector T, broadcastable_to<T> Lo,
+        vector_subsumed_by<T> Hi>
+    requires canonical_vector<Hi>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(
-        AT&& val, BT&& low, basic_vector<E, A> high) noexcept
+    static constexpr T operator()(T val, Lo&& low, Hi high) noexcept
     requires requires {
-        clamp(internal::abi<A>, __DPL forward<AT>(val),
-            __DPL forward<BT>(low), high);
+        clamp(internal::abi<T>, val, __DPL forward<Lo>(low), high);
     }
     {
-        return clamp(internal::abi<A>, __DPL forward<AT>(val),
-            __DPL forward<BT>(low), high);
+        return clamp(internal::abi<T>, val, __DPL forward<Lo>(low), high);
+    }
+
+    template <canonical_vector T, broadcastable_to<T> Lo,
+        broadcastable_to<T> Hi>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(T val, Lo&& low, Hi&& high) noexcept
+    requires requires {
+        clamp(internal::abi<T>, val, __DPL forward<Lo>(low),
+            __DPL forward<Hi>(high));
+    }
+    {
+        return clamp(internal::abi<T>, val, __DPL forward<Lo>(low),
+            __DPL forward<Hi>(high));
+    }
+
+    template <canonical_vector Lo, common_vector_with<Lo> Hi,
+        broadcastable_to<common_canonical_simd_t<Lo, Hi>> T>
+    requires canonical_vector<Hi>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T&& val, Lo low, Hi high) noexcept
+    requires requires {
+        clamp(internal::abi<common_abi_t<Lo, Hi>>, __DPL forward<T>(val), low,
+            high);
+    }
+    {
+        return clamp(internal::abi<common_abi_t<Lo, Hi>>,
+            __DPL forward<T>(val), low, high);
+    }
+
+    template <canonical_vector Lo, broadcastable_to<Lo> T,
+        broadcastable_to<Lo> Hi>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr Lo operator()(T&& val, Lo low, Hi&& high) noexcept
+    requires requires {
+        clamp(internal::abi<Lo>, __DPL forward<T>(val), low,
+            __DPL forward<Hi>(high));
+    }
+    {
+        return clamp(internal::abi<Lo>, __DPL forward<T>(val), low,
+            __DPL forward<Hi>(high));
+    }
+
+    template <canonical_vector Hi, broadcastable_to<Hi> T,
+        broadcastable_to<Hi> Lo>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr Hi operator()(T&& val, Lo&& low, Hi high) noexcept
+    requires requires {
+        clamp(internal::abi<Hi>, __DPL forward<T>(val),
+            __DPL forward<Lo>(low), high);
+    }
+    {
+        return clamp(internal::abi<Hi>, __DPL forward<T>(val),
+            __DPL forward<Lo>(low), high);
     }
 };
 
@@ -161,19 +150,15 @@ concept unqualified_extended_clamp = requires(AT a, BT b, CT c) {
 
 template <>
 struct extended_impl<clamp_t> {
-    template <simd_vector AT, simd_vector BT, simd_vector CT>
+    template <simd_vector AT, vector_subsumed_by<AT> BT,
+        vector_subsumed_by<AT> CT>
     requires (extended_vector<AT> || extended_vector<BT> ||
                  extended_vector<CT>) &&
         unqualified_extended_clamp<AT, BT, CT>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(AT&& val, BT&& low, CT&& high) {
-        if constexpr (unqualified_extended_clamp<AT, BT, CT>) {
-            return clamp(__DPL forward<AT>(val), __DPL forward<BT>(low),
-                __DPL forward<CT>(high));
-        } else {
-            return fallback_impl<clamp_t>::operator()(__DPL forward<AT>(val),
-                __DPL forward<BT>(low), __DPL forward<CT>(high));
-        }
+        return clamp(__DPL forward<AT>(val), __DPL forward<BT>(low),
+            __DPL forward<CT>(high));
     }
 
     template <simd_vector AT, common_vector_with<AT> BT, typename CT>

@@ -25,8 +25,8 @@ namespace datapar::internal {
 void permute(...) noexcept = delete;
 
 struct DPL_EMPTY_BASES permute_t :
-    private primitive_operation_base<permute_t>,
-    private maskable_transform_base<permute_t> {
+    public primitive_operation_base<permute_t>,
+    public maskable_transform_base<permute_t> {
     using operation_base<permute_t>::operator();
     using maskable_transform_base<permute_t>::operator();
 };

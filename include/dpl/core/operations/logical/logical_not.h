@@ -42,32 +42,6 @@ struct fallback_impl<logical_not_t> {
         return dx::bwnot(__DPL forward<T>(val));
     }
 };
-
-template <>
-struct canonical_impl<logical_not_t> {
-    template <canonical_mask T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr bool operator()(T val) noexcept
-    requires requires { logical_not(internal::abi<T>, val); }
-    {
-        return logical_not(internal::abi<T>, val);
-    }
-};
-
-template <typename T, typename A = simd_abi_type_t<T>>
-concept unqualified_extended_logical_not = requires(T&& val) {
-    { logical_not(__DPL forward<T>(val)) } -> mask_with_common_abi<A>;
-};
-
-template <>
-struct extended_impl<logical_not_t> {
-    template <extended_mask T>
-    requires unqualified_extended_logical_not<T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T&& val) {
-        return logical_not(__DPL forward<T>(val));
-    }
-};
 } // namespace datapar::internal
 
 namespace datapar {

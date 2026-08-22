@@ -16,6 +16,7 @@ import :core.basic;
 import :core.concepts;
 import :core.type_traits;
 import :core.utility;
+import :core.math;
 
 DPL_DISABLE_WARNING_PUSH()
 #if DPL_COMPILER_MSVC
@@ -26,6 +27,7 @@ DPL_DISABLE_WARNING(5244)
 #include "dpl/core/algorithm/clamp.h"
 #include "dpl/core/algorithm/compress.h"
 #include "dpl/core/algorithm/expand.h"
+#include "dpl/core/algorithm/lerp.h"
 #include "dpl/core/algorithm/reduce.h"
 #include "dpl/core/algorithm/rotate.h"
 #include "dpl/core/algorithm/scan.h"

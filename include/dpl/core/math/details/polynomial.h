@@ -28,73 +28,116 @@ struct unintialized_t {};
 /**
  * Use a union for easier debugging at constexpr
  */
-template <floating_point_like E, simd_abi A>
+template <canonical_vector T>
 union optional {
     unintialized_t none;
-    basic_vector<E, A> val;
+    T val;
 };
 
 /**
  * Union based storage used to reduce register pressure
  * on estrin evalutaions.
  */
-template <size_t S, floating_point_like E, simd_abi A>
-class vpowers : protected vpowers<S - 1, E, A> {
-    using base_type DPL_NODEBUG = vpowers<S - 1, E, A>;
-    using vector_type = make_canonical_vector_t<E, A>;
+template <size_t S, canonical_vector T>
+class vpowers : protected vpowers<S - 1, T> {
+    using base_type DPL_NODEBUG = vpowers<S - 1, T>;
 
 public:
     __DPL_HIDE_FROM_ABI constexpr vpowers() noexcept = default;
-    __DPL_HIDE_FROM_ABI explicit constexpr vpowers(
-        basic_vector<E, A> x0) noexcept
+    __DPL_HIDE_FROM_ABI explicit constexpr vpowers(T x0) noexcept
     requires (S == 0)
         : data{
               .val = x0,
           } {}
 
-    __DPL_HIDE_FROM_ABI explicit constexpr vpowers(
-        basic_vector<E, A> x0) noexcept
+    __DPL_HIDE_FROM_ABI explicit constexpr vpowers(T x0) noexcept
         : base_type(nullptr, x0)
         , data{.none = {}} {}
 
     template <integral auto I>
     requires (S > 0 && I <= S)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    constexpr basic_vector<E, A> operator[](immediate<I>) const noexcept {
+    constexpr T operator[](immediate<I>) const noexcept {
         if constexpr (I == S) {
             return data.val;
         } else {
-            return vpowers<I, E, A>::data.val;
+            return vpowers<I, T>::data.val;
         }
     }
 
-    template <integral auto I>
+    template <size_t I>
     requires (I <= S && S > 0)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
     constexpr void initialize() noexcept {
-        vpowers<I, E, A>::data = optional<E, A>{
+        vpowers<I, T>::data = optional<T>{
             .val = dx::multiply(
-                vpowers<I - 1, E, A>::data.val, vpowers<I - 1, E, A>::data.val),
+                vpowers<I - 1, T>::data.val, vpowers<I - 1, T>::data.val),
         };
     }
 
 protected:
     __DPL_HIDE_FROM_ABI explicit constexpr vpowers(
-        decltype(nullptr), basic_vector<E, A> x0) noexcept
-    requires (S == 1)
+        decltype(nullptr), T x0) noexcept
+    requires (S == 1 && different_from<T, simd_native_type_t<T>>)
         : base_type(x0)
         , data{.val = dx::multiply(x0, x0)} {}
 
     __DPL_HIDE_FROM_ABI explicit constexpr vpowers(
-        decltype(nullptr) tag, basic_vector<E, A> x0) noexcept
+        decltype(nullptr) tag, T x0) noexcept
+    requires different_from<T, simd_native_type_t<T>>
         : base_type(tag, x0)
         , data{.none = {}} {}
 
-    optional<E, A> data;
+    optional<T> data;
 };
 
-template <floating_point_like E, simd_abi A>
-class vpowers<static_cast<size_t>(-1), E, A> {};
+template <canonical_vector T>
+class vpowers<static_cast<size_t>(-1), T> {};
+
+template <size_t S, canonical_vector T>
+requires same_as<simd_native_type_t<T>, T>
+class vpowers<S, T> : protected vpowers<S - 1, T> {
+    using base_type DPL_NODEBUG = vpowers<S - 1, T>;
+
+public:
+    __DPL_HIDE_FROM_ABI constexpr vpowers() noexcept = default;
+    __DPL_HIDE_FROM_ABI explicit constexpr vpowers(T& x0) noexcept
+    requires (S == 0)
+        : data{x0} {}
+
+    // Arguments should be provided in reverse order!
+    template <same_as<T>... Ts>
+    requires (sizeof...(Ts) == S)
+    __DPL_HIDE_FROM_ABI explicit constexpr vpowers(T& xn, Ts&... tail) noexcept
+        : base_type(tail...)
+        , data{xn} {}
+
+    template <integral auto I>
+    requires (S > 0 && I <= S)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    constexpr T operator[](immediate<I>) const noexcept {
+        if constexpr (I == S) {
+            return data;
+        } else {
+            return vpowers<I, T>::data;
+        }
+    }
+
+    template <size_t I>
+    requires (I <= S && S > 0)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
+    constexpr void initialize() noexcept {
+        vpowers<I, T>::data =
+            dx::multiply(vpowers<I - 1, T>::data, vpowers<I - 1, T>::data);
+    }
+
+protected:
+    T& data;
+};
+
+template <canonical_vector T>
+requires same_as<simd_native_type_t<T>, T>
+class vpowers<static_cast<size_t>(-1), T> {};
 
 } // namespace estrin
 
@@ -134,15 +177,16 @@ private:
     template <floating_point_like T>
     static constexpr coeffs_t<T> coeffs{};
 
-    static constexpr auto degree = sizeof...(Vs);
+    static constexpr size_t degree = sizeof...(Vs);
     static constexpr size_t depth = __DPL bit_width(degree) - 1;
 
-    template <floating_point_like E, simd_abi A, typename Powers,
-        size_t B = 0zu, size_t L = depth>
-    requires same_as<decay_t<Powers>, fmath::estrin::vpowers<depth, E, A>>
+    template <canonical_vector T, typename Powers, size_t B = 0zu,
+        size_t L = depth>
+    requires same_as<decay_t<Powers>, fmath::estrin::vpowers<depth, T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto eval_estrin(
         Powers&& x, immediate<B> = {}, immediate<L> = {}) noexcept {
+        using E = simd_element_type_t<T>;
         constexpr auto S = 1 << L; // stride for the next level
         if constexpr (L == 0) {
             // Leaf
@@ -150,11 +194,11 @@ private:
                 return dx::muladd(
                     x[imm<L>], coeffs<E>[imm<B + S>], coeffs<E>[imm<B>]);
             } else {
-                return dx::broadcast<A>(coeffs<E>[imm<B>]);
+                return dx::broadcast<T>(coeffs<E>[imm<B>]);
             }
         } else if constexpr (B + S <= degree) {
-            auto const right = eval_estrin<E, A>(x, imm<B>, imm<L - 1>);
-            auto const left = eval_estrin<E, A>(x, imm<B + S>, imm<L - 1>);
+            auto const right = eval_estrin<T>(x, imm<B>, imm<L - 1>);
+            auto const left = eval_estrin<T>(x, imm<B + S>, imm<L - 1>);
             if constexpr (B == 2 * S) {
                 // Late initialization of squares for powers greater than 2
                 // Pray that OOO execution can hide it's latency
@@ -170,40 +214,44 @@ private:
                 x.template initialize<L + 1>();
             }
 
-            return eval_estrin<E, A>(x, imm<B>, imm<L - 1>);
+            return eval_estrin<T>(x, imm<B>, imm<L - 1>);
         }
     }
 
-    template <floating_point_like E, simd_abi A>
+    template <canonical_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL eval_estrin(
-        basic_vector<E, A> x) noexcept {
-        // Compiler Explorer: https://godbolt.org/z/nsvsYnez1
-        // Evaluates estrin with lower register pressure by deferring
-        // the square operation as late as possible, using the FMA dependency
-        // chain to hide it's latency.
-        // This results in lower register pressures and register
-        // lifetimes reductions for large polynomials, e.g. 18th degree, on
-        // clang
-
-        // TODO scalable ABIs:
-        // Possible solution: template recursion to allocate vectors on the
-        // stack and then store them as references in vpowers.
-        // E.g.
-        //   func<N>(x)
-        // -> func<N - 1>(x, undef1)
-        // -> func<N - 2>(x, undef1, undef2)...
-        // -> make_vpowers(x, undefs...);
-        return eval_estrin<E, A>(estrin::vpowers<depth, E, A>(x));
+    static constexpr T DPL_VECTORCALL eval_estrin(T x) noexcept {
+        if constexpr (same_as<simd_native_type_t<T>, T>) {
+            static_assert(scalable_abi<simd_abi_type_t<T>>);
+            // sizeless type workaround
+            // allocate all the powers on the stack
+            return []<typename... U>(this auto self, U&... args) noexcept {
+                if constexpr (sizeof...(U) == depth) {
+                    T end; // TODO undefine
+                    return eval_estrin<T>(
+                        estrin::vpowers<depth, T>(end, args...));
+                } else {
+                    T next; // TODO undefine
+                    return self(next, args...);
+                }
+            }(x);
+        } else {
+            // Compiler Explorer: https://godbolt.org/z/nsvsYnez1
+            // Evaluates estrin with lower register pressure by deferring
+            // the square operation as late as possible, using the FMA
+            // dependency chain to hide it's latency. This results in lower
+            // register pressures and register lifetimes reductions for large
+            // polynomials, e.g. 18th degree, on clang
+            return eval_estrin<T>(estrin::vpowers<depth, T>(x));
+        }
     }
 
-    template <floating_point_like E, simd_abi A>
+    template <canonical_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL eval_horner(
-        basic_vector<E, A> x) noexcept {
-        using simd = basic_vector<E, A>;
+    static constexpr T DPL_VECTORCALL eval_horner(T x) noexcept {
+        using E = simd_element_type_t<T>;
         return []<int I = sizeof...(Vs) - 1>(
-            this auto self, simd result, simd x, immediate<I> = {}) {
+            this auto self, T result, T x, immediate<I> = {}) {
             if constexpr (I > 0) {
                 return self(
                     dx::muladd(result, x, coeffs<E>[imm<I>]), x, imm<I - 1>);
@@ -211,23 +259,19 @@ private:
                 return dx::muladd(result, x, coeffs<E>[imm<I>]);
             }
         }
-        (dx::broadcast<A>(coeffs<E>.back()), x);
+        (dx::broadcast<T>(coeffs<E>.back()), x);
     }
 
 public:
-    template <floating_point_like T, simd_abi A>
+    template <canonical_vector T>
+    requires floating_point_like<simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(basic_vector<T, A> x) noexcept {
+    static constexpr T operator()(T x) noexcept {
         if constexpr (degree < 6) {
             return eval_horner(x);
         } else {
             return eval_estrin(x);
         }
-    }
-
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(dx::zero_t) noexcept {
-        return V0;
     }
 };
 } // namespace datapar::fmath

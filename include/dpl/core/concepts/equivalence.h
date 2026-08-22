@@ -84,6 +84,30 @@ template <typename T, typename U>
 concept equivalent_mask_with =
     equivalent_simd_type_with<T, U> && atom::equivalent_mask_elements<T, U>;
 
+template <typename...>
+struct common_canonical_simd {};
+
+template <typename... Ts>
+using common_canonical_simd_t = typename common_canonical_simd<Ts...>::type;
+
+template <typename T>
+struct common_canonical_simd<T> : canonical_type<T> {};
+
+template <simd_vector A, common_vector_with<A> B>
+struct common_canonical_simd<A, B> :
+    make_canonical_vector<simd_element_type_t<A>,
+        common_abi_t<simd_abi_type_t<A>, simd_abi_type_t<B>>> {};
+
+template <simd_mask A, common_mask_with<A> B>
+struct common_canonical_simd<A, B> :
+    make_canonical_mask<simd_element_type_t<A>,
+        common_abi_t<simd_abi_type_t<A>, simd_abi_type_t<B>>> {};
+
+template <typename T, typename U, typename... Ts>
+requires requires { typename common_canonical_simd_t<T, U>; }
+struct common_canonical_simd<T, U, Ts...> :
+    common_canonical_simd<common_canonical_simd_t<T, U>, Ts...> {};
+
 } // namespace datapar::internal
 
 __DPL_DEFAULT_NAMESPACE_END

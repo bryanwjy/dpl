@@ -75,7 +75,7 @@ inline constexpr assume_normalized_mask_t assume_normalized_mask{};
 namespace datapar::internal {
 void to_simd_mask(...) noexcept = delete;
 
-struct to_simd_mask_t : private primitive_operation_base<to_simd_mask_t> {
+struct to_simd_mask_t : public primitive_operation_base<to_simd_mask_t> {
     using operation_base<to_simd_mask_t>::operator();
 };
 

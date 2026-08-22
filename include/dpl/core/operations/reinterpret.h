@@ -30,13 +30,13 @@ template <typename>
 void reinterpret(...) noexcept = delete;
 
 template <typename E>
-struct reinterpret_t : private primitive_operation_base<reinterpret_t<E>> {
+struct reinterpret_t : public primitive_operation_base<reinterpret_t<E>> {
     using operation_base<reinterpret_t<E>>::operator();
 };
 
 // TODO: remove this specialization
 template <simd_type T>
-struct reinterpret_t<T> : private reinterpret_t<simd_element_type_t<T>> {
+struct reinterpret_t<T> : public reinterpret_t<simd_element_type_t<T>> {
     static_assert(is_object_v<T> && !is_const_v<T> && !is_volatile_v<T>);
     template <simd_type U>
     requires cpo_invocable<reinterpret_t<simd_element_type_t<T>>, U>

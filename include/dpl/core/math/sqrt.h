@@ -25,8 +25,8 @@ namespace datapar::internal {
 void sqrt(...) noexcept = delete;
 
 struct DPL_EMPTY_BASES sqrt_t :
-    private math_operation_base<sqrt_t>,
-    private maskable_transform_base<sqrt_t> {
+    public math_operation_base<sqrt_t>,
+    public maskable_transform_base<sqrt_t> {
     using math_operation_base<sqrt_t>::operator();
     using maskable_transform_base<sqrt_t>::operator();
 };
@@ -47,32 +47,24 @@ concept unqualified_canonical_msqrt = cpo_invocable<sqrt_t, T> &&
 
 template <>
 struct canonical_impl<sqrt_t> {
-private:
-    template <typename T>
-    using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
-
-public:
-    template <simd_abi A, simd_element_for<A> E>
+    template <canonical_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(
-        basic_vector<E, A> val) noexcept
-    requires requires { sqrt(internal::abi<A>, val); }
+    static constexpr T operator()(T val) noexcept
+    requires requires { sqrt(internal::abi<T>, val); }
     {
-        return sqrt(internal::abi<A>, val);
+        return sqrt(internal::abi<T>, val);
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_msqrt<type_identity_t<T>, mask_t<T>, T>
+    requires unqualified_canonical_msqrt<T, simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
-        type_identity_t<T> src, mask_t<T> mask, T val) noexcept {
+        type_identity_t<T> src, simd_mask_type_t<T> mask, T val) noexcept {
         return sqrt(internal::abi<T>, src, mask, val);
     }
 
     template <canonical_vector T, const_mask_for<T> M>
-    requires unqualified_canonical_msqrt<type_identity_t<T>,
-        launder_cmask_t<T, M>, T>
+    requires unqualified_canonical_msqrt<T, launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
         type_identity_t<T> src, M cmask, T val) noexcept {
@@ -80,10 +72,10 @@ public:
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_msqrt<dx::zero_t, mask_t<T>, T>
+    requires unqualified_canonical_msqrt<dx::zero_t, simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
-        dx::zero_t zero, mask_t<T> mask, T val) noexcept {
+        dx::zero_t zero, simd_mask_type_t<T> mask, T val) noexcept {
         return sqrt(internal::abi<T>, zero, mask, val);
     }
 
@@ -120,7 +112,7 @@ public:
         return sqrt(__DPL forward<T>(val));
     }
 
-    template <simd_vector S, exact_mask_for<S> M, common_vector_with<S> T>
+    template <simd_vector S, exact_mask_for<S> M, equivalent_vector_with<S> T>
     requires (extended_vector<S> || extended_mask<M> || extended_vector<T>) &&
         unqualified_extended_msqrt<S, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -129,7 +121,7 @@ public:
             __DPL forward<T>(val));
     }
 
-    template <simd_vector S, const_mask_for<S> M, common_vector_with<S> T>
+    template <simd_vector S, const_mask_for<S> M, equivalent_vector_with<S> T>
     requires (extended_vector<S> || extended_vector<T>) &&
         unqualified_extended_msqrt<S, launder_cmask_t<S, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -161,26 +153,32 @@ template <>
 struct fallback_impl<sqrt_t> {
 public:
     // TODO: float16/bfloat16
-    template <simd_abi A, simd_element_for<A> E>
-    requires same_as<float, E> || same_as<double, E>
+    template <canonical_vector T>
+    requires same_as<float, simd_element_type_t<T>> ||
+        same_as<double, simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(
-        basic_vector<E, A> val) noexcept {
+    static constexpr T DPL_VECTORCALL operator()(T val) noexcept {
         // 2 * sqrt(2)
-        auto const two = dx::broadcast<E, A>(2.0);
-        auto const sqrt8 = dx::broadcast<E, A>(2.8284271247461900976033774484);
+        auto const vone = dx::broadcast<T>(dx::one);
+        auto const vtwo = dx::broadcast<T>(2.0);
+        auto const vsqrt8 = dx::broadcast<T>(2.8284271247461900976033774484);
 
-        using vexp_t = basic_vector<signed_representation_t<E>, A>;
+        using vexp_t = mx::exponent_vector_t<T>;
         vexp_t exp;
         auto const fr = dx::frexp(val, exp);
-        auto const remtwo = exp & dx::one;
-        auto const ifodd = dx::select(remtwo == dx::zero, sqrt8, two);
-        auto const sig = (ifodd * fr) * mx::rsqrt2(mx::accuracy::maximum, fr);
+        auto const remtwo = dx::bwand(exp, vone);
+        auto const ifodd =
+            dx::select(dx::cmpeq(remtwo, dx::zero), vsqrt8, vtwo);
+        auto const sig = dx::multiply(
+            dx::multiply(ifodd, fr), mx::rsqrt2(mx::accuracy::maximum, fr));
         auto const result = mx::ldexp(mx::compliance::unsafe, //
-            sig, (exp - dx::one) >> imm<1>);
+            sig, dx::bwshift_right(dx::subtract(exp, vone), imm<1>));
 
-        return dx::select(dx::isfinite(val) && val != dx::zero,
-            dx::select(val < dx::zero, dx::all_bits, result), val);
+        auto const vzero = dx::broadcast<T>(dx::zero);
+        auto const eqz = dx::cmpeq(val, vzero);
+        auto const gtz = dx::cmpgt(val, vzero);
+
+        return dx::select(eqz, val, dx::select(gtz, result, dx::all_bits));
     }
 };
 } // namespace datapar::internal

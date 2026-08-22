@@ -85,7 +85,7 @@ void split(...) noexcept = delete;
 void split(...) noexcept = delete;
 
 template <size_t N>
-struct split_t : private primitive_operation_base<split_t<N>> {
+struct split_t : public primitive_operation_base<split_t<N>> {
     using primitive_operation_base<split_t<N>>::operator();
 };
 

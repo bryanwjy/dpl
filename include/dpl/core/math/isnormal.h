@@ -20,8 +20,8 @@ namespace datapar::internal {
 void isnormal(...) noexcept = delete;
 
 struct DPL_EMPTY_BASES isnormal_t :
-    private math_operation_base<isnormal_t>,
-    private maskable_predicate_base<isnormal_t> {
+    public math_operation_base<isnormal_t>,
+    public maskable_predicate_base<isnormal_t> {
     using math_operation_base<isnormal_t>::operator();
     using maskable_predicate_base<isnormal_t>::operator();
 };
@@ -33,46 +33,53 @@ struct operation_signature<isnormal_t> {
 
 template <>
 struct fallback_impl<isnormal_t> {
-private:
-    template <typename T>
-    using imask_t DPL_NODEBUG = mask_value_t<simd_abi_traits<T>::size>;
-
-    template <typename T, imask_t<T> V>
-    using cmask_t DPL_NODEBUG = const_mask<simd_abi_traits<T>::size, V>;
-
-    template <typename T>
-    using result_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
-
 public:
-    template <simd_abi A, simd_element_for<A> E>
-    requires floating_point_like<E>
+    template <canonical_vector T>
+    requires binary_layout_floating_point<simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_mask<E, A>
-        DPL_VECTORCALL operator()(basic_vector<E, A> val) noexcept {
-        auto const exp = dx::bwand(val, dx::infinity);
-        return dx::cmpneq(exp, dx::infinity) && dx::cmpgt(exp, dx::zero);
+    static constexpr simd_mask_type_t<T>
+        DPL_VECTORCALL operator()(T val) noexcept {
+        using E = simd_element_type_t<T>;
+        using sint_t = signed_representation_t<E>;
+        constexpr auto shift =
+            __DPL countr_zero(floating_point_traits<E>::exponent_mask);
+        constexpr sint_t limit = sint_t(1) << shift;
+
+        auto const vabs = dx::abs(val);
+        auto const vlimit = dx::broadcast<mx::exponent_vector_t<T>>(limit);
+        return dx::cmplt(dx::reinterpret<sint_t>(vabs), vlimit);
     }
 
-    template <simd_abi A, simd_element_for<A> E>
-    requires floating_point_like<E>
+    template <canonical_vector T>
+    requires binary_layout_floating_point<simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_mask<E, A>
-        DPL_VECTORCALL operator()(
-            basic_mask<E, A> mask, basic_vector<E, A> val) noexcept {
-        auto const exp = dx::bwand(val, dx::infinity);
-        auto const zero = dx::broadcast<E, A>(dx::zero);
-        return dx::cmpneq(exp, dx::infinity) && dx::cmpgt(mask, exp, zero);
+    static constexpr simd_mask_type_t<T>
+        DPL_VECTORCALL operator()(simd_mask_type_t<T> mask, T val) noexcept {
+        using E = simd_element_type_t<T>;
+        using sint_t = signed_representation_t<E>;
+        constexpr auto shift =
+            __DPL countr_zero(floating_point_traits<E>::exponent_mask);
+        constexpr sint_t limit = sint_t(1) << shift;
+
+        auto const vabs = dx::abs(val);
+        auto const vlimit = dx::broadcast<mx::exponent_vector_t<T>>(limit);
+        return dx::cmplt(mask, dx::reinterpret<sint_t>(vabs), vlimit);
     }
 
     template <canonical_vector T, const_mask_for<T> M>
-    requires floating_point_like<simd_element_type_t<T>>
+    requires binary_layout_floating_point<simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr result_t<T>
+    static constexpr simd_mask_type_t<T>
         DPL_VECTORCALL operator()(M cmask, T val) noexcept {
-        auto const exp = dx::bwand(val, dx::infinity);
-        auto const zero = dx::broadcast<T>(dx::zero);
-        return dx::cmpneq(exp, dx::infinity) && dx::cmpgt(cmask, exp, zero);
+        using E = simd_element_type_t<T>;
+        using sint_t = signed_representation_t<E>;
+        constexpr auto shift =
+            __DPL countr_zero(floating_point_traits<E>::exponent_mask);
+        constexpr sint_t limit = sint_t(1) << shift;
+
+        auto const vabs = dx::abs(val);
+        auto const vlimit = dx::broadcast<mx::exponent_vector_t<T>>(limit);
+        return dx::cmplt(cmask, dx::reinterpret<sint_t>(vabs), vlimit);
     }
 };
 
@@ -80,7 +87,7 @@ template <typename T, typename A = simd_abi_type_t<T>>
 concept unqualified_canonical_isnormal = requires {
     {
         isnormal(internal::abi<A>, internal::declarg<T>())
-    } -> same_as<basic_mask<simd_element_type_t<T>, A>>;
+    } -> same_as<simd_mask_type_t<T>>;
 };
 
 template <typename S, typename T>
@@ -94,33 +101,26 @@ concept unqualified_canonical_misnormal = cpo_invocable<isnormal_t, T> &&
 
 template <>
 struct canonical_impl<isnormal_t> {
-private:
-    template <typename T>
-    using result_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
-
-    template <typename T>
-    using mask_t DPL_NODEBUG = cpo_result_t<cmpeq_t, T>;
-
 public:
     template <canonical_vector T>
     requires unqualified_canonical_isnormal<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr result_t<T> operator()(T arg) noexcept {
+    static constexpr simd_mask_type_t<T> operator()(T arg) noexcept {
         return isnormal(internal::abi<T>, arg);
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_misnormal<mask_t<T>, T>
+    requires unqualified_canonical_misnormal<simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr mask_t<T> operator()(mask_t<T> src, T val) noexcept {
+    static constexpr simd_mask_type_t<T> operator()(
+        simd_mask_type_t<T> src, T val) noexcept {
         return isnormal(internal::abi<T>, src, val);
     }
 
     template <canonical_vector T, const_mask_for<T> M>
     requires unqualified_canonical_misnormal<launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr mask_t<T> operator()(M cmask, T val) noexcept {
+    static constexpr simd_mask_type_t<T> operator()(M cmask, T val) noexcept {
         return isnormal(internal::abi<T>, dx::to_const_mask<T>(cmask), val);
     }
 };
@@ -143,13 +143,6 @@ concept unqualified_extended_misnormal = cpo_invocable<isnormal_t, T> &&
 
 template <>
 struct extended_impl<isnormal_t> {
-private:
-    template <typename T>
-    using imask_t DPL_NODEBUG = mask_value_t<simd_abi_traits<T>::size>;
-
-    template <typename T, imask_t<T> V>
-    using cmask_t DPL_NODEBUG = const_mask<simd_abi_traits<T>::size, V>;
-
 public:
     template <extended_vector T>
     requires unqualified_extended_isnormal<T>

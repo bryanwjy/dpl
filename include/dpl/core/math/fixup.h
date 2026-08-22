@@ -59,8 +59,7 @@ concept unqualified_canonical_fixup =
         } -> same_as<T>;
     };
 
-template <typename T, typename C,
-    typename M = basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>>
+template <typename T, typename C, typename M = simd_mask_type_t<T>>
 concept unqualified_canonical_mfixup =
     cpo_invocable<fixup_t, T, T, C> && requires {
         {
@@ -70,8 +69,7 @@ concept unqualified_canonical_mfixup =
         } -> same_as<cpo_result_t<fixup_t, T, T, C>>;
     };
 
-template <typename T, typename C,
-    typename M = basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>>
+template <typename T, typename C, typename M = simd_mask_type_t<T>>
 concept unqualified_canonical_zmfixup =
     cpo_invocable<fixup_t, T, T, C> && requires {
         {
@@ -84,11 +82,6 @@ concept unqualified_canonical_zmfixup =
 template <>
 struct canonical_impl<fixup_t> {
 public:
-    template <typename T>
-    using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
-
-public:
     template <canonical_vector T, fixflags_for<simd_element_type_t<T>> C>
     requires unqualified_canonical_fixup<T, C>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -100,8 +93,8 @@ public:
     template <canonical_vector T, fixflags_for<simd_element_type_t<T>> C>
     requires unqualified_canonical_mfixup<T, C>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(
-        type_identity_t<T> lhs, mask_t<T> mask, T rhs, C tokens) noexcept {
+    static constexpr T operator()(type_identity_t<T> lhs,
+        simd_mask_type_t<T> mask, T rhs, C tokens) noexcept {
         return fixup(internal::abi<T>, lhs, mask, rhs, tokens);
     }
 
@@ -119,7 +112,7 @@ public:
     template <canonical_vector T, fixflags_for<simd_element_type_t<T>> C>
     requires unqualified_canonical_zmfixup<T, C>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(dx::zero_t zero, mask_t<T> mask,
+    static constexpr T operator()(dx::zero_t zero, simd_mask_type_t<T> mask,
         type_identity_t<T> lhs, T rhs, C tokens) noexcept {
         return fixup(internal::abi<T>, zero, mask, lhs, rhs, tokens);
     }
@@ -221,17 +214,15 @@ template <>
 struct fallback_impl<fixup_t> {
 public:
     // TODO enable only if canonical is provided
-    template <floating_point E, simd_abi A, fixflags_for<E> C>
+    template <canonical_vector T, fixflags_for<simd_element_type_t<T>> C>
+    requires floating_point_like<simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(basic_vector<E, A> src,
-        basic_vector<E, A> result, C conditions) noexcept {
-        auto mask = dx::broadcast<E, A>(false);
+    static constexpr T operator()(T src, T result, C conditions) noexcept {
         fpfix::template_for(
             [&](auto flags, auto val) {
-                using simd = basic_vector<E, A>;
                 if constexpr (val == fpfix::signed_inf) {
                     result = dx::select(match(src, flags),
-                        dx::negate(dx::signbit(src), dx::infinity_v<simd>),
+                        dx::negate(dx::signbit(src), dx::infinity_v<T>),
                         result);
                 } else if constexpr (val == fpfix::revert) {
                     result = dx::select(match(src, flags), src, result);
@@ -263,10 +254,10 @@ private:
         static constexpr auto posneg = fpfix::positive | fpfix::negative;
     };
 
-    template <floating_point E, simd_abi A>
+    template <canonical_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL match_disjoint(
-        basic_vector<E, A> src, auto flags) noexcept {
+    static constexpr simd_mask_type_t<T>
+        DPL_VECTORCALL match_disjoint(T src, auto flags) noexcept {
         static_assert((flags & fpfix::nan) != fpfix::nan);
         static_assert((flags & fpfix::infinity) != fpfix::infinity);
         static_assert((flags & fpfix::finite) != fpfix::finite);
@@ -334,14 +325,14 @@ private:
                     match_disjoint(src, F & ~fpfix::one);
             }
         } else {
-            return dx::broadcast<E, A>(false);
+            return dx::broadcast<T>(false);
         }
     }
 
-    template <floating_point E, simd_abi A>
+    template <canonical_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL match_posneg(
-        basic_vector<E, A> src, auto flags) noexcept {
+    static constexpr simd_mask_type_t<T>
+        DPL_VECTORCALL match_posneg(T src, auto flags) noexcept {
         using flag_type = decltype(flags);
         constexpr flag_type F{};
         static_assert((F & fpfix::finite) != fpfix::finite);
@@ -355,7 +346,7 @@ private:
             } else if constexpr (!(F & fpfix::one)) {
                 return dx::cmpneq(src, dx::one);
             } else {
-                return dx::broadcast<E, A>(true);
+                return dx::broadcast<T>(true);
             }
         }();
 
@@ -406,16 +397,16 @@ private:
         }
     }
 
-    template <floating_point E, simd_abi A>
+    template <canonical_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL match(
-        basic_vector<E, A> src, auto flags) noexcept {
+    static constexpr simd_mask_type_t<T>
+        DPL_VECTORCALL match(T src, auto flags) noexcept {
         using flag_type = decltype(flags);
         constexpr flag_type F{};
         if constexpr (F == fpfix::all) {
-            return dx::broadcast<E, A>(true);
+            return dx::broadcast<T>(true);
         } else if constexpr (F == fpfix::none) {
-            return dx::broadcast<E, A>(false);
+            return dx::broadcast<T>(false);
         } else if constexpr (F == (fpfix::infinity | fpfix::finite)) {
             return !dx::isnan(src);
         } else if constexpr (F == sets::nonfinite) {

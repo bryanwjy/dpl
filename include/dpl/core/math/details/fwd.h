@@ -6,6 +6,9 @@
 __DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::fmath {
 namespace dx = __DPL datapar; // NOLINT
+
+void make_tuple(...) noexcept = delete;
+
 } // namespace datapar::fmath
 
 namespace datapar::internal {

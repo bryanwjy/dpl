@@ -25,8 +25,8 @@ namespace datapar::internal {
 void isnanq(...) noexcept = delete;
 
 struct DPL_EMPTY_BASES isnanq_t :
-    private math_operation_base<isnanq_t>,
-    private maskable_predicate_base<isnanq_t> {
+    public math_operation_base<isnanq_t>,
+    public maskable_predicate_base<isnanq_t> {
     using math_operation_base<isnanq_t>::operator();
     using maskable_predicate_base<isnanq_t>::operator();
 };
@@ -38,59 +38,55 @@ struct operation_signature<isnanq_t> {
 
 template <>
 struct fallback_impl<isnanq_t> {
-private:
-    template <typename T>
-    using result_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
-
 public:
-    template <simd_abi A, simd_element_for<A> E>
-    requires floating_point<E>
+    template <canonical_vector T>
+    requires binary_layout_floating_point<simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_mask<E, A>
-        DPL_VECTORCALL operator()(basic_vector<E, A> val) noexcept {
-        using sint = signed_representation_t<E>;
-        constexpr sint signaling_bit = sint(1) << (dx::mantissa_width_v<E> - 1);
-        constexpr sint max_snan =
-            __DPL bit_cast<sint>(dx::value_bits_v<E>) ^ signaling_bit;
+    static constexpr simd_mask_type_t<T>
+        DPL_VECTORCALL operator()(T val) noexcept {
+        using E = simd_element_type_t<T>;
+        using sint_t = signed_representation_t<E>;
+        constexpr sint_t signaling_bit = sint_t(1)
+            << (dx::mantissa_width_v<E> - 1);
+        constexpr sint_t max_snan =
+            __DPL bit_cast<sint_t>(dx::value_bits_v<E>) ^ signaling_bit;
 
-        using sint = signed_representation_t<E>;
         auto const abs_val = dx::bwandnot(val, dx::msb);
-        return dx::cmpgt(dx::reinterpret<sint>(abs_val), max_snan);
+        return dx::cmpgt(dx::reinterpret<sint_t>(abs_val), max_snan);
     }
 
-    template <simd_abi A, simd_element_for<A> E>
-    requires floating_point<E>
+    template <canonical_vector T>
+    requires binary_layout_floating_point<simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_mask<E, A>
-        DPL_VECTORCALL operator()(
-            basic_mask<E, A> mask, basic_vector<E, A> val) noexcept {
-        using sint = signed_representation_t<E>;
-        constexpr sint signaling_bit = sint(1) << (dx::mantissa_width_v<E> - 1);
-        constexpr sint max_snan =
-            __DPL bit_cast<sint>(dx::value_bits_v<E>) ^ signaling_bit;
+    static constexpr simd_mask_type_t<T>
+        DPL_VECTORCALL operator()(simd_mask_type_t<T> mask, T val) noexcept {
+        using E = simd_element_type_t<T>;
+        using sint_t = signed_representation_t<E>;
+        constexpr sint_t signaling_bit = sint_t(1)
+            << (dx::mantissa_width_v<E> - 1);
+        constexpr sint_t max_snan =
+            __DPL bit_cast<sint_t>(dx::value_bits_v<E>) ^ signaling_bit;
 
-        using sint = signed_representation_t<E>;
         auto const abs_val = dx::bwandnot(val, dx::msb);
-        auto const max = dx::broadcast<E, A>(max_snan);
-        return dx::cmpgt(mask, dx::reinterpret<sint>(abs_val), max);
+        auto const max = dx::broadcast<mx::exponent_vector_t<T>>(max_snan);
+        return dx::cmpgt(mask, dx::reinterpret<sint_t>(abs_val), max);
     }
 
     template <canonical_vector T, const_mask_for<T> M>
-    requires floating_point<simd_element_type_t<T>>
+    requires binary_layout_floating_point<simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr result_t<T>
+    static constexpr simd_mask_type_t<T>
         DPL_VECTORCALL operator()(M cmask, T val) noexcept {
         using E = simd_element_type_t<T>;
-        using sint = signed_representation_t<E>;
-        constexpr sint signaling_bit = sint(1) << (dx::mantissa_width_v<E> - 1);
-        constexpr sint max_snan =
-            __DPL bit_cast<sint>(dx::value_bits_v<E>) ^ signaling_bit;
+        using sint_t = signed_representation_t<E>;
+        constexpr sint_t signaling_bit = sint_t(1)
+            << (dx::mantissa_width_v<E> - 1);
+        constexpr sint_t max_snan =
+            __DPL bit_cast<sint_t>(dx::value_bits_v<E>) ^ signaling_bit;
 
-        using sint = signed_representation_t<E>;
         auto const abs_val = dx::bwandnot(val, dx::msb);
-        auto const max = dx::broadcast<T>(max_snan);
-        return dx::cmpgt(cmask, dx::reinterpret<sint>(abs_val), max);
+        auto const max = dx::broadcast<mx::exponent_vector_t<T>>(max_snan);
+        return dx::cmpgt(cmask, dx::reinterpret<sint_t>(abs_val), max);
     }
 };
 
@@ -98,7 +94,7 @@ template <typename T, typename A = simd_abi_type_t<T>>
 concept unqualified_canonical_isnanq = requires {
     {
         isnanq(internal::abi<A>, internal::declarg<T>())
-    } -> same_as<basic_mask<simd_element_type_t<T>, A>>;
+    } -> same_as<simd_mask_type_t<T>>;
 };
 
 template <typename S, typename T>
@@ -112,33 +108,26 @@ concept unqualified_canonical_misnanq = cpo_invocable<isnanq_t, T> &&
 
 template <>
 struct canonical_impl<isnanq_t> {
-private:
-    template <typename T>
-    using result_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
-
-    template <typename T>
-    using mask_t DPL_NODEBUG = cpo_result_t<cmpeq_t, T>;
-
 public:
     template <canonical_vector T>
     requires unqualified_canonical_isnanq<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr result_t<T> operator()(T arg) noexcept {
+    static constexpr simd_mask_type_t<T> operator()(T arg) noexcept {
         return isnanq(internal::abi<T>, arg);
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_misnanq<mask_t<T>, T>
+    requires unqualified_canonical_misnanq<simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr mask_t<T> operator()(mask_t<T> src, T val) noexcept {
+    static constexpr simd_mask_type_t<T> operator()(
+        simd_mask_type_t<T> src, T val) noexcept {
         return isnanq(internal::abi<T>, src, val);
     }
 
     template <canonical_vector T, const_mask_for<T> M>
     requires unqualified_canonical_misnanq<launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr mask_t<T> operator()(M cmask, T val) noexcept {
+    static constexpr simd_mask_type_t<T> operator()(M cmask, T val) noexcept {
         return isnanq(internal::abi<T>, dx::to_const_mask<T>(cmask), val);
     }
 };
@@ -161,13 +150,6 @@ concept unqualified_extended_misnanq = cpo_invocable<isnanq_t, T> &&
 
 template <>
 struct extended_impl<isnanq_t> {
-private:
-    template <typename T>
-    using imask_t DPL_NODEBUG = mask_value_t<simd_abi_traits<T>::size>;
-
-    template <typename T, imask_t<T> V>
-    using cmask_t DPL_NODEBUG = const_mask<simd_abi_traits<T>::size, V>;
-
 public:
     template <extended_vector T>
     requires unqualified_extended_isnanq<T>

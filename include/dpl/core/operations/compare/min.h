@@ -133,11 +133,10 @@ template <>
 struct canonical_impl<min_t> {
 private:
     template <typename L, typename R>
-    using result_t DPL_NODEBUG =
-        make_canonical_vector_t<simd_element_type_t<L>, common_abi_t<L, R>>;
+    using result_t DPL_NODEBUG = common_canonical_simd_t<L, R>;
 
     template <typename L, typename R>
-    using mask_t DPL_NODEBUG = simd_mask_type_t<result_t<L, R>>;
+    using mask_t DPL_NODEBUG = simd_mask_type_t<common_canonical_simd_t<L, R>>;
 
 public:
     template <canonical_vector L, common_vector_with<L> R>

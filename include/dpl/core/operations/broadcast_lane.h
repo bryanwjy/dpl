@@ -22,8 +22,8 @@ namespace datapar::internal {
 void broadcast_lane(...) noexcept = delete;
 
 struct DPL_EMPTY_BASES broadcast_lane_t :
-    private primitive_operation_base<broadcast_lane_t>,
-    private maskable_transform_base<broadcast_lane_t> {
+    public primitive_operation_base<broadcast_lane_t>,
+    public maskable_transform_base<broadcast_lane_t> {
     using operation_base<broadcast_lane_t>::operator();
     using maskable_transform_base<broadcast_lane_t>::operator();
 };
@@ -38,7 +38,6 @@ struct operation_signature<broadcast_lane_t> {
 
 template <>
 struct fallback_impl<broadcast_lane_t> {
-
 private:
     template <simd_vector T, integral_constant_like I>
     static consteval auto broadcast_sequence(I) noexcept {

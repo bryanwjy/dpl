@@ -26,8 +26,8 @@ __DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 
 struct DPL_EMPTY_BASES ceil_t :
-    private math_operation_base<ceil_t>,
-    private maskable_transform_base<ceil_t> {
+    public math_operation_base<ceil_t>,
+    public maskable_transform_base<ceil_t> {
     using math_operation_base<ceil_t>::operator();
     using maskable_transform_base<ceil_t>::operator();
 };
@@ -68,32 +68,25 @@ concept unqualified_canonical_mceilne =
 
 template <>
 struct canonical_impl<ceil_t> {
-private:
-    template <typename T>
-    using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
-
 public:
-    template <simd_abi A, simd_element_for<A> E>
+    template <canonical_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(
-        basic_vector<E, A> val) noexcept
-    requires requires { round(internal::abi<A>, val, ceil_exc_v); }
+    static constexpr T operator()(T val) noexcept
+    requires requires { round(internal::abi<T>, val, ceil_exc_v); }
     {
-        return round(internal::abi<A>, val, ceil_exc_v);
+        return round(internal::abi<T>, val, ceil_exc_v);
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mceil<type_identity_t<T>, mask_t<T>, T>
+    requires unqualified_canonical_mceil<T, simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
-        type_identity_t<T> src, mask_t<T> mask, T val) noexcept {
+        type_identity_t<T> src, simd_mask_type_t<T> mask, T val) noexcept {
         return round(internal::abi<T>, src, mask, val, ceil_exc_v);
     }
 
     template <canonical_vector T, const_mask_for<T> M>
-    requires unqualified_canonical_mceil<type_identity_t<T>,
-        launder_cmask_t<T, M>, T>
+    requires unqualified_canonical_mceil<T, launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
         type_identity_t<T> src, M cmask, T val) noexcept {
@@ -102,10 +95,10 @@ public:
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mceil<dx::zero_t, mask_t<T>, T>
+    requires unqualified_canonical_mceil<dx::zero_t, simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
-        dx::zero_t zero, mask_t<T> mask, T val) noexcept {
+        dx::zero_t zero, simd_mask_type_t<T> mask, T val) noexcept {
         return round(internal::abi<T>, zero, mask, val, ceil_exc_v);
     }
 
@@ -118,26 +111,24 @@ public:
     }
     ///
 
-    template <simd_abi A, simd_element_for<A> E>
+    template <canonical_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(
-        basic_vector<E, A> val, rounding::no_exc_t) noexcept
-    requires requires { round(internal::abi<A>, val, ceil_noexc_v); }
+    static constexpr T operator()(T val, rounding::no_exc_t) noexcept
+    requires requires { round(internal::abi<T>, val, ceil_noexc_v); }
     {
-        return round(internal::abi<A>, val, ceil_noexc_v);
+        return round(internal::abi<T>, val, ceil_noexc_v);
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mceilne<type_identity_t<T>, mask_t<T>, T>
+    requires unqualified_canonical_mceilne<T, simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(type_identity_t<T> src, mask_t<T> mask, T val,
-        rounding::no_exc_t) noexcept {
+    static constexpr T operator()(type_identity_t<T> src,
+        simd_mask_type_t<T> mask, T val, rounding::no_exc_t) noexcept {
         return round(internal::abi<T>, src, mask, val, ceil_noexc_v);
     }
 
     template <canonical_vector T, const_mask_for<T> M>
-    requires unqualified_canonical_mceilne<type_identity_t<T>,
-        launder_cmask_t<T, M>, T>
+    requires unqualified_canonical_mceilne<T, launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
         type_identity_t<T> src, M cmask, T val, rounding::no_exc_t) noexcept {
@@ -146,10 +137,10 @@ public:
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mceilne<dx::zero_t, mask_t<T>, T>
+    requires unqualified_canonical_mceilne<dx::zero_t, simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(
-        dx::zero_t zero, mask_t<T> mask, T val, rounding::no_exc_t) noexcept {
+    static constexpr T operator()(dx::zero_t zero, simd_mask_type_t<T> mask,
+        T val, rounding::no_exc_t) noexcept {
         return round(internal::abi<T>, zero, mask, val, ceil_noexc_v);
     }
 
@@ -211,7 +202,7 @@ public:
         return round(__DPL forward<T>(val), ceil_exc_v);
     }
 
-    template <simd_vector S, exact_mask_for<S> M, common_vector_with<S> T>
+    template <simd_vector S, exact_mask_for<S> M, equivalent_vector_with<S> T>
     requires (extended_vector<S> || extended_mask<M> || extended_vector<T>) &&
         unqualified_extended_mceil<S, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -220,7 +211,7 @@ public:
             __DPL forward<T>(val), ceil_exc_v);
     }
 
-    template <simd_vector S, const_mask_for<S> M, common_vector_with<S> T>
+    template <simd_vector S, const_mask_for<S> M, equivalent_vector_with<S> T>
     requires (extended_vector<S> || extended_vector<T>) &&
         unqualified_extended_mceil<S, launder_cmask_t<S, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -255,7 +246,7 @@ public:
         return round( __DPL forward<T>(val), ceil_noexc_v);
     }
 
-    template <simd_vector S, exact_mask_for<S> M, common_vector_with<S> T>
+    template <simd_vector S, exact_mask_for<S> M, equivalent_vector_with<S> T>
     requires (extended_vector<S> || extended_mask<M> || extended_vector<T>) &&
         unqualified_extended_mceilne<S, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -265,7 +256,7 @@ public:
             __DPL forward<T>(val), ceil_noexc_v);
     }
 
-    template <simd_vector S, const_mask_for<S> M, common_vector_with<S> T>
+    template <simd_vector S, const_mask_for<S> M, equivalent_vector_with<S> T>
     requires (extended_vector<S> || extended_vector<T>) &&
         unqualified_extended_mceilne<S, launder_cmask_t<S, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -301,26 +292,30 @@ public:
 
 template <>
 struct fallback_impl<ceil_t> {
-    template <simd_abi A, simd_element_for<A> E>
-    requires binary_layout_floating_point<E>
+    template <canonical_vector T>
+    requires binary_layout_floating_point<simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_vector<E, A>
-        DPL_VECTORCALL operator()(basic_vector<E, A> val) noexcept {
-        auto const isfinite = dx::isfinite(val);
-        auto const finite = dx::select(isfinite, val, dx::zero);
-        auto fr = finite - dx::trunc(finite);
-        fr = dx::subtract(fr, fr > dx::zero, fr, dx::broadcast<E, A>(dx::one));
+    static constexpr T DPL_VECTORCALL operator()(T val) noexcept {
+        auto const vone = dx::broadcast<T>(dx::one);
+        auto fr = dx::subtract(val, dx::trunc(val));
+        fr = dx::subtract(fr, dx::cmpgt(fr, dx::zero), fr, vone);
 
-        auto const result = dx::copysign(finite - fr, finite);
-        return dx::select(isfinite && dx::abs(val) < mx::maxint, result, val);
+        auto const argvalid = dx::cmplt(dx::abs(val), mx::maxint);
+        return dx::copysign(val, argvalid, dx::subtract(val, fr), val);
     }
 
-    template <simd_abi A, simd_element_for<A> E>
-    requires binary_layout_floating_point<E>
+    template <canonical_vector T>
+    requires binary_layout_floating_point<simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(
-        basic_vector<E, A> val, rounding::no_exc_t) noexcept {
-        return operator()(val);
+    static constexpr T operator()(T val, rounding::no_exc_t noexc) noexcept {
+        auto const isfinite = dx::isfinite(val);
+        auto const finite = dx::select(isfinite, val, dx::zero);
+        auto const vone = dx::broadcast<T>(dx::one);
+        auto fr = dx::subtract(finite, dx::trunc(finite, noexc));
+        fr = dx::subtract(fr, dx::cmpgt(fr, dx::zero), fr, vone);
+
+        auto const argvalid = dx::cmplt(dx::abs(val), mx::maxint);
+        return dx::copysign(val, argvalid, dx::subtract(finite, fr), finite);
     }
 };
 } // namespace datapar::internal

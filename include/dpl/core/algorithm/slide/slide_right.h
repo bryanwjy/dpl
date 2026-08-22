@@ -69,12 +69,12 @@ struct fallback_impl<slide_right_t> {
 };
 
 template <typename L, typename R, typename N = size_t,
-    typename A = common_abi_t<L, R>>
+    typename T = common_canonical_simd_t<L, R>>
 concept unqualified_canonical_slide_right = requires {
     {
-        slide_right(internal::abi<A>, internal::declarg<L>(),
+        slide_right(internal::abi<T>, internal::declarg<L>(),
             internal::declarg<R>(), internal::declarg<N>())
-    } -> same_as<basic_vector<simd_element_type_t<L>, A>>;
+    } -> same_as<T>;
 };
 
 template <typename S, typename M, typename L, typename R, typename N = size_t,
@@ -94,18 +94,17 @@ template <>
 struct canonical_impl<slide_right_t> {
 private:
     template <typename L, typename R>
-    using result_t DPL_NODEBUG =
-        make_canonical_vector_t<simd_element_type_t<L>, common_abi_t<L, R>>;
+    using result_t DPL_NODEBUG = common_canonical_simd_t<L, R>;
 
     template <typename L, typename R>
-    using mask_t DPL_NODEBUG =
-        make_canonical_mask_t<simd_element_type_t<L>, common_abi_t<L, R>>;
+    using mask_t DPL_NODEBUG = simd_mask_type_t<result_t<L, R>>;
 
 public:
     template <canonical_vector L, common_vector_with<L> R>
     requires canonical_vector<R> && unqualified_canonical_slide_right<L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L lhs, R rhs, size_t count) noexcept {
+    static constexpr result_t<L, R> operator()(
+        L lhs, R rhs, size_t count) noexcept {
         return slide_right(internal::abi<common_abi_t<L, R>>, lhs, rhs, count);
     }
 
@@ -113,8 +112,8 @@ public:
     requires canonical_vector<R> &&
         unqualified_canonical_mslide_right<result_t<L, R>, mask_t<L, R>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(result_t<L, R> src, mask_t<L, R> mask,
-        L lhs, R rhs, size_t count) noexcept {
+    static constexpr result_t<L, R> operator()(result_t<L, R> src,
+        mask_t<L, R> mask, L lhs, R rhs, size_t count) noexcept {
         return slide_right(
             internal::abi<common_abi_t<L, R>>, src, mask, lhs, rhs, count);
     }
@@ -125,7 +124,7 @@ public:
         unqualified_canonical_mslide_right<result_t<L, R>,
             launder_cmask_t<result_t<L, R>, M>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
+    static constexpr result_t<L, R> operator()(
         result_t<L, R> src, M cmask, L lhs, R rhs, size_t count) noexcept {
         return slide_right(internal::abi<common_abi_t<L, R>>, src,
             dx::to_const_mask<result_t<L, R>>(cmask), lhs, rhs, count);
@@ -135,8 +134,8 @@ public:
     requires canonical_vector<R> &&
         unqualified_canonical_mslide_right<dx::zero_t, mask_t<L, R>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(dx::zero_t zero, mask_t<L, R> mask, L lhs,
-        R rhs, size_t count) noexcept {
+    static constexpr result_t<L, R> operator()(dx::zero_t zero,
+        mask_t<L, R> mask, L lhs, R rhs, size_t count) noexcept {
         return slide_right(
             internal::abi<common_abi_t<L, R>>, zero, mask, lhs, rhs, count);
     }
@@ -147,7 +146,7 @@ public:
         unqualified_canonical_mslide_right<dx::zero_t,
             launder_cmask_t<result_t<L, R>, M>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
+    static constexpr result_t<L, R> operator()(
         dx::zero_t zero, M cmask, L lhs, R rhs, size_t count) noexcept {
         return slide_right(internal::abi<common_abi_t<L, R>>, zero,
             dx::to_const_mask<result_t<L, R>>(cmask), lhs, rhs, count);
@@ -158,7 +157,7 @@ public:
         integral_constant_like N>
     requires canonical_vector<R> && unqualified_canonical_slide_right<L, R, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L lhs, R rhs, N count) noexcept {
+    static constexpr result_t<L, R> operator()(L lhs, R rhs, N count) noexcept {
         return slide_right(internal::abi<common_abi_t<L, R>>, lhs, rhs, count);
     }
 
@@ -168,7 +167,7 @@ public:
         unqualified_canonical_mslide_right<result_t<L, R>, mask_t<L, R>, L, R,
             N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
+    static constexpr result_t<L, R> operator()(
         result_t<L, R> src, mask_t<L, R> mask, L lhs, R rhs, N count) noexcept {
         return slide_right(
             internal::abi<common_abi_t<L, R>>, src, mask, lhs, rhs, count);
@@ -180,7 +179,7 @@ public:
         unqualified_canonical_mslide_right<result_t<L, R>,
             launder_cmask_t<result_t<L, R>, M>, L, R, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
+    static constexpr result_t<L, R> operator()(
         result_t<L, R> src, M cmask, L lhs, R rhs, N count) noexcept {
         return slide_right(internal::abi<common_abi_t<L, R>>, src,
             dx::to_const_mask<result_t<L, R>>(cmask), lhs, rhs, count);
@@ -191,7 +190,7 @@ public:
     requires canonical_vector<R> &&
         unqualified_canonical_mslide_right<dx::zero_t, mask_t<L, R>, L, R, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
+    static constexpr result_t<L, R> operator()(
         dx::zero_t zero, mask_t<L, R> mask, L lhs, R rhs, N count) noexcept {
         return slide_right(
             internal::abi<common_abi_t<L, R>>, zero, mask, lhs, rhs, count);
@@ -203,7 +202,7 @@ public:
         unqualified_canonical_mslide_right<dx::zero_t,
             launder_cmask_t<result_t<L, R>, M>, L, R, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
+    static constexpr result_t<L, R> operator()(
         dx::zero_t zero, M cmask, L lhs, R rhs, N count) noexcept {
         return slide_right(internal::abi<common_abi_t<L, R>>, zero,
             dx::to_const_mask<result_t<L, R>>(cmask), lhs, rhs, count);

@@ -4,6 +4,7 @@
 #include "dpl/config.h"
 
 #include "dpl/core/math/details/compliance.h"
+#include "dpl/core/math/details/floating_point_simd.h"
 #include "dpl/core/math/details/ilogb.h"
 #include "dpl/core/math/rounding.h"
 
@@ -27,8 +28,8 @@ __DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 
 struct trunc_t :
-    private math_operation_base<trunc_t>,
-    private maskable_transform_base<trunc_t> {
+    public math_operation_base<trunc_t>,
+    public maskable_transform_base<trunc_t> {
     using math_operation_base<trunc_t>::operator();
     using maskable_transform_base<trunc_t>::operator();
 };
@@ -69,32 +70,25 @@ concept unqualified_canonical_mtruncne =
 
 template <>
 struct canonical_impl<trunc_t> {
-private:
-    template <typename T>
-    using mask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<T>, simd_abi_type_t<T>>;
-
 public:
-    template <simd_abi A, simd_element_for<A> E>
+    template <canonical_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(
-        basic_vector<E, A> val) noexcept
-    requires requires { round(internal::abi<A>, val, trunc_exc_v); }
+    static constexpr T operator()(T val) noexcept
+    requires requires { round(internal::abi<T>, val, trunc_exc_v); }
     {
-        return round(internal::abi<A>, val, trunc_exc_v);
+        return round(internal::abi<T>, val, trunc_exc_v);
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mtrunc<type_identity_t<T>, mask_t<T>, T>
+    requires unqualified_canonical_mtrunc<T, simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
-        type_identity_t<T> src, mask_t<T> mask, T val) noexcept {
+        type_identity_t<T> src, simd_mask_type_t<T> mask, T val) noexcept {
         return round(internal::abi<T>, src, mask, val, trunc_exc_v);
     }
 
     template <canonical_vector T, const_mask_for<T> M>
-    requires unqualified_canonical_mtrunc<type_identity_t<T>,
-        launder_cmask_t<T, M>, T>
+    requires unqualified_canonical_mtrunc<T, launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
         type_identity_t<T> src, M cmask, T val) noexcept {
@@ -103,10 +97,10 @@ public:
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mtrunc<dx::zero_t, mask_t<T>, T>
+    requires unqualified_canonical_mtrunc<dx::zero_t, simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
-        dx::zero_t zero, mask_t<T> mask, T val) noexcept {
+        dx::zero_t zero, simd_mask_type_t<T> mask, T val) noexcept {
         return round(internal::abi<T>, zero, mask, val, trunc_exc_v);
     }
 
@@ -119,26 +113,24 @@ public:
     }
     ///
 
-    template <simd_abi A, simd_element_for<A> E>
+    template <canonical_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(
-        basic_vector<E, A> val, rounding::no_exc_t) noexcept
-    requires requires { round(internal::abi<A>, val, trunc_noexc_v); }
+    static constexpr T operator()(T val, rounding::no_exc_t) noexcept
+    requires requires { round(internal::abi<T>, val, trunc_noexc_v); }
     {
-        return round(internal::abi<A>, val, trunc_noexc_v);
+        return round(internal::abi<T>, val, trunc_noexc_v);
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mtruncne<type_identity_t<T>, mask_t<T>, T>
+    requires unqualified_canonical_mtruncne<T, simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(type_identity_t<T> src, mask_t<T> mask, T val,
-        rounding::no_exc_t) noexcept {
+    static constexpr T operator()(type_identity_t<T> src,
+        simd_mask_type_t<T> mask, T val, rounding::no_exc_t) noexcept {
         return round(internal::abi<T>, src, mask, val, trunc_noexc_v);
     }
 
     template <canonical_vector T, const_mask_for<T> M>
-    requires unqualified_canonical_mtruncne<type_identity_t<T>,
-        launder_cmask_t<T, M>, T>
+    requires unqualified_canonical_mtruncne<T, launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
         type_identity_t<T> src, M cmask, T val, rounding::no_exc_t) noexcept {
@@ -147,10 +139,10 @@ public:
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mtruncne<dx::zero_t, mask_t<T>, T>
+    requires unqualified_canonical_mtruncne<dx::zero_t, simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(
-        dx::zero_t zero, mask_t<T> mask, T val, rounding::no_exc_t) noexcept {
+    static constexpr T operator()(dx::zero_t zero, simd_mask_type_t<T> mask,
+        T val, rounding::no_exc_t) noexcept {
         return round(internal::abi<T>, zero, mask, val, trunc_noexc_v);
     }
 
@@ -213,7 +205,7 @@ public:
         return round(__DPL forward<T>(val), trunc_exc_v);
     }
 
-    template <simd_vector S, exact_mask_for<S> M, common_vector_with<S> T>
+    template <simd_vector S, exact_mask_for<S> M, equivalent_vector_with<S> T>
     requires (extended_vector<S> || extended_mask<M> || extended_vector<T>) &&
         unqualified_extended_mtrunc<S, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -222,7 +214,7 @@ public:
             __DPL forward<T>(val), trunc_exc_v);
     }
 
-    template <simd_vector S, const_mask_for<S> M, common_vector_with<S> T>
+    template <simd_vector S, const_mask_for<S> M, equivalent_vector_with<S> T>
     requires (extended_vector<S> || extended_vector<T>) &&
         unqualified_extended_mtrunc<S, launder_cmask_t<S, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -257,7 +249,7 @@ public:
         return round( __DPL forward<T>(val), trunc_noexc_v);
     }
 
-    template <simd_vector S, exact_mask_for<S> M, common_vector_with<S> T>
+    template <simd_vector S, exact_mask_for<S> M, equivalent_vector_with<S> T>
     requires (extended_vector<S> || extended_mask<M> || extended_vector<T>) &&
         unqualified_extended_mtruncne<S, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -267,7 +259,7 @@ public:
             __DPL forward<T>(val), trunc_noexc_v);
     }
 
-    template <simd_vector S, const_mask_for<S> M, common_vector_with<S> T>
+    template <simd_vector S, const_mask_for<S> M, equivalent_vector_with<S> T>
     requires (extended_vector<S> || extended_vector<T>) &&
         unqualified_extended_mtruncne<S, launder_cmask_t<S, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -304,34 +296,40 @@ public:
 
 template <>
 struct fallback_impl<trunc_t> {
-private:
-    template <typename E>
-    static constexpr auto nonmantissa_v = __DPL type_bit_v<E> -
-        __DPL countr_zero(floating_point_traits<E>::exponent_mask);
 
 public:
-    template <simd_abi A, simd_element_for<A> E>
-    requires binary_layout_floating_point<E>
+    template <canonical_vector T>
+    requires binary_layout_floating_point<simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(
-        basic_vector<E, A> val) noexcept {
+    static constexpr T DPL_VECTORCALL operator()(T val) noexcept {
         // Based on musl libm
-        using sint = signed_representation_t<E>;
-        auto const nonmantissa = dx::broadcast<sint, A>(nonmantissa_v<E>);
-        auto const exp = [](auto exp, auto nonmantissa) {
-            return dx::select(exp < nonmantissa, dx::one, exp);
-        }(mx::ilogb(mx::compliance::unsafe, val) + nonmantissa, nonmantissa);
+        using vexp_t = mx::exponent_vector_t<T>;
+        using E = simd_element_type_t<T>;
+        constexpr auto nonmantissa = __DPL to_signed(__DPL type_bit_v<E> -
+            __DPL countr_zero(floating_point_traits<E>::exponent_mask));
+
+        auto const vnonmantissa = dx::broadcast<vexp_t>(nonmantissa);
+        auto const vone = dx::broadcast<vexp_t>(dx::one);
+
+        auto exp = mx::ilogb(mx::compliance::unsafe, val);
+        exp = dx::add(exp, vnonmantissa);
+        exp = dx::select(dx::cmplt(exp, vnonmantissa), vone, exp);
+
+        auto const vbits = dx::broadcast<vexp_t>(__DPL type_bit_v<E>);
+        auto const vbitsm1 = dx::broadcast<vexp_t>(__DPL type_bit_v<E> - 1);
+        exp = dx::min(exp, vbitsm1); // Workaround UB
 
         // Operation might be slow for backends without vector right shift
-        auto const m = dx::broadcast<E, A>(dx::all_bits) >> exp;
+        // But trunc is usually supported as an intrinsic so should be fine
+        auto const m = dx::bwshift_right(
+            dx::cmplt(exp, vbits), dx::broadcast<T>(dx::all_bits), exp);
         return dx::bwandnot(val, m);
     }
 
-    template <simd_abi A, simd_element_for<A> E>
-    requires binary_layout_floating_point<E>
+    template <canonical_vector T>
+    requires binary_layout_floating_point<simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(
-        basic_vector<E, A> val, rounding::no_exc_t) noexcept {
+    static constexpr T operator()(T val, rounding::no_exc_t) noexcept {
         return operator()(val);
     }
 };

@@ -22,8 +22,8 @@ namespace datapar::internal {
 void ldexp(...) noexcept = delete;
 
 struct DPL_EMPTY_BASES ldexp_t :
-    private math_operation_base<ldexp_t>,
-    private maskable_transform_base<ldexp_t> {
+    public math_operation_base<ldexp_t>,
+    public maskable_transform_base<ldexp_t> {
     using math_operation_base<ldexp_t>::operator();
     using maskable_transform_base<ldexp_t>::operator();
 };
@@ -34,11 +34,11 @@ struct operation_signature<ldexp_t> {
         simd_vector auto&&, simd_vector auto&&) noexcept {}
 };
 
-template <typename L, typename R, typename A = common_abi_t<L, R>>
+template <typename L, typename R>
 concept unqualified_canonical_ldexp = requires {
     {
-        ldexp(internal::abi<A>, internal::declarg<L>(), internal::declarg<R>())
-    } -> same_as<basic_vector<simd_element_type_t<L>, A>>;
+        ldexp(internal::abi<L>, internal::declarg<L>(), internal::declarg<R>())
+    } -> same_as<L>;
 };
 
 template <typename S, typename M, typename L, typename R>
@@ -53,65 +53,50 @@ concept unqualified_canonical_mldexp = cpo_invocable<ldexp_t, L, R> &&
 
 template <>
 struct canonical_impl<ldexp_t> {
-private:
-    template <typename L, typename R>
-    using vresult_t DPL_NODEBUG =
-        basic_vector<simd_element_type_t<L>, common_abi_t<L, R>>;
-
-    template <typename L, typename R>
-    using vmask_t DPL_NODEBUG =
-        basic_mask<simd_element_type_t<L>, common_abi_t<L, R>>;
-
-    template <typename L, typename R, typename M>
-    using vcmask_t DPL_NODEBUG =
-        launder_cmask_t<cpo_result_t<ldexp_t, L, R>, M>;
-
-public:
     template <canonical_vector L, canonical_vector R>
-    requires canonical_vector<R> && unqualified_canonical_ldexp<L, R>
+    requires same_abi_as<simd_abi_type_t<L>, simd_abi_type_t<R>> &&
+        unqualified_canonical_ldexp<L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr vresult_t<L, R> operator()(L lhs, R rhs) noexcept {
-        return ldexp(internal::abi<common_abi_t<L, R>>, lhs, rhs);
+    static constexpr L operator()(L lhs, R rhs) noexcept {
+        return ldexp(internal::abi<L>, lhs, rhs);
     }
 
     template <canonical_vector L, canonical_vector R>
-    requires canonical_vector<R> &&
-        unqualified_canonical_mldexp<vresult_t<L, R>, vmask_t<L, R>, L, R>
+    requires same_abi_as<simd_abi_type_t<L>, simd_abi_type_t<R>> &&
+        unqualified_canonical_mldexp<L, simd_mask_type_t<L>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr vresult_t<L, R> operator()(
-        vresult_t<L, R> src, vmask_t<L, R> mask, L lhs, R rhs) noexcept {
-        return ldexp(internal::abi<common_abi_t<L, R>>, src, mask, lhs, rhs);
+    static constexpr L operator()(type_identity_t<L> src,
+        simd_mask_type_t<L> mask, L lhs, R rhs) noexcept {
+        return ldexp(internal::abi<L>, src, mask, lhs, rhs);
     }
 
-    template <canonical_vector L, canonical_vector R,
-        const_mask_for<vresult_t<L, R>> M>
-    requires canonical_vector<R> &&
-        unqualified_canonical_mldexp<vresult_t<L, R>, vcmask_t<L, R, M>, L, R>
+    template <canonical_vector L, const_mask_for<L> M, canonical_vector R>
+    requires same_abi_as<simd_abi_type_t<L>, simd_abi_type_t<R>> &&
+        unqualified_canonical_mldexp<L, launder_cmask_t<L, M>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr vresult_t<L, R> operator()(
-        vresult_t<L, R> src, M cmask, L lhs, R rhs) noexcept {
-        return ldexp(internal::abi<common_abi_t<L, R>>, src,
-            dx::to_const_mask<vresult_t<L, R>>(cmask), lhs, rhs);
+    static constexpr L operator()(
+        type_identity_t<L> src, M cmask, L lhs, R rhs) noexcept {
+        return ldexp(
+            internal::abi<L>, src, dx::to_const_mask<L>(cmask), lhs, rhs);
     }
 
     template <canonical_vector L, canonical_vector R>
-    requires canonical_vector<R> &&
-        unqualified_canonical_mldexp<dx::zero_t, vmask_t<L, R>, L, R>
+    requires same_abi_as<simd_abi_type_t<L>, simd_abi_type_t<R>> &&
+        unqualified_canonical_mldexp<dx::zero_t, simd_mask_type_t<L>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr vresult_t<L, R> operator()(
-        dx::zero_t zero, vmask_t<L, R> mask, L lhs, R rhs) noexcept {
-        return ldexp(internal::abi<common_abi_t<L, R>>, zero, mask, lhs, rhs);
+    static constexpr L operator()(
+        dx::zero_t zero, simd_mask_type_t<L> mask, L lhs, R rhs) noexcept {
+        return ldexp(internal::abi<L>, zero, mask, lhs, rhs);
     }
 
-    template <canonical_vector L, canonical_vector R,
-        const_mask_for<vresult_t<L, R>> M>
-    requires canonical_vector<R> &&
-        unqualified_canonical_mldexp<dx::zero_t, vcmask_t<L, R, M>, L, R>
+    template <canonical_vector L, const_mask_for<L> M, canonical_vector R>
+    requires same_abi_as<simd_abi_type_t<L>, simd_abi_type_t<R>> &&
+        unqualified_canonical_mldexp<dx::zero_t, launder_cmask_t<L, M>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr vresult_t<L, R> operator()(
+    static constexpr L operator()(
         dx::zero_t zero, M cmask, L lhs, R rhs) noexcept {
-        return ldexp(internal::abi<common_abi_t<L, R>>, zero,
-            dx::to_const_mask<vresult_t<L, R>>(cmask), lhs, rhs);
+        return ldexp(
+            internal::abi<L>, zero, dx::to_const_mask<L>(cmask), lhs, rhs);
     }
 };
 
@@ -148,7 +133,8 @@ public:
         return ldexp(__DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 
-    template <simd_vector S, exact_mask_for<S> M, simd_vector L, simd_vector R>
+    template <simd_vector S, exact_mask_for<S> M, vector_subsumed_by<S> L,
+        simd_vector R>
     requires (extended_vector<S> || extended_mask<M> || extended_vector<L> ||
                  extended_vector<R>) &&
         unqualified_extended_mldexp<S, M, L, R>
@@ -158,7 +144,8 @@ public:
             __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 
-    template <simd_vector S, const_mask_for<S> M, simd_vector L, simd_vector R>
+    template <simd_vector S, const_mask_for<S> M, vector_subsumed_by<S> L,
+        simd_vector R>
     requires (extended_vector<S> || extended_vector<L> || extended_vector<R>) &&
         unqualified_extended_mldexp<S, launder_cmask_t<S, M>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -192,44 +179,49 @@ public:
 template <>
 struct fallback_impl<ldexp_t> {
 private:
-    template <signed_integral E, simd_abi A>
+    template <canonical_vector T>
+    requires signed_integral<simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> signbit(
-        basic_vector<E, A> val) noexcept {
-        constexpr auto shift = sizeof(E) * char_bit_v - 1;
-        return val >> imm<shift>;
+    static constexpr T signbit(T val) noexcept {
+        using E = simd_element_type_t<T>;
+        constexpr auto shift = __DPL type_bit_v<E> - 1;
+        return dx::bwshift_right(val, imm<shift>);
     }
 
 public:
-    template <floating_point E, simd_abi A>
+    template <canonical_vector T>
+    requires binary_layout_floating_point<simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_vector<E, A>
-        DPL_VECTORCALL operator()(basic_vector<E, A> num,
-            basic_vector<signed_representation_t<E>, A> exp) noexcept {
-
-        constexpr auto mantissa_shift = imm<dx::mantissa_width_v<E>>;
-        using sint = signed_representation_t<E>;
-        constexpr auto exp_mask =
-            dx::exponent_mask_v<E, sint> >> mantissa_shift;
-        constexpr auto exp_bias = dx::exponent_bias<E>;
+    static constexpr T DPL_VECTORCALL operator()(
+        T num, mx::exponent_vector_t<T> exp) noexcept {
+        using E = simd_element_type_t<T>;
+        using traits = floating_point_traits<E>;
+        constexpr auto shift = __DPL countr_zero(traits::exponent_mask);
+        constexpr auto bexp_max = __DPL to_signed(
+            __DPL to_underlying(traits::exponent_mask >> shift));
         constexpr auto chunk =
-            __DPL popcount(static_cast<unsigned>(exp_bias)) - 1;
+            __DPL popcount(__DPL to_unsigned(traits::exponent_bias)) - 1;
         constexpr auto lshift = imm<chunk>;
         constexpr auto rshift = imm<chunk - 2>;
+
         auto const sign = fallback_impl::signbit(exp);
-        auto m = (((sign + exp) >> lshift) - sign) << rshift;
-        exp = exp - (m << imm<2>);
+        auto m = dx::add(sign, exp);
+        m = dx::bwshift_right(m, lshift);
+        m = dx::subtract(m, sign);
+        m = dx::bwshift_left(m, rshift);
 
-        m += exp_bias;
+        exp = dx::subtract(exp, dx::bwshift_left(m, imm<2zu>));
+        m = dx::add(m, traits::exponent_bias);
         m = dx::max(dx::zero, m);
-        m = dx::min(exp_mask, m);
-
-        using simdi = basic_vector<sint, A>;
-        auto u = dx::reinterpret<E>(m << mantissa_shift);
-
-        num *= [](auto u2) { return u2 * u2; }(u * u);
-
-        return num * dx::reinterpret<E>((exp + exp_bias) << mantissa_shift);
+        m = dx::min(bexp_max, m);
+        m = dx::bwshift_left(m, imm<shift>);
+        auto u = dx::reinterpret<E>(m);
+        auto const u4 = [](T u2) { return dx::multiply(u2, u2); }(
+                            dx::multiply(u, u));
+        num = dx::multiply(num, u4);
+        exp = dx::add(exp, traits::exponent_bias);
+        exp = dx::bwshift_left(exp, imm<shift>);
+        return dx::multiply(num, dx::reinterpret<E>(exp));
     }
 };
 } // namespace datapar::internal

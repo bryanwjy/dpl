@@ -11,6 +11,7 @@
 #if !DPL_MODULES
 #  include "dpl/core/basic/basic_vector.h" // IWYU pragma: export
 #  include "dpl/core/basic/broadcast.h"
+#  include "dpl/core/basic/tuple_access.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_element.h"
 #  include "dpl/core/immediate/constants/ln2.h"
@@ -28,10 +29,8 @@ struct sqrt_t;
 } // namespace datapar::internal
 
 namespace datapar::fmath {
-
-template <floating_point_like T, simd_abi A>
-requires simd_floating_point_for<T, A>
-struct pair {
+template <floating_point_like T, fixed_width_abi A>
+struct basic_pair : simd_tuple_base<basic_pair<T, A>> {
     using value_type = T;
     using abi_type = A;
     using element_type = basic_vector<T, A>;
@@ -39,286 +38,372 @@ struct pair {
     basic_vector<T, A> upper;
     basic_vector<T, A> lower;
 
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    constexpr pair DPL_VECTORCALL operator+(
-        this pair self, element_type right) noexcept {
-        auto s = self.upper + right;
-        auto v = s - self.upper;
-        return pair{
-            .upper = s,
-            .lower = self.upper - (s - v) + (right - v) + self.lower,
-        };
+    template <size_t I>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    constexpr element_type get(this basic_pair const& self) noexcept {
+        if constexpr (I == 0) {
+            return self.upper;
+        } else {
+            static_assert(I == 1);
+            return self.lower;
+        }
     }
 
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    friend constexpr pair DPL_VECTORCALL operator+(
-        element_type left, pair right) noexcept {
-        auto s = left + right.upper;
-        auto v = s - left;
-        return pair{
-            .upper = s,
-            .lower = left - (s - v) + (right.upper - v) + right.lower,
-        };
-    }
-
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    constexpr pair DPL_VECTORCALL operator+(
-        this pair self, pair right) noexcept {
-        auto s = self.upper + right.upper;
-        auto v = s - self.upper;
-        auto t = self.upper - (s - v) + (right.upper - v);
-        return pair{
-            .upper = s,
-            .lower = t + (self.lower + right.lower),
-        };
-    }
-
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    constexpr pair DPL_VECTORCALL operator-(
-        this pair self, element_type right) noexcept {
-        auto s = self.upper - right;
-        return pair{
-            .upper = s,
-            .lower = self.upper - s - right + self.lower,
-        };
-    }
-
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    friend constexpr pair DPL_VECTORCALL operator-(
-        element_type left, pair right) noexcept {
-        auto s = left - right.upper;
-        return pair{
-            .upper = s,
-            .lower = left - s - right.upper - right.lower,
-        };
-    }
-
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    constexpr pair DPL_VECTORCALL operator-(
-        this pair self, pair right) noexcept {
-        auto s = self.upper - right.upper;
-        auto v = s - self.upper;
-        auto t = self.upper - (s - v) - (right.upper + v);
-        return pair{
-            .upper = s,
-            .lower = t + (self.lower - right.lower),
-        };
-    }
-
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    constexpr pair DPL_VECTORCALL operator-(this pair self) noexcept {
-        return pair{
-            .upper = -self.upper,
-            .lower = -self.lower,
-        };
-    }
-
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    constexpr pair DPL_VECTORCALL operator/(
-        this pair self, pair right) noexcept {
-        auto t = dx::one / right.upper;
-        auto s = self.upper * t;
-        auto u = dx::mulsub(t, self.upper, s);
-        auto v =
-            dx::nmuladd(right.lower, t, dx::nmuladd(right.upper, t, dx::one));
-        return pair{
-            .upper = s,
-            .lower = dx::muladd(s, v, dx::muladd(self.lower, t, u)),
-        };
-    }
-
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    constexpr pair DPL_VECTORCALL operator*(
-        this pair self, pair right) noexcept {
-
-        auto const s = self.upper * right.upper;
-        return pair{
-            .upper = s,
-            .lower = dx::muladd(self.upper, right.lower,
-                dx::muladd(self.lower, right.upper,
-                    dx::mulsub(self.upper, right.upper, s))),
-        };
-    }
-
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    constexpr pair DPL_VECTORCALL operator*(
-        this pair self, element_type right) noexcept {
-        auto const s = self.upper * right;
-        return pair{
-            .upper = s,
-            .lower =
-                dx::muladd(self.lower, right, dx::mulsub(self.upper, right, s)),
-        };
-    }
-
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    friend constexpr pair DPL_VECTORCALL operator*(
-        element_type left, pair right) noexcept {
-        auto const s = left * right.upper;
-        return pair{
-            .upper = s,
-            .lower =
-                dx::muladd(left, right.lower, dx::mulsub(left, right.upper, s)),
-        };
+    template <size_t I>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    constexpr element_type& get(this basic_pair& self) noexcept {
+        if constexpr (I == 0) {
+            return self.upper;
+        } else {
+            static_assert(I == 1);
+            return self.lower;
+        }
     }
 };
 
 template <canonical_vector T>
-using pair_of = pair<simd_element_type_t<T>, simd_abi_type_t<T>>;
-
-template <typename T>
-inline constexpr bool is_pair = false;
-template <simd_abi A, simd_element_for<A> E>
-inline constexpr bool is_pair<pair<E, A>> = true;
-
-template <typename T>
-concept pair_type = is_pair<T> && requires {
-    typename T::value_type;
-    typename T::abi_type;
-    typename T::element_type;
-    requires simd_abi<typename T::abi_type>;
-    requires simd_element_for<typename T::value_type, typename T::abi_type>;
-    requires simd_vector<typename T::element_type>;
-    requires same_as<typename T::element_type,
-        basic_vector<typename T::value_type, typename T::abi_type>>;
+struct pair_type {
+    using type DPL_NODEBUG =
+        basic_pair<simd_element_type_t<T>, simd_abi_type_t<T>>;
 };
 
-// TODO: Scalable ABIs, hook into simd_tuple APIs
+/**
+ * Scalable ABI workaround
+ * We don't explicit target scalable abi but check for
+ * `same_as<T, simd_native_type_t<T>>`
+ */
+template <typename T>
+concept has_native_pair = canonical_vector<T> &&
+    same_as<T, simd_native_type_t<T>> && requires(T vec) {
+        typename simd_abi_traits<T>::template native_tuple<2>;
+        make_tuple(dx::internal::abi<T>, vec, vec);
+    };
 
-template <simd_vector T>
+template <canonical_vector T>
+requires has_native_pair<T>
+struct pair_type<T> {
+    using type DPL_NODEBUG =
+        typename simd_abi_traits<T>::template native_tuple<2>;
+};
+
+template <typename T>
+using pair_type_t DPL_NODEBUG = typename pair_type<T>::type;
+
+template <typename T>
+concept simd_double =
+    simd_tuple<T> && same_as<T, pair_type_t<simd_element_type_t<T>>>;
+
+template <canonical_vector T>
+requires has_native_pair<T>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+constexpr pair_type_t<T> make_pair(
+    T upper, T lower = dx::broadcast<T>(dx::zero)) noexcept {
+    return make_tuple(dx::internal::abi<T>, upper, lower);
+}
+
+template <canonical_vector T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-constexpr pair_of<T>
+constexpr pair_type_t<T>
     DPL_VECTORCALL make_pair(
         T upper, T lower = dx::broadcast<T>(dx::zero)) noexcept {
-    return pair_of<T>{
+    return pair_type_t<T>{
         .upper = upper,
         .lower = lower,
     };
 }
 
-template <simd_abi A, simd_floating_point_for<A> E,
-    broadcastable_to<basic_vector<E, A>> T1,
-    broadcastable_to<basic_vector<E, A>> T2 = dx::zero_t>
+template <simd_abi A, floating_point_like E>
+requires requires(make_canonical_vector_t<E, A> vec) {
+    fmath::make_pair<make_canonical_vector_t<E, A>>(vec, vec);
+}
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-constexpr pair<E, A>
-    DPL_VECTORCALL make_pair(T1 upper, T2 lower = {}) noexcept {
-    return pair<E, A>{
-        .upper = dx::broadcast<E, A>(upper),
-        .lower = dx::broadcast<E, A>(lower),
-    };
+constexpr pair_type_t<make_canonical_vector_t<E, A>>
+    DPL_VECTORCALL make_pair(E upper, E lower = dx::zero) noexcept {
+    return fmath::make_pair(
+        dx::broadcast<E, A>(upper), dx::broadcast<E, A>(lower));
 }
 
-template <simd_abi A, simd_floating_point_for<A> E,
-    broadcastable_to<basic_vector<E, A>> T2 = dx::zero_t>
+/**
+ * Scalable ABI workaround
+ * For ADL operations
+ */
+template <simd_double T>
+struct pair_ref {
+    using value_type DPL_NODEBUG = simd_value_type_t<T>;
+    using abi_type DPL_NODEBUG = simd_abi_type_t<T>;
+    using element_type DPL_NODEBUG = simd_element_type_t<T>;
+
+    __DPL_HIDE_FROM_ABI constexpr pair_ref(
+        T const& ref DPL_LIFETIMEBOUND) noexcept
+        : value(ref) {}
+
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD) constexpr operator T(
+        this pair_ref self) noexcept {
+        return self.value;
+    }
+
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD) constexpr T operator+(
+        this pair_ref self) noexcept {
+        return self.value;
+    }
+
+    template <size_t I>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    constexpr element_type get(this pair_ref self) noexcept {
+        return dx::get_element<I>(self.value);
+    }
+
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
+    constexpr T DPL_VECTORCALL operator+(
+        this pair_ref self, element_type right) noexcept {
+        auto const [upper, lower] = self;
+        auto s = dx::add(upper, right);
+        auto v = dx::subtract(s, upper);
+        return fmath::make_pair(s,
+            dx::add(lower,
+                dx::add(dx::subtract(upper, dx::subtract(s, v)),
+                    dx::subtract(right, v))));
+    }
+
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
+    friend constexpr T DPL_VECTORCALL operator+(
+        element_type left, pair_ref self) noexcept {
+        auto const [upper, lower] = self;
+        auto s = dx::add(left, upper);
+        auto v = dx::subtract(s, left);
+
+        return fmath::make_pair(s,
+            dx::add(lower,
+                dx::add(dx::subtract(left, dx::subtract(s, v)),
+                    dx::subtract(upper, v))));
+    }
+
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
+    constexpr T DPL_VECTORCALL operator+(
+        this pair_ref left, pair_ref right) noexcept {
+        auto const [lupper, llower] = left;
+        auto const [rupper, rlower] = right;
+        auto s = dx::add(lupper, rupper);
+        auto v = dx::subtract(s, lupper);
+        auto t = dx::add(
+            dx::subtract(rupper, v), dx::subtract(lupper, dx::subtract(s, v)));
+        return fmath::make_pair(s, dx::add(t, dx::add(llower, rlower)));
+    }
+
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    friend constexpr T operator+(T left, pair_ref self) noexcept {
+        return pair_ref{left} + self;
+    }
+
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
+    constexpr T DPL_VECTORCALL operator-(
+        this pair_ref self, element_type right) noexcept {
+        auto const [upper, lower] = self;
+        auto s = dx::subtract(upper, right);
+        return fmath::make_pair(
+            s, dx::add(lower, dx::subtract(dx::subtract(upper, s), right)));
+    }
+
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
+    friend constexpr T DPL_VECTORCALL operator-(
+        element_type left, pair_ref self) noexcept {
+        auto const [upper, lower] = self;
+        auto s = dx::subtract(left, upper);
+        return fmath::make_pair(
+            s, dx::subtract(dx::subtract(dx::subtract(left, s), upper)), lower);
+    }
+
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
+    constexpr T DPL_VECTORCALL operator-(
+        this pair_ref self, pair_ref right) noexcept {
+        auto const [lupper, llower] = self;
+        auto const [rupper, rlower] = right;
+
+        auto s = dx::subtract(lupper, rupper);
+        auto v = dx::subtract(s, lupper);
+        auto t = dx::subtract(
+            dx::subtract(lupper, dx::subtract(s, v)), dx::add(rupper, v));
+        return fmath::make_pair(s, dx::add(t, dx::subtract(llower, rlower)));
+    }
+
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    friend constexpr T operator-(T left, pair_ref self) noexcept {
+        return pair_ref{left} - self;
+    }
+
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
+    constexpr T DPL_VECTORCALL operator-(this pair_ref self) noexcept {
+        auto const [upper, lower] = self;
+        return fmath::make_pair(dx::negate(upper), dx::negate(lower));
+    }
+
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
+    constexpr T DPL_VECTORCALL operator/(
+        this pair_ref self, pair_ref right) noexcept {
+        auto const [lupper, llower] = self;
+        auto const [rupper, rlower] = right;
+        auto const one = dx::broadcast<T>(dx::one);
+
+        auto t = dx::divide(one, rupper);
+        auto s = dx::multiply(lupper, t);
+        auto u = dx::mulsub(t, lupper, s);
+        auto v = dx::nmuladd(rlower, t, dx::nmuladd(rupper, t, one));
+        return fmath::make_pair(s, dx::muladd(s, v, dx::muladd(llower, t, u)));
+    }
+
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    friend constexpr T operator/(T left, pair_ref self) noexcept {
+        return pair_ref{left} / self;
+    }
+
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
+    constexpr T DPL_VECTORCALL operator*(
+        this pair_ref self, element_type right) noexcept {
+        auto const [upper, lower] = self;
+        auto const s = dx::multiply(upper, right);
+        return fmath::make_pair(
+            s, dx::muladd(lower, right, dx::mulsub(upper, right, s)));
+    }
+
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
+    friend constexpr T DPL_VECTORCALL operator*(
+        element_type left, pair_ref self) noexcept {
+        auto const [upper, lower] = self;
+        auto const s = dx::multiply(left, upper);
+        return fmath::make_pair(
+            s, dx::muladd(left, lower, dx::mulsub(left, upper, s)));
+    }
+
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
+    constexpr T DPL_VECTORCALL operator*(
+        this pair_ref self, pair_ref right) noexcept {
+        auto const [lupper, llower] = self;
+        auto const [rupper, rlower] = right;
+
+        auto const s = dx::multiply(lupper, rupper);
+        return fmath::make_pair(s,
+            dx::muladd(lupper, rlower,
+                dx::muladd(llower, rupper, dx::mulsub(lupper, rupper, s))));
+    }
+
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    friend constexpr T operator*(T left, pair_ref self) noexcept {
+        return pair_ref{left} * self;
+    }
+
+    T const& value;
+};
+
+template <simd_double T>
+explicit pair_ref(T const&) -> pair_ref<T>;
+
+} // namespace datapar::fmath
+
+template <floating_point_like E, datapar::fixed_width_abi A>
+struct tuple_size<datapar::fmath::basic_pair<E, A>> : size_constant<2> {};
+
+template <size_t I, floating_point_like E, datapar::fixed_width_abi A>
+struct tuple_element<I, datapar::fmath::basic_pair<E, A>> :
+    type_identity<datapar::basic_vector<E, A>> {};
+
+template <datapar::fmath::simd_double T>
+struct tuple_size<datapar::fmath::pair_ref<T>> : size_constant<2> {};
+
+template <size_t I, datapar::fmath::simd_double T>
+struct tuple_element<I, datapar::fmath::pair_ref<T>> : tuple_element<I, T> {};
+
+namespace datapar::fmath {
+
+template <simd_double T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-constexpr pair<E, A>
-    DPL_VECTORCALL make_pair(E upper, T2 lower = {}) noexcept {
-    using simd = basic_vector<E, A>;
-    return pair<E, A>{
-        .upper = dx::broadcast<E, A>(upper),
-        .lower = dx::broadcast<E, A>(lower),
-    };
+constexpr simd_element_type_t<T>
+    DPL_VECTORCALL recombine(T arg) noexcept {
+    return dx::add(dx::get_element<0>(arg), dx::get_element<1>(arg));
 }
 
-template <simd_abi A, simd_floating_point_for<A> E, simd_element_for<A> C>
-requires common_size_with<E, C>
-DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-constexpr pair<E, A>
-    DPL_VECTORCALL select(
-        basic_mask<C, A> mask, pair<E, A> left, pair<E, A> right) noexcept {
-    return pair<E, A>{
-        .upper = dx::select(mask, left.upper, right.upper),
-        .lower = dx::select(mask, left.lower, right.lower),
-    };
+template <simd_double T>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+constexpr simd_element_type_t<T> recombine(pair_ref<T> arg) noexcept {
+    return fmath::recombine(arg.value);
 }
 
-template <pair_type T, broadcastable_to<typename T::element_type> C>
+template <simd_double T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+constexpr T DPL_VECTORCALL select(
+    simd_mask_type_t<simd_element_type_t<T>> mask, T left, T right) noexcept {
+    return fmath::make_pair(
+        dx::select(mask, dx::get_element<0>(left), dx::get_element<0>(right)),
+        dx::select(mask, dx::get_element<1>(left), dx::get_element<1>(right)));
+}
+
+template <simd_double T, broadcastable_to<simd_element_type_t<T>> C>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 constexpr T broadcast(C arg) noexcept {
     using simd = typename T::element_type;
-    return T{
-        .upper = dx::broadcast<simd>(arg),
-        .lower = dx::broadcast<simd>(dx::zero),
-    };
+    return fmath::make_pair(dx::broadcast<simd>(arg));
 }
 
-template <simd_abi A, simd_floating_point_for<A> E>
+template <simd_double T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-constexpr pair<E, A>
-    DPL_VECTORCALL abs(pair<E, A> arg) noexcept {
-    return pair<E, A>{
-        .upper = dx::abs(arg.upper),
-        .lower = dx::abs(arg.lower),
-    };
+constexpr T DPL_VECTORCALL abs(T arg) noexcept {
+    auto const sign = dx::signbit(arg.upper);
+    return fmath::make_pair(dx::negate(arg.upper, sign, arg.upper),
+        dx::negate(arg.lower, sign, arg.lower));
 }
 
-template <simd_abi A, simd_floating_point_for<A> E>
+template <simd_double T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-constexpr pair<E, A>
-    DPL_VECTORCALL normalize(pair<E, A> arg) noexcept {
-    auto upper = arg.upper + arg.lower;
-    return pair<E, A>{
-        .upper = upper,
-        .lower = arg.upper - upper + arg.lower,
-    };
+constexpr T DPL_VECTORCALL normalize(T arg) noexcept {
+    auto const [in_upper, in_lower] = dx::to_tuple_like(arg);
+    auto upper = dx::add(in_upper, in_lower);
+    return fmath::make_pair(
+        upper, dx::add(dx::subtract(in_upper, upper), in_lower));
 }
 
-template <simd_abi A, simd_floating_point_for<A> E, typename S>
-requires requires(pair<E, A> p, S scale) {
-    p.upper * scale;
-    p.lower * scale;
-}
+template <simd_double T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-constexpr pair<E, A>
-    DPL_VECTORCALL scale(pair<E, A> arg, S scale) noexcept {
-    return pair<E, A>{
-        .upper = arg.upper * scale,
-        .lower = arg.lower * scale,
-    };
+constexpr T DPL_VECTORCALL scale(T arg, simd_value_type_t<T> scale) noexcept {
+    return fmath::make_pair(dx::multiply(dx::get_element<0>(arg), scale),
+        dx::multiply(dx::get_element<1>(arg), scale));
 }
 
-template <simd_abi A, simd_floating_point_for<A> E>
+template <simd_double T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-constexpr pair<E, A>
-    DPL_VECTORCALL square(pair<E, A> arg) noexcept {
-    auto s = arg.upper * arg.upper;
-    return pair<E, A>{
-        .upper = s,
-        .lower = dx::muladd(       //
-            arg.upper + arg.upper, //
-            arg.lower,             //
-            dx::mulsub(arg.upper, arg.upper, s)),
-    };
+constexpr T DPL_VECTORCALL square(T arg) noexcept {
+    auto const [in_upper, in_lower] = dx::to_tuple_like(arg);
+    auto s = dx::multiply(in_upper, in_lower);
+    return fmath::make_pair(s,
+        dx::muladd(                      //
+            dx::add(in_upper, in_upper), //
+            in_lower,                    //
+            dx::mulsub(in_upper, in_upper, s)));
 }
 
-template <simd_abi A, simd_floating_point_for<A> E>
+template <simd_double T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-constexpr pair<E, A>
-    DPL_VECTORCALL rcp(pair<E, A> arg) noexcept {
-    auto s = dx::one / arg.upper;
-    return pair<E, A>{
-        .upper = s,
-        .lower =
-            s * dx::nmuladd(arg.lower, s, dx::nmuladd(arg.upper, s, dx::one)),
-    };
+constexpr T DPL_VECTORCALL rcp(T arg) noexcept {
+    auto const one = dx::broadcast<simd_element_type_t<T>>(dx::one);
+    auto s = dx::divide(one, dx::get_element<0>(arg));
+    return fmath::make_pair(s,
+        dx::multiply(
+            s, dx::nmuladd(arg.lower, s, dx::nmuladd(arg.upper, s, one))));
 }
 
 struct frsqrt_t : public dx::internal::operation_base<dx::internal::rsqrt_t> {
     using operation_base<dx::internal::rsqrt_t>::operator();
 };
 
-template <simd_abi A, simd_floating_point_for<A> E>
-requires internal::cpo_invocable<dx::internal::rsqrt_t,
-    typename pair<E, A>::element_type>
+template <simd_double T>
+requires internal::cpo_invocable<dx::internal::rsqrt_t, simd_element_type_t<T>>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-constexpr pair<E, A>
-    DPL_VECTORCALL sqrt(pair<E, A> arg) noexcept {
+constexpr T DPL_VECTORCALL sqrt(T arg) noexcept {
     constexpr frsqrt_t rsqrt;
-    using simd = typename pair<E, A>::element_type;
-    auto x = rsqrt(arg.upper + arg.lower);
-    auto r = arg * x;
-    constexpr auto n3 = dx::broadcast<simd>(-3.0);
-    return fmath::scale(r * (r * x + n3), -0.5);
+    using simd = simd_element_type_t<T>;
+    auto const [upper, lower] = arg;
+    auto x = rsqrt(dx::add(upper, lower));
+    T r = pair_ref{arg} * x;
+    auto const n3 = dx::broadcast<simd>(-3.0);
+    return fmath::scale(pair_ref{r} * (pair_ref{pair_ref{r} * x} + n3), -0.5);
 }
 
 template <typename T>
@@ -326,13 +411,14 @@ struct fast;
 template <typename T>
 struct single;
 
-template <floating_point_like E, simd_abi A>
-requires simd_floating_point_for<E, A> &&
-    requires { typename basic_vector<E, A>; }
-struct single<basic_vector<E, A>> {
-    using element_type = basic_vector<E, A>;
-    element_type value;
-    __DPL_HIDE_FROM_ABI explicit constexpr single(element_type val) noexcept
+template <canonical_vector T>
+struct single<T> {
+    using element_type = T;
+
+    element_type const& value;
+
+    __DPL_HIDE_FROM_ABI explicit constexpr single(
+        element_type const& val DPL_LIFETIMEBOUND) noexcept
         : value(val) {}
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
@@ -340,101 +426,96 @@ struct single<basic_vector<E, A>> {
         return self.value;
     }
 
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    constexpr auto DPL_VECTORCALL operator+(
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
+    constexpr pair_type_t<T> DPL_VECTORCALL operator+(
         this single self, element_type right) noexcept {
         // Knuth's twosum
-        auto s = self.value + right;
-        auto v = s - self.value;
-        return pair<E, A>{
-            .upper = s,
-            .lower = (self.value - (s - v)) + (right - v),
-        };
+        auto s = dx::add(self.value, right);
+        auto v = dx::subtract(s, self.value);
+        return fmath::make_pair(s,
+            dx::add(dx::subtract(right, v),
+                dx::subtract(self.value, dx::subtract(s, v))));
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    friend constexpr auto DPL_VECTORCALL operator+(
+    friend constexpr pair_type_t<T> DPL_VECTORCALL operator+(
         element_type left, single right) noexcept {
         return single(left) + right.value;
     }
 
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    constexpr auto DPL_VECTORCALL operator-(
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
+    constexpr pair_type_t<T> DPL_VECTORCALL operator-(
         this single self, element_type right) noexcept {
         // Knuth's twodiff
-        auto s = self.value - right;
-        auto v = s - self.value;
-        return pair<E, A>{
-            .upper = s,
-            .lower = (self.value - (s - v)) - (right + v),
-        };
+        auto s = dx::subtract(self.value, right);
+        auto v = dx::subtract(s, self.value);
+        return fmath::make_pair(s,
+            dx::subtract(dx::subtract(self.value, dx::subtract(s, v)),
+                dx::add(right, v)));
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    friend constexpr auto DPL_VECTORCALL operator-(
+    friend constexpr pair_type_t<T> DPL_VECTORCALL operator-(
         element_type left, single right) noexcept {
         return single(left) - right.value;
     }
 
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    constexpr auto DPL_VECTORCALL operator*(
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
+    constexpr pair_type_t<T> DPL_VECTORCALL operator*(
         this single self, element_type right) noexcept {
-        auto s = self.value * right;
-        return pair<E, A>{
-            .upper = s,
-            .lower = dx::mulsub(self.value, right, s),
-        };
+        auto s = dx::multiply(self.value, right);
+        return fmath::make_pair(s, dx::mulsub(self.value, right, s));
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    friend constexpr auto DPL_VECTORCALL operator*(
+    friend constexpr pair_type_t<T> DPL_VECTORCALL operator*(
         element_type left, single right) noexcept {
         return single(left) * right.value;
     }
 
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    constexpr auto DPL_VECTORCALL operator*(
-        this single self, pair_of<element_type> right) noexcept {
-        auto hi = self.value * right.upper;
-        auto lo = dx::muladd(
-            self.value, right.lower, dx::mulsub(self.value, right.upper, hi));
-        return hi + lo;
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
+    constexpr T DPL_VECTORCALL operator*(
+        this single self, pair_type_t<T> right) noexcept {
+        auto const [upper, lower] = right;
+        auto hi = dx::multiply(self.value, upper);
+        auto lo =
+            dx::muladd(self.value, lower, dx::mulsub(self.value, upper, hi));
+        return dx::add(hi, lo);
     }
 };
 
-template <simd_vector T>
+template <canonical_vector T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-constexpr pair_of<T>
+constexpr pair_type_t<T>
     DPL_VECTORCALL rcp(single<T> arg) noexcept {
-    auto s = one_v<T> / arg.value;
-    return pair_of<T>{
-        .upper = s,
-        .lower = s * dx::nmuladd(arg.value, s, dx::one),
-    };
+    auto const one = dx::broadcast<T>(dx::one);
+    auto s = dx::divide(one, arg.value);
+    return fmath::make_pair(s, dx::multiply(s, dx::nmuladd(arg.value, s, one)));
 }
 
 struct fsqrt_t : public dx::internal::operation_base<dx::internal::sqrt_t> {
     using operation_base<dx::internal::sqrt_t>::operator();
 };
 
-template <simd_vector T>
+template <canonical_vector T>
 requires dx::internal::cpo_invocable<dx::internal::sqrt_t, T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-constexpr pair_of<T>
+constexpr pair_type_t<T>
     DPL_VECTORCALL sqrt(single<T> arg) noexcept {
     constexpr fsqrt_t sqrt;
     auto t = sqrt(arg.value);
     return fmath::scale(
-        arg + (single(t) * t) * fmath::rcp(single(t)), dx::broadcast<T>(0.5));
+        arg.value + pair_ref{single{t} * t} * fmath::rcp(single{t}),
+        dx::broadcast<T>(0.5));
 }
 
-template <floating_point_like E, simd_abi A>
-requires pair_type<pair<E, A>>
-struct single<pair<E, A>> {
-    using element_type = pair<E, A>;
-    pair<E, A> value;
+template <simd_double T>
+struct single<T> {
+    using element_type = T;
+    T const& value;
 
-    __DPL_HIDE_FROM_ABI explicit constexpr single(element_type val) noexcept
+    __DPL_HIDE_FROM_ABI explicit constexpr single(
+        T const& val DPL_LIFETIMEBOUND) noexcept
         : value(val) {}
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
@@ -443,17 +524,18 @@ struct single<pair<E, A>> {
     }
 };
 
-template <floating_point_like E, simd_abi A>
-explicit single(pair<E, A>) -> single<pair<E, A>>;
-template <floating_point_like E, simd_abi A>
-explicit single(basic_vector<E, A>) -> single<basic_vector<E, A>>;
+template <simd_double T>
+explicit single(T const&) -> single<T>;
+template <canonical_vector T>
+explicit single(T const&) -> single<T>;
 
-template <pair_type T>
-DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-constexpr
-    typename T::element_type DPL_VECTORCALL square(single<T> arg) noexcept {
-    return dx::muladd(arg.value.upper, arg.value.upper,
-        [](auto val) { return val + val; }(arg.value.upper * arg.value.lower));
+template <simd_double T>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
+constexpr simd_element_type_t<T>
+    DPL_VECTORCALL square(single<T> arg) noexcept {
+    auto const [upper, lower] = arg.value;
+    return dx::muladd(upper, upper,
+        [](auto val) { return dx::add(val, val); }(dx::multiply(upper, lower)));
 }
 
 template <typename T>
@@ -468,14 +550,13 @@ struct element_type_if<T> {
     using type = typename T::element_type;
 };
 
-template <floating_point_like E, simd_abi A>
-requires simd_floating_point_for<E, A> &&
-    requires { typename basic_vector<E, A>; }
-struct fast<basic_vector<E, A>> {
-    using element_type = basic_vector<E, A>;
-    basic_vector<E, A> value;
+template <canonical_vector T>
+struct fast<T> {
+    using element_type = T;
+    T const& value;
 
-    __DPL_HIDE_FROM_ABI explicit constexpr fast(element_type val) noexcept
+    __DPL_HIDE_FROM_ABI explicit constexpr fast(
+        T const& val DPL_LIFETIMEBOUND) noexcept
         : value(val) {}
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
@@ -483,146 +564,126 @@ struct fast<basic_vector<E, A>> {
         return value;
     }
 
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
     constexpr auto DPL_VECTORCALL operator+(
         this fast self, element_type right) noexcept {
         // |self.value| > |right|
         auto upper = self.value + right;
-        return pair_of<element_type>{
-            .upper = upper,
-            .lower = self.value - upper + right,
-        };
+        return fmath::make_pair(upper, self.value - upper + right);
     }
 
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
     friend constexpr auto DPL_VECTORCALL operator+(
         element_type left, fast right) noexcept {
         return fast(left) + right.value;
     }
 
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
     constexpr auto DPL_VECTORCALL operator-(
         this fast self, element_type right) noexcept {
         // |self.value| > |right|
         auto upper = self.value - right;
-        return pair<E, A>{
-            .upper = upper,
-            .lower = self.value - upper - right,
-        };
+        return fmath::make_pair(upper, self.value - upper - right);
     }
 
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
     constexpr auto DPL_VECTORCALL operator+(
-        this fast self, pair_of<element_type> right) noexcept {
+        this fast self, pair_type_t<element_type> right) noexcept {
         // |self.value| < |right.upper|
         auto upper = self.value + right.upper;
-        return pair_of<element_type>{
-            .upper = upper,
-            .lower = (self.value - upper) + (right.upper + right.lower),
-        };
+        return fmath::make_pair(
+            upper, (self.value - upper) + (right.upper + right.lower));
     }
 };
 
-template <typename T>
-requires pair_type<T>
+template <simd_double T>
 struct fast<T> {
-    static_assert(simd_vector<T> != pair_type<T>);
     using element_type = T;
-    T value;
+    T const& value;
 
-    __DPL_HIDE_FROM_ABI explicit constexpr fast(T val) noexcept : value(val) {}
+    __DPL_HIDE_FROM_ABI explicit constexpr fast(
+        T const& val DPL_LIFETIMEBOUND) noexcept
+        : value(val) {}
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     constexpr operator T() const noexcept {
         return value;
     }
 
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
     constexpr T DPL_VECTORCALL operator+(this fast self, T right) noexcept {
         // |left.upper| >= |right.upper|
         auto s = self.value.upper + right.upper;
-        return T{
-            .upper = s,
-            .lower = (self.value.upper - s) + right.upper +
-                (self.value.lower + right.lower),
-        };
+
+        return fmath::make_pair(s,
+            (self.value.upper - s) + right.upper +
+                (self.value.lower + right.lower));
     }
 
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
     constexpr T DPL_VECTORCALL operator+(
         this fast self, element_type_if_t<T> right) noexcept {
         // |self.value.upper| > |right|
         auto s = self.value.upper + right;
-        return T{
-            .upper = s,
-            .lower = (self.value.upper - s) + (right + self.value.lower),
-        };
+        return fmath::make_pair(
+            s, (self.value.upper - s) + (right + self.value.lower));
     }
 
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
     friend constexpr T DPL_VECTORCALL operator+(
-        typename T::element_type left, fast right) noexcept {
+        simd_element_type_t<T> left, fast right) noexcept {
         auto s = left + right.value.upper;
-        return T{
-            .upper = s,
-            .lower = (left - s) + (right.value.upper + right.value.lower),
-        };
+        return fmath::make_pair(
+            s, (left - s) + (right.value.upper + right.value.lower));
     }
 
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
     constexpr T DPL_VECTORCALL operator-(
-        this fast self, typename T::element_type right) noexcept {
+        this fast self, simd_element_type_t<T> right) noexcept {
         // |x| >= |y|
         auto s = self.value.upper - right;
-        return pair{
-            .upper = s,
-            .lower = self.value.upper - s - right + self.value.lower,
-        };
+        return fmath::make_pair(
+            s, self.value.upper - s - right + self.value.lower);
     }
 
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
     constexpr T DPL_VECTORCALL operator-(this fast self, T right) noexcept {
         // |x| >= |y|
         auto s = self.value.upper - right.upper;
         auto t = self.value.upper - s;
         t = t - right.upper;
         t = t + self.value.lower;
-        return pair{
-            .upper = s,
-            .lower = t - right.lower,
-        };
+
+        return fmath::make_pair(s, t - right.lower);
     }
 
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
     friend constexpr T DPL_VECTORCALL operator-(T left, fast right) noexcept {
         return fast(left) - right.value;
     }
 };
 
 template <typename T>
-explicit fast(T) -> fast<T>;
+explicit fast(T const&) -> fast<T>;
 
 struct ln2_t : dx::ln2_t {
     __DPL_HIDE_FROM_ABI explicit constexpr ln2_t() noexcept = default;
 
-    template <simd_abi A>
+    template <simd_double T>
+    requires same_as<simd_value_type_t<T>, float>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    constexpr operator pair<float, A>(this ln2_t) noexcept {
-        return pair<float, A>{
-            .upper = dx::broadcast<A>(0.693145751953125f),
-            .lower = dx::broadcast<A>(1.428606765330187045e-06f),
-        };
+    constexpr operator T(this ln2_t) noexcept {
+        return fmath::make_pair<simd_abi_type_t<T>, float>(
+            0.693145751953125f, 1.428606765330187045e-06f);
     }
 
-    template <simd_abi A>
+    template <simd_double T>
+    requires same_as<simd_value_type_t<T>, double>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    constexpr operator pair<double, A>(this ln2_t) noexcept {
-        return pair<double, A>{
-            .upper =
-                dx::broadcast<A>(0.69314718055966295651160180568695068359375),
-            .lower = dx::broadcast<A>(
-                0.28235290563031577122588448175013436025525412068e-12),
-        };
+    constexpr operator T(this ln2_t) noexcept {
+        return fmath::make_pair<simd_abi_type_t<T>, double>(
+            0.69314718055966295651160180568695068359375,
+            0.28235290563031577122588448175013436025525412068e-12);
     }
 };
 
@@ -631,6 +692,9 @@ inline constexpr ln2_t ln2{};
 template <typename T>
 requires explicitly_convertible_to<ln2_t, T>
 inline constexpr auto ln2_v = static_cast<T>(ln2);
+
+template <typename E, typename A>
+using make_pair_type_t = pair_type_t<make_canonical_vector_t<E, A>>;
 
 } // namespace datapar::fmath
 __DPL_DEFAULT_NAMESPACE_END
