@@ -42,7 +42,8 @@ struct canonical_impl<broadcast_t<A>> {
     template <simd_element_for<A> E>
     requires cpo_invocable<broadcast_t<A, E>, E>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(E scalar) noexcept {
+    static constexpr make_canonical_vector_t<E, A> operator()(
+        E scalar) noexcept {
         return broadcast_t<A, E>::operator()(scalar);
     }
 };

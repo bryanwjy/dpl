@@ -56,7 +56,7 @@ constexpr vector<E> broadcast(type_identity_t<E> scalar) noexcept {
 
 template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr vector<E> broadcast(dx::zero_t zero) noexcept {
+constexpr vector<E> broadcast(dx::zero_t) noexcept {
     if consteval {
         return xmm::broadcast<E>(0);
     } else {
@@ -75,7 +75,7 @@ constexpr vector<E> broadcast(dx::zero_t zero) noexcept {
 
 template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr vector<E> broadcast(dx::all_bits_t all) noexcept {
+constexpr vector<E> broadcast(dx::all_bits_t) noexcept {
     if consteval {
         return xmm::broadcast<E>(dx::all_bits_v<E>);
     } else {

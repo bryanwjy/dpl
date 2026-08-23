@@ -4,9 +4,10 @@
 #include "dpl/config.h"
 
 #include "dpl/core/basic/broadcast.h"
-#include "dpl/core/basic/broadcasting.h"
 #include "dpl/core/basic/extract.h"
 #include "dpl/core/basic/initialize.h"
+#include "dpl/core/basic/initializers.h"
+#include "dpl/core/basic/undefined.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/simd_abi.h"
@@ -48,6 +49,9 @@ public:
     __DPL_HIDE_FROM_ABI explicit constexpr basic_vector(
         broadcasting_t, E scalar) noexcept
         : basic_vector(datapar::broadcast<E, A>(scalar)) {}
+
+    __DPL_HIDE_FROM_ABI explicit constexpr basic_vector(unspecified_t) noexcept
+        : basic_vector(datapar::undefined<E, A>()) {}
 
     template <different_from<basic_vector> B>
     requires broadcastable_constant<B, value_type>

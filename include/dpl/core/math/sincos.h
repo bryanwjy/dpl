@@ -14,6 +14,7 @@
 #include "dpl/core/math/trunc.h"
 
 #if !DPL_MODULES
+#  include "dpl/core/basic/undefined.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/dispatch/interface.h"
 #  include "dpl/core/dispatch/maskable/transform.h"
@@ -795,7 +796,7 @@ private:
             auto x = mx::single(arg) * mx::gather(mx::rempi_table<E>, exp);
             auto y = mx::single(arg) * mx::gather(mx::rempi_table<E> + 1, exp);
 
-            mx::exponent_vector_t<T> qidx; // TODO undefined value
+            auto qidx = dx::undefined<mx::exponent_vector_t<T>>();
             auto dif = quantize_quarters(dx::get_element<0>(x), qidx);
             x = mx::normalize(dx::set_element<0>(x, dif));
             x = x + y;
@@ -872,7 +873,8 @@ public:
             rem = dx::select(is_below, rem, rempi_mid(qf, val, ops));
             if (is_below = dx::abs(val) < threshold_mid<E>;
                 !dx::all_of(is_below)) {
-                mx::exponent_vector_t<T> rempi_i; // TODO undefined value
+
+                auto rempi_i = dx::undefined<mx::exponent_vector_t<T>>();
                 auto rempi_df = rempi(val, rempi_i);
                 auto q2 = dx::bwand(rempi_i, 3);
                 q2 = dx::add(q2, q2);

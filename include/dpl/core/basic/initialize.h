@@ -3,14 +3,22 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/basic/broadcast.h"
+#include "dpl/core/basic/initializers.h"
 #include "dpl/core/basic/internal/abi.h"
+#include "dpl/core/basic/lane_index.h"
+#include "dpl/core/basic/undefined.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/fwd.h"
 
+#  include "dpl/core/concepts/broadcastable_to.h"
+#  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/concepts/simd_type.h"
 #  include "dpl/core/dispatch/interface.h"
 #  include "dpl/core/dispatch/operation/basic.h"
+#  include "dpl/core/immediate/broadcastable_base.h"
+#  include "dpl/core/type_traits/simd_abi_traits.h"
 #  include "dpl/std/concepts/different_from.h"
 #  include "dpl/std/concepts/same_as.h"
 #  include "dpl/std/utility/forward.h"
@@ -25,6 +33,30 @@ void initialize(...) noexcept = delete;
 template <typename T, typename U = void>
 struct initialize_t : public basic_operation_base<initialize_t<T, U>> {
     using operation_base<initialize_t<T, U>>::operator();
+
+    template <same_as<broadcasting_t> Tag, typename E>
+    requires cpo_invocable<broadcast_t<T, U>, E> &&
+        simd_vector<cpo_result_t<broadcast_t<T, U>, E>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr cpo_result_t<broadcast_t<T, U>, E>
+    operator()(Tag, E&& scalar) noexcept(
+        noexcept(dx::broadcast<T, U>(__DPL forward<E>(scalar)))) {
+        return dx::broadcast<T, U>(__DPL forward<E>(scalar));
+    }
+
+    template <same_as<unspecified_t> Tag>
+    requires cpo_invocable<undefined_t<T, U>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr cpo_result_t<undefined_t<T, U>> operator()(Tag) noexcept {
+        return dx::undefined<T, U>();
+    }
+
+    template <same_as<iota_t> Tag>
+    requires cpo_invocable<lane_index_t<T, U>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr cpo_result_t<lane_index_t<T, U>> operator()(Tag) noexcept {
+        return dx::lane_index<T, U>();
+    }
 };
 
 template <typename T, typename U>
@@ -67,15 +99,15 @@ requires (simd_abi<T> && simd_element_for<U, T>) ||
     (simd_abi<U> && simd_element_for<T, U>)
 struct canonical_impl<initialize_t<T, U>> {
 private:
-    using E DPL_NODEBUG = conditional_t<simd_abi<T>, U, T>;
-    using A DPL_NODEBUG = conditional_t<simd_abi<T>, T, U>;
+    using E DPL_NODEBUG = typename simd_abi_traits<T, U>::element_type;
+    using A DPL_NODEBUG = typename simd_abi_traits<T, U>::type;
+    using vector_type DPL_NODEBUG = make_canonical_vector_t<E, A>;
 
 public:
     template <convertible_to<E>... Args>
-    requires (... && !same_as<bool, Args>)
+    requires (... && different_from<bool, Args>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr make_canonical_vector_t<E, A> operator()(
-        Args&&... args) noexcept
+    static constexpr vector_type operator()(Args&&... args) noexcept
     requires requires {
         initialize<E>(internal::abi<A>, __DPL forward<Args>(args)...);
     }

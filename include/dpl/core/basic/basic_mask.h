@@ -4,9 +4,9 @@
 #include "dpl/config.h"
 
 #include "dpl/core/basic/broadcast.h"
-#include "dpl/core/basic/broadcasting.h"
 #include "dpl/core/basic/extract.h"
 #include "dpl/core/basic/from_bitset.h"
+#include "dpl/core/basic/initializers.h"
 #include "dpl/core/basic/to_bitset.h"
 
 #if !DPL_MODULES

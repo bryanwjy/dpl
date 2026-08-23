@@ -21,6 +21,7 @@ using __DPL datapar::xmm::load;
 using __DPL datapar::xmm::mask;
 using __DPL datapar::xmm::store;
 using __DPL datapar::xmm::to_bitset;
+using __DPL datapar::xmm::undefined;
 using __DPL datapar::xmm::vector;
 } // namespace datapar::xmm
 namespace xmm = datapar::xmm;

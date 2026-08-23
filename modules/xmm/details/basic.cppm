@@ -23,6 +23,7 @@ DPL_DISABLE_WARNING(5244)
 #include "dpl/xmm/basic/load.h"
 #include "dpl/xmm/basic/store.h"
 #include "dpl/xmm/basic/to_bitset.h"
+#include "dpl/xmm/basic/undefined.h"
 // IWYU pragma: end_exports
 
 DPL_DISABLE_WARNING_POP()

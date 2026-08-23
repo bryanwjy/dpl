@@ -18,8 +18,12 @@ using __DPL datapar::basic_mask;
 using __DPL datapar::basic_vector;
 using __DPL datapar::broadcasting;
 using __DPL datapar::broadcasting_t;
+using __DPL datapar::iota;
+using __DPL datapar::iota_t;
 using __DPL datapar::to_canonical;
 using __DPL datapar::to_native_type;
+using __DPL datapar::unspecified;
+using __DPL datapar::unspecified_t;
 //
 
 inline namespace cpo {
@@ -35,6 +39,7 @@ using __DPL datapar::cpo::lane_index;
 using __DPL datapar::cpo::load;
 using __DPL datapar::cpo::store;
 using __DPL datapar::cpo::to_bitset;
+using __DPL datapar::cpo::undefined;
 } // namespace cpo
 } // namespace datapar
 

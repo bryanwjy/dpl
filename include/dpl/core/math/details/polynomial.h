@@ -7,6 +7,7 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/broadcast.h"
+#  include "dpl/core/basic/undefined.h"
 #  include "dpl/core/immediate/constants/digits.h"
 #  include "dpl/core/immediate/immediate.h"
 #  include "dpl/core/numbers/floating_point_like.h"
@@ -227,11 +228,11 @@ private:
             // allocate all the powers on the stack
             return []<typename... U>(this auto self, U&... args) noexcept {
                 if constexpr (sizeof...(U) == depth) {
-                    T end; // TODO undefine
+                    T end = dx::undefined<T>();
                     return eval_estrin<T>(
                         estrin::vpowers<depth, T>(end, args...));
                 } else {
-                    T next; // TODO undefine
+                    T next = dx::undefined<T>();
                     return self(next, args...);
                 }
             }(x);
