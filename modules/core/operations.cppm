@@ -58,6 +58,7 @@ using __DPL datapar::cpo::cmpgt;
 using __DPL datapar::cpo::cmple;
 using __DPL datapar::cpo::cmplt;
 using __DPL datapar::cpo::cmpneq;
+using __DPL datapar::cpo::cmpunord;
 using __DPL datapar::cpo::max;
 using __DPL datapar::cpo::min;
 //

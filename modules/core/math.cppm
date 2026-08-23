@@ -103,11 +103,16 @@ using __DPL datapar::cpo::sqrt;
 //
 
 using __DPL datapar::cpo::isfinite;
+using __DPL datapar::cpo::isgreater;
+using __DPL datapar::cpo::isgreaterequal;
 using __DPL datapar::cpo::isinf;
+using __DPL datapar::cpo::isless;
+using __DPL datapar::cpo::islessequal;
 using __DPL datapar::cpo::isnan;
 using __DPL datapar::cpo::isnanq;
 using __DPL datapar::cpo::isnans;
 using __DPL datapar::cpo::isnormal;
+using __DPL datapar::cpo::isunordered;
 //
 using __DPL datapar::cpo::cos;
 using __DPL datapar::cpo::cosh;

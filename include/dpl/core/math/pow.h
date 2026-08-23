@@ -365,9 +365,7 @@ public:
         result = dx::select(
             dx::logical_or(dx::isinf(lhs), islhs_zero), negated, result);
 
-        // TODO isunordered
-        result = dx::select(dx::logical_or(dx::isnan(lhs), dx::isnan(rhs)),
-            dx::all_bits, result);
+        result = dx::select(dx::cmpunord(lhs, rhs), dx::all_bits, result);
 
         return dx::select(
             dx::logical_or(dx::cmpeq(rhs, dx::zero), dx::cmpeq(rhs, dx::one)),

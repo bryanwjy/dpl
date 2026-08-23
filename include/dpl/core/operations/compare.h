@@ -18,6 +18,7 @@
 #include "dpl/core/operations/compare/cmple.h"
 #include "dpl/core/operations/compare/cmplt.h"
 #include "dpl/core/operations/compare/cmpneq.h"
+#include "dpl/core/operations/compare/cmpunord.h"
 // IWYU pragma: end_exports
 
 __DPL_DEFAULT_NAMESPACE_BEGIN
