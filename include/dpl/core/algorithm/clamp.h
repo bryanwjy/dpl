@@ -8,7 +8,7 @@
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/dispatch/broadcastable/ternary.h"
 #  include "dpl/core/dispatch/interface.h"
-#  include "dpl/core/dispatch/maskable/transform.h"
+#  include "dpl/core/dispatch/maskable/accumulation.h"
 #  include "dpl/core/dispatch/operation/algorithm.h"
 #  include "dpl/core/operations/minmax.h"
 #endif
@@ -21,10 +21,10 @@ struct clamp_t;
 
 struct DPL_EMPTY_BASES clamp_t :
     public algorithm_base<clamp_t>,
-    public maskable_transform_base<clamp_t>,
+    public maskable_accumulation_base<clamp_t>,
     public ternary_broadcastable_operation<clamp_t> {
     using operation_base<clamp_t>::operator();
-    using maskable_transform_base<clamp_t>::operator();
+    using maskable_accumulation_base<clamp_t>::operator();
     using ternary_broadcastable_operation<clamp_t>::operator();
 };
 
@@ -42,7 +42,7 @@ struct fallback_impl<clamp_t> : ternary_broadcasting_fallback<clamp_t> {
     requires cpo_invocable<min_t, T, Hi> &&
         cpo_invocable<max_t, Lo, cpo_result_t<min_t, T, Hi>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(
+    static constexpr T DPL_VECTORCALL operator()(
         T&& val, Lo&& low, Hi&& high) noexcept {
         return dx::max(__DPL forward<Lo>(low),
             dx::min(__DPL forward<T>(val), __DPL forward<Hi>(high)));
@@ -140,13 +140,80 @@ struct canonical_impl<clamp_t> {
         return clamp(internal::abi<Hi>, __DPL forward<T>(val),
             __DPL forward<Lo>(low), high);
     }
+
+    template <canonical_vector T, vector_subsumed_by<T> Lo,
+        vector_subsumed_by<T> Hi>
+    requires (canonical_vector<Lo> && canonical_vector<Hi>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(
+        T val, simd_mask_type_t<T> mask, Lo low, Hi high) noexcept
+    requires requires { clamp(internal::abi<T>, val, mask, low, high); }
+    {
+        return clamp(internal::abi<T>, val, mask, low, high);
+    }
+
+    template <canonical_vector T, const_mask_for<T> M, vector_subsumed_by<T> Lo,
+        vector_subsumed_by<T> Hi>
+    requires (canonical_vector<Lo> && canonical_vector<Hi>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(T val, M mask, Lo low, Hi high) noexcept
+    requires requires(launder_cmask_t<T, M> cmask) {
+        clamp(internal::abi<T>, val, cmask, low, high);
+    }
+    {
+        return clamp(
+            internal::abi<T>, val, dx::to_const_mask<T>(mask), low, high);
+    }
+
+    template <canonical_vector T, vector_subsumed_by<T> Lo,
+        vector_subsumed_by<T> Hi>
+    requires (canonical_vector<Lo> && canonical_vector<Hi>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(dx::zero_t zero, simd_mask_type_t<T> mask,
+        T val, Lo low, Hi high) noexcept
+    requires requires { clamp(internal::abi<T>, zero, mask, val, low, high); }
+    {
+        return clamp(internal::abi<T>, zero, mask, val, low, high);
+    }
+
+    template <canonical_vector T, const_mask_for<T> M, vector_subsumed_by<T> Lo,
+        vector_subsumed_by<T> Hi>
+    requires (canonical_vector<Lo> && canonical_vector<Hi>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(
+        dx::zero_t zero, M mask, T val, Lo low, Hi high) noexcept
+    requires requires(launder_cmask_t<T, M> cmask) {
+        clamp(internal::abi<T>, zero, cmask, val, low, high);
+    }
+    {
+        return clamp(
+            internal::abi<T>, zero, dx::to_const_mask<T>(mask), val, low, high);
+    }
 };
 
-template <typename AT, typename BT, typename CT,
-    typename A = common_abi_t<AT, BT, CT>>
-concept unqualified_extended_clamp = requires(AT a, BT b, CT c) {
-    { clamp(a, b, c) } -> vector_with_common_abi<A>;
+template <typename T, typename AT, typename BT,
+    typename A = common_abi_t<T, AT, BT>>
+concept unqualified_extended_clamp = requires(T val, AT lo, BT hi) {
+    { clamp(val, lo, hi) } -> vector_with_common_abi<A>;
 };
+
+template <typename T, typename M, typename AT, typename BT>
+concept unqualified_extended_mclamp =
+    cpo_invocable<clamp_t, T, AT, BT> && requires {
+        {
+            clamp(internal::declarg<T>(), internal::declarg<M>(),
+                internal::declarg<AT>(), internal::declarg<BT>())
+        } -> equivalent_vector_with<cpo_result_t<clamp_t, T, AT, BT>>;
+    };
+
+template <typename T, typename M, typename AT, typename BT>
+concept unqualified_extended_zmclamp =
+    cpo_invocable<clamp_t, T, AT, BT> && requires {
+        {
+            clamp(dx::zero, internal::declarg<M>(), internal::declarg<T>(),
+                internal::declarg<AT>(), internal::declarg<BT>())
+        } -> equivalent_vector_with<cpo_result_t<clamp_t, T, AT, BT>>;
+    };
 
 template <>
 struct extended_impl<clamp_t> {
@@ -213,6 +280,52 @@ struct extended_impl<clamp_t> {
     static constexpr auto operator()(AT&& val, BT&& low, CT&& high) {
         return clamp(__DPL forward<AT>(val), __DPL forward<BT>(low),
             __DPL forward<CT>(high));
+    }
+
+    template <simd_vector T, exact_mask_for<T> M, vector_subsumed_by<T> Lo,
+        vector_subsumed_by<T> Hi>
+    requires (extended_vector<T> || extended_mask<M> || extended_vector<Lo> ||
+                 extended_vector<Hi>) &&
+        unqualified_extended_mclamp<T, M, Lo, Hi>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T val, M mask, Lo low, Hi high) {
+        return clamp(__DPL forward<T>(val), __DPL forward<M>(mask),
+            __DPL forward<Lo>(low), __DPL forward<Hi>(high));
+    }
+
+    template <simd_vector T, const_mask_for<T> M, vector_subsumed_by<T> Lo,
+        vector_subsumed_by<T> Hi>
+    requires (extended_vector<T> || extended_vector<Lo> ||
+                 extended_vector<Hi>) &&
+        unqualified_extended_mclamp<T, launder_cmask_t<T, M>, Lo, Hi>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T val, M mask, Lo low, Hi high) {
+        return clamp(__DPL forward<T>(val), dx::to_const_mask<T>(mask),
+            __DPL forward<Lo>(low), __DPL forward<Hi>(high));
+    }
+
+    template <canonical_vector T, exact_mask_for<T> M, vector_subsumed_by<T> Lo,
+        vector_subsumed_by<T> Hi>
+    requires (extended_vector<T> || extended_mask<M> || extended_vector<Lo> ||
+                 extended_vector<Hi>) &&
+        unqualified_extended_zmclamp<T, M, Lo, Hi>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(
+        dx::zero_t zero, M mask, T val, Lo low, Hi high) {
+        return clamp(zero, __DPL forward<M>(mask), __DPL forward<T>(val),
+            __DPL forward<Lo>(low), __DPL forward<Hi>(high));
+    }
+
+    template <canonical_vector T, const_mask_for<T> M, vector_subsumed_by<T> Lo,
+        vector_subsumed_by<T> Hi>
+    requires (extended_vector<T> || extended_mask<M> || extended_vector<Lo> ||
+                 extended_vector<Hi>) &&
+        unqualified_extended_zmclamp<T, launder_cmask_t<T, M>, Lo, Hi>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(
+        dx::zero_t zero, M mask, T val, Lo low, Hi high) {
+        return clamp(zero, dx::to_const_mask<T>(mask), __DPL forward<T>(val),
+            __DPL forward<Lo>(low), __DPL forward<Hi>(high));
     }
 };
 } // namespace datapar::internal

@@ -219,19 +219,17 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr T operator()(T src, T result, C conditions) noexcept {
         fpfix::template_for(
-            [&](auto flags, auto val) {
+            [&]<typename F, typename V>(F flags, V val) {
                 if constexpr (val == fpfix::signed_inf) {
                     result = dx::select(match(src, flags),
                         dx::negate(dx::signbit(src), dx::infinity_v<T>),
                         result);
                 } else if constexpr (val == fpfix::revert) {
                     result = dx::select(match(src, flags), src, result);
-                } else if constexpr (same_as<decltype(val),
-                                         decltype(dx::nan)>) {
+                } else if constexpr (same_as<V, decltype(dx::nan)>) {
                     result =
                         dx::select(match(src, flags), dx::all_bits, result);
-                } else if constexpr (same_as<decltype(val),
-                                         decltype(dx::zero)>) {
+                } else if constexpr (same_as<V, decltype(dx::zero)>) {
                     result = dx::select(match(src, flags), dx::zero, result);
                 } else {
                     result = dx::select(match(src, flags), val, result);

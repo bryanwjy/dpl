@@ -185,7 +185,7 @@ private:
         size_t L = depth>
     requires same_as<decay_t<Powers>, fmath::estrin::vpowers<depth, T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto eval_estrin(
+    static constexpr T eval_estrin(
         Powers&& x, immediate<B> = {}, immediate<L> = {}) noexcept {
         using E = simd_element_type_t<T>;
         constexpr auto S = 1 << L; // stride for the next level
@@ -220,8 +220,8 @@ private:
     }
 
     template <canonical_vector T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr T DPL_VECTORCALL eval_estrin(T x) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T eval_estrin(T x) noexcept {
         if constexpr (same_as<simd_native_type_t<T>, T>) {
             static_assert(scalable_abi<simd_abi_type_t<T>>);
             // sizeless type workaround
@@ -248,8 +248,8 @@ private:
     }
 
     template <canonical_vector T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr T DPL_VECTORCALL eval_horner(T x) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T eval_horner(T x) noexcept {
         using E = simd_element_type_t<T>;
         return []<int I = sizeof...(Vs) - 1>(
             this auto self, T result, T x, immediate<I> = {}) {
@@ -266,8 +266,8 @@ private:
 public:
     template <canonical_vector T>
     requires floating_point_like<simd_element_type_t<T>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(T x) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr T DPL_VECTORCALL operator()(T x) noexcept {
         if constexpr (degree < 6) {
             return eval_horner(x);
         } else {
