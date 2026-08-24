@@ -238,8 +238,8 @@ inline vector<ext::bfloat16>
 
 template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-inline auto DPL_VECTORCALL multiply(
-    abi_tag, vector<E> lhs, vector<E> rhs) noexcept
+inline vector<E>
+    DPL_VECTORCALL multiply(abi_tag, vector<E> lhs, vector<E> rhs) noexcept
 requires requires { xmm::multiply(lhs, rhs); }
 {
     return xmm::multiply(lhs, rhs);

@@ -202,21 +202,21 @@ inline vector<int16>
 #    endif
 #  endif
 
-template <simd_element E>
+template <simd_element E, imask_t<E> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 inline vector<E>
     DPL_VECTORCALL abs(abi_tag, type_identity_t<vector<E>> src,
-        type_identity_t<mask<E>> mask, vector<E> val) noexcept
+        cmask_t<E, M> mask, vector<E> val) noexcept
 requires requires { xmm::abs(src, mask, val); }
 {
     return xmm::abs(src, mask, val);
 }
 
-template <simd_element E>
+template <simd_element E, imask_t<E> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 inline vector<E>
-    DPL_VECTORCALL abs(abi_tag, dx::zero_t zero, type_identity_t<mask<E>> mask,
-        vector<E> val) noexcept
+    DPL_VECTORCALL abs(
+        abi_tag, dx::zero_t zero, cmask_t<E, M> mask, vector<E> val) noexcept
 requires requires { xmm::abs(zero, mask, val); }
 {
     return xmm::abs(zero, mask, val);

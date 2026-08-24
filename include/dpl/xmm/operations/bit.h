@@ -9,4 +9,5 @@
 #include "dpl/xmm/operations/bit/countl.h"
 #include "dpl/xmm/operations/bit/countr.h"
 #include "dpl/xmm/operations/bit/popcount.h"
+#include "dpl/xmm/operations/bit/rot.h"
 // IWYU pragma: end_exports

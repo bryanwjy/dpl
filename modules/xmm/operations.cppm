@@ -14,8 +14,8 @@ namespace datapar::xmm {
 using __DPL datapar::xmm::abs;
 using __DPL datapar::xmm::add;
 using __DPL datapar::xmm::divide;
+// use fallback negate
 using __DPL datapar::xmm::multiply;
-// using __DPL datapar::xmm::negate;
 using __DPL datapar::xmm::subadd;
 using __DPL datapar::xmm::subtract;
 //
@@ -34,8 +34,8 @@ using __DPL datapar::xmm::countl_zero;
 using __DPL datapar::xmm::countr_one;
 using __DPL datapar::xmm::countr_zero;
 using __DPL datapar::xmm::popcount;
-// using __DPL datapar::xmm::rotl;
-// using __DPL datapar::xmm::rotr;
+using __DPL datapar::xmm::rotl;
+using __DPL datapar::xmm::rotr;
 //
 
 //

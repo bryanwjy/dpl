@@ -163,8 +163,7 @@ template <>
 struct canonical_impl<rotl_t> {
 private:
     template <typename L, typename R>
-    using vresult_t DPL_NODEBUG =
-        make_canonical_vector_t<simd_element_type_t<L>, common_abi_t<L, R>>;
+    using vresult_t DPL_NODEBUG = common_canonical_simd_t<L, R>;
 
     template <typename L, typename R>
     using vmask_t DPL_NODEBUG = simd_mask_type_t<vresult_t<L, R>>;
