@@ -95,14 +95,12 @@ struct operation_signature<max_t> {
 template <>
 struct fallback_impl<max_t> : binary_broadcasting_fallback<max_t> {
 
-    template <fixed_width_abi A, simd_element_for<A> E>
-    requires totally_ordered<E>
+    template <canonical_vector T>
+    requires totally_ordered<simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_vector<E, A>
-        DPL_VECTORCALL operator()(
-            basic_vector<E, A> lhs, basic_vector<E, A> rhs) noexcept {
+    static constexpr T DPL_VECTORCALL operator()(T lhs, T rhs) noexcept {
         if consteval {
-            return internal::transform<basic_vector<E, A>>(max_t{}, lhs, rhs);
+            return internal::transform<T>(max_t{}, lhs, rhs);
         } else {
             return dx::select(dx::cmplt(lhs, rhs), rhs, lhs);
         }

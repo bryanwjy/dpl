@@ -46,8 +46,8 @@ using __DPL datapar::xmm::cmple;
 using __DPL datapar::xmm::cmplt;
 using __DPL datapar::xmm::cmpneq;
 using __DPL datapar::xmm::cmpunord;
-// using __DPL datapar::xmm::min;
-// using __DPL datapar::xmm::max;
+using __DPL datapar::xmm::max;
+using __DPL datapar::xmm::min;
 //
 using __DPL datapar::xmm::element_cast;
 //
