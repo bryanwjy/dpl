@@ -53,12 +53,11 @@ struct fallback_impl<cmplt_t> : binary_broadcasting_fallback<cmplt_t> {
     using binary_broadcasting_fallback<cmplt_t>::operator();
 };
 
-template <typename L, typename R, typename A = common_abi_t<L, R>,
-    typename E = simd_element_type_t<L>>
+template <typename L, typename R, typename T = common_canonical_simd_t<L, R>>
 concept unqualified_canonical_cmplt = requires {
     {
-        cmplt(internal::abi<A>, internal::declarg<L>(), internal::declarg<R>())
-    } -> equivalent_mask_with<basic_mask<simd_element_type_t<L>, A>>;
+        cmplt(internal::abi<T>, internal::declarg<L>(), internal::declarg<R>())
+    } -> equivalent_mask_with<simd_mask_type_t<T>>;
 };
 
 template <typename S, typename L, typename R>
@@ -75,10 +74,10 @@ struct canonical_impl<cmplt_t> {
 private:
     template <typename L, typename R>
     using result_t DPL_NODEBUG =
-        make_canonical_mask_t<simd_element_type_t<L>, common_abi_t<L, R>>;
+        simd_mask_type_t<common_canonical_simd_t<L, R>>;
 
     template <typename L, typename R>
-    using mask_t DPL_NODEBUG = cpo_result_t<cmplt_t, L, R>;
+    using mask_t DPL_NODEBUG = result_t<L, R>;
 
 public:
     template <canonical_vector L, common_vector_with<L> R>
@@ -89,16 +88,14 @@ public:
     }
 
     template <canonical_vector L, broadcastable_to<L> R>
-    requires unqualified_canonical_cmplt<L, R, simd_abi_type_t<L>,
-        simd_element_type_t<L>>
+    requires unqualified_canonical_cmplt<L, R, L>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr result_t<L, L> operator()(L lhs, R&& rhs) noexcept {
         return cmplt(internal::abi<L>, lhs, __DPL forward<R>(rhs));
     }
 
     template <canonical_vector R, broadcastable_to<R> L>
-    requires unqualified_canonical_cmplt<L, R, simd_abi_type_t<R>,
-        simd_element_type_t<R>>
+    requires unqualified_canonical_cmplt<L, R, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr result_t<R, R> operator()(L&& lhs, R rhs) noexcept {
         return cmplt(internal::abi<R>, __DPL forward<L>(lhs), rhs);

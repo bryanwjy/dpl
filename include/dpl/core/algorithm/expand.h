@@ -20,8 +20,8 @@ namespace datapar::internal {
 void expand(...) noexcept = delete;
 
 struct DPL_EMPTY_BASES expand_t :
-    private algorithm_base<expand_t>,
-    private maskable_transform_base<expand_t> {
+    public algorithm_base<expand_t>,
+    public maskable_transform_base<expand_t> {
     using operation_base<expand_t>::operator();
     using maskable_transform_base<expand_t>::operator();
 };

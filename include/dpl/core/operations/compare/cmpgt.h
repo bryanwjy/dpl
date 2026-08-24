@@ -40,19 +40,17 @@ struct operation_signature<cmpgt_t> {
 template <>
 struct fallback_impl<cmpgt_t> : binary_broadcasting_fallback<cmpgt_t> {
 
-    template <simd_abi LA, common_abi_with<LA> RA, simd_element_for<LA> E,
-        typename A = common_abi_t<LA, RA>>
-    requires simd_element_for<E, RA> &&
-        cpo_invocable<cmplt_t, basic_vector<E, LA>, basic_vector<E, RA>>
+    template <canonical_vector L, common_vector_with<L> R>
+    requires canonical_vector<R> && cpo_invocable<cmplt_t, R, L>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_mask<E, A>
-        DPL_VECTORCALL operator()(
-            basic_vector<E, LA> lhs, basic_vector<E, RA> rhs) noexcept {
+    static constexpr cpo_result_t<cmplt_t, R, L>
+        DPL_VECTORCALL operator()(L lhs, R rhs) noexcept {
         return dx::cmplt(rhs, lhs);
     }
 
     using binary_broadcasting_fallback<cmpgt_t>::operator();
 };
+
 template <typename L, typename R, typename A = common_abi_t<L, R>,
     typename E = simd_element_type_t<L>>
 concept unqualified_canonical_cmpgt = requires {

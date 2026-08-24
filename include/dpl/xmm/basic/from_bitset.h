@@ -13,6 +13,8 @@ DPL_DISABLE_WARNING("-Wc++26-extensions")
 
 #  include "dpl/xmm/basic/abi.h"
 #  include "dpl/xmm/basic/initialize.h"
+#  include "dpl/xmm/basic/inl/bitwise.h"
+#  include "dpl/xmm/basic/inl/compare.h"
 
 #  if !DPL_MODULES
 #    include "dpl/core/immediate/constants/all_bits.h"
@@ -63,30 +65,30 @@ constexpr mask<E> from_bitset(bitset_t<E> mask) noexcept {
                 auto const lower = _mm_set1_epi16(imask & 0xff);
                 auto const zero = _mm_setzero_si128();
                 auto const hi8 =
-                    _mm_cmpgt_epi16(_mm_and_si128(upper, bits), zero);
+                    fwd::cmpgt_epi16(fwd::and_si128(upper, bits), zero);
                 auto const lo8 =
-                    _mm_cmpgt_epi16(_mm_and_si128(lower, bits), zero);
+                    fwd::cmpgt_epi16(fwd::and_si128(lower, bits), zero);
                 return _mm_packs_epi16(lo8, hi8);
             } else if constexpr (width == 8) {
                 auto const val =
                     static_cast<uint16>(__DPL to_underlying(mask));
                 auto const m = _mm_set1_epi16( __DPL to_signed(val));
-                return _mm_cmpgt_epi16(
-                    _mm_and_si128(m, +internal::mask_lane_bits<E>),
+                return fwd::cmpgt_epi16(
+                    fwd::and_si128(m, +internal::mask_lane_bits<E>),
                     _mm_setzero_si128());
             } else if constexpr (width == 4) {
                 auto const val =
                     static_cast<uint32>(__DPL to_underlying(mask));
                 auto const m = _mm_set1_epi32( __DPL to_signed(val));
-                return _mm_cmpgt_epi32(
-                    _mm_and_si128(m, +internal::mask_lane_bits<E>),
+                return fwd::cmpgt_epi32(
+                    fwd::and_si128(m, +internal::mask_lane_bits<E>),
                     _mm_setzero_si128());
             } else if constexpr (width == 2) {
                 auto const val =
                     static_cast<uint64>(__DPL to_underlying(mask));
                 auto const m = _mm_set1_epi64x( __DPL to_signed(val));
-                return _mm_cmpgt_epi64(
-                    _mm_and_si128(m, +internal::mask_lane_bits<E>),
+                return fwd::cmpgt_epi64(
+                    fwd::and_si128(m, +internal::mask_lane_bits<E>),
                     _mm_setzero_si128());
             } else {
                 static_assert(width == 1);

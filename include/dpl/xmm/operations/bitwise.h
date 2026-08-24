@@ -5,6 +5,7 @@
 #include "dpl/config.h"
 
 // IWYU pragma: begin_exports
+#include "dpl/xmm/basic/inl/bitwise.inl"
 #include "dpl/xmm/operations/bitwise/bwand.h"
 #include "dpl/xmm/operations/bitwise/bwandnot.h"
 #include "dpl/xmm/operations/bitwise/bwnot.h"

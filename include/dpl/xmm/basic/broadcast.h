@@ -8,6 +8,7 @@
 
 #  include "dpl/xmm/basic/abi.h"
 #  include "dpl/xmm/basic/initialize.h"
+#  include "dpl/xmm/basic/inl/compare.h"
 
 #  if !DPL_MODULES
 #    include "dpl/core/immediate/constants/all_bits.h"
@@ -80,7 +81,7 @@ constexpr vector<E> broadcast(dx::all_bits_t) noexcept {
         return xmm::broadcast<E>(dx::all_bits_v<E>);
     } else {
         auto xmm0 = _mm_undefined_si128();
-        xmm0 = _mm_cmpeq_epi32(xmm0, xmm0);
+        xmm0 = fwd::cmpeq_epi32(xmm0, xmm0);
         if constexpr (is_same_v<native_vector_t<E>, __m128>) {
             return _mm_castsi128_ps(xmm0);
         } else if constexpr (is_same_v<native_vector_t<E>, __m128d>) {
