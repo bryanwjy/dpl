@@ -20,6 +20,7 @@ DPL_DISABLE_WARNING(5244)
 #include "dpl/xmm/operations/bitwise.h"
 #include "dpl/xmm/operations/compare.h"
 #include "dpl/xmm/operations/element_cast.h"
+#include "dpl/xmm/operations/permute.h"
 #include "dpl/xmm/operations/reinterpret.h"
 #include "dpl/xmm/operations/select.h"
 #include "dpl/xmm/operations/to_simd_mask.h"

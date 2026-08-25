@@ -29,10 +29,19 @@ DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<E>
     DPL_VECTORCALL select(
         mask<C> condition, vector<E> lhs, vector<E> rhs) noexcept {
-    if constexpr (same_as<E, float>) {
+    if constexpr (is_same_v<E, float>) {
+#  if DPL_SIMD_X86_SSE4_1
         return _mm_blendv_ps(+rhs, +lhs, +xmm::reinterpret<float>(condition));
-    } else if constexpr (same_as<E, double>) {
+#  else
+        auto const vcond = +xmm::reinterpret<float>(condition);
+        return _mm_or_ps(_mm_and_ps(vcond, +lhs), _mm_andnot_ps(vcond, +rhs));
+#  endif
+    } else if constexpr (is_same_v<E, double>) {
+#  if DPL_SIMD_X86_SSE4_1
         return _mm_blendv_pd(+rhs, +lhs, +xmm::reinterpret<double>(condition));
+#  else
+        return _mm_or_pd(_mm_and_pd(vcond, +lhs), _mm_andnot_pd(vcond, +rhs));
+#  endif
     } else if constexpr (common_size_with<E, float>) {
         return xmm::reinterpret<E>(xmm::select(condition,
             xmm::reinterpret<float>(lhs), xmm::reinterpret<float>(rhs)));
@@ -40,14 +49,26 @@ inline vector<E>
         return xmm::reinterpret<E>(xmm::select(condition,
             xmm::reinterpret<double>(lhs), xmm::reinterpret<double>(rhs)));
     } else if constexpr (common_size_with<E, int16>) {
+#  if DPL_SIMD_X86_SSE4_1
         return xmm::reinterpret<E>(vector<int16>(_mm_blendv_epi8(
             +xmm::reinterpret<int16>(rhs), +xmm::reinterpret<int16>(lhs),
             +xmm::reinterpret<int16>(condition))));
+#  else
+        auto const vcond = +xmm::reinterpret<int16>(condition);
+        return _mm_or_si128(
+            _mm_and_si128(vcond, +lhs), _mm_andnot_si128(vcond, +rhs));
+#  endif
     } else {
         static_assert(common_size_with<E, int8>);
+#  if DPL_SIMD_X86_SSE4_1
         return xmm::reinterpret<E>(vector<int8>(_mm_blendv_epi8(
             +xmm::reinterpret<int8>(rhs), +xmm::reinterpret<int8>(lhs),
             +xmm::reinterpret<int8>(condition))));
+#  else
+        auto const vcond = +xmm::reinterpret<int8>(condition);
+        return _mm_or_si128(
+            _mm_and_si128(vcond, +lhs), _mm_andnot_si128(vcond, +rhs));
+#  endif
     }
 }
 

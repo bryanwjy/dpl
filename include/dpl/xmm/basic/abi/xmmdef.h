@@ -27,7 +27,7 @@ template <typename E>
 using size_vector_t =
     dx::basic_vector<dx::unsigned_representation_t<E>, abi_tag>;
 template <typename E>
-using difference_vector_t =
+using ssize_vector_t =
     dx::basic_vector<dx::signed_representation_t<E>, abi_tag>;
 template <typename E>
 using mask = dx::basic_mask<E, abi_tag>;

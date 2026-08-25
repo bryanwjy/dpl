@@ -21,3 +21,15 @@ def __lldb_init_module(debugger, internal_dict):
     debugger.HandleCommand(
         'type category enable dpl'
     )
+    debugger.HandleCommand(
+        'type synthetic add -w dpl -l lldb_formatter.classes.FormatDispatcher -x "^basic_vector"'
+    )
+    debugger.HandleCommand(
+        'type summary add -w dpl -F lldb_formatter.classes.summarize -x "^basic_vector"'
+    )
+    debugger.HandleCommand(
+        'type synthetic add -w dpl -l lldb_formatter.classes.FormatDispatcher -x "^basic_mask"'
+    )
+    debugger.HandleCommand(
+        'type summary add -w dpl -F lldb_formatter.classes.summarize -x "^basic_mask"'
+    )

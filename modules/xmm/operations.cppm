@@ -51,6 +51,7 @@ using __DPL datapar::xmm::min;
 //
 using __DPL datapar::xmm::element_cast;
 //
+using __DPL datapar::xmm::permute;
 using __DPL datapar::xmm::reinterpret;
 using __DPL datapar::xmm::select;
 using __DPL datapar::xmm::to_simd_mask;
