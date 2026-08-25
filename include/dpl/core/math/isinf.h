@@ -12,7 +12,7 @@
 #  include "dpl/core/dispatch/operation/math.h"
 #  include "dpl/core/immediate/constants/infinity.h"
 #  include "dpl/core/immediate/constants/value_bits.h"
-#  include "dpl/core/operations/bitwise.h"
+#  include "dpl/core/operations/arithmetic/abs.h"
 #  include "dpl/core/operations/compare.h"
 #endif
 
@@ -35,7 +35,8 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr simd_mask_type_t<T>
         DPL_VECTORCALL operator()(T val) noexcept {
-        return dx::cmpeq(dx::bwand(val, dx::value_bits), dx::infinity);
+        auto const inf = dx::broadcast<T>(dx::infinity);
+        return dx::cmpeq(dx::abs(val), inf);
     }
 
     template <canonical_vector T>
@@ -44,7 +45,7 @@ public:
     static constexpr simd_mask_type_t<T>
         DPL_VECTORCALL operator()(simd_mask_type_t<T> mask, T val) noexcept {
         auto const inf = dx::broadcast<T>(dx::infinity);
-        return dx::cmpeq(mask, dx::bwand(val, dx::value_bits), inf);
+        return dx::cmpeq(mask, dx::abs(val), inf);
     }
 
     template <canonical_vector T, const_mask_for<T> M>
@@ -53,7 +54,7 @@ public:
     static constexpr simd_mask_type_t<T>
         DPL_VECTORCALL operator()(M cmask, T val) noexcept {
         auto const inf = dx::broadcast<T>(dx::infinity);
-        return dx::cmpeq(cmask, dx::bwand(val, dx::value_bits), inf);
+        return dx::cmpeq(cmask, dx::abs(val), inf);
     }
 };
 

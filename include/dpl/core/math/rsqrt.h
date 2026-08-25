@@ -172,10 +172,19 @@ public:
         auto result = mx::ldexp(mx::compliance::unsafe, reduced, rhs);
         result = dx::multiply(
             result, dx::cmpeq(remtwo, dx::zero), result, inv_sqrt2);
-        return dx::fixup(val, result,
-            fpfix::condition<fpfix::nan, fpfix::revert>       //
-                | fpfix::condition<fpfix::infinity, dx::zero> //
-                | fpfix::condition<fpfix::negative, dx::nan>);
+        constexpr auto fixflags = fpfix::condition<fpfix::nan, fpfix::copy> //
+            | fpfix::condition<fpfix::infinite, dx::zero>                   //
+            | fpfix::condition<fpfix::negative, dx::nan>;
+        if constexpr (dx::is_simd_canonical_invocable<T, T, decltype(fixflags)>(
+                          dx::fixup)) {
+            return dx::fixup(result, val, fixflags);
+        } else {
+            result = dx::select(
+                dx::logical_or(dx::isnan(val), dx::cmplt(val, dx::zero)),
+                dx::all_bits, result);
+            result = dx::select(dx::isinf(val), dx::zero, result);
+            return result;
+        }
     }
 };
 

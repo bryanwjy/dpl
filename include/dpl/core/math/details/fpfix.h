@@ -28,7 +28,7 @@ enum class fpc : unsigned char {
     qnan = 1 << 6,
     snan = 1 << 7,
     all = (1 << 8) - 1,
-    infinity = 0b11 << 4,
+    infinite = 0b11 << 4,
     nan = 0b11 << 6,
     finite = 0b1111,
 };
@@ -100,16 +100,16 @@ struct signed_inf_t {
     consteval bool operator==(auto) noexcept { return false; }
 };
 
-struct revert_t {
-    explicit consteval revert_t() noexcept = default;
-    consteval bool operator==(revert_t) noexcept { return true; }
+struct copy_val_t {
+    explicit consteval copy_val_t() noexcept = default;
+    consteval bool operator==(copy_val_t) noexcept { return true; }
     consteval bool operator==(auto) noexcept { return false; }
 };
 
 template <>
 inline constexpr bool is_dependent_result<signed_inf_t> = false;
 template <>
-inline constexpr bool is_dependent_result<revert_t> = false;
+inline constexpr bool is_dependent_result<copy_val_t> = false;
 
 template <typename T>
 concept dependent_result = is_dependent_result<T>;
@@ -136,8 +136,8 @@ public:
     requires result_type<T, E>
     static consteval auto operator[](fix_case<E, CT>) noexcept {
         static_assert((C & CT) != fpc::none);
-        if constexpr (same_as<T, revert_t>) {
-            return revert_t{};
+        if constexpr (same_as<T, copy_val_t>) {
+            return copy_val_t{};
         } else if constexpr (same_as<T, signed_inf_t>) {
             return signed_inf_t{};
         } else {
@@ -148,8 +148,8 @@ public:
     template <fpc CT>
     static consteval auto operator[](fpclass<CT>) noexcept {
         static_assert((C & CT) != fpc::none);
-        if constexpr (same_as<T, revert_t>) {
-            return revert_t{};
+        if constexpr (same_as<T, copy_val_t>) {
+            return copy_val_t{};
         } else if constexpr (same_as<T, signed_inf_t>) {
             return signed_inf_t{};
         } else {

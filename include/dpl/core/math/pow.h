@@ -341,12 +341,13 @@ public:
 
         auto const inf = dx::broadcast<T>(dx::infinity);
 
-        auto const efx =
-            dx::fixup(dx::sign(dx::subtract(absl, dx::one), rhs), inf,
-                fpfix::condition<fpfix::negative, dx::zero> |
-                    fpfix::condition<fpfix::zero, dx::one>);
-
-        result = dx::select(dx::isinf(rhs), efx, result);
+        {
+            auto efx = dx::sign(dx::subtract(absl, dx::one), rhs);
+            auto const ltz = dx::cmplt(efx, dx::zero);
+            auto const eqz = dx::cmpeq(efx, dx::zero);
+            efx = dx::select(ltz, dx::zero, dx::select(eqz, dx::one, inf));
+            result = dx::select(dx::isinf(rhs), efx, result);
+        }
 
         auto const islhs_zero = dx::cmpeq(lhs, dx::zero);
         auto const is_odd = [](auto rhs) {

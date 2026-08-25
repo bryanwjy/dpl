@@ -16,7 +16,7 @@ __DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::fpfix {
 
-inline constexpr mx::revert_t revert{};
+inline constexpr mx::copy_val_t copy{};
 inline constexpr mx::signed_inf_t signed_inf{};
 
 template <typename T>
@@ -45,7 +45,7 @@ inline constexpr mx::fpclass<mx::fpc::neg_inf> neg_inf{};
 inline constexpr mx::fpclass<mx::fpc::qnan> qnan{};
 inline constexpr mx::fpclass<mx::fpc::snan> snan{};
 inline constexpr mx::fpclass<mx::fpc::all> all{};
-inline constexpr mx::fpclass<mx::fpc::infinity> infinity{};
+inline constexpr mx::fpclass<mx::fpc::infinite> infinite{};
 inline constexpr mx::fpclass<mx::fpc::nan> nan{};
 inline constexpr mx::fpclass<mx::fpc::finite> finite{};
 // clang-format on

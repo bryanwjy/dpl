@@ -180,24 +180,27 @@ private:
         return refine(dx::reinterpret<E>(seed), val);
     }
 
-    static constexpr auto fix = fpfix::condition<fpfix::infinity, dx::zero> |
+    static constexpr auto fixflags =
+        fpfix::condition<fpfix::infinite, dx::zero> |
         fpfix::condition<fpfix::zero, fpfix::signed_inf>;
 
 public:
     template <canonical_vector T>
-    requires same_as<simd_element_type_t<T>, float>
+    requires same_as<simd_element_type_t<T>, float> ||
+        same_as<simd_element_type_t<T>, double>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr T DPL_VECTORCALL operator()(T val) noexcept {
-        // nan is implicitly handled
-        return dx::fixup(val, approximate(val), fix);
-    }
-
-    template <canonical_vector T>
-    requires same_as<simd_element_type_t<T>, double>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr T DPL_VECTORCALL operator()(T val) noexcept {
-        // nan is implicitly handled
-        return dx::fixup(val, approximate(val), fix);
+        if constexpr (dx::is_simd_canonical_invocable<T, T, decltype(fixflags)>(
+                          dx::fixup)) {
+            // nan is implicitly handled
+            return dx::fixup(val, approximate(val), fixflags);
+        } else {
+            auto result = approximate(val);
+            auto const inf = dx::broadcast<T>(dx::infinity);
+            result = dx::select(dx::isinf(val), dx::zero, result);
+            result = dx::select(dx::cmpeq(val, dx::zero), inf, result);
+            return dx::copysign(result, val);
+        }
     }
 };
 } // namespace datapar::internal

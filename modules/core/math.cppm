@@ -28,8 +28,9 @@ using __DPL datapar::rounding::to_zero_t;
 
 namespace fpfix {
 using __DPL datapar::fpfix::all;
+using __DPL datapar::fpfix::copy;
 using __DPL datapar::fpfix::finite;
-using __DPL datapar::fpfix::infinity;
+using __DPL datapar::fpfix::infinite;
 using __DPL datapar::fpfix::nan;
 using __DPL datapar::fpfix::neg_inf;
 using __DPL datapar::fpfix::negative;
@@ -38,7 +39,6 @@ using __DPL datapar::fpfix::one;
 using __DPL datapar::fpfix::pos_inf;
 using __DPL datapar::fpfix::positive;
 using __DPL datapar::fpfix::qnan;
-using __DPL datapar::fpfix::revert;
 using __DPL datapar::fpfix::signed_inf;
 using __DPL datapar::fpfix::snan;
 using __DPL datapar::fpfix::zero;

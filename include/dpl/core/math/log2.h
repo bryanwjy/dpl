@@ -202,11 +202,23 @@ public:
         auto s = exp + mx::pair_ref{x} * inv_halfln2;
         s = s + mx::pair_ref{x3} * t;
 
-        return dx::fixup(val, mx::recombine(s),
-            fpfix::condition<fpfix::negative, dx::nan> |
-                fpfix::condition<fpfix::zero, -dx::infinity> |
-                fpfix::condition<fpfix::infinity, fpfix::revert> |
-                fpfix::condition<fpfix::nan, fpfix::revert>);
+        constexpr auto fixflags = fpfix::condition<fpfix::negative, dx::nan> |
+            fpfix::condition<fpfix::zero, -dx::infinity> |
+            fpfix::condition<fpfix::infinite, fpfix::copy> |
+            fpfix::condition<fpfix::nan, fpfix::copy>;
+        if constexpr (dx::is_simd_canonical_invocable<T, T, decltype(fixflags)>(
+                          dx::fixup)) {
+            return dx::fixup(val, mx::recombine(s), fixflags);
+        } else {
+            auto result = mx::recombine(s);
+            result = dx::select(dx::isinf(val), dx::infinity, result);
+            result = dx::select(
+                dx::logical_or(dx::cmplt(val, dx::zero), dx::isnan(val)),
+                dx::all_bits, result);
+            result =
+                dx::select(dx::cmpeq(val, dx::zero), -dx::infinity, result);
+            return result;
+        }
     }
 };
 } // namespace datapar::internal

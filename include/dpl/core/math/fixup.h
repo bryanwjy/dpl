@@ -31,8 +31,8 @@ __DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void fixup(...) noexcept = delete;
 struct DPL_EMPTY_BASES fixup_t :
-    private math_operation_base<fixup_t>,
-    private maskable_accumulation_base<fixup_t> {
+    public math_operation_base<fixup_t>,
+    public maskable_accumulation_base<fixup_t> {
     using math_operation_base<fixup_t>::operator();
     using maskable_accumulation_base<fixup_t>::operator();
 };
@@ -213,30 +213,29 @@ public:
 template <>
 struct fallback_impl<fixup_t> {
 public:
-    // TODO enable only if canonical is provided
+    // Enabled only if canonical is provided
     template <canonical_vector T, fixflags_for<simd_element_type_t<T>> C>
-    requires floating_point_like<simd_element_type_t<T>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr T operator()(T src, T result, C conditions) noexcept {
+    requires floating_point_like<simd_element_type_t<T>> &&
+        cpo_invocable<canonical_impl<fixup_t>, T, T, C>
+    static consteval T operator()(T dst, T arg, C conditions) noexcept {
+        // classify arg and write to dst
         fpfix::template_for(
             [&]<typename F, typename V>(F flags, V val) {
                 if constexpr (val == fpfix::signed_inf) {
-                    result = dx::select(match(src, flags),
-                        dx::negate(dx::signbit(src), dx::infinity_v<T>),
-                        result);
-                } else if constexpr (val == fpfix::revert) {
-                    result = dx::select(match(src, flags), src, result);
-                } else if constexpr (same_as<V, decltype(dx::nan)>) {
-                    result =
-                        dx::select(match(src, flags), dx::all_bits, result);
-                } else if constexpr (same_as<V, decltype(dx::zero)>) {
-                    result = dx::select(match(src, flags), dx::zero, result);
+                    dst = dx::select(match(arg, flags),
+                        dx::negate(dx::signbit(arg), dx::infinity_v<T>), dst);
+                } else if constexpr (val == fpfix::copy) {
+                    dst = dx::select(match(arg, flags), arg, dst);
+                } else if constexpr (same_as<V, dx::nan_t>) {
+                    dst = dx::select(match(arg, flags), dx::all_bits, dst);
+                } else if constexpr (same_as<V, dx::zero_t>) {
+                    dst = dx::select(match(arg, flags), dx::zero, dst);
                 } else {
-                    result = dx::select(match(src, flags), val, result);
+                    dst = dx::select(match(arg, flags), val, dst);
                 }
             },
             conditions);
-        return result;
+        return dst;
     }
 
 private:
@@ -248,16 +247,15 @@ private:
         static constexpr auto finite_ltzero = fpfix::negative;
         static constexpr auto full_gezero = finite_gezero | fpfix::pos_inf;
         static constexpr auto full_lezero = finite_lezero | fpfix::neg_inf;
-        static constexpr auto nonfinite = fpfix::nan | fpfix::infinity;
+        static constexpr auto nonfinite = fpfix::nan | fpfix::infinite;
         static constexpr auto posneg = fpfix::positive | fpfix::negative;
     };
 
     template <canonical_vector T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr simd_mask_type_t<T>
-        DPL_VECTORCALL match_disjoint(T src, auto flags) noexcept {
+    static consteval simd_mask_type_t<T> match_disjoint(
+        T src, auto flags) noexcept {
         static_assert((flags & fpfix::nan) != fpfix::nan);
-        static_assert((flags & fpfix::infinity) != fpfix::infinity);
+        static_assert((flags & fpfix::infinite) != fpfix::infinite);
         static_assert((flags & fpfix::finite) != fpfix::finite);
         static_assert(!(flags & fpfix::negative));
         using flag_type = decltype(flags);
@@ -328,9 +326,8 @@ private:
     }
 
     template <canonical_vector T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr simd_mask_type_t<T>
-        DPL_VECTORCALL match_posneg(T src, auto flags) noexcept {
+    static consteval simd_mask_type_t<T> match_posneg(
+        T src, auto flags) noexcept {
         using flag_type = decltype(flags);
         constexpr flag_type F{};
         static_assert((F & fpfix::finite) != fpfix::finite);
@@ -354,7 +351,7 @@ private:
             return initial;
         } else if constexpr ((remainder & fpfix::nan) == fpfix::nan) {
             constexpr auto nonnan = remainder & ~fpfix::nan;
-            static_assert(nonnan != fpfix::infinity);
+            static_assert(nonnan != fpfix::infinite);
             if constexpr (!nonnan) {
                 return initial && !dx::isinf(src);
             } else if constexpr (nonnan == fpfix::pos_inf) {
@@ -362,8 +359,8 @@ private:
             } else {
                 return initial && dx::cmpneq(src, dx::infinity);
             }
-        } else if constexpr ((remainder & fpfix::infinity) == fpfix::infinity) {
-            constexpr auto noninf = remainder & ~fpfix::infinity;
+        } else if constexpr ((remainder & fpfix::infinite) == fpfix::infinite) {
+            constexpr auto noninf = remainder & ~fpfix::infinite;
             static_assert(noninf != fpfix::nan);
             if constexpr (!noninf) {
                 return initial && !dx::isnan(src);
@@ -396,16 +393,14 @@ private:
     }
 
     template <canonical_vector T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr simd_mask_type_t<T>
-        DPL_VECTORCALL match(T src, auto flags) noexcept {
+    static consteval simd_mask_type_t<T> match(T src, auto flags) noexcept {
         using flag_type = decltype(flags);
         constexpr flag_type F{};
         if constexpr (F == fpfix::all) {
             return dx::broadcast<T>(true);
         } else if constexpr (F == fpfix::none) {
             return dx::broadcast<T>(false);
-        } else if constexpr (F == (fpfix::infinity | fpfix::finite)) {
+        } else if constexpr (F == (fpfix::infinite | fpfix::finite)) {
             return !dx::isnan(src);
         } else if constexpr (F == sets::nonfinite) {
             return !dx::isfinite(src);
@@ -413,7 +408,7 @@ private:
             return !dx::isinf(src);
         } else if constexpr (F == fpfix::nan) {
             return dx::isnan(src);
-        } else if constexpr (F == fpfix::infinity) {
+        } else if constexpr (F == fpfix::infinite) {
             return dx::isinf(src);
         } else if constexpr (F == fpfix::finite) {
             return dx::isfinite(src);
@@ -460,9 +455,9 @@ private:
         } else if constexpr ((F & fpfix::nan) == fpfix::nan) {
             static_assert(!(F & fpfix::negative));
             return dx::isnan(src) || match_disjoint(src, F & ~fpfix::nan);
-        } else if constexpr ((F & fpfix::infinity) == fpfix::infinity) {
+        } else if constexpr ((F & fpfix::infinite) == fpfix::infinite) {
             static_assert(!(F & fpfix::negative));
-            return dx::isinf(src) || match_disjoint(src, F & ~fpfix::infinity);
+            return dx::isinf(src) || match_disjoint(src, F & ~fpfix::infinite);
         } else {
             return match_disjoint(src, F);
         }
