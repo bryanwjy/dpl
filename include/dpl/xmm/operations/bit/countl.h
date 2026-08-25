@@ -84,7 +84,8 @@ inline vector<uint16>
     vval = _mm_or_si128(vval, _mm_srli_epi16(vval, 2));
     vval = _mm_or_si128(vval, _mm_srli_epi16(vval, 4));
     vval = _mm_or_si128(vval, _mm_srli_epi16(vval, 8));
-    return _mm_sub_epi16(_mm_set1_epi16(16), +xmm::popcount<uint16>(vval));
+    return _mm_sub_epi16(
+        +xmm::broadcast<int16>(16), +xmm::popcount<uint16>(vval));
 }
 
 template <common_size_with<uint8> E>

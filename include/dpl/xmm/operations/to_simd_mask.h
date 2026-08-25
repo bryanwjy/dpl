@@ -44,10 +44,11 @@ constexpr mask<E>
             } else if constexpr (is_same_v<E, ext::float16> ||
                 is_same_v<E, ext::bfloat16>) {
                 auto const vsrc = __DPL bit_cast<__m128i>(+src);
-                auto const abs = _mm_and_si128(vsrc, _mm_set1_epi16(0x7fff));
+                auto const abs =
+                    _mm_and_si128(vsrc, +xmm::broadcast<int16>(0x7fff));
                 using sbit = signed_representation_t<E>;
                 auto const mask = _mm_xor_si128(
-                    _mm_cmpeq_epi16(zero, +src), _mm_set1_epi16(-1));
+                    _mm_cmpeq_epi16(zero, +src), +xmm::broadcast<int16>(-1));
                 return +xmm::reinterpret<E>(tag, vector<sbit>(mask));
             } else {
                 auto const all = [](__m128i val) {

@@ -57,8 +57,8 @@ public:
         auto const abs_val =
             dx::reinterpret<sint_t>(dx::bwandnot(val, dx::msb));
 
-        return dx::logical_and(
-            dx::cmple(abs_val, max_snan), dx::cmpgt(abs_val, inf));
+        return dx::bwandnot(
+            dx::cmpgt(abs_val, inf), dx::cmpgt(abs_val, max_snan));
     }
 
     template <canonical_vector T>
@@ -77,8 +77,8 @@ public:
         auto const abs_val =
             dx::reinterpret<sint_t>(dx::bwandnot(val, dx::msb));
         auto const vinf = dx::broadcast<mx::exponent_vector_t<T>>(inf);
-        return dx::logical_and(
-            dx::cmple(abs_val, max_snan), dx::cmpgt(mask, abs_val, vinf));
+        return dx::bwandnot(
+            dx::cmpgt(mask, abs_val, vinf), dx::cmpgt(abs_val, max_snan));
     }
 
     template <canonical_vector T, const_mask_for<T> M>
@@ -97,8 +97,8 @@ public:
         auto const abs_val =
             dx::reinterpret<sint_t>(dx::bwandnot(val, dx::msb));
         auto const vinf = dx::broadcast<mx::exponent_vector_t<T>>(inf);
-        return dx::logical_and(
-            dx::cmple(abs_val, max_snan), dx::cmpgt(cmask, abs_val, vinf));
+        return dx::bwandnot(
+            dx::cmpgt(cmask, abs_val, vinf), dx::cmpgt(abs_val, max_snan));
     }
 };
 

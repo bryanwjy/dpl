@@ -54,84 +54,6 @@ inline vector<E>
     }
 }
 
-DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-constexpr vector<float> DPL_VECTORCALL abs(vector<float> val) noexcept {
-    if consteval {
-        alignas(16) uint32 data[4]{};
-        xmm::store(xmm::reinterpret<uint32>(val), data);
-        for (auto& lane : data) {
-            constexpr auto mask = ~__DPL bit_cast<uint32>(-0.0f);
-            lane &= mask;
-        }
-        return xmm::reinterpret<float>(xmm::load<uint32>(data));
-    } else {
-        return _mm_andnot_ps(_mm_set1_ps(-0.0f), +val);
-    }
-}
-
-DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-constexpr vector<double> DPL_VECTORCALL abs(vector<double> val) noexcept {
-    if consteval {
-        alignas(16) uint64 data[2]{};
-        xmm::store(xmm::reinterpret<uint64>(val), data);
-        for (auto& lane : data) {
-            constexpr auto mask = ~__DPL bit_cast<uint64>(-0.0);
-            lane &= mask;
-        }
-        return xmm::reinterpret<double>(xmm::load<uint64>(data));
-    } else {
-        return _mm_andnot_pd(_mm_set1_pd(-0.0), +val);
-    }
-}
-
-DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-constexpr vector<ext::float16> DPL_VECTORCALL abs(
-    vector<ext::float16> val) noexcept {
-    if consteval {
-        alignas(16) uint16 data[8]{};
-        xmm::store(xmm::reinterpret<uint16>(val), data);
-        for (auto& lane : data) {
-            constexpr auto mask = ~static_cast<uint16>(0x8000u);
-            lane &= mask;
-        }
-        return xmm::reinterpret<ext::float16>(xmm::load<uint16>(data));
-    } else {
-#  if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
-        return _mm_abs_ph(+val);
-#  else
-        auto const vval = +xmm::reinterpret<int16>(val);
-        return __DPL bit_cast<__m128h>(
-            _mm_andnot_si128(_mm_set1_epi16(0x8000), vval));
-#  endif
-    }
-}
-
-DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-constexpr vector<ext::bfloat16> DPL_VECTORCALL abs(
-    vector<ext::bfloat16> val) noexcept {
-    if consteval {
-        alignas(16) uint16 data[8]{};
-        xmm::store(xmm::reinterpret<uint16>(val), data);
-        for (auto& lane : data) {
-            constexpr auto mask = ~static_cast<uint16>(0x8000u);
-            lane &= mask;
-        }
-        return xmm::reinterpret<ext::bfloat16>(xmm::load<uint16>(data));
-    } else {
-        auto const vval = +xmm::reinterpret<int16>(val);
-        return __DPL bit_cast<__m128bh>(
-            _mm_andnot_si128(_mm_set1_epi16(0x8000), vval));
-    }
-}
-
-template <simd_element E>
-DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-constexpr vector<E> abs(abi_tag, vector<E> val) noexcept
-requires requires { xmm::abs(val); }
-{
-    return xmm::abs(val);
-}
-
 #  if DPL_SIMD_X86_AVX512VL
 #    if DPL_SIMD_X86_AVX512F
 template <imask_t<int32> M>
@@ -201,6 +123,14 @@ inline vector<int16>
 }
 #    endif
 #  endif
+
+template <simd_element E>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+constexpr vector<E> abs(abi_tag, vector<E> val) noexcept
+requires requires { xmm::abs(val); }
+{
+    return xmm::abs(val);
+}
 
 template <simd_element E, imask_t<E> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)

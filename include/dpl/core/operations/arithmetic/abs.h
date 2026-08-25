@@ -52,6 +52,13 @@ struct fallback_impl<abs_t> {
     }
 
     template <canonical_vector T>
+    requires unsigned_integral<simd_element_type_t<T>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr T DPL_VECTORCALL operator()(T val) noexcept {
+        return val;
+    }
+
+    template <canonical_vector T>
     requires floating_point_like<simd_element_type_t<T>> &&
         requires { floating_point_traits<simd_element_type_t<T>>::signbit; } &&
         cpo_invocable<bwandnot_t, T, simd_element_type_t<T>>
@@ -65,10 +72,55 @@ struct fallback_impl<abs_t> {
     }
 
     template <canonical_vector T>
-    requires unsigned_integral<simd_element_type_t<T>>
+    requires floating_point_like<simd_element_type_t<T>> &&
+        requires { floating_point_traits<simd_element_type_t<T>>::signbit; } &&
+        cpo_invocable<bwandnot_t, T, simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr T DPL_VECTORCALL operator()(T val) noexcept {
-        return val;
+    static constexpr T DPL_VECTORCALL operator()(
+        type_identity_t<T> src, simd_mask_type_t<T> mask, T val) noexcept {
+        using E = simd_element_type_t<T>;
+        constexpr auto signbit =
+            __DPL bit_cast<E>(floating_point_traits<E>::signbit);
+        return dx::bwandnot(src, mask, val, signbit);
+    }
+
+    template <canonical_vector T, const_mask_for<T> M>
+    requires floating_point_like<simd_element_type_t<T>> &&
+        requires { floating_point_traits<simd_element_type_t<T>>::signbit; } &&
+        cpo_invocable<bwandnot_t, T, simd_element_type_t<T>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr T DPL_VECTORCALL operator()(
+        type_identity_t<T> src, M mask, T val) noexcept {
+        using E = simd_element_type_t<T>;
+        constexpr auto signbit =
+            __DPL bit_cast<E>(floating_point_traits<E>::signbit);
+        return dx::bwandnot(src, mask, val, signbit);
+    }
+
+    template <canonical_vector T>
+    requires floating_point_like<simd_element_type_t<T>> &&
+        requires { floating_point_traits<simd_element_type_t<T>>::signbit; } &&
+        cpo_invocable<bwandnot_t, T, simd_element_type_t<T>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr T DPL_VECTORCALL operator()(
+        dx::zero_t zero, simd_mask_type_t<T> mask, T val) noexcept {
+        using E = simd_element_type_t<T>;
+        constexpr auto signbit =
+            __DPL bit_cast<E>(floating_point_traits<E>::signbit);
+        return dx::bwandnot(zero, mask, val, signbit);
+    }
+
+    template <canonical_vector T, const_mask_for<T> M>
+    requires floating_point_like<simd_element_type_t<T>> &&
+        requires { floating_point_traits<simd_element_type_t<T>>::signbit; } &&
+        cpo_invocable<bwandnot_t, T, simd_element_type_t<T>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr T DPL_VECTORCALL operator()(
+        dx::zero_t zero, M mask, T val) noexcept {
+        using E = simd_element_type_t<T>;
+        constexpr auto signbit =
+            __DPL bit_cast<E>(floating_point_traits<E>::signbit);
+        return dx::bwandnot(zero, mask, val, signbit);
     }
 };
 
