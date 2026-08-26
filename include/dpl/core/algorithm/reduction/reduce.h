@@ -15,6 +15,7 @@
 #  include "dpl/core/immediate/immediate.h"
 #  include "dpl/core/operations/bit.h"
 #  include "dpl/core/operations/logical.h"
+#  include "dpl/core/type_traits/rebind_simd.h"
 #endif
 
 __DPL_DEFAULT_NAMESPACE_BEGIN
@@ -207,7 +208,8 @@ public:
         auto const pop = dx::popcount(mask);
         auto compressed =
             dx::compress(__DPL forward<M>(mask), __DPL forward<T>(val));
-        return dx::select(dx::lane_index<S>() < pop,
+        using vidx_t = signed_canonical_vector_t<T>;
+        return dx::select(dx::cmplt(dx::lane_index<vidx_t>(), pop),
             internal::reduction(
                 pop, __DPL move(compressed), __DPL forward<Op>(func)),
             __DPL forward<S>(src));
@@ -239,7 +241,8 @@ public:
         auto const pop = dx::popcount(mask);
         auto compressed =
             dx::compress(__DPL forward<M>(mask), __DPL forward<T>(val));
-        return dx::select(dx::lane_index<T>() < pop,
+        using vidx_t = signed_canonical_vector_t<T>;
+        return dx::select(dx::cmplt(dx::lane_index<vidx_t>(), pop),
             internal::reduction(
                 pop, __DPL move(compressed), __DPL forward<Op>(func)),
             zero);

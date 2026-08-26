@@ -31,14 +31,12 @@ public:
         using index_t = dpp::signed_representation_t<E>;
         constexpr auto lanes = dpp::simd_abi_traits<A, E>::size();
         test::array_generator<A, index_t> const idx_generator(0, lanes);
-        test::array_generator<A, index_t> const oob_generator(0, 2 * lanes);
         test::scalar_generator<E> const src_generator(
             dpp::max_value_v<E> / 4 * 3, dpp::max_value_v<E>);
 
         for (auto i = 0; i < 3; ++i) {
             auto const lhs = data_generator(engine);
             auto const rhs = idx_generator(engine);
-            auto const oob = oob_generator(engine);
             auto const src = src_generator(engine);
 
             auto expected = lhs;
@@ -58,21 +56,8 @@ public:
                     src);
             }
 
-            {
-                for (auto i = 0zu; i < expected.size(); ++i) {
-                    if (oob[i] < lhs.size()) {
-                        expected[i] = lhs[oob[i]];
-                    } else {
-                        expected[i] = 0;
-                    }
-                }
-
-                auto const vlhs = dpp::load<A>(lhs.data());
-                auto const vrhs = dpp::load<A>(oob.data());
-                auto const vexpected = dpp::load<A>(expected.data());
-                auto const vactual = dpp::permute(vlhs, vrhs);
-                assert(dpp::all_of(test::bitcmp(vactual, vexpected)));
-            }
+            // Out of bounds index is implementation-defined behaviour and not
+            // tested
         }
 
         {

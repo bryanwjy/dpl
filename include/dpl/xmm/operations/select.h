@@ -105,10 +105,10 @@ inline vector<R>
 template <simd_element L, common_size_with<L> R>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<R>
-    DPL_VECTORCALL select(mask<L> lhs, vector<R> rhs, dx::all_bits_t) noexcept {
+    DPL_VECTORCALL select(
+        mask<L> lhs, vector<R> rhs, dx::all_bits_t all_bits) noexcept {
     using bit = unsigned_representation_t<L>;
-    auto const all = [](__m128i val) { return _mm_cmpeq_epi32(val, val); }(
-                         _mm_undefined_si128());
+    auto const all = +xmm::broadcast<bit>(all_bits);
     auto const result =
         _mm_or_si128(_mm_xor_si128(all, +xmm::reinterpret<bit>(lhs)),
             +xmm::reinterpret<bit>(rhs));

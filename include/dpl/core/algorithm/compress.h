@@ -17,6 +17,7 @@
 #  include "dpl/core/operations/bit.h"
 #  include "dpl/core/operations/permute.h"
 #  include "dpl/core/operations/select.h"
+#  include "dpl/core/type_traits/rebind_simd.h"
 #  include "dpl/core/type_traits/simd_abi_traits.h"
 #endif
 
@@ -163,15 +164,15 @@ public:
 
     template <simd_vector S, exact_mask_for<S> M, vector_subsumed_by<S> T>
     requires (!fixed_width_vector<S>) &&
-        cpo_invocable<exscan_sum_t, decltype(dx::lane_index<S>()), dx::zero_t>
+        cpo_invocable<exscan_sum_t, signed_canonical_vector_t<S>, dx::zero_t>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr S DPL_VECTORCALL operator()(S src, M mask, T val) noexcept(
         canonical_vector<S> && canonical_mask<M> && canonical_vector<T>) {
         using A = simd_abi_type_t<S>;
         using I = signed_representation_t<simd_element_type_t<S>>;
         auto const simd_size = simd_abi_traits<I, A>::size();
-        auto const idx = dx::lane_index<S>();
-        using vidx_t = remove_cvref_t<decltype(idx)>;
+        using vidx_t = signed_canonical_vector_t<S>;
+        auto const idx = dx::lane_index<vidx_t>();
         auto const rank = fwd::exscan_sum(
             dx::select(mask, dx::broadcast<vidx_t>(dx::one), dx::zero),
             dx::zero);
@@ -192,15 +193,14 @@ public:
 
     template <fixed_width_vector S, exact_mask_for<S> M,
         vector_subsumed_by<S> T>
-    requires cpo_invocable<exscan_sum_t, decltype(dx::lane_index<S>()),
+    requires cpo_invocable<exscan_sum_t, signed_canonical_vector_t<S>,
         dx::zero_t>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(
         S src, M mask, T val) noexcept(canonical_vector<S> &&
         canonical_mask<M> && canonical_vector<T>) {
         using A = simd_abi_type_t<S>;
-        using I = signed_representation_t<simd_element_type_t<S>>;
-        using vidx_t = make_canonical_vector_t<I, A>;
+        using vidx_t = signed_canonical_vector_t<S>;
         auto const rank = fwd::exscan_sum(
             dx::select(mask, dx::broadcast<vidx_t>(dx::one), dx::zero),
             dx::zero);
@@ -208,7 +208,7 @@ public:
             constexpr auto idx =
                 fallback_impl::template butterfly<J>(iota_sequence<S>);
             auto const perm_rank = dx::permute(rank, idx);
-            auto const dist = dx::broadcast<I, A>(J);
+            auto const dist = dx::broadcast<vidx_t>(J);
             auto const move =
                 (rank & dist) != dx::zero && perm_rank == (rank ^ dist);
 
@@ -219,7 +219,7 @@ public:
         }(rank, imm<1zu>);
 
         return dx::select(
-            dx::lane_index<I, A>() < dx::popcount(mask), val, src);
+            dx::lane_index<vidx_t>() < dx::popcount(mask), val, src);
     }
 
     template <simd_vector S, const_mask_for<S> M, vector_subsumed_by<S> T>
@@ -228,8 +228,6 @@ public:
         S src, M mask, T val) noexcept {
         constexpr auto cmask = dx::to_const_mask<S>(mask);
         using A = simd_abi_type_t<S>;
-        using I = signed_representation_t<simd_element_type_t<S>>;
-        using vidx_t = make_canonical_vector_t<I, A>;
         using bitset_t = bitset<simd_abi_traits<S>::size>;
         constexpr auto rank = []<size_t... Is>(M mask, index_sequence<Is...>) {
             constexpr auto set = static_cast<bitset_t>(dx::to_bitset(mask));

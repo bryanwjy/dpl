@@ -13,6 +13,7 @@
 #  include "dpl/core/dispatch/maskable/transform.h"
 #  include "dpl/core/dispatch/operation/algorithm.h"
 #  include "dpl/core/immediate/immediate.h"
+#  include "dpl/core/type_traits/rebind_simd.h"
 #endif
 
 __DPL_DEFAULT_NAMESPACE_BEGIN
@@ -232,15 +233,16 @@ public:
         S&& src, M&& mask, T&& val, V&& init, Op&& func) {
         auto const pop = dx::popcount(mask);
         auto const last = simd_abi_traits<S>::size() - 1;
+        auto const indices = dx::lane_index<signed_canonical_vector_t<S>>();
         auto const compression_mask =
-            dx::bwand(dx::lane_index<S>() != last, mask);
+            dx::bwandnot(mask, dx::cmpeq(indices, last));
         auto compressed =
             dx::compress(dx::broadcast<T>(__DPL forward<V>(init)),
                 compression_mask, __DPL forward<T>(val));
         auto scanned = internal::inclusive_scan(pop,
             dx::rotate_right(__DPL move(compressed), imm<1zu>),
             __DPL forward<Op>(func));
-        return dx::select(dx::lane_index<S>() < pop, __DPL move(scanned),
+        return dx::select(dx::cmplt(indices, pop), __DPL move(scanned),
             __DPL forward<S>(src));
     }
 
@@ -286,16 +288,16 @@ public:
         dx::zero_t zero, M&& mask, T&& val, V&& init, Op&& func) {
         auto const pop = dx::popcount(mask);
         auto const last = simd_abi_traits<T>::size() - 1;
+        auto const indices = dx::lane_index<signed_canonical_vector_t<T>>();
         auto const compression_mask =
-            dx::bwand(dx::lane_index<T>() != last, mask);
+            dx::bwandnot(mask, dx::cmpeq(indices, last));
         auto compressed =
             dx::compress(dx::broadcast<T>(__DPL forward<V>(init)),
                 compression_mask, __DPL forward<T>(val));
         auto scanned = internal::inclusive_scan(pop,
             dx::rotate_right(__DPL move(compressed), imm<1zu>),
             __DPL forward<Op>(func));
-        return dx::select(
-            dx::lane_index<T>() < pop, __DPL move(scanned), zero);
+        return dx::select(dx::cmplt(indices, pop), __DPL move(scanned), zero);
     }
 
     template <simd_vector T, simask_t<T> M, broadcastable_to<T> V, typename Op>

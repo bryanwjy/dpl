@@ -7,6 +7,7 @@
 #include "dpl/core/type_traits/enable_simd_abi.h"
 #include "dpl/core/type_traits/enable_simd_mask.h"
 #include "dpl/core/type_traits/enable_simd_vector.h"
+#include "dpl/core/type_traits/representation.h"
 #include "dpl/core/type_traits/simd_abi_type.h"
 
 #if !DPL_MODULES
@@ -37,6 +38,15 @@ template <typename T, typename E, typename A>
 requires enable_simd_mask<T> && enable_simd_abi<A>
 struct rebind_simd<T, E, A> : make_canonical_mask<E, A> {};
 
+namespace internal {
+template <typename T>
+using signed_canonical_vector_t DPL_NODEBUG = rebind_simd_t<canonical_type_t<T>,
+    signed_representation_t<simd_element_type_t<T>>>;
+template <typename T>
+using unsigned_canonical_vector_t DPL_NODEBUG =
+    rebind_simd_t<canonical_type_t<T>,
+        unsigned_representation_t<simd_element_type_t<T>>>;
+} // namespace internal
 } // namespace datapar
 
 __DPL_DEFAULT_NAMESPACE_END

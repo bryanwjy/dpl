@@ -12,6 +12,7 @@
 #  include "dpl/core/dispatch/operation/algorithm.h"
 #  include "dpl/core/immediate/const_mask.h"
 #  include "dpl/core/immediate/immediate.h"
+#  include "dpl/core/type_traits/rebind_simd.h"
 #endif
 
 __DPL_DEFAULT_NAMESPACE_BEGIN
@@ -200,7 +201,8 @@ public:
         auto const pop = dx::popcount(mask);
         auto compressed =
             dx::compress(__DPL forward<M>(mask), __DPL forward<T>(val));
-        return dx::select(dx::lane_index<S>() < pop,
+        return dx::select(
+            dx::cmplt(dx::lane_index<signed_canonical_vector_t<S>>(), pop),
             internal::inclusive_scan(
                 pop, __DPL move(compressed), __DPL forward<Op>(func)),
             __DPL forward<S>(src));
@@ -232,7 +234,8 @@ public:
         auto const pop = dx::popcount(mask);
         auto compressed =
             dx::compress(__DPL forward<M>(mask), __DPL forward<T>(val));
-        return dx::select(dx::lane_index<T>() < pop,
+        return dx::select(
+            dx::cmplt(dx::lane_index<signed_canonical_vector_t<T>>(), pop),
             internal::inclusive_scan(
                 pop, __DPL move(compressed), __DPL forward<Op>(func)),
             zero);

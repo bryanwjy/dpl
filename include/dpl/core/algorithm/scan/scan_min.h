@@ -13,6 +13,7 @@
 #  include "dpl/core/dispatch/operation/algorithm.h"
 #  include "dpl/core/immediate/const_mask.h"
 #  include "dpl/core/operations/compare/min.h"
+#  include "dpl/core/type_traits/rebind_simd.h"
 #endif
 
 __DPL_DEFAULT_NAMESPACE_BEGIN
@@ -183,7 +184,8 @@ public:
         S&& src, M&& mask, T&& val) noexcept(canonical_vector<S> &&
         canonical_mask<M> && canonical_vector<T>) {
         auto const pop = dx::popcount(mask);
-        return dx::select(dx::lane_index<T>() < pop,
+        return dx::select(
+            dx::cmplt(dx::lane_index<signed_canonical_vector_t<S>>(), pop),
             internal::inclusive_scan(
                 dx::compress(mask, __DPL forward<T>(val)), dx::min),
             __DPL forward<S>(src));
@@ -204,7 +206,8 @@ public:
     static constexpr auto DPL_VECTORCALL operator()(dx::zero_t zero, M mask,
         T&& val) noexcept(canonical_mask<M> && canonical_vector<T>) {
         auto const pop = dx::popcount(mask);
-        return dx::select(dx::lane_index<T>() < pop,
+        return dx::select(
+            dx::cmplt(dx::lane_index<signed_canonical_vector_t<T>>(), pop),
             internal::inclusive_scan(
                 dx::compress(mask, __DPL forward<T>(val)), dx::min),
             zero);

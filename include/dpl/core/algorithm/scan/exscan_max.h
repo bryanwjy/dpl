@@ -11,6 +11,7 @@
 #  include "dpl/core/dispatch/operation/algorithm.h"
 #  include "dpl/core/immediate/const_mask.h"
 #  include "dpl/core/operations/compare/max.h"
+#  include "dpl/core/type_traits/rebind_simd.h"
 #  include "dpl/std/utility/forward.h"
 #endif
 
@@ -206,8 +207,8 @@ public:
         S&& src, M&& mask, T&& val, V&& init) {
         auto const pop = dx::popcount(mask);
         auto const last = simd_abi_traits<S>::size() - 1;
-        auto const idx = dx::lane_index<S>();
-        auto const compression_mask = dx::bwand(idx != last, mask);
+        auto const idx = dx::lane_index<signed_canonical_vector_t<S>>();
+        auto const compression_mask = dx::bwandnot(mask, dx::cmpeq(idx, last));
         auto compressed =
             dx::compress(dx::broadcast<T>(__DPL forward<V>(init)),
                 compression_mask, __DPL forward<T>(val));
@@ -234,9 +235,8 @@ public:
         dx::zero_t zero, M&& mask, T&& val, V&& init) {
         auto const pop = dx::popcount(mask);
         auto const last = simd_abi_traits<T>::size() - 1;
-        auto const idx = dx::lane_index<T>();
-
-        auto const compression_mask = dx::bwand(idx != last, mask);
+        auto const idx = dx::lane_index<signed_canonical_vector_t<T>>();
+        auto const compression_mask = dx::bwandnot(mask, dx::cmpeq(idx, last));
         auto compressed =
             dx::compress(dx::broadcast<T>(__DPL forward<V>(init)),
                 compression_mask, __DPL forward<T>(val));

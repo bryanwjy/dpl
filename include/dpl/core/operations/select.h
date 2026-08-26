@@ -128,7 +128,7 @@ public:
             lhs, rhs);
     }
 
-    template <simd_mask L, compatible_mask_with<L> M>
+    template <simd_mask L, equivalent_mask_with<L> M>
     requires cpo_invocable<bwand_t, M, L>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M&& mask, L&& lhs, dx::zero_t) noexcept(
@@ -137,7 +137,7 @@ public:
         return bwand( __DPL forward<M>(mask), __DPL forward<L>(lhs));
     }
 
-    template <simd_mask R, compatible_mask_with<R> M>
+    template <simd_mask R, equivalent_mask_with<R> M>
     requires cpo_invocable<bwandnot_t, R, M>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M&& mask, dx::zero_t, R&& rhs) noexcept(
@@ -146,7 +146,7 @@ public:
         return bwandnot( __DPL forward<R>(rhs), __DPL forward<M>(mask));
     }
 
-    template <simd_mask L, compatible_mask_with<L> M>
+    template <simd_mask L, equivalent_mask_with<L> M>
     requires cpo_invocable<bwornot_t, L, M>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M&& mask, L&& lhs,
@@ -155,7 +155,7 @@ public:
         return bwornot( __DPL forward<L>(lhs), __DPL forward<M>(mask));
     }
 
-    template <simd_mask R, compatible_mask_with<R> M>
+    template <simd_mask R, equivalent_mask_with<R> M>
     requires cpo_invocable<bwor_t, M, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M&& mask, dx::all_bits_t, R rhs) noexcept(

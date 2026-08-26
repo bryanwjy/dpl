@@ -19,6 +19,7 @@
 #  include "dpl/core/dispatch/maskable/transform.h"
 #  include "dpl/core/dispatch/operation/primitive.h"
 #  include "dpl/core/immediate/const_mask.h"
+#  include "dpl/core/type_traits/rebind_simd.h"
 #  include "dpl/core/type_traits/simd_mask_type.h"
 #endif
 
@@ -67,7 +68,8 @@ struct fallback_impl<subadd_t> : binary_broadcasting_fallback<subadd_t> {
                     ((Is & 1) == 0)...)>;
             }(iota_sequence<T>);
         } else {
-            return dx::cmpeq(dx::bwand(dx::lane_index<T>(), dx::one), dx::zero);
+            auto const idx = dx::lane_index<signed_canonical_vector_t<T>>();
+            return dx::cmpeq(dx::bwand(idx, dx::one), dx::zero);
         }
     }
 

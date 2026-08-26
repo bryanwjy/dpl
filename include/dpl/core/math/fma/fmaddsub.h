@@ -19,6 +19,7 @@
 #  include "dpl/core/operations/arithmetic/negate.h"
 #  include "dpl/core/operations/bitwise/bwand.h"
 #  include "dpl/core/operations/compare/cmpeq.h"
+#  include "dpl/core/type_traits/rebind_simd.h"
 #endif
 
 __DPL_DEFAULT_NAMESPACE_BEGIN
@@ -61,8 +62,8 @@ struct fallback_impl<fmaddsub_t> : ternary_broadcasting_fallback<fmaddsub_t> {
             }(iota_sequence<AT>);
             return dx::fmadd(aval, bval, dx::negate(cval, mask, cval));
         } else {
-            auto const mask =
-                dx::cmpeq(dx::bwand(dx::lane_index<AT>(), dx::one), dx::one);
+            auto const idx = dx::lane_index<signed_canonical_vector_t<AT>>();
+            auto const mask = dx::cmpeq(dx::bwand(idx, dx::one), dx::one);
             return dx::fmadd(aval, bval, dx::negate(cval, mask, cval));
         }
     }

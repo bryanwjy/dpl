@@ -52,18 +52,7 @@ public:
             dpl::test::unary_transform<A>::template test_masked<E>(
                 lhs, broadcast, src);
         }
-        {
-            // OOB results in zero
-            for (auto& val : expected) {
-                val = 0;
-            }
-            dpl::test::unary_transform<A>::template test<E>(
-                lhs,
-                [](auto lhs) {
-                    return dpp::broadcast_lane(lhs, abi_traits<E>::size());
-                },
-                expected);
-        }
+        // OOB is implementation-defined, not tested
 
         if constexpr (dpp::fixed_width_abi<A>) {
             dpl::pack::for_each(

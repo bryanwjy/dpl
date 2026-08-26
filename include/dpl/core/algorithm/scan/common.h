@@ -11,6 +11,7 @@
 #  include "dpl/core/immediate/const_mask.h"
 #  include "dpl/core/immediate/immediate.h"
 #  include "dpl/core/operations/broadcast_lane.h"
+#  include "dpl/core/type_traits/rebind_simd.h"
 #  include "dpl/core/type_traits/simd_abi_traits.h"
 #  include "dpl/std/concepts/integral_constant_like.h"
 #  include "dpl/std/concepts/invocable.h"
@@ -68,7 +69,7 @@ constexpr T DPL_VECTORCALL inclusive_scan(Imm, T val, Op&& op) {
 template <simd_vector T, scan_operator_for<T> Op>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr T DPL_VECTORCALL inclusive_scan(size_t size, T val, Op op) {
-    auto const iota = dx::lane_index<T>();
+    auto const iota = dx::lane_index<signed_canonical_vector_t<T>>();
     for (auto i = 0zu; i < size; i <<= 1) {
         auto const shifted = dx::shift_right(val, i);
         auto const offset = dx::broadcast_lane(iota, i);

@@ -16,6 +16,7 @@
 #  include "dpl/core/operations/cast.h"
 #  include "dpl/core/operations/permute.h"
 #  include "dpl/core/type_traits/common_abi.h"
+#  include "dpl/core/type_traits/rebind_simd.h"
 #endif
 
 __DPL_DEFAULT_NAMESPACE_BEGIN
@@ -240,11 +241,12 @@ struct fallback_impl<dot_product_t> {
         same_as<ext::bfloat16, simd_element_type_t<S>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr S DPL_VECTORCALL operator()(S src, T lhs, T rhs) noexcept {
-        auto const idx = dx::lane_index<T>();
-        auto const lower_half = idx < simd_abi_traits<S>::size();
+        using vidx_t = signed_canonical_vector_t<T>;
+        auto const idx = dx::lane_index<vidx_t>();
+        auto const lower_half = dx::cmplt(idx, simd_abi_traits<S>::size());
         auto const even = dx::bwshift_left(lower_half, idx, imm<1zu>);
-        auto const odd = dx::add(lower_half, even,
-            dx::broadcast<decltype(dx::lane_index<T>())>(dx::one));
+        auto const odd =
+            dx::add(lower_half, even, dx::broadcast<vidx_t>(dx::one));
         auto const odd_vals =
             dx::multiply(dx::element_cast<float>(dx::permute(lhs, odd)),
                 dx::element_cast<float>(dx::permute(rhs, odd)));

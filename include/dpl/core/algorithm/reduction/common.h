@@ -10,6 +10,7 @@
 #  include "dpl/core/immediate/immediate.h"
 #  include "dpl/core/operations/bitwise/bwxor.h"
 #  include "dpl/core/operations/permute.h"
+#  include "dpl/core/type_traits/rebind_simd.h"
 #  include "dpl/core/type_traits/simd_abi_traits.h"
 #  include "dpl/std/concepts/integral_constant_like.h"
 #  include "dpl/std/concepts/invocable.h"
@@ -53,7 +54,7 @@ DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr auto DPL_VECTORCALL reduction(size_t size, T val, Op op) noexcept(
     is_nothrow_invocable_v<Op, T, T> && canonical_vector<T>) {
     constexpr auto simd_size = simd_abi_traits<T>::size();
-    auto const idx = dx::lane_index<T>();
+    auto const idx = dx::lane_index<signed_canonical_vector_t<T>>();
     using idx_t = remove_const_t<decltype(idx)>;
     using sint = typename idx_t::value_type;
     for (auto offset = 1zu; offset < size; offset <<= 1) {

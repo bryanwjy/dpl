@@ -24,6 +24,48 @@ __DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void permute(...) noexcept = delete;
 
+/**
+ * @brief Rearranges lanes of a vector according to an index.
+ *
+ * Lane @c i of the result holds <tt>val[idx[i]]</tt>.
+ *
+ * The index may be a vector with an signed-integral element type, or an
+ * @c index_sequence_like carrying the pattern as a non-type template parameter.
+ * Prefer the latter where the pattern is known at compile time: backends can
+ * select an immediate-operand instruction. @ref permutei is a convenience alias
+ * for that form.
+ *
+ * Indices are element-granular: an index of @c n selects lane @c n regardless
+ * of element width. Backends translate to the granularity their instruction
+ * requires.
+ *
+ * @param val Source vector supplying lane values.
+ * @param idx Index selecting a source lane per output lane.
+ * @return A vector whose lane @c i is <tt>val[idx[i]]</tt>.
+ *
+ * @pre Every index lies in <tt>[0, size)</tt>.
+ * @pre @c size is a power of two.
+ *
+ * @par Out-of-range indices
+ * ABI implementation-defined, possibly even undefined. It may differ between
+ * ABIs, between element types on the same ABI, and between DPL versions -- some
+ * hardware wraps the index, some yields zero, some ignores the high bits it
+ * does not need. Requiring one policy would cost several instructions per
+ * permute on backends whose native behavior differs, and on scalable ABIs a
+ * wrapping policy would make results depend on the runtime vector length.
+ *
+ * @warning Do not rely on observed out-of-range behavior. Use @ref lookup for a
+ *          defined policy, at explicit cost.
+ *
+ * @par Constant evaluation
+ * Out-of-range indices are ill-formed during constant evaluation. @c if
+ * @c consteval bypasses ADL for the reference implementation, which diagnoses
+ * rather than producing an unspecified value -- there is no implementation to
+ * be defined by at compile time.
+ *
+ * @sa lookup   Defined out-of-range policy.
+ * @sa permutei Compile-time index pattern.
+ */
 struct DPL_EMPTY_BASES permute_t :
     public primitive_operation_base<permute_t>,
     public maskable_transform_base<permute_t> {
@@ -56,11 +98,7 @@ struct fallback_impl<permute_t> {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr T DPL_VECTORCALL operator()(T arg, R idx) noexcept {
         return []<size_t... Is>(T arg, R idx, index_sequence<Is...>) {
-            constexpr auto simd_size = simd_abi_traits<T>::size();
-            using TE = simd_element_type_t<T>;
-            auto const zero = TE();
-            return dx::initialize<T>(
-                (idx[imm<Is>] < simd_size ? arg[idx[imm<Is>]] : zero)...);
+            return dx::initialize<T>(arg[idx[imm<Is>]]...);
         }(arg, idx, iota_sequence<T>);
     }
 
@@ -244,7 +282,7 @@ public:
         return permute(__DPL forward<L>(val), __DPL to_index_sequence(idx));
     }
 
-    template <simd_vector S, exact_mask_for<S> M, common_vector_with<S> T,
+    template <simd_vector S, exact_mask_for<S> M, vector_subsumed_by<S> T,
         index_sequence_like R>
     requires (extended_vector<S> || extended_mask<M> || extended_vector<T>) &&
         unqualified_extended_mpermute<S, M, T, launder_sequence_t<R>>
@@ -254,7 +292,7 @@ public:
             __DPL forward<T>(val), __DPL to_index_sequence(idx));
     }
 
-    template <simd_vector S, const_mask_for<S> M, common_vector_with<S> T,
+    template <simd_vector S, const_mask_for<S> M, vector_subsumed_by<S> T,
         index_sequence_like R>
     requires (extended_vector<S> || extended_vector<T>) &&
         unqualified_extended_mpermute<S, launder_cmask_t<S, M>, T,
@@ -297,7 +335,7 @@ public:
         return permute(__DPL forward<L>(val), idx);
     }
 
-    template <simd_vector S, exact_mask_for<S> M, common_vector_with<S> T,
+    template <simd_vector S, exact_mask_for<S> M, vector_subsumed_by<S> T,
         vindex_for<T> R>
     requires (extended_vector<S> || extended_mask<M> || extended_vector<T>) &&
         unqualified_extended_mpermute<S, M, T, R>
@@ -307,7 +345,7 @@ public:
             __DPL forward<T>(val), idx);
     }
 
-    template <simd_vector S, const_mask_for<S> M, common_vector_with<S> T,
+    template <simd_vector S, const_mask_for<S> M, vector_subsumed_by<S> T,
         vindex_for<T> R>
     requires (extended_vector<S> || extended_vector<T>) &&
         unqualified_extended_mpermute<S, launder_cmask_t<S, M>, T, R>
@@ -345,7 +383,6 @@ template <size_t... Is>
 struct permutei_t {
 private:
     using seq_t DPL_NODEBUG = index_sequence<Is...>;
-    static constexpr seq_t seq{};
 
 public:
     template <typename... Ts>
@@ -353,6 +390,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(Ts&&... args) noexcept(
         (... && (!simd_type<Ts> || canonical_simd_type<Ts>))) {
+        constexpr seq_t seq{};
         return permute_t::operator()(__DPL forward<Ts>(args)..., seq);
     }
 };

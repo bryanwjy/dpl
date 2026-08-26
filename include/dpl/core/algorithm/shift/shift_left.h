@@ -15,6 +15,7 @@
 #  include "dpl/core/operations/bitwise/bwshift_right.h"
 #  include "dpl/core/operations/permute.h"
 #  include "dpl/core/operations/select.h"
+#  include "dpl/core/type_traits/rebind_simd.h"
 #  include "dpl/core/type_traits/simd_abi_traits.h"
 #  include "dpl/std/concepts/integral_constant_like.h"
 #  include "dpl/std/type_traits/type_identity.h"
@@ -46,11 +47,13 @@ struct fallback_impl<shift_left_t> {
     static constexpr auto DPL_VECTORCALL operator()(
         T&& val, size_t num) noexcept {
         using traits = simd_abi_traits<remove_cvref_t<T>>;
-        using idx_t = simd_element_type_t<decltype(dx::lane_index<T>())>;
+        using vidx_t = signed_canonical_vector_t<T>;
+        using idx_t = simd_element_type_t<vidx_t>;
         auto const size = static_cast<idx_t>(traits::size());
-        auto const idx = dx::lane_index<T>() + static_cast<idx_t>(size);
-        return dx::select(
-            idx > size, dx::zero, dx::permute(__DPL forward<T>(val), idx));
+        auto const idx =
+            dx::add(dx::lane_index<vidx_t>(), static_cast<idx_t>(size));
+        return dx::select(dx::cmpgt(idx, dx::zero), dx::zero,
+            dx::permute(__DPL forward<T>(val), idx));
     }
 
     template <simd_mask T>
