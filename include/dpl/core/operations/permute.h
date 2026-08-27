@@ -83,12 +83,12 @@ struct operation_signature<permute_t> {
 
 template <typename T, typename L>
 concept vindex_for = simd_vector<T> && simd_vector<L> &&
-    common_abi_with<simd_abi_type_t<T>, simd_abi_type_t<L>> &&
+    same_abi_as<simd_abi_type_t<T>, simd_abi_type_t<L>> &&
     integral<simd_element_type_t<T>>;
 
 template <typename T, typename L>
-concept canonical_vindex_for = vindex_for<T, L> && canonical_vector<T> &&
-    canonical_vector<L> && same_abi_as<simd_abi_type_t<T>, simd_abi_type_t<L>>;
+concept canonical_vindex_for =
+    vindex_for<T, L> && canonical_vector<T> && canonical_vector<L>;
 
 template <>
 struct fallback_impl<permute_t> {

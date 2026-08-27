@@ -28,6 +28,7 @@ DPL_DISABLE_WARNING(5244)
 #include "dpl/core/algorithm/compress.h"
 #include "dpl/core/algorithm/expand.h"
 #include "dpl/core/algorithm/lerp.h"
+#include "dpl/core/algorithm/lookup.h"
 #include "dpl/core/algorithm/reduce.h"
 #include "dpl/core/algorithm/rotate.h"
 #include "dpl/core/algorithm/scan.h"

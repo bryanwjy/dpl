@@ -25,6 +25,7 @@ using __DPL datapar::cpo::hmin;
 using __DPL datapar::cpo::hsum;
 using __DPL datapar::cpo::inner_product;
 using __DPL datapar::cpo::lerp;
+using __DPL datapar::cpo::lookup;
 using __DPL datapar::cpo::reduce;
 using __DPL datapar::cpo::rotate_left;
 using __DPL datapar::cpo::rotate_lefti;

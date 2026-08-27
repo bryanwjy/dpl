@@ -9,7 +9,7 @@
 #  include "dpl/core/dispatch/broadcastable/ternary.h"
 #  include "dpl/core/dispatch/interface.h"
 #  include "dpl/core/dispatch/maskable/accumulation.h"
-#  include "dpl/core/dispatch/operation/math.h"
+#  include "dpl/core/dispatch/operation/algorithm.h"
 #  include "dpl/core/math/mulx.h"
 #  include "dpl/core/type_traits/details/cpo_result.h"
 #  include "dpl/std/concepts/floating_point.h"

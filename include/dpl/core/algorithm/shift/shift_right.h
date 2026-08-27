@@ -3,6 +3,7 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/algorithm/lookup.h"
 #include "dpl/core/algorithm/shift/shift_left.h"
 
 #if !DPL_MODULES
@@ -53,9 +54,8 @@ struct fallback_impl<shift_right_t> {
         using vidx_t = signed_canonical_vector_t<T>;
         using idx_t = simd_element_type_t<vidx_t>;
         auto const size = static_cast<idx_t>(traits::size());
-        auto const idx = dx::subtract(dx::lane_index<vidx_t>(), size);
-        return dx::select(dx::cmplt(idx, dx::zero), dx::zero,
-            dx::permute(__DPL forward<T>(val), idx));
+        auto idx = dx::subtract(dx::lane_index<vidx_t>(), size);
+        return dx::lookup(dx::zero, __DPL forward<T>(val), idx);
     }
 
     template <simd_mask T>

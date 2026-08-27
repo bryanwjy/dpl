@@ -397,23 +397,63 @@ requires requires { xmm::permute(src, mask, lhs, rhs); }
     return xmm::permute(src, mask, lhs, rhs);
 }
 
+template <typename E>
+concept permutable =
+    requires(vector<E> lhs, ssize_vector_t<E> rhs) { xmm::permute(lhs, rhs); };
+
+template <typename E, typename S, typename M>
+concept impermutable = requires(S src, M mask, vector<E> lhs,
+    ssize_vector_t<E> rhs) { xmm::permute(src, mask, lhs, rhs); };
+
 template <template_barrier_t = template_barrier, simd_element E>
+requires permutable<E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-inline vector<E> permute(abi_tag, vector<E> lhs, ssize_vector_t<E> rhs) noexcept
-requires requires { xmm::permute(lhs, rhs); }
-{
+inline vector<E> permute(
+    abi_tag, vector<E> lhs, ssize_vector_t<E> rhs) noexcept {
     return xmm::permute(lhs, rhs);
 }
 
 template <template_barrier_t = template_barrier, simd_element E, imask_t<E> M>
+requires impermutable<E, vector<E>, cmask_t<E, M>>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 inline vector<E> permute(abi_tag, type_identity_t<vector<E>> src,
-    cmask_t<E, M> mask, vector<E> lhs, ssize_vector_t<E> rhs) noexcept
-requires requires { xmm::permute(src, mask, lhs, rhs); }
-{
+    cmask_t<E, M> mask, vector<E> lhs, ssize_vector_t<E> rhs) noexcept {
     return xmm::permute(src, mask, lhs, rhs);
 }
 
+template <template_barrier_t = template_barrier, simd_element E, imask_t<E> M>
+requires impermutable<E, dx::zero_t, cmask_t<E, M>>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+inline vector<E> permute(abi_tag, dx::zero_t zero, cmask_t<E, M> mask,
+    vector<E> lhs, ssize_vector_t<E> rhs) noexcept {
+    return xmm::permute(zero, mask, lhs, rhs);
+}
+
+template <template_barrier_t = template_barrier, simd_element E,
+    unsigned_integral I>
+requires permutable<E> && common_size_with<E, I>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+inline vector<E> permute(abi_tag, vector<E> lhs, vector<I> rhs) noexcept {
+    return xmm::permute(lhs, +rhs);
+}
+
+template <template_barrier_t = template_barrier, simd_element E,
+    unsigned_integral I, imask_t<E> M>
+requires impermutable<E, vector<E>, cmask_t<E, M>>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+inline vector<E> permute(abi_tag, type_identity_t<vector<E>> src,
+    cmask_t<E, M> mask, vector<E> lhs, vector<I> rhs) noexcept {
+    return xmm::permute(src, mask, lhs, +rhs);
+}
+
+template <template_barrier_t = template_barrier, simd_element E,
+    unsigned_integral I, imask_t<E> M>
+requires impermutable<E, dx::zero_t, cmask_t<E, M>>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+inline vector<E> permute(abi_tag, dx::zero_t zero, cmask_t<E, M> mask,
+    vector<E> lhs, vector<I> rhs) noexcept {
+    return xmm::permute(zero, mask, lhs, +rhs);
+}
 } // namespace datapar::xmm
 __DPL_DEFAULT_NAMESPACE_END
 

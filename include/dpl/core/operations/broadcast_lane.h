@@ -48,15 +48,11 @@ private:
         }(iota_sequence<L>);
     }
 
-    template <typename T>
-    using index_vector DPL_NODEBUG =
-        rebind_simd_t<T, signed_representation_t<simd_element_type_t<T>>>;
-
 public:
     template <simd_vector L, integral_constant_like R>
     requires fixed_width_abi<simd_abi_type_t<L>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD) static constexpr auto
-    operator()(L val, R idx) noexcept
+    operator()(L&& val, R idx) noexcept
     requires cpo_invocable<permute_t, L, decltype(broadcast_sequence<L>(idx))>
     {
         constexpr auto seq = broadcast_sequence<L>(idx);
@@ -65,15 +61,14 @@ public:
     }
 
     template <simd_vector L>
-    requires cpo_invocable<broadcast_t<index_vector<L>>,
-                 simd_element_type_t<index_vector<L>>> &&
-        cpo_invocable<permute_t, L, index_vector<L>>
+    requires cpo_invocable<permute_t, L, signed_canonical_vector_t<L>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(
-        L val, size_t idx) noexcept {
-        using index_t = simd_element_type_t<index_vector<L>>;
+        L&& val, size_t idx) noexcept {
+        using index_t = simd_element_type_t<signed_canonical_vector_t<L>>;
         return dx::permute( __DPL forward<L>(val),
-            dx::broadcast<index_vector<L>>(static_cast<index_t>(idx)));
+            dx::broadcast<signed_canonical_vector_t<L>>(
+                static_cast<index_t>(idx)));
     }
 };
 

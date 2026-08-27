@@ -3,6 +3,8 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/algorithm/lookup.h"
+
 #if !DPL_MODULES
 #  include "dpl/core/basic/lane_index.h"
 #  include "dpl/core/concepts/equivalence.h"
@@ -52,8 +54,7 @@ struct fallback_impl<shift_left_t> {
         auto const size = static_cast<idx_t>(traits::size());
         auto const idx =
             dx::add(dx::lane_index<vidx_t>(), static_cast<idx_t>(size));
-        return dx::select(dx::cmpgt(idx, dx::zero), dx::zero,
-            dx::permute(__DPL forward<T>(val), idx));
+        return dx::lookup(dx::zero, __DPL forward<T>(val), idx);
     }
 
     template <simd_mask T>
