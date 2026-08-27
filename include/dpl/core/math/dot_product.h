@@ -153,9 +153,8 @@ public:
         return dot_product( __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 
-    template <simd_vector L, common_vector_with<L> R,
-        vector_subsumed_by<common_canonical_simd_t<L, R>> S,
-        exact_mask_for<S> M>
+    template <simd_vector S, exact_mask_for<S> M, simd_vector L,
+        common_vector_with<L> R>
     requires (extended_vector<S> || extended_mask<M> || extended_vector<L> ||
                  extended_vector<R>) &&
         unqualified_extended_mdot_product<S, M, L, R>
@@ -165,9 +164,8 @@ public:
             __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 
-    template <simd_vector L, common_vector_with<L> R,
-        vector_subsumed_by<common_canonical_simd_t<L, R>> S,
-        const_mask_for<S> M>
+    template <simd_vector S, const_mask_for<S> M, simd_vector L,
+        common_vector_with<L> R>
     requires (extended_vector<S> || extended_vector<L> || extended_vector<R>) &&
         unqualified_extended_mdot_product<S, launder_cmask_t<S, M>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -179,7 +177,7 @@ public:
     template <simd_vector L, common_vector_with<L> R,
         result_mask_for<dot_product_t, L, R> M>
     requires (extended_mask<M> || extended_vector<L> || extended_vector<R>) &&
-        unqualified_extended_mdot_product<dx::zero_t, M, L, R>
+        unqualified_extended_mzdot_product<M, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         dx::zero_t zero, M&& mask, L&& lhs, R&& rhs) {
@@ -190,7 +188,7 @@ public:
     template <simd_vector L, common_vector_with<L> R,
         result_cmask_for<dot_product_t, L, R> M>
     requires (extended_vector<L> || extended_vector<R>) &&
-        unqualified_extended_mdot_product<dx::zero_t,
+        unqualified_extended_mzdot_product<
             launder_cmask_t<cpo_result_t<dot_product_t, L, R>, M>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(

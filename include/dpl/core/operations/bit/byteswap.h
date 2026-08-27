@@ -134,7 +134,7 @@ public:
         return byteswap(__DPL forward<T>(val));
     }
 
-    template <simd_vector S, exact_mask_for<S> M, common_vector_with<S> T>
+    template <simd_vector S, exact_mask_for<S> M, vector_subsumed_by<S> T>
     requires (extended_vector<S> || extended_mask<M> || extended_vector<T>) &&
         unqualified_extended_mbyteswap<S, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -143,8 +143,7 @@ public:
             __DPL forward<T>(val));
     }
 
-    template <fixed_width_vector S, const_mask_for<S> M,
-        common_vector_with<S> T>
+    template <simd_vector S, const_mask_for<S> M, vector_subsumed_by<S> T>
     requires (extended_vector<S> || extended_vector<T>) &&
         unqualified_extended_mbyteswap<S, launder_cmask_t<S, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -161,7 +160,7 @@ public:
         return byteswap(zero, __DPL forward<M>(mask), __DPL forward<T>(val));
     }
 
-    template <fixed_width_vector T, result_cmask_for<byteswap_t, T> M>
+    template <simd_vector T, result_cmask_for<byteswap_t, T> M>
     requires extended_vector<T> &&
         unqualified_extended_mbyteswap<dx::zero_t, launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
