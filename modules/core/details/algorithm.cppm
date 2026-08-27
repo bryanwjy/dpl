@@ -31,6 +31,7 @@ DPL_DISABLE_WARNING(5244)
 #include "dpl/core/algorithm/lookup.h"
 #include "dpl/core/algorithm/reduce.h"
 #include "dpl/core/algorithm/rotate.h"
+#include "dpl/core/algorithm/sad.h"
 #include "dpl/core/algorithm/scan.h"
 #include "dpl/core/algorithm/shift.h"
 #include "dpl/core/algorithm/slide.h"

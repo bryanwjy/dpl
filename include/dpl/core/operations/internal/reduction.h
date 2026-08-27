@@ -31,7 +31,7 @@ concept reduction_operator_for =
 template <integral_constant_like N, fixed_width_vector T,
     reduction_operator_for<T> Op>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr auto DPL_VECTORCALL reduction(N size, T val, Op op) noexcept(
+constexpr T DPL_VECTORCALL reduction(N size, T val, Op op) noexcept(
     is_nothrow_invocable_v<Op, T, T> && canonical_vector<T>) {
     constexpr auto simd_size = simd_abi_traits<T>::size();
     static_assert(simd_size >= N::value);
@@ -51,7 +51,7 @@ constexpr auto DPL_VECTORCALL reduction(N size, T val, Op op) noexcept(
 
 template <simd_vector T, reduction_operator_for<T> Op>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr auto DPL_VECTORCALL reduction(size_t size, T val, Op op) noexcept(
+constexpr T DPL_VECTORCALL reduction(size_t size, T val, Op op) noexcept(
     is_nothrow_invocable_v<Op, T, T> && canonical_vector<T>) {
     constexpr auto simd_size = simd_abi_traits<T>::size();
     auto const idx = dx::lane_index<signed_canonical_vector_t<T>>();
@@ -67,7 +67,7 @@ constexpr auto DPL_VECTORCALL reduction(size_t size, T val, Op op) noexcept(
 
 template <simd_vector T, reduction_operator_for<T> Op>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr auto DPL_VECTORCALL reduction(T val, Op&& op) noexcept(
+constexpr T DPL_VECTORCALL reduction(T val, Op&& op) noexcept(
     is_nothrow_invocable_v<Op, T, T> && canonical_vector<T>) {
     if constexpr (fixed_width_vector<T>) {
         return internal::reduction(

@@ -32,6 +32,7 @@ DPL_DISABLE_WARNING(5244)
 #include "dpl/core/operations/compare.h"
 #include "dpl/core/operations/concat.h"
 #include "dpl/core/operations/internal/array_for.h"
+#include "dpl/core/operations/internal/reduction.h"
 #include "dpl/core/operations/internal/transform.h"
 #include "dpl/core/operations/logical.h"
 #include "dpl/core/operations/minmax.h"

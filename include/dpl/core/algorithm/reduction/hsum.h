@@ -3,16 +3,14 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/algorithm/compress.h"
-#include "dpl/core/algorithm/reduction/common.h"
 #include "dpl/core/algorithm/reduction/reduce.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/equivalence.h"
-#  include "dpl/core/dispatch/maskable/transform.h"
+#  include "dpl/core/dispatch/maskable/base.h"
 #  include "dpl/core/dispatch/operation/algorithm.h"
-#  include "dpl/core/operations/arithmetic/add.h"
-#  include "dpl/core/type_traits/rebind_simd.h"
+#  include "dpl/core/operations/compare/max.h"
+#  include "dpl/core/operations/internal/reduction.h"
 #endif
 
 __DPL_DEFAULT_NAMESPACE_BEGIN
@@ -22,9 +20,8 @@ void hsum(...) noexcept = delete;
 
 struct hsum_t :
     public reduction_base<hsum_t>,
-    public maskable_transform_base<hsum_t> {
+    public maskable_operation_base<hsum_t> {
     using operation_base<hsum_t>::operator();
-    using maskable_transform_base<hsum_t>::operator();
 };
 
 template <>
@@ -35,19 +32,17 @@ struct operation_signature<hsum_t> {
 
 template <typename T>
 concept unqualified_canonical_hsum = requires {
-    { hsum(internal::abi<T>, internal::declarg<T>()) } -> canonical_vector;
+    {
+        hsum(internal::abi<T>, internal::declarg<T>())
+    } -> same_as<simd_element_type_t<T>>;
 };
 
-template <typename S, typename M, typename T>
-concept unqualified_canonical_mhsum = cpo_invocable<hsum_t, T> &&
-    (!simd_type<S> || equivalent_vector_with<S, cpo_result_t<hsum_t, T>>) &&
-    requires {
-        {
-            hsum(internal::abi<conditional_t<simd_type<S>, S, T>>,
-                internal::declarg<S>(), internal::declarg<M>(),
-                internal::declarg<T>())
-        } -> equivalent_vector_with<cpo_result_t<hsum_t, T>>;
-    };
+template <typename M, typename T>
+concept unqualified_canonical_mhsum = cpo_invocable<hsum_t, T> && requires {
+    {
+        hsum(internal::abi<T>, internal::declarg<M>(), internal::declarg<T>())
+    } -> same_as<simd_element_type_t<T>>;
+};
 
 template <>
 struct canonical_impl<hsum_t> {
@@ -55,56 +50,40 @@ public:
     template <canonical_vector T>
     requires unqualified_canonical_hsum<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(T val) noexcept {
+    static constexpr simd_element_type_t<T> operator()(T val) noexcept {
         return hsum(internal::abi<T>, val);
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mhsum<T, simd_mask_type_t<T>, T>
+    requires unqualified_canonical_mhsum<simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(
-        type_identity_t<T> src, simd_mask_type_t<T> mask, T val) noexcept {
-        return hsum(internal::abi<T>, src, mask, val);
+    static constexpr simd_element_type_t<T> operator()(
+        simd_mask_type_t<T> mask, T val) noexcept {
+        return hsum(internal::abi<T>, mask, val);
     }
 
     template <canonical_vector T, const_mask_for<T> M>
-    requires unqualified_canonical_mhsum<T, launder_cmask_t<T, M>, T>
+    requires unqualified_canonical_mhsum<launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(
-        type_identity_t<T> src, M cmask, T val) noexcept {
-        return hsum(internal::abi<T>, src, dx::to_const_mask<T>(cmask), val);
-    }
-
-    template <canonical_vector T>
-    requires unqualified_canonical_mhsum<dx::zero_t, simd_mask_type_t<T>, T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(
-        dx::zero_t zero, simd_mask_type_t<T> mask, T val) noexcept {
-        return hsum(internal::abi<T>, zero, mask, val);
-    }
-
-    template <canonical_vector T, const_mask_for<T> M>
-    requires unqualified_canonical_mhsum<dx::zero_t, launder_cmask_t<T, M>, T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(dx::zero_t zero, M cmask, T val) noexcept {
-        return hsum(internal::abi<T>, zero, dx::to_const_mask<T>(cmask), val);
+    static constexpr simd_element_type_t<T> operator()(
+        M cmask, T val) noexcept {
+        return hsum(internal::abi<T>, dx::to_const_mask<T>(cmask), val);
     }
 };
 
 template <typename T>
 concept unqualified_extended_hsum = requires {
-    { hsum(internal::declarg<T>()) } -> equivalent_vector_with<T>;
+    {
+        hsum(internal::declarg<T>())
+    } -> core_convertible_to<simd_element_type_t<T>>;
 };
 
-template <typename S, typename M, typename T>
-concept unqualified_extended_mhsum = cpo_invocable<hsum_t, T> &&
-    (!simd_type<S> || equivalent_vector_with<S, cpo_result_t<hsum_t, T>>) &&
-    requires {
-        {
-            hsum(internal::declarg<S>(), internal::declarg<M>(),
-                internal::declarg<T>())
-        } -> equivalent_vector_with<cpo_result_t<hsum_t, T>>;
-    };
+template <typename M, typename T>
+concept unqualified_extended_mhsum = cpo_invocable<hsum_t, T> && requires {
+    {
+        hsum(internal::declarg<M>(), internal::declarg<T>())
+    } -> core_convertible_to<simd_element_type_t<T>>;
+};
 
 template <>
 struct extended_impl<hsum_t> {
@@ -116,42 +95,19 @@ public:
         return hsum(__DPL forward<T>(val));
     }
 
-    template <simd_vector S, exact_mask_for<S> M, common_vector_with<S> T,
-        broadcastable_to<T> V>
-    requires (extended_vector<S> || extended_vector<T> || extended_mask<M>) &&
-        unqualified_extended_mhsum<S, M, T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(S&& src, M&& mask, T&& val) {
-        return hsum(__DPL forward<S>(src), __DPL forward<M>(mask),
-            __DPL forward<T>(val));
-    }
-
-    template <simd_vector S, const_mask_for<S> M, common_vector_with<S> T,
-        broadcastable_to<T> V>
-    requires (extended_vector<S> || extended_vector<T>) &&
-        unqualified_extended_mhsum<S, launder_cmask_t<S, M>, T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(S&& src, M cmask, T&& val) {
-        return hsum(__DPL forward<S>(src), dx::to_const_mask<S>(cmask),
-            __DPL forward<T>(val));
-    }
-
-    template <simd_vector T, result_mask_for<hsum_t, T> M>
+    template <simd_vector T, exact_mask_for<T> M>
     requires (extended_vector<T> || extended_mask<M>) &&
-        unqualified_extended_mhsum<dx::zero_t, M, T>
+        unqualified_extended_mhsum<M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(dx::zero_t zero, M&& mask, T&& val) {
-        return hsum(zero, __DPL forward<M>(mask), __DPL forward<T>(val));
+    static constexpr auto operator()(M&& mask, T&& val) {
+        return hsum(__DPL forward<M>(mask), __DPL forward<T>(val));
     }
 
-    template <fixed_width_vector T, result_cmask_for<hsum_t, T> M>
-    requires extended_vector<T> &&
-        unqualified_extended_mhsum<dx::zero_t,
-            launder_cmask_t<cpo_result_t<hsum_t, T>, M>, T>
+    template <extended_vector T, const_mask_for<T> M>
+    requires unqualified_extended_mhsum<launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(dx::zero_t zero, M cmask, T&& val) {
-        return hsum(zero, dx::to_const_mask<cpo_result_t<hsum_t, T>>(cmask),
-            __DPL forward<T>(val));
+    static constexpr auto operator()(M cmask, T&& val) {
+        return hsum(dx::to_const_mask<T>(cmask), __DPL forward<T>(val));
     }
 };
 
@@ -159,54 +115,35 @@ template <>
 struct fallback_impl<hsum_t> {
 public:
     template <simd_vector T>
-    requires scan_operator_for<add_t, T>
+    requires cpo_invocable<reduce_t, T, add_t>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T&& val) noexcept(canonical_vector<T>) {
-        return internal::reduction( __DPL forward<T>(val), dx::add);
+    static constexpr simd_element_type_t<T> operator()(T&& val) noexcept(
+        canonical_vector<T>) {
+        return dx::reduce(__DPL forward<T>(val), dx::add);
     }
 
-    template <simd_vector S, simd_mask M, simd_vector T>
-    requires cpo_invocable<reduce_t, S, M, T, add_t>
+    template <simd_vector T, exact_mask_for<T> M>
+    requires cpo_invocable<select_t, M, T, dx::zero_t> &&
+        cpo_invocable<reduce_t, cpo_result_t<select_t, M, T, dx::zero_t>, add_t>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(
-        S&& src, M&& mask, T&& val) noexcept(canonical_vector<S> &&
-        canonical_mask<M> && canonical_vector<T>) {
-        auto const pop = dx::popcount(mask);
-        using vidx_t = signed_canonical_vector_t<T>;
-        return dx::select(dx::cmplt(dx::lane_index<vidx_t>(), pop),
-            internal::reduction(
-                dx::compress(mask, __DPL forward<T>(val)), dx::add),
-            __DPL forward<S>(src));
-    }
-
-    template <simd_vector S, const_mask_for<S> M, simd_vector T>
-    requires cpo_invocable<reduce_t, S, M, T, add_t>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(S&& src, M cmask,
-        T&& val) noexcept(canonical_vector<S> && canonical_vector<T>) {
-        return dx::reduce(
-            __DPL forward<S>(src), cmask, __DPL forward<T>(val), dx::add);
-    }
-
-    template <simd_mask M, simd_vector T>
-    requires cpo_invocable<reduce_t, dx::zero_t, M, T, add_t>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(dx::zero_t zero, M mask,
-        T&& val) noexcept(canonical_mask<M> && canonical_vector<T>) {
-        auto const pop = dx::popcount(mask);
-        using vidx_t = signed_canonical_vector_t<T>;
-        return dx::select(dx::cmplt(dx::lane_index<vidx_t>(), pop),
-            internal::reduction(
-                dx::compress(mask, __DPL forward<T>(val)), dx::add),
-            zero);
+    static constexpr simd_element_type_t<T>
+        DPL_VECTORCALL operator()(M&& mask, T&& val) noexcept(
+            canonical_mask<M> && canonical_vector<T>) {
+        using E = simd_element_type_t<T>;
+        return hsum_t::operator()(dx::select(
+            __DPL forward<M>(mask), __DPL forward<T>(val), dx::zero));
     }
 
     template <simd_vector T, const_mask_for<T> M>
-    requires cpo_invocable<reduce_t, dx::zero_t, M, T, add_t>
+    requires cpo_invocable<select_t, M, T, dx::zero_t>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(
-        dx::zero_t zero, M cmask, T&& val) noexcept(canonical_vector<T>) {
-        return dx::reduce(zero, cmask, __DPL forward<T>(val), dx::add);
+    static constexpr simd_element_type_t<T>
+        DPL_VECTORCALL operator()(M mask, T&& val) noexcept(
+            canonical_vector<T>) {
+        using E = simd_element_type_t<T>;
+        using Arg = cpo_result_t<select_t, M, T, dx::zero_t>;
+        return hsum_t::operator()(dx::select(
+            __DPL forward<M>(mask), __DPL forward<T>(val), dx::zero));
     }
 };
 

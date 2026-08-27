@@ -236,6 +236,36 @@ public:
     }
 };
 
+/**
+ * Multiplies integral elements in the upper half of the vector
+ * to produce a result that is twice the width of the argument
+ * integral.
+ */
+struct wmulhi_t;
+
+/**
+ * Multiplies integral elements in the lower half of the vector
+ * to produce a result that is twice the width of the argument
+ * integral.
+ */
+struct wmullo_t;
+
+/**
+ * Multiplies integral elements in the upper half of the vector
+ * to produce an intermediate integral that is twice the width
+ * of the argument integral. Stores the upper bits of the
+ * intermediate result in the destination
+ */
+struct mulhi_t;
+
+/**
+ * Multiplies integral elements in the lower half of the vector
+ * to produce an intermediate integral that is twice the width
+ * of the argument integral. Stores the lower bits of the
+ * intermediate result in the destination
+ */
+struct mullo_t;
+
 } // namespace datapar::internal
 
 namespace datapar {

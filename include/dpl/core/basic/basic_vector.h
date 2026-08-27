@@ -13,6 +13,7 @@
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_element.h"
 #  include "dpl/core/immediate/broadcastable_base.h"
+#  include "dpl/core/immediate/constants/zero.h"
 #  include "dpl/core/type_traits/simd_abi_traits.h"
 #  include "dpl/std/concepts/different_from.h"
 #  include "dpl/std/type_traits/decay.h"
@@ -41,7 +42,7 @@ public:
     }
 
     __DPL_HIDE_FROM_ABI constexpr basic_vector() noexcept
-        : basic_vector(datapar::broadcast<basic_vector>(0)) {}
+        : basic_vector(datapar::broadcast<E, A>(datapar::zero)) {}
 
     __DPL_HIDE_FROM_ABI constexpr basic_vector(vector_type vec) noexcept
         : data_(vec) {}
@@ -56,7 +57,7 @@ public:
     template <different_from<basic_vector> B>
     requires broadcastable_constant<B, value_type>
     __DPL_HIDE_FROM_ABI constexpr basic_vector(B scalar) noexcept
-        : basic_vector(datapar::broadcast<E, A>(static_cast<E>(scalar))) {}
+        : basic_vector(datapar::broadcast<E, A>(scalar)) {}
 
     template <core_convertible_to<E>... Args>
     __DPL_HIDE_FROM_ABI explicit(

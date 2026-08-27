@@ -89,6 +89,7 @@ using __DPL datapar::cpo::sign;
 using __DPL datapar::cpo::signbit;
 //
 using __DPL datapar::cpo::dot_product;
+using __DPL datapar::cpo::inner_product;
 //
 // TODO: cleanup and export frexp
 using __DPL datapar::cpo::exp;
