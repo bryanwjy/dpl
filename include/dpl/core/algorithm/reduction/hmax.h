@@ -138,8 +138,8 @@ public:
 
     template <simd_vector T, exact_mask_for<T> M>
     requires cpo_invocable<select_t, M, T, simd_element_type_t<T>> &&
-        cpo_invocable<reduce_t,
-            cpo_result_t<select_t, M, T, simd_element_type_t<T>>, max_t>
+        cpo_invocable<hmax_t,
+            cpo_result_t<select_t, M, T, simd_element_type_t<T>>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr simd_element_type_t<T>
         DPL_VECTORCALL operator()(M&& mask, T&& val) noexcept(
@@ -151,8 +151,8 @@ public:
 
     template <simd_vector T, const_mask_for<T> M>
     requires cpo_invocable<select_t, M, T, simd_element_type_t<T>> &&
-        cpo_invocable<reduce_t,
-            cpo_result_t<select_t, M, T, simd_element_type_t<T>>, max_t>
+        cpo_invocable<hmax_t,
+            cpo_result_t<select_t, M, T, simd_element_type_t<T>>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr simd_element_type_t<T>
         DPL_VECTORCALL operator()(M mask, T&& val) noexcept(

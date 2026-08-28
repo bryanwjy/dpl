@@ -23,17 +23,25 @@ struct lookup_t : public algorithm_base<lookup_t> {
 };
 
 template <>
+struct operation_signature<lookup_t> {
+    template <simd_vector S, simd_vector L, vindex_for<L> R>
+    static consteval void operator()(S&&, L&&, R&&) noexcept {}
+    template <simd_vector L, vindex_for<L> R>
+    static consteval void operator()(dx::zero_t, L&&, R&&) noexcept {}
+};
+
+template <>
 struct fallback_impl<lookup_t> {
     template <simd_vector T, vindex_for<T> I>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(
         dx::zero_t zero, T&& arg, I&& idx) noexcept {
         using idx_t = simd_element_type_t<I>;
-        using uidx_t = signed_representation_t<idx_t>;
-        auto const sizem1 = simd_abi_traits<T>::size() - 1;
-        auto const oob = dx::cmpgt(dx::reinterpret<uidx_t>(idx), sizem1);
-        return dx::select(oob, zero,
-            dx::permute(__DPL forward<T>(arg), dx::bwand(idx, sizem1)));
+        using uidx_t = unsigned_representation_t<idx_t>;
+        auto const size = simd_abi_traits<T>::size();
+        auto const inrange = dx::cmplt(dx::reinterpret<uidx_t>(idx), size);
+        return dx::permute(
+            zero, inrange, __DPL forward<T>(arg), dx::bwand(idx, size - 1));
     }
 
     template <simd_vector T, vindex_for<T> I, equivalent_vector_with<T> S>
@@ -41,11 +49,11 @@ struct fallback_impl<lookup_t> {
     static constexpr auto DPL_VECTORCALL operator()(
         S&& src, T&& arg, I&& idx) noexcept {
         using idx_t = simd_element_type_t<I>;
-        using uidx_t = signed_representation_t<idx_t>;
-        auto const sizem1 = simd_abi_traits<T>::size() - 1;
-        auto const oob = dx::cmpgt(dx::reinterpret<uidx_t>(idx), sizem1);
-        return dx::select(oob, __DPL forward<S>(src),
-            dx::permute(__DPL forward<T>(arg), dx::bwand(idx, sizem1)));
+        using uidx_t = unsigned_representation_t<idx_t>;
+        auto const size = simd_abi_traits<T>::size();
+        auto const inrange = dx::cmplt(dx::reinterpret<uidx_t>(idx), size);
+        return dx::permute( __DPL forward<S>(src), inrange,
+            __DPL forward<T>(arg), dx::bwand(idx, size - 1));
     }
 };
 

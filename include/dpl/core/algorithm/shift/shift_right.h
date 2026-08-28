@@ -37,9 +37,9 @@ struct DPL_EMPTY_BASES shift_right_t :
 
 template <>
 struct operation_signature<shift_right_t> {
-    template <simd_vector T, integral_constant_like N>
+    template <simd_type T, integral_constant_like N>
     static consteval void operator()(T&&, N) noexcept {}
-    template <simd_vector T>
+    template <simd_type T>
     static consteval void operator()(T&&, size_t) noexcept {}
 };
 
@@ -53,8 +53,8 @@ struct fallback_impl<shift_right_t> {
         using traits = simd_abi_traits<remove_cvref_t<T>>;
         using vidx_t = signed_canonical_vector_t<T>;
         using idx_t = simd_element_type_t<vidx_t>;
-        auto const size = static_cast<idx_t>(traits::size());
-        auto idx = dx::subtract(dx::lane_index<vidx_t>(), size);
+        auto idx =
+            dx::subtract(dx::lane_index<vidx_t>(), static_cast<idx_t>(num));
         return dx::lookup(dx::zero, __DPL forward<T>(val), idx);
     }
 

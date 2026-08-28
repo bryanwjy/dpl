@@ -233,6 +233,7 @@ struct fallback_impl<sad_t> {
                           common_canonical_simd_t<L, R>>) {
             return dx::add(src, dx::hsum(abs_diff(lhs, rhs)));
         } else {
+            // one less broadcast
             return dx::add(
                 src, internal::reduction(abs_diff(lhs, rhs), dx::add));
         }

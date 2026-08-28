@@ -201,8 +201,8 @@ public:
             __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 
-    template <fixed_width_vector S, const_mask_for<S> M,
-        common_vector_with<S> L, common_vector_with<L> R>
+    template <simd_vector S, const_mask_for<S> M, common_vector_with<S> L,
+        common_vector_with<L> R>
     requires (extended_vector<S> || extended_vector<L> || extended_vector<R>) &&
         unqualified_extended_mmultiply<S, launder_cmask_t<S, M>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
