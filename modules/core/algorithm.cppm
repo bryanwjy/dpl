@@ -39,6 +39,10 @@ using __DPL datapar::cpo::shift_left;
 using __DPL datapar::cpo::shift_lefti;
 using __DPL datapar::cpo::shift_right;
 using __DPL datapar::cpo::shift_righti;
+using __DPL datapar::cpo::slide_left;
+using __DPL datapar::cpo::slide_lefti;
+using __DPL datapar::cpo::slide_right;
+using __DPL datapar::cpo::slide_righti;
 
 } // namespace cpo
 } // namespace datapar

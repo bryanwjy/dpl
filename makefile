@@ -21,7 +21,7 @@ ifeq ($(filter -std=%,$(CXXFLAGS)),)
 CXXFLAGS += -std=c++23
 endif
 
-# When on clang >= 22; until someone fixed immintrin.h and issues with implicit function template instantiations
+# When on clang >= 22; until someone fixes immintrin.h and issues with implicit function template instantiations
 # add -Wno-TU-local-entity-exposure -Wno-reference-tu-local-entity-in-other-tu to reduce noise
 CXXFLAGS += -mfma -mavx2 -fvisibility=hidden -fvisibility-inlines-hidden
 CPPFLAGS += -I$(INCLUDE_DIR)

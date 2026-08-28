@@ -29,14 +29,12 @@ int main() {
             // Reduce number of types to reduce compile time steps
             using types =
                 dpl::type_pack<dpl::int8, dpl::int16, dpl::int32, dpl::int64>;
-            return dpl::test::lane_shift<dpp::shift_left, abi_t>::run_all(
-                types{}, engine);
+            return dpl::test::shift_left<abi_t>::run_all(types{}, engine);
         } else {
             using types = dpl::type_pack<dpl::int8, dpl::uint8, dpl::int16,
                 dpl::uint16, dpl::int32, dpl::uint32, dpl::int64, dpl::uint64,
                 float, double, dpl::ext::float16, dpl::ext::bfloat16>;
-            return dpl::test::lane_shift<dpp::shift_left, abi_t>::run_all(
-                types{}, engine);
+            return dpl::test::shift_left<abi_t>::run_all(types{}, engine);
         }
     };
 

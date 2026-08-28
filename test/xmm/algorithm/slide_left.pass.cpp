@@ -1,21 +1,21 @@
 // Copyright 2025-2026 Bryan Wong
-// @dpl[clang].compile-flags: -fconstexpr-steps=8000000
-// @dpl[msvc].compile-flags: /constexpr:steps8000000
+// @dpl[clang].compile-flags: -fconstexpr-steps=12000000
+// @dpl[msvc].compile-flags: /constexpr:steps12000000
 
 #include "dpl/config.h"
 
 #include <cassert>
 
 import dpl.xmm;
-import dpl.test.harness.algorithm.shift;
+import dpl.test.harness.algorithm.slide;
 
-// Tests for dpp::shift_right on xmm ABI. Requires SSE4.2 (implied by dpl.xmm).
+// Tests for dpp::slide_left on xmm ABI. Requires SSE4.2 (implied by dpl.xmm).
 //
 // Forms tested:
-// (1) dpp::shift_right(lhs, rhs)                  -- unmasked, always available
-// (2) dpp::shift_right(src, mask, lhs, rhs)       -- merge-masked
-// (3) dpp::shift_right(dpp::zero, mask, lhs, rhs) -- zero-masked explicit
-// (4) dpp::shift_right(mask, lhs, rhs)            -- zero-masked alias (== form
+// (1) dpp::slide_left(lhs, rhs)                  -- unmasked, always available
+// (2) dpp::slide_left(src, mask, lhs, rhs)       -- merge-masked
+// (3) dpp::slide_left(dpp::zero, mask, lhs, rhs) -- zero-masked explicit
+// (4) dpp::slide_left(mask, lhs, rhs)            -- zero-masked alias (== form
 // 3)
 
 int main() {
@@ -29,14 +29,12 @@ int main() {
             // Reduce number of types to reduce compile time steps
             using types =
                 dpl::type_pack<dpl::int8, dpl::int16, dpl::int32, dpl::int64>;
-            return dpl::test::lane_shift<dpp::shift_right, abi_t>::run_all(
-                types{}, engine);
+            return dpl::test::slide_left<abi_t>::run_all(types{}, engine);
         } else {
             using types = dpl::type_pack<dpl::int8, dpl::uint8, dpl::int16,
                 dpl::uint16, dpl::int32, dpl::uint32, dpl::int64, dpl::uint64,
                 float, double, dpl::ext::float16, dpl::ext::bfloat16>;
-            return dpl::test::lane_shift<dpp::shift_right, abi_t>::run_all(
-                types{}, engine);
+            return dpl::test::slide_left<abi_t>::run_all(types{}, engine);
         }
     };
 
