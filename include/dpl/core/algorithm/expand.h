@@ -41,8 +41,8 @@ concept unqualified_canonical_mexpand =
 template <>
 struct canonical_impl<expand_t> {
 public:
-    template <simd_vector T>
-    static constexpr T operator()(T&& val) noexcept {
+    template <canonical_vector T>
+    static constexpr T operator()(T val) noexcept {
         static_assert(!simd_vector<T>,
             "This overload is uninvocable at evaluated contexts");
         return __DPL forward<T>(val);
@@ -93,7 +93,7 @@ template <>
 struct extended_impl<expand_t> {
 public:
     template <simd_vector T>
-    static constexpr T operator()(T&& val) noexcept {
+    static constexpr decay_t<T> operator()(T&& val) noexcept {
         static_assert(!simd_vector<T>,
             "This overload is uninvocable at evaluated contexts");
         return __DPL forward<T>(val);
@@ -169,7 +169,7 @@ public:
     template <simd_vector S, simd_mask M, simd_vector T>
     requires cpo_invocable<exscan_sum_t, M> &&
         cpo_invocable<permute_t, S, M, T, cpo_result_t<exscan_sum_t, M>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr S DPL_VECTORCALL operator()(
         S&& src, M&& mask, T&& val) noexcept {
         return dx::permute(__DPL forward<S>(src), __DPL forward<S>(mask),
@@ -179,12 +179,13 @@ public:
     template <simd_vector S, const_mask_for<S> M, simd_vector T>
     requires cpo_invocable<permute_t, S, M, T,
         decltype(fallback_impl::prefix_sum(internal::declarg<M>()))>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(
-        S src, M mask, T val) noexcept {
+        S&& src, M mask, T&& val) noexcept {
         constexpr auto cmask = dx::to_const_mask<S>(mask);
         constexpr auto seq = fallback_impl::prefix_sum(cmask);
-        return dx::permute(src, cmask, val, seq);
+        return dx::permute(
+            __DPL forward<S>(src), cmask, __DPL forward<T>(val), seq);
     }
 
     template <simd_mask M, simd_vector R>

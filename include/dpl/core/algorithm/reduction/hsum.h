@@ -7,7 +7,7 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/equivalence.h"
-#  include "dpl/core/dispatch/maskable/base.h"
+#  include "dpl/core/dispatch/maskable/fold.h"
 #  include "dpl/core/dispatch/operation/algorithm.h"
 #  include "dpl/core/operations/compare/max.h"
 #  include "dpl/core/operations/internal/reduction.h"
@@ -20,7 +20,7 @@ void hsum(...) noexcept = delete;
 
 struct hsum_t :
     public reduction_base<hsum_t>,
-    public maskable_operation_base<hsum_t> {
+    public maskable_fold_base<hsum_t> {
     using operation_base<hsum_t>::operator();
 };
 
@@ -28,6 +28,11 @@ template <>
 struct operation_signature<hsum_t> {
     template <simd_vector T>
     static consteval void operator()(T&&) noexcept {}
+    template <simd_vector T, exact_mask_for<T> M>
+    static consteval void operator()(M&&, T&&) noexcept {}
+
+    template <simd_vector T, const_mask_for<T> M>
+    static consteval void operator()(M&&, T&&) noexcept {}
 };
 
 template <typename T>

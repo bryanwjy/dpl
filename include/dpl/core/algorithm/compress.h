@@ -162,12 +162,14 @@ public:
         return __DPL forward<T>(val);
     }
 
-    template <simd_vector S, exact_mask_for<S> M, vector_subsumed_by<S> T>
-    requires (!fixed_width_vector<S>) &&
+    // The fallback below is too complex to allow for extended types
+
+    template <canonical_vector S, vector_subsumed_by<S> T>
+    requires (!fixed_width_vector<S>) && canonical_vector<T> &&
         cpo_invocable<exscan_sum_t, signed_canonical_vector_t<S>, dx::zero_t>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr S DPL_VECTORCALL operator()(S src, M mask, T val) noexcept(
-        canonical_vector<S> && canonical_mask<M> && canonical_vector<T>) {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr S DPL_VECTORCALL operator()(
+        S src, simd_mask_type_t<S> mask, T val) noexcept {
         using A = simd_abi_type_t<S>;
         using I = signed_representation_t<simd_element_type_t<S>>;
         auto const simd_size = simd_abi_traits<I, A>::size();
@@ -178,27 +180,27 @@ public:
             dx::zero);
         for (auto i = 1zu; i < simd_size; i <<= 1) {
             auto const dist = dx::broadcast<I, A>(static_cast<I>(i));
-            auto const perm = idx ^ dist;
+            auto const perm = dx::bwxor(idx, dist);
             auto const perm_val = dx::permute(val, perm);
             auto const perm_rank = dx::permute(rank, perm);
 
             auto const move =
-                (rank & dist) != dx::zero && perm_rank == (rank ^ dist);
+                dx::bwandnot(dx::cmpeq(perm_rank, dx::bwxor(rank, dist)),
+                    dx::cmpeq(dx::bwand(rank, dist), dx::zero));
             val = dx::select(move, perm_val, val);
             rank = dx::select(move, perm_rank, rank);
         }
 
-        return dx::select(idx < dx::popcount(mask), val, src);
+        return dx::select(dx::cmplt(idx, dx::popcount(mask)), val, src);
     }
 
-    template <fixed_width_vector S, exact_mask_for<S> M,
-        vector_subsumed_by<S> T>
-    requires cpo_invocable<exscan_sum_t, signed_canonical_vector_t<S>,
-        dx::zero_t>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(
-        S src, M mask, T val) noexcept(canonical_vector<S> &&
-        canonical_mask<M> && canonical_vector<T>) {
+    template <canonical_vector S, vector_subsumed_by<S> T>
+    requires fixed_width_vector<S> && canonical_vector<T> &&
+        cpo_invocable<exscan_sum_t, signed_canonical_vector_t<S>, dx::zero_t>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(S src,
+        simd_mask_type_t<S> mask,
+        T val) noexcept(canonical_vector<S> && canonical_vector<T>) {
         using A = simd_abi_type_t<S>;
         using vidx_t = signed_canonical_vector_t<S>;
         auto const rank = fwd::exscan_sum(
@@ -210,7 +212,8 @@ public:
             auto const perm_rank = dx::permute(rank, idx);
             auto const dist = dx::broadcast<vidx_t>(J);
             auto const move =
-                (rank & dist) != dx::zero && perm_rank == (rank ^ dist);
+                dx::bwandnot(dx::cmpeq(perm_rank, dx::bwxor(rank, dist)),
+                    dx::cmpeq(dx::bwand(rank, dist), dx::zero));
 
             val = dx::permute(val, move, val, idx);
             if constexpr (J < simd_abi_traits<T>::size) {
@@ -219,11 +222,12 @@ public:
         }(rank, imm<1zu>);
 
         return dx::select(
-            dx::lane_index<vidx_t>() < dx::popcount(mask), val, src);
+            dx::cmplt(dx::lane_index<vidx_t>(), dx::popcount(mask)), val, src);
     }
 
-    template <simd_vector S, const_mask_for<S> M, vector_subsumed_by<S> T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    template <canonical_vector S, const_mask_for<S> M, vector_subsumed_by<S> T>
+    requires canonical_vector<T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(
         S src, M mask, T val) noexcept {
         constexpr auto cmask = dx::to_const_mask<S>(mask);

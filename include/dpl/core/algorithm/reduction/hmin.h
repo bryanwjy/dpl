@@ -7,7 +7,7 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/equivalence.h"
-#  include "dpl/core/dispatch/maskable/base.h"
+#  include "dpl/core/dispatch/maskable/fold.h"
 #  include "dpl/core/dispatch/operation/algorithm.h"
 #  include "dpl/core/operations/compare/min.h"
 #  include "dpl/core/operations/internal/reduction.h"
@@ -20,7 +20,7 @@ void hmin(...) noexcept = delete;
 
 struct hmin_t :
     public reduction_base<hmin_t>,
-    public maskable_operation_base<hmin_t> {
+    public maskable_fold_base<hmin_t> {
     using operation_base<hmin_t>::operator();
 };
 
@@ -28,6 +28,11 @@ template <>
 struct operation_signature<hmin_t> {
     template <simd_vector T>
     static consteval void operator()(T&&) noexcept {}
+    template <simd_vector T, exact_mask_for<T> M>
+    static consteval void operator()(M&&, T&&) noexcept {}
+
+    template <simd_vector T, const_mask_for<T> M>
+    static consteval void operator()(M&&, T&&) noexcept {}
 };
 
 template <typename T>
