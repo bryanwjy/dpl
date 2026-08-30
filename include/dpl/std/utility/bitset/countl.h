@@ -21,7 +21,7 @@ template <size_t W>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr int countl_one(bitset<W> const& val) noexcept {
     if constexpr (integral_bitset_type<bitset<W>>) {
-        constexpr auto chunk = sizeof(bitset<W>) * __DPL char_bit_v;
+        constexpr auto chunk = __DPL type_bit_v<bitset<W>>;
         constexpr auto padding = chunk - W;
         if constexpr (padding > 0) {
             return __DPL countl_zero(__DPL to_underlying(~val)) - padding;
@@ -59,8 +59,7 @@ template <size_t W>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr int countl_zero(bitset<W> const& val) noexcept {
     if constexpr (integral_bitset_type<bitset<W>>) {
-        constexpr auto chunk =
-            sizeof(typename bitset<W>::underlying_type) * __DPL char_bit_v;
+        constexpr auto chunk =__DPL type_bit_v<bitset<W>>;
         constexpr auto padding = chunk - W;
         if constexpr (padding > 0) {
             return __DPL countl_zero(__DPL to_underlying(val)) - padding;

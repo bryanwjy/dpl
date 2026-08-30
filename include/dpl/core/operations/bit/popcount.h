@@ -34,9 +34,9 @@ struct popcount_t :
     using maskable_transform_base<popcount_t>::operator();
 
     template <const_mask_like M>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr size_t operator()(M) noexcept {
-        return __DPL popcount(M::value);
+    static consteval size_t operator()(M mask) noexcept {
+        // used adl
+        return popcount(dx::to_const_mask(mask));
     }
 };
 

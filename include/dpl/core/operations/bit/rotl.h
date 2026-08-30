@@ -38,10 +38,10 @@ struct rotl_t :
     using operation_base<rotl_t>::operator();
     using maskable_transform_base<rotl_t>::operator();
 
-    template <const_mask_like M>
+    template <size_t W, internal::mask_value_t<W> V>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto operator()(M) noexcept {
-        return cmask_v<__DPL rotl(M::value)>;
+    static consteval auto operator()(const_mask<W, V> mask) noexcept {
+        return const_mask<W, rotl(mask)>{};
     }
 };
 

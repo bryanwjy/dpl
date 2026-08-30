@@ -27,7 +27,8 @@ inline constexpr bool is_nothrow_convertible_v =
     };
 
 template <typename From, typename To>
-struct is_convertible : bool_constant<is_nothrow_convertible_v<From, To>> {};
+struct is_nothrow_convertible :
+    bool_constant<is_nothrow_convertible_v<From, To>> {};
 
 #endif // if __DPL_SHOULD_USE_BUILTIN(is_nothrow_convertible)
 

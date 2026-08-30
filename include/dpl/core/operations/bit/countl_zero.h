@@ -35,8 +35,9 @@ struct countl_zero_t :
 
     template <const_mask_like M>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr size_t operator()(M) noexcept {
-        return __DPL countl_zero(M::value);
+    static consteval size_t operator()(M mask) noexcept {
+        // used adl
+        return countl_zero(dx::to_const_mask(mask));
     }
 };
 

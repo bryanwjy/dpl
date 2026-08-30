@@ -43,6 +43,7 @@ using __DPL datapar::cpo::slide_left;
 using __DPL datapar::cpo::slide_lefti;
 using __DPL datapar::cpo::slide_right;
 using __DPL datapar::cpo::slide_righti;
+using __DPL datapar::cpo::splice;
 
 } // namespace cpo
 } // namespace datapar

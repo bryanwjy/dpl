@@ -1,22 +1,17 @@
 // Copyright 2025-2026 Bryan Wong
-// @dpl[clang].compile-flags: -fconstexpr-steps=12000000
-// @dpl[msvc].compile-flags: /constexpr:steps12000000
 
 #include "dpl/config.h"
 
 #include <cassert>
 
 import dpl.xmm;
-import dpl.test.harness.algorithm.slide;
+import dpl.test.harness.algorithm.splice;
 
-// Tests for dpp::slide_right on xmm ABI. Requires SSE4.2 (implied by dpl.xmm).
+// Tests for dpp::splice on xmm ABI. Requires SSE4.2 (implied by dpl.xmm).
 //
 // Forms tested:
-// (1) dpp::slide_right(lhs, rhs)                  -- unmasked, always available
-// (2) dpp::slide_right(src, mask, lhs, rhs)       -- merge-masked
-// (3) dpp::slide_right(dpp::zero, mask, lhs, rhs) -- zero-masked explicit
-// (4) dpp::slide_right(mask, lhs, rhs)            -- zero-masked alias (== form
-// 3)
+// (1) dpp::splice(mask, lhs, rhs)                  -- unmasked, always
+// form 3)
 
 int main() {
     namespace dpp = dpl::datapar;
@@ -29,12 +24,12 @@ int main() {
             // Reduce number of types to reduce compile time steps
             using types =
                 dpl::type_pack<dpl::int8, dpl::int16, dpl::int32, dpl::int64>;
-            return dpl::test::slide_right<abi_t>::run_all(types{}, engine);
+            return dpl::test::splice<abi_t>::run_all(types{}, engine);
         } else {
             using types = dpl::type_pack<dpl::int8, dpl::uint8, dpl::int16,
                 dpl::uint16, dpl::int32, dpl::uint32, dpl::int64, dpl::uint64,
                 float, double, dpl::ext::float16, dpl::ext::bfloat16>;
-            return dpl::test::slide_right<abi_t>::run_all(types{}, engine);
+            return dpl::test::splice<abi_t>::run_all(types{}, engine);
         }
     };
 

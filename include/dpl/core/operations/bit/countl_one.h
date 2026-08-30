@@ -34,9 +34,9 @@ struct countl_one_t :
     using maskable_transform_base<countl_one_t>::operator();
 
     template <const_mask_like M>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr size_t operator()(M) noexcept {
-        return __DPL countl_one(M::value);
+    static consteval size_t operator()(M mask) noexcept {
+        // used adl
+        return countl_one(dx::to_const_mask(mask));
     }
 };
 

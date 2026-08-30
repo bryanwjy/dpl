@@ -25,19 +25,19 @@ struct DPL_EMPTY_BASES splice_t : public algorithm_base<splice_t> {
 
 template <>
 struct operation_signature<splice_t> {
-    template <simd_mask M, simd_vector L, simd_vector R>
+    template <typename L, typename R>
+    using vector_t DPL_NODEBUG = common_canonical_simd_t<L, R>;
+
+    template <simd_vector L, equivalent_vector_with<L> R, exact_mask_for<L> M>
+    static consteval void operator()(M&&, L&&, R&&) noexcept {}
+    template <simd_vector L, equivalent_vector_with<L> R, const_mask_for<L> M>
     static consteval void operator()(M&&, L&&, R&&) noexcept {}
 };
 
 template <>
 struct fallback_impl<splice_t> {
-private:
-    template <typename L, typename R>
-    using vector_t DPL_NODEBUG = common_canonical_simd_t<L, R>;
-
 public:
-    template <simd_vector L, common_vector_with<L> R,
-        exact_mask_for<vector_t<L, R>> M>
+    template <simd_vector L, equivalent_vector_with<L> R, exact_mask_for<L> M>
     requires cpo_invocable<select_t, M, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(
@@ -46,88 +46,191 @@ public:
         auto const low = dx::countr_zero(mask);
         auto const high = dx::countl_zero(__DPL forward<M>(mask));
         return dx::slide_left(dx::shift_right(__DPL forward<L>(lhs), high),
-            __DPL forward<R>(rhs), high + low);
+            __DPL forward<R>(rhs), high + low); // slide will clamp `high+low`
     }
 
-    template <simd_vector L, common_vector_with<L> R,
-        const_mask_for<vector_t<L, R>> M>
+    template <simd_vector L, equivalent_vector_with<L> R, const_mask_for<L> M>
     requires cpo_invocable<select_t, M, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(
-        M mask, L lhs, R rhs) noexcept {
-        constexpr auto cmask = dx::to_const_mask<vector_t<L, R>>(mask);
+        M mask, L&& lhs, R&& rhs) noexcept {
+        constexpr auto cmask = dx::to_const_mask<L>(mask);
         constexpr auto low = dx::countr_zero(cmask);
-        constexpr auto high = dx::countr_zero(cmask);
-        return dx::slide_left(
-            dx::shift_right(lhs, imm<high>), rhs, imm<high + low>);
+        if constexpr (dx::none_of(cmask)) {
+            return rhs;
+        } else if constexpr (dx::all_of(cmask)) {
+            return lhs;
+        } else {
+            constexpr auto high = dx::countl_zero(cmask);
+            return dx::slide_left(
+                dx::shift_right(__DPL forward<L>(lhs), imm<high>),
+                __DPL forward<R>(rhs), imm<high + low>);
+        }
+    }
+
+    template <simd_vector R, exact_mask_for<R> M, broadcastable_to<R> L>
+    requires cpo_invocable<splice_t, M, R, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr cpo_result<splice_t, M, R, R> operator()(
+        M&& mask, L&& lhs, R&& rhs) noexcept {
+        return splice_t::operator()(__DPL forward<M>(mask),
+            dx::broadcast<R>(__DPL forward<L>(lhs)), __DPL forward<R>(rhs));
+    }
+
+    template <simd_vector R, const_mask_for<R> M, broadcastable_to<R> L>
+    requires cpo_invocable<splice_t, M, R, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr cpo_result<splice_t, M, R, R> operator()(
+        M mask, L&& lhs, R&& rhs) noexcept {
+        return splice_t::operator()(mask,
+            dx::broadcast<R>(__DPL forward<L>(lhs)), __DPL forward<R>(rhs));
+    }
+
+    template <simd_vector L, exact_mask_for<L> M, broadcastable_to<L> R>
+    requires cpo_invocable<splice_t, M, L, L>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr cpo_result<splice_t, M, L, L> operator()(
+        M&& mask, L&& lhs, R&& rhs) noexcept {
+        return splice_t::operator()(__DPL forward<M>(mask),
+            __DPL forward<L>(lhs), dx::broadcast<L>(__DPL forward<R>(rhs)));
+    }
+
+    template <simd_vector L, const_mask_for<L> M, broadcastable_to<L> R>
+    requires cpo_invocable<splice_t, M, L, L>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr cpo_result<splice_t, M, L, L> operator()(
+        M mask, L&& lhs, R&& rhs) noexcept {
+        return splice_t::operator()(mask, __DPL forward<L>(lhs),
+            dx::broadcast<L>(__DPL forward<R>(rhs)));
     }
 };
 
 template <>
 struct canonical_impl<splice_t> {
-private:
-    template <typename L, typename R>
-    using result_t DPL_NODEBUG = common_canonical_simd_t<L, R>;
-
-    template <typename L, typename R>
-    using mask_t DPL_NODEBUG = simd_mask_type_t<common_canonical_simd_t<L, R>>;
-
 public:
-    template <canonical_vector L, common_vector_with<L> R>
-    requires canonical_vector<R>
+    template <canonical_vector L, same_as<L> R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr result_t<L, R> operator()(
-        mask_t<L, R> mask, L lhs, R rhs) noexcept
-    requires requires {
-        splice(internal::abi<common_abi_t<L, R>>, mask, lhs, rhs);
-    }
+    static constexpr L operator()(
+        simd_mask_type_t<L> mask, L lhs, R rhs) noexcept
+    requires requires { splice(internal::abi<L>, mask, lhs, rhs); }
     {
-        return splice(internal::abi<common_abi_t<L, R>>, mask, lhs, rhs);
+        return splice(internal::abi<L>, mask, lhs, rhs);
     }
 
-    template <canonical_vector L, common_vector_with<L> R,
-        const_mask_for<result_t<L, R>> M>
-    requires canonical_vector<R>
+    template <canonical_vector L, const_mask_for<L> M, same_as<L> R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr result_t<L, R> operator()(M cmask, L lhs, R rhs) noexcept
+    static constexpr L operator()(
+        simd_mask_type_t<L> mask, L lhs, R rhs) noexcept
+    requires requires { splice(internal::abi<L>, mask, lhs, rhs); }
+    {
+        return splice(internal::abi<L>, dx::to_const_mask<L>(mask), lhs, rhs);
+    }
+
+    template <canonical_vector R, broadcastable_to<R> L>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr R operator()(
+        simd_mask_type_t<R> mask, L&& lhs, R rhs) noexcept
     requires requires {
-        splice(internal::abi<common_abi_t<L, R>>, cmask, lhs, rhs);
+        splice(internal::abi<R>, mask, __DPL forward<L>(lhs), rhs);
     }
     {
-        return splice(internal::abi<common_abi_t<L, R>>,
-            dx::to_const_mask<result_t<L, R>>(cmask), lhs, rhs);
+        return splice(internal::abi<R>, mask, __DPL forward<L>(lhs), rhs);
+    }
+
+    template <canonical_vector R, broadcastable_to<R> L>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr L operator()(
+        simd_mask_type_t<L> mask, L&& lhs, R rhs) noexcept
+    requires requires {
+        splice(internal::abi<R>, mask, __DPL forward<L>(lhs), rhs);
+    }
+    {
+        return splice(internal::abi<R>, dx::to_const_mask<R>(mask),
+            __DPL forward<L>(lhs), rhs);
+    }
+
+    template <canonical_vector L, broadcastable_to<L> R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr L operator()(
+        simd_mask_type_t<L> mask, L lhs, R&& rhs) noexcept
+    requires requires {
+        splice(internal::abi<L>, mask, lhs, __DPL forward<R>(rhs));
+    }
+    {
+        return splice(internal::abi<R>, mask, lhs, __DPL forward<R>(rhs));
+    }
+
+    template <canonical_vector L, const_mask_for<L> M, broadcastable_to<L> R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr L operator()(M mask, L lhs, R&& rhs) noexcept
+    requires requires {
+        splice(internal::abi<L>, mask, lhs, __DPL forward<R>(rhs));
+    }
+    {
+        return splice(internal::abi<L>, mask, lhs, __DPL forward<R>(rhs));
     }
 };
 
 template <typename M, typename L, typename R, typename A = common_abi_t<L, R>>
 concept unqualified_extended_splice = requires(M mask, L lhs, R rhs) {
-    { splice(mask, lhs, rhs) } -> vector_with<simd_element_type_t<L>, A>;
+    {
+        splice(mask, lhs, rhs)
+    } -> equivalent_vector_with<common_canonical_simd_t<L, R>>;
 };
 
 template <>
 struct extended_impl<splice_t> {
-private:
-    template <typename L, typename R>
-    using vector_t DPL_NODEBUG = common_canonical_simd_t<L, R>;
-
 public:
-    template <simd_vector L, common_vector_with<L> R,
-        exact_mask_for<vector_t<L, R>> M>
-    requires (extended_vector<L> || extended_vector<R>) &&
+    template <simd_vector L, equivalent_vector_with<L> R, exact_mask_for<L> M>
+    requires (extended_mask<M> || extended_vector<L> || extended_vector<R>) &&
         unqualified_extended_splice<M, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M&& mask, L&& lhs, R&& rhs) {
-        return splice(mask, __DPL forward<L>(lhs), __DPL forward<R>(rhs));
+        return splice(__DPL forward<M>(mask), __DPL forward<L>(lhs),
+            __DPL forward<R>(rhs));
     }
 
-    template <simd_vector L, common_vector_with<L> R,
-        const_mask_for<vector_t<L, R>> M>
+    template <simd_vector L, equivalent_vector_with<L> R, const_mask_for<L> M>
     requires (extended_vector<L> || extended_vector<R>) &&
-        unqualified_extended_splice<launder_cmask_t<vector_t<L, R>, M>, L, R>
+        unqualified_extended_splice<launder_cmask_t<L, M>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto operator()(M cmask, L&& lhs, R&& rhs) {
-        return splice(dx::to_const_mask<vector_t<L, R>>(cmask),
-            __DPL forward<L>(lhs), __DPL forward<R>(rhs));
+    static constexpr auto operator()(M mask, L&& lhs, R&& rhs) {
+        return splice(dx::to_const_mask<L>(mask), __DPL forward<L>(lhs),
+            __DPL forward<R>(rhs));
+    }
+
+    template <simd_vector R, exact_mask_for<R> M, broadcastable_to<R> L>
+    requires (extended_vector<R> || extended_mask<M>) &&
+        unqualified_extended_splice<M, L, R, simd_abi_type_t<R>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(M&& mask, L&& lhs, R&& rhs) noexcept {
+        return splice(__DPL forward<M>(mask), __DPL forward<L>(lhs),
+            __DPL forward<R>(rhs));
+    }
+
+    template <extended_vector R, const_mask_for<R> M, broadcastable_to<R> L>
+    requires unqualified_extended_splice<M, L, R, simd_abi_type_t<R>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(M mask, L&& lhs, R&& rhs) noexcept {
+        return splice(dx::to_const_mask<L>(mask), __DPL forward<L>(lhs),
+            __DPL forward<R>(rhs));
+    }
+
+    template <simd_vector L, exact_mask_for<L> M, broadcastable_to<L> R>
+    requires (extended_vector<L> || extended_mask<M>) &&
+        unqualified_extended_splice<M, L, R, simd_abi_type_t<L>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(M&& mask, L&& lhs, R&& rhs) noexcept {
+        return splice(__DPL forward<M>(mask), __DPL forward<L>(lhs),
+            __DPL forward<R>(rhs));
+    }
+
+    template <extended_vector L, const_mask_for<L> M, broadcastable_to<L> R>
+    requires unqualified_extended_splice<M, L, R, simd_abi_type_t<L>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(M mask, L&& lhs, R&& rhs) noexcept {
+        return splice(dx::to_const_mask<L>(mask), __DPL forward<L>(lhs),
+            __DPL forward<R>(rhs));
     }
 };
 
@@ -146,9 +249,11 @@ struct splicei_t {
 } // namespace datapar::internal
 
 namespace datapar {
+inline namespace cpo {
 template <auto V>
 inline constexpr internal::splicei_t<V> splicei{};
 inline constexpr internal::splice_t splice{};
+} // namespace cpo
 } // namespace datapar
 
 __DPL_DEFAULT_NAMESPACE_END

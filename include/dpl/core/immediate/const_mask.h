@@ -116,22 +116,22 @@ public:
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     constexpr bool operator==(this const_mask, all_bits_t) noexcept {
-        return __DPL popcount(value) == static_cast<int>(W);
+        return bitset<W>(value) == ~bitset<W>();
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     constexpr bool operator!=(this const_mask, all_bits_t) noexcept {
-        return __DPL popcount(value) == static_cast<int>(W);
+        return bitset<W>(value) != ~bitset<W>();
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     constexpr bool operator==(this const_mask, zero_t) noexcept {
-        return (value & static_cast<value_type>(W - 1)) == 0;
+        return !bitset<W>(value);
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     constexpr bool operator!=(this const_mask, zero_t) noexcept {
-        return (value & static_cast<value_type>(W - 1)) != 0;
+        return static_cast<bool>(bitset<W>(value));
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
@@ -145,22 +145,22 @@ public:
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     friend constexpr bool operator==(all_bits_t, const_mask) noexcept {
-        return __DPL popcount(value) == static_cast<int>(W);
+        return bitset<W>(value) == ~bitset<W>();
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     friend constexpr bool operator!=(all_bits_t, const_mask) noexcept {
-        return __DPL popcount(value) == static_cast<int>(W);
+        return bitset<W>(value) != ~bitset<W>();
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     friend constexpr bool operator==(zero_t, const_mask) noexcept {
-        return (value & static_cast<value_type>(W - 1)) == 0;
+        return !bitset<W>(value);
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     friend constexpr bool operator!=(zero_t, const_mask) noexcept {
-        return (value & static_cast<value_type>(W - 1)) != 0;
+        return static_cast<bool>(bitset<W>(value));
     }
 
     template <size_t W2, internal::mask_value_t<W2> V2>
@@ -180,23 +180,23 @@ public:
         return (static_cast<value_type>(1zu << idx) & value) > 0;
     }
 
-    friend consteval auto all_of(const_mask val) noexcept {
-        return val == all_bits_t{};
+    friend consteval bool all_of(const_mask val) noexcept {
+        return bitset<W>(value) == ~bitset<W>();
     }
 
-    friend consteval auto any_of(const_mask val) noexcept {
-        return val != zero_t{};
+    friend consteval bool any_of(const_mask val) noexcept {
+        return static_cast<bool>(bitset<W>(value));
     }
 
-    friend consteval auto none_of(const_mask val) noexcept {
-        return val == zero_t{};
+    friend consteval bool none_of(const_mask val) noexcept {
+        return !bitset<W>(value);
     }
 
-    friend consteval auto some_of(const_mask val) noexcept {
+    friend consteval bool some_of(const_mask val) noexcept {
         return any_of(val) && !all_of(val);
     }
 
-    friend consteval auto popcount(const_mask) noexcept {
+    friend consteval int popcount(const_mask) noexcept {
         return __DPL popcount(value);
     }
 
