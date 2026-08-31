@@ -7,7 +7,6 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/equivalence.h"
-#  include "dpl/core/dispatch/maskable/fold.h"
 #  include "dpl/core/dispatch/operation/algorithm.h"
 #  include "dpl/core/immediate/const_mask.h"
 #  include "dpl/core/operations/compare/max.h"
@@ -19,9 +18,7 @@ __DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void scan_max(...) noexcept = delete;
 
-struct scan_max_t :
-    public inclusive_scan_base<scan_max_t>,
-    public maskable_operation_base<scan_max_t> {
+struct scan_max_t : public inclusive_scan_base<scan_max_t> {
     using operation_base<scan_max_t>::operator();
 };
 
@@ -29,6 +26,10 @@ template <>
 struct operation_signature<scan_max_t> {
     template <simd_vector T>
     static consteval void operator()(T&&) noexcept {}
+    template <simd_vector T, exact_mask_for<T> M>
+    static consteval void operator()(T&&, M&&) noexcept {}
+    template <simd_vector T, const_mask_for<T> M>
+    static consteval void operator()(T&&, M) noexcept {}
 };
 
 template <typename T>
@@ -36,12 +37,12 @@ concept unqualified_canonical_scan_max = requires {
     { scan_max(internal::abi<T>, internal::declarg<T>()) } -> same_as<T>;
 };
 
-template <typename M, typename T>
+template <typename T, typename M>
 concept unqualified_canonical_mscan_max =
     cpo_invocable<scan_max_t, T> && requires {
         {
-            scan_max(internal::abi<T>, internal::declarg<M>(),
-                internal::declarg<T>())
+            scan_max(internal::abi<T>, internal::declarg<T>(),
+                internal::declarg<M>())
         } -> same_as<T>;
     };
 
@@ -56,16 +57,16 @@ public:
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mscan_max<simd_mask_type_t<T>, T>
+    requires unqualified_canonical_mscan_max<T, simd_mask_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(simd_mask_type_t<T> mask, T val) noexcept {
+    static constexpr T operator()(T val, simd_mask_type_t<T> mask) noexcept {
         return scan_max(internal::abi<T>, mask, val);
     }
 
     template <canonical_vector T, const_mask_for<T> M>
-    requires unqualified_canonical_mscan_max<launder_cmask_t<T, M>, T>
+    requires unqualified_canonical_mscan_max<T, launder_cmask_t<T, M>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(M mask, T val) noexcept {
+    static constexpr T operator()(T val, M mask) noexcept {
         return scan_max(internal::abi<T>, dx::to_const_mask<T>(mask), val);
     }
 };
@@ -75,11 +76,11 @@ concept unqualified_extended_scan_max = requires {
     { scan_max(internal::declarg<T>()) } -> equivalent_vector_with<T>;
 };
 
-template <typename M, typename T>
+template <typename T, typename M>
 concept unqualified_extended_mscan_max =
     cpo_invocable<scan_max_t, T> && requires {
         {
-            scan_max(internal::declarg<M>(), internal::declarg<T>())
+            scan_max(internal::declarg<T>(), internal::declarg<M>())
         } -> equivalent_vector_with<T>;
     };
 
@@ -97,15 +98,15 @@ public:
     requires (extended_vector<T> || extended_mask<M>) &&
         unqualified_extended_mscan_max<M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(M&& mask, T&& val) {
-        return scan_max( __DPL forward<M>(mask), __DPL forward<T>(val));
+    static constexpr auto operator()(T&& val, M&& mask) {
+        return scan_max( __DPL forward<T>(val), __DPL forward<M>(mask));
     }
 
     template <extended_vector T, const_mask_for<T> M>
-    requires unqualified_extended_mscan_max<launder_cmask_t<T, M>, T>
+    requires unqualified_extended_mscan_max<T, launder_cmask_t<T, M>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(M mask, T&& val) {
-        return scan_max(dx::to_const_mask<T>(mask), __DPL forward<T>(val));
+    static constexpr auto operator()(T&& val, M mask) {
+        return scan_max(__DPL forward<T>(val), dx::to_const_mask<T>(mask));
     }
 };
 
@@ -138,7 +139,7 @@ public:
         cpo_invocable<scan_max_t,
             cpo_result_t<select_t, M, T, simd_element_type_t<T>>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(M&& mask, T&& val) noexcept(
+    static constexpr auto DPL_VECTORCALL operator()(T&& val, M&& mask) noexcept(
         canonical_vector<T> && canonical_mask<M>) {
         using E = simd_element_type_t<T>;
         return scan_max_t::operator()(dx::select(
@@ -150,7 +151,7 @@ public:
         cpo_invocable<scan_max_t,
             cpo_result_t<select_t, M, T, simd_element_type_t<T>>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(M mask, T&& val) noexcept(
+    static constexpr auto DPL_VECTORCALL operator()(T&& val, M mask) noexcept(
         canonical_vector<T>) {
         using E = simd_element_type_t<T>;
         return scan_max_t::operator()(

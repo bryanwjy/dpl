@@ -70,7 +70,7 @@ public:
     requires canonical_vector<R> && unqualified_canonical_dot_product<L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr result_t<L, R> operator()(L lhs, R rhs) noexcept {
-        return inner_product(internal::abi<common_abi_t<L, R>>, lhs, rhs);
+        return dot_product(internal::abi<common_abi_t<L, R>>, lhs, rhs);
     }
 
     template <canonical_vector L, common_vector_with<L> R>
@@ -79,7 +79,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr result_t<L, R> operator()(
         result_t<L, R> src, mask_t<L, R> mask, L lhs, R rhs) noexcept {
-        return inner_product(
+        return dot_product(
             internal::abi<common_abi_t<L, R>>, src, mask, lhs, rhs);
     }
 
@@ -91,7 +91,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr result_t<L, R> operator()(
         result_t<L, R> src, M cmask, L lhs, R rhs) noexcept {
-        return inner_product(internal::abi<common_abi_t<L, R>>, src,
+        return dot_product(internal::abi<common_abi_t<L, R>>, src,
             dx::to_const_mask<result_t<L, R>>(cmask), lhs, rhs);
     }
 
@@ -101,7 +101,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         dx::zero_t zero, mask_t<L, R> mask, L lhs, R rhs) noexcept {
-        return inner_product(
+        return dot_product(
             internal::abi<common_abi_t<L, R>>, zero, mask, lhs, rhs);
     }
 
@@ -113,7 +113,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         dx::zero_t zero, M cmask, L lhs, R rhs) noexcept {
-        return inner_product(internal::abi<common_abi_t<L, R>>, zero,
+        return dot_product(internal::abi<common_abi_t<L, R>>, zero,
             dx::to_const_mask<result_t<L, R>>(cmask), lhs, rhs);
     }
 };

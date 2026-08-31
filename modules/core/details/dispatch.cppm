@@ -29,7 +29,6 @@ DPL_DISABLE_WARNING(5244)
 #include "dpl/core/dispatch/evaluate.h"
 #include "dpl/core/dispatch/interface.h"
 #include "dpl/core/dispatch/maskable/accumulation.h"
-#include "dpl/core/dispatch/maskable/fold.h"
 #include "dpl/core/dispatch/maskable/predicate.h"
 #include "dpl/core/dispatch/maskable/transform.h"
 #include "dpl/core/dispatch/operation/algorithm.h"

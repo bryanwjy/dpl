@@ -7,7 +7,6 @@
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/equivalence.h"
-#  include "dpl/core/dispatch/maskable/fold.h"
 #  include "dpl/core/dispatch/operation/algorithm.h"
 #  include "dpl/core/operations/compare/max.h"
 #  include "dpl/core/operations/internal/reduction.h"
@@ -18,9 +17,7 @@ __DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void hmax(...) noexcept = delete;
 
-struct hmax_t :
-    public reduction_base<hmax_t>,
-    public maskable_fold_base<hmax_t> {
+struct hmax_t : public reduction_base<hmax_t> {
     using operation_base<hmax_t>::operator();
 };
 
@@ -30,10 +27,10 @@ struct operation_signature<hmax_t> {
     static consteval void operator()(T&&) noexcept {}
 
     template <simd_vector T, exact_mask_for<T> M>
-    static consteval void operator()(M&&, T&&) noexcept {}
+    static consteval void operator()(T&&, M&&) noexcept {}
 
     template <simd_vector T, const_mask_for<T> M>
-    static consteval void operator()(M&&, T&&) noexcept {}
+    static consteval void operator()(T&&, M&&) noexcept {}
 };
 
 template <typename T>
@@ -46,7 +43,7 @@ concept unqualified_canonical_hmax = requires {
 template <typename M, typename T>
 concept unqualified_canonical_mhmax = cpo_invocable<hmax_t, T> && requires {
     {
-        hmax(internal::abi<T>, internal::declarg<M>(), internal::declarg<T>())
+        hmax(internal::abi<T>, internal::declarg<T>(), internal::declarg<M>())
     } -> same_as<simd_element_type_t<T>>;
 };
 
@@ -61,34 +58,31 @@ public:
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mhmax<simd_mask_type_t<T>, T>
+    requires unqualified_canonical_mhmax<T, simd_mask_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr simd_element_type_t<T> operator()(
-        simd_mask_type_t<T> mask, T val) noexcept {
-        return hmax(internal::abi<T>, mask, val);
+        T val, simd_mask_type_t<T> mask) noexcept {
+        return hmax(internal::abi<T>, val, mask);
     }
 
     template <canonical_vector T, const_mask_for<T> M>
-    requires unqualified_canonical_mhmax<launder_cmask_t<T, M>, T>
+    requires unqualified_canonical_mhmax<T, launder_cmask_t<T, M>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr simd_element_type_t<T> operator()(
-        M cmask, T val) noexcept {
-        return hmax(internal::abi<T>, dx::to_const_mask<T>(cmask), val);
+    static constexpr simd_element_type_t<T> operator()(T val, M mask) noexcept {
+        return hmax(internal::abi<T>, val, dx::to_const_mask<T>(mask));
     }
 };
 
 template <typename T>
 concept unqualified_extended_hmax = requires {
-    {
-        hmax(internal::declarg<T>())
-    } -> core_convertible_to<simd_element_type_t<T>>;
+    { hmax(internal::declarg<T>()) } -> convertible_to<simd_element_type_t<T>>;
 };
 
-template <typename M, typename T>
+template <typename T, typename M>
 concept unqualified_extended_mhmax = cpo_invocable<hmax_t, T> && requires {
     {
-        hmax(internal::declarg<M>(), internal::declarg<T>())
-    } -> core_convertible_to<simd_element_type_t<T>>;
+        hmax(internal::declarg<T>(), internal::declarg<M>())
+    } -> convertible_to<simd_element_type_t<T>>;
 };
 
 template <>
@@ -103,17 +97,17 @@ public:
 
     template <simd_vector T, exact_mask_for<T> M>
     requires (extended_vector<T> || extended_mask<M>) &&
-        unqualified_extended_mhmax<M, T>
+        unqualified_extended_mhmax<T, M>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(M&& mask, T&& val) {
-        return hmax(__DPL forward<M>(mask), __DPL forward<T>(val));
+    static constexpr auto operator()(T&& val, M&& mask) {
+        return hmax(__DPL forward<T>(val), __DPL forward<M>(mask));
     }
 
     template <extended_vector T, const_mask_for<T> M>
-    requires unqualified_extended_mhmax<launder_cmask_t<T, M>, T>
+    requires unqualified_extended_mhmax<T, launder_cmask_t<T, M>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(M cmask, T&& val) {
-        return hmax(dx::to_const_mask<T>(cmask), __DPL forward<T>(val));
+    static constexpr auto operator()(T&& val, M mask) {
+        return hmax(__DPL forward<T>(val), dx::to_const_mask<T>(mask));
     }
 };
 
@@ -146,9 +140,9 @@ public:
     requires cpo_invocable<select_t, M, T, simd_element_type_t<T>> &&
         cpo_invocable<hmax_t,
             cpo_result_t<select_t, M, T, simd_element_type_t<T>>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr simd_element_type_t<T>
-        DPL_VECTORCALL operator()(M&& mask, T&& val) noexcept(
+        DPL_VECTORCALL operator()(T&& val, M&& mask) noexcept(
             canonical_mask<M> && canonical_vector<T>) {
         using E = simd_element_type_t<T>;
         return hmax_t::operator()(dx::select(
@@ -159,13 +153,13 @@ public:
     requires cpo_invocable<select_t, M, T, simd_element_type_t<T>> &&
         cpo_invocable<hmax_t,
             cpo_result_t<select_t, M, T, simd_element_type_t<T>>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr simd_element_type_t<T>
-        DPL_VECTORCALL operator()(M mask, T&& val) noexcept(
+        DPL_VECTORCALL operator()(T&& val, M mask) noexcept(
             canonical_vector<T>) {
         using E = simd_element_type_t<T>;
-        return hmax_t::operator()(dx::select(
-            __DPL forward<M>(mask), __DPL forward<T>(val), identity<E>()));
+        return hmax_t::operator()(
+            dx::select(mask, __DPL forward<T>(val), identity<E>()));
     }
 };
 
