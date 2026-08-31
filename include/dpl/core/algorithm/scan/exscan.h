@@ -75,8 +75,8 @@ struct fallback_impl<exscan_t> {
     template <simd_vector T, broadcastable_to<T> V, scan_operator_for<T> Op>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T&& val, V&& init, Op&& func) noexcept {
-        auto slid = dx::slide_right(__DPL forward<T>(val),
-            dx::broadcast<T>(__DPL forward<V>(init)), imm<1zu>);
+        auto slid = dx::slide_right(dx::broadcast<T>(__DPL forward<V>(init)),
+            __DPL forward<T>(val), imm<1zu>);
         return internal::inclusive_scan(
             __DPL move(slid), __DPL forward<Op>(func));
     }

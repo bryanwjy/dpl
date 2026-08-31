@@ -24,7 +24,7 @@ class splice {
 
     template <dpp::simd_element_for<A> E>
     static constexpr auto expected_op(dpl::bitset<abi_traits<E>::size> mask,
-        data<E> lhs, data<E> rhs) noexcept
+        data<E> const& lhs, data<E> const& rhs) noexcept
     requires dpp::fixed_width_abi<A>
     {
         auto const low = dpl::countr_zero(mask);

@@ -66,9 +66,8 @@ public:
     template <simd_vector T, scan_operator_for<T> Op>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T&& val, Op&& func) {
-        using type = remove_cvref_t<T>;
-        return internal::inclusive_scan<type>(
-            __DPL forward<T>(val), __DPL forward<Op>(func));
+        return internal::inclusive_scan(
+            auto(__DPL forward<T>(val)), __DPL forward<Op>(func));
     }
 };
 

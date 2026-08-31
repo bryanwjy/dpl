@@ -27,8 +27,8 @@ struct scan_min_t :
 
 template <>
 struct operation_signature<scan_min_t> {
-    template <simd_vector T, broadcastable_to<T> V>
-    static consteval void operator()(T&&, V&&) noexcept {}
+    template <simd_vector T>
+    static consteval void operator()(T&&) noexcept {}
 };
 
 template <typename T>
