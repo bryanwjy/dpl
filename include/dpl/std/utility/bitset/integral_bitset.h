@@ -202,12 +202,15 @@ public:
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) constexpr bitset operator<<(
         this bitset self, size_t shift) noexcept {
-        return bitset(self.value_ << shift);
+        return bitset(shift >= W ? static_cast<underlying_type>(0u)
+                                 : self.value_ << shift);
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) constexpr bitset operator>>(
         this bitset self, size_t shift) noexcept {
-        return bitset(static_cast<underlying_type>(self.value_ >> shift));
+        return bitset(shift >= W
+                ? static_cast<underlying_type>(0u)
+                : static_cast<underlying_type>(self.value_ >> shift));
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) constexpr bool test(
