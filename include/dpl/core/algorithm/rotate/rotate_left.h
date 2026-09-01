@@ -47,7 +47,7 @@ struct fallback_impl<rotate_left_t> {
 
     template <fixed_width_vector T, integral_constant_like N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL fallback(T&& val, N lanes) noexcept {
+    static constexpr auto DPL_VECTORCALL fallback(T&& val, N) noexcept {
         constexpr auto V = N::value % simd_abi_traits<T>::size();
         return dx::slide_left(val, val, imm<V>);
     }

@@ -67,7 +67,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T&& val, Op&& func) {
         return internal::inclusive_scan(
-            auto(__DPL forward<T>(val)), __DPL forward<Op>(func));
+            __DPL forward<T>(val), __DPL forward<Op>(func));
     }
 };
 

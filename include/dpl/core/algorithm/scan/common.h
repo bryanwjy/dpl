@@ -15,6 +15,7 @@
 #  include "dpl/core/type_traits/simd_abi_traits.h"
 #  include "dpl/std/concepts/integral_constant_like.h"
 #  include "dpl/std/concepts/invocable.h"
+#  include "dpl/std/type_traits/decay.h"
 #  include "dpl/std/type_traits/is_invocable.h"
 #  include "dpl/std/utility/bitset.h"
 #  include "dpl/std/utility/forward.h"
@@ -38,7 +39,7 @@ concept scan_operator_for =
 template <fixed_width_vector T, integral_constant_like Imm,
     scan_operator_for<T> Op>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr T DPL_VECTORCALL inclusive_scan(Imm, T val, Op&& op) {
+constexpr auto DPL_VECTORCALL inclusive_scan(Imm, T val, Op&& op) {
 
     [&]<size_t I>(this auto self, immediate<I> offset) {
         using bitset_t = bitset<simd_abi_traits<T>::size>;
@@ -81,7 +82,8 @@ constexpr T DPL_VECTORCALL inclusive_scan(size_t size, T val, Op op) {
 
 template <simd_vector T, scan_operator_for<T> Op>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-constexpr T DPL_VECTORCALL inclusive_scan(T&& val, Op&& op) {
+constexpr decay_t<T>
+    DPL_VECTORCALL inclusive_scan(T&& val, Op&& op) {
     using type = remove_cvref_t<T>;
     if constexpr (fixed_width_vector<type>) {
         return internal::inclusive_scan(simd_abi_traits<type>::size,

@@ -100,7 +100,6 @@ concept unqualified_extended_zexpand = requires {
 
 template <>
 struct extended_impl<expand_t> {
-public:
     template <simd_vector T, exact_mask_for<T> M, equivalent_vector_with<T> S>
     requires (extended_vector<T> || extended_mask<T> || extended_vector<S>) &&
         unqualified_extended_expand<T, M, S>
@@ -161,13 +160,14 @@ public:
     template <simd_vector T, exact_mask_for<T> M, equivalent_vector_with<T> S>
     requires cpo_invocable<permute_t, S, M, T, signed_canonical_vector_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr S DPL_VECTORCALL operator()(
+    static constexpr auto DPL_VECTORCALL operator()(
         T&& val, M&& mask, S&& src) noexcept(canonical_vector<T> &&
         canonical_vector<S> && canonical_mask<M>) {
         using vidx_t = signed_canonical_vector_t<T>;
         auto const vone = dx::broadcast<vidx_t>(dx::one);
-        auto const idx = dx::exscan_sum(dx::select(mask, vone, dx::zero));
-        return dx::permute(__DPL forward<S>(src), __DPL forward<S>(mask),
+        auto const idx =
+            dx::exscan_sum(dx::select(mask, vone, dx::zero), dx::zero);
+        return dx::permute(__DPL forward<S>(src), __DPL forward<M>(mask),
             __DPL forward<T>(val), idx);
     }
 
