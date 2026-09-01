@@ -14,7 +14,7 @@ namespace details::numbers {
         extended_floating_point_operations const& lhs, T rhs) noexcept { \
         return static_cast<T>(lhs) OP rhs;                               \
     }                                                                    \
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)                     \
+    __DPL_HIDE_FROM_ABI                                                  \
     friend constexpr T& operator OP## =                                  \
         (extended_floating_point_operations & lhs, T rhs) noexcept {     \
         return static_cast<T&>(lhs) = static_cast<T const&>(lhs) OP rhs; \

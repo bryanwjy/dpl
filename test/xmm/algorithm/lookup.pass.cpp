@@ -10,14 +10,12 @@ import dpl.test.harness.algorithm.lookup;
 // Tests for dpp::lookup on xmm ABI. Requires SSE4.2 (implied by dpl.xmm).
 //
 // Forms tested:
-// (1) dpp::lookup(oob, lhs, rhs)                  -- unmasked, always
-// form 3)
+// (1) dpp::lookup(src, val, idx)
 
 int main() {
     namespace dpp = dpl::datapar;
     namespace xmm = dpl::datapar::xmm;
     using abi_t = xmm::abi_tag;
-    using types = dpl::type_pack<dpl::int8, dpl::int16, dpl::int32, dpl::int64>;
     constexpr auto run = []() {
         dpl::test::mt19937 engine;
         if consteval {

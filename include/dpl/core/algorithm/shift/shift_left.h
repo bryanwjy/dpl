@@ -53,7 +53,7 @@ struct fallback_impl<shift_left_t> {
         using idx_t = simd_element_type_t<vidx_t>;
         auto const idx =
             dx::add(dx::lane_index<vidx_t>(), static_cast<idx_t>(num));
-        return dx::lookup(dx::zero, __DPL forward<T>(val), idx);
+        return dx::lookup(__DPL forward<T>(val), idx, dx::zero);
     }
 
     template <simd_mask T>

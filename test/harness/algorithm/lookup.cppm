@@ -30,53 +30,45 @@ public:
         test::array_generator<A, E> const data_generator(test::half_range);
         using index_t = dpp::signed_representation_t<E>;
         constexpr auto lanes = dpp::simd_abi_traits<A, E>::size();
-        test::array_generator<A, index_t> const oob_generator(0, 2 * lanes);
+        test::array_generator<A, index_t> const idx_generator(0, 2 * lanes);
         test::scalar_generator<E> const src_generator(
             dpp::max_value_v<E> / 4 * 3, dpp::max_value_v<E>);
 
         for (auto i = 0; i < 3; ++i) {
-            auto const lhs = data_generator(engine);
-            auto const oob = oob_generator(engine);
+            auto const val = data_generator(engine);
+            auto const idx = idx_generator(engine);
             auto const src = src_generator(engine);
 
-            auto expected = lhs;
+            auto expected = val;
             {
                 for (auto i = 0zu; i < expected.size(); ++i) {
-                    if (oob[i] < lhs.size()) {
-                        expected[i] = lhs[oob[i]];
-                    } else {
-                        expected[i] = src;
-                    }
+                    expected[i] = idx[i] < val.size() ? val[idx[i]] : src;
                 }
 
-                auto const vlhs = dpp::load<A>(lhs.data());
-                auto const vrhs = dpp::load<A>(oob.data());
+                auto const vval = dpp::load<A>(val.data());
+                auto const vidx = dpp::load<A>(idx.data());
                 auto const vexpected = dpp::load<A>(expected.data());
                 auto const vactual =
-                    dpp::lookup(dpp::broadcast<A, E>(src), vlhs, vrhs);
+                    dpp::lookup(vval, vidx, dpp::broadcast<A, E>(src));
                 assert(dpp::all_of(test::bitcmp(vactual, vexpected)));
             }
         }
 
         for (auto i = 0; i < 3; ++i) {
-            auto const lhs = data_generator(engine);
-            auto const oob = oob_generator(engine);
-            auto const src = src_generator(engine);
+            auto const val = data_generator(engine);
+            auto const idx = idx_generator(engine);
 
-            auto expected = lhs;
+            auto expected = val;
             {
                 for (auto i = 0zu; i < expected.size(); ++i) {
-                    if (oob[i] < lhs.size()) {
-                        expected[i] = lhs[oob[i]];
-                    } else {
-                        expected[i] = 0;
-                    }
+                    expected[i] =
+                        idx[i] < val.size() ? val[idx[i]] : static_cast<E>(0);
                 }
 
-                auto const vlhs = dpp::load<A>(lhs.data());
-                auto const vrhs = dpp::load<A>(oob.data());
+                auto const vval = dpp::load<A>(val.data());
+                auto const vidx = dpp::load<A>(idx.data());
                 auto const vexpected = dpp::load<A>(expected.data());
-                auto const vactual = dpp::lookup(dpp::zero, vlhs, vrhs);
+                auto const vactual = dpp::lookup(vval, vidx, dpp::zero);
                 assert(dpp::all_of(test::bitcmp(vactual, vexpected)));
             }
         }

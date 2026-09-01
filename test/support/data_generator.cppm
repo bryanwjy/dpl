@@ -322,9 +322,8 @@ class bit_generator<N> :
 
 public:
     constexpr bit_generator() noexcept
-        : base_type(static_cast<underlying_type>(0),
-              static_cast<underlying_type>(
-                  static_cast<underlying_type>(1) << N)) {}
+        : base_type(static_cast<underlying_type>(result_type()),
+              static_cast<underlying_type>(~result_type())) {}
 
     template <rng_like Rng>
     constexpr result_type operator()(Rng& rng) const noexcept {

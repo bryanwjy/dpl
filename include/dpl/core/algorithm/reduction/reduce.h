@@ -25,7 +25,11 @@ struct reduce_t : public reduction_base<reduce_t> {
 
 template <>
 struct operation_signature<reduce_t> {
-    template <simd_vector T, reduction_operator_for<T> Op>
+    template <simd_vector T, typename Op>
+    requires ([] {
+        static_assert(reduction_operator_for<Op, T>);
+        return true;
+    }())
     static consteval void operator()(T&&, Op&&) noexcept {}
 };
 

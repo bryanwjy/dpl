@@ -28,8 +28,9 @@ inline constexpr struct bitcmp_t {
     }
 
     template <typename L, typename R>
-    requires dpl::is_scalar_v<L> && dpl::is_scalar_v<R>
-    static constexpr auto operator()(L lhs, R rhs) noexcept {
+    requires (!dpp::simd_vector<L> && !dpp::simd_vector<R>) &&
+        dpl::is_trivially_copyable_v<L> && dpl::is_trivially_copyable_v<R>
+    static constexpr bool operator()(L lhs, R rhs) noexcept {
         return sizeof(L) == sizeof(R) &&
             dpl::to_bit_representation(lhs) == dpl::to_bit_representation(rhs);
     }

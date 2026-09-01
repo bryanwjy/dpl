@@ -139,6 +139,7 @@ public:
           return static_cast<float16_t>(                                  \
               static_cast<float>(lhs) OP static_cast<float>(rhs));        \
       }                                                                   \
+      __DPL_HIDE_FROM_ABI                                                 \
       friend constexpr float16_t& operator OP## =                         \
           (float16_t & lhs, same_as<float16_t> auto rhs) noexcept {       \
           return lhs = static_cast<float16_t>(                            \

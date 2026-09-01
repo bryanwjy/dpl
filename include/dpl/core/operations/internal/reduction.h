@@ -14,6 +14,7 @@
 #  include "dpl/core/type_traits/simd_abi_traits.h"
 #  include "dpl/std/concepts/integral_constant_like.h"
 #  include "dpl/std/concepts/invocable.h"
+#  include "dpl/std/type_traits/decay.h"
 #  include "dpl/std/type_traits/is_invocable.h"
 #  include "dpl/std/type_traits/sequence.h"
 #  include "dpl/std/utility/forward.h"
@@ -26,7 +27,7 @@ template <typename F, typename T>
 concept reduction_operator_for =
     simd_vector<T> && regular_invocable<F, T const&, T const&> &&
     simd_vector<invoke_result_t<F, T const&, T const&>> &&
-    same_as<invoke_result_t<F, T const&, T const&>, remove_cvref_t<T>>;
+    same_as<invoke_result_t<F, T const&, T const&>, decay_t<T>>;
 
 template <integral_constant_like N, fixed_width_vector T,
     reduction_operator_for<T> Op>

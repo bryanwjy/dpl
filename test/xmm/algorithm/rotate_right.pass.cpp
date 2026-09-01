@@ -23,7 +23,6 @@ int main() {
     namespace dpp = dpl::datapar;
     namespace xmm = dpl::datapar::xmm;
     using abi_t = xmm::abi_tag;
-    using types = dpl::type_pack<dpl::int8, dpl::int16, dpl::int32, dpl::int64>;
     constexpr auto run = []() {
         dpl::test::mt19937 engine;
         if consteval {

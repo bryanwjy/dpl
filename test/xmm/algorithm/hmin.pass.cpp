@@ -1,18 +1,17 @@
 // Copyright 2025-2026 Bryan Wong
-// @dpl[clang].compile-flags: -fconstexpr-steps=4000000
-// @dpl[msvc].compile-flags: /constexpr:steps4000000
 
 #include "dpl/config.h"
 
 #include <cassert>
 
 import dpl.xmm;
-import dpl.test.harness.algorithm.expand;
+import dpl.test.harness.algorithm.reduction;
 
-// Tests for dpp::expand on xmm ABI. Requires SSE4.2 (implied by dpl.xmm).
+// Tests for dpp::hmin on xmm ABI. Requires SSE4.2 (implied by dpl.xmm).
 //
 // Forms tested:
-// (1) dpp::expand(val, mask, src)
+// (1) dpp::hmin(val)
+// (2) dpp::hmin(val, mask)
 
 int main() {
     namespace dpp = dpl::datapar;
@@ -23,13 +22,13 @@ int main() {
         if consteval {
             // Reduce number of types to reduce compile time steps
             using types =
-                dpl::type_pack<dpl::int8, dpl::int16, dpl::int32, dpl::int64>;
-            return dpl::test::expand<abi_t>::run_all(types{}, engine);
+                dpl::type_pack<dpl::int8, dpl::int16, dpl::int32, float>;
+            return dpl::test::hmin<abi_t>::run_all(types{}, engine);
         } else {
             using types = dpl::type_pack<dpl::int8, dpl::uint8, dpl::int16,
                 dpl::uint16, dpl::int32, dpl::uint32, dpl::int64, dpl::uint64,
                 float, double, dpl::ext::float16, dpl::ext::bfloat16>;
-            return dpl::test::expand<abi_t>::run_all(types{}, engine);
+            return dpl::test::hmin<abi_t>::run_all(types{}, engine);
         }
     };
 

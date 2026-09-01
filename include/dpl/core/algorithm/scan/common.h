@@ -34,7 +34,7 @@ template <typename F, typename T>
 concept scan_operator_for =
     simd_vector<T> && regular_invocable<F, T const&, T const&> &&
     simd_vector<invoke_result_t<F, T const&, T const&>> &&
-    same_as<invoke_result_t<F, T const&, T const&>, remove_cvref_t<T>>;
+    same_as<invoke_result_t<F, T const&, T const&>, decay_t<T>>;
 
 template <fixed_width_vector T, integral_constant_like Imm,
     scan_operator_for<T> Op>

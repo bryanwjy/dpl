@@ -20,11 +20,11 @@ namespace details::numbers {
     }
 
 #define __DPL_FP_ASSIGN(TP, OP)                                       \
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)                  \
+    __DPL_HIDE_FROM_ABI                                               \
     friend constexpr T& operator OP## = (T & lhs, TP rhs) noexcept {  \
         return lhs = lhs OP static_cast<T>(rhs);                      \
     }                                                                 \
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)                  \
+    __DPL_HIDE_FROM_ABI                                               \
     friend constexpr TP& operator OP## = (TP & lhs, T rhs) noexcept { \
         return lhs = lhs OP static_cast<TP>(rhs);                     \
     }
