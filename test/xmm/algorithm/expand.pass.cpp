@@ -1,4 +1,4 @@
-// Copyright 2025-2026 Bryan Wong
+// Copyright 2026 Bryan Wong
 // @dpl[clang].compile-flags: -fconstexpr-steps=4000000
 // @dpl[msvc].compile-flags: /constexpr:steps4000000
 

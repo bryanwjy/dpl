@@ -24,11 +24,6 @@
 __DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::internal {
-struct exscan_sum_t;
-namespace fwd {
-struct fexscan_sum : operation_base<exscan_sum_t> {};
-inline constexpr fexscan_sum exscan_sum{};
-} // namespace fwd
 
 template <typename F, typename T>
 concept scan_operator_for =

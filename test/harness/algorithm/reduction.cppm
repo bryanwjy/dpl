@@ -255,13 +255,6 @@ using hmax = reduction<A, dpp::hmax>;
 
 export template <dpp::simd_abi A>
 class reduce {
-private:
-    template <typename E>
-    using abi_traits = dpp::simd_abi_traits<A, E>;
-    template <typename E>
-    using data = test::array<E, abi_traits<E>::size>;
-    template <typename E>
-    using vector_t = dpp::make_canonical_vector_t<E, A>;
 
 public:
     template <rng_like Rng, dpp::simd_element_for<A>... Es>

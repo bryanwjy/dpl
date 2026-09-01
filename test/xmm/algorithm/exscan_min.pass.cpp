@@ -1,17 +1,19 @@
 // Copyright 2026 Bryan Wong
+// @dpl[clang].compile-flags: -fconstexpr-steps=2000000
+// @dpl[msvc].compile-flags: /constexpr:steps2000000
 
 #include "dpl/config.h"
 
 #include <cassert>
 
 import dpl.xmm;
-import dpl.test.harness.algorithm.reduction;
+import dpl.test.harness.algorithm.scanning;
 
-// Tests for dpp::hmax on xmm ABI. Requires SSE4.2 (implied by dpl.xmm).
+// Tests for dpp::exscan_min on xmm ABI. Requires SSE4.2 (implied by dpl.xmm).
 //
 // Forms tested:
-// (1) dpp::hmax(val)
-// (2) dpp::hmax(val, mask)
+// (1) dpp::exscan_min(val, init)
+// (2) dpp::exscan_min(val, mask, init)
 
 int main() {
     namespace dpp = dpl::datapar;
@@ -23,12 +25,12 @@ int main() {
             // Reduce number of types to reduce compile time steps
             using types =
                 dpl::type_pack<dpl::int8, dpl::int16, dpl::int32, float>;
-            return dpl::test::hmax<abi_t>::run_all(types{}, engine);
+            return dpl::test::exscan_min<abi_t>::run_all(types{}, engine);
         } else {
             using types = dpl::type_pack<dpl::int8, dpl::uint8, dpl::int16,
                 dpl::uint16, dpl::int32, dpl::uint32, dpl::int64, dpl::uint64,
                 float, double, dpl::ext::float16, dpl::ext::bfloat16>;
-            return dpl::test::hmax<abi_t>::run_all(types{}, engine);
+            return dpl::test::exscan_min<abi_t>::run_all(types{}, engine);
         }
     };
 

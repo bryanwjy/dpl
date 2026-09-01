@@ -1,4 +1,4 @@
-// Copyright 2025-2026 Bryan Wong
+// Copyright 2026 Bryan Wong
 
 #include "dpl/config.h"
 
@@ -11,7 +11,6 @@ import dpl.test.harness.algorithm.reduction;
 //
 // Forms tested:
 // (1) dpp::reduce(val, func)
-// (2) dpp::reduce(val, mask, func)
 
 int main() {
     namespace dpp = dpl::datapar;

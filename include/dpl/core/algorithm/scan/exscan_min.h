@@ -101,7 +101,7 @@ struct extended_impl<exscan_min_t> {
         return exscan_min(__DPL forward<T>(val), __DPL forward<V>(init));
     }
 
-    template <simd_vector T, broadcastable_to<T> V, exact_mask_for<T> M>
+    template <simd_vector T, exact_mask_for<T> M, broadcastable_to<T> V>
     requires (extended_vector<T> || extended_mask<M>) &&
         unqualified_extended_mexscan_min<T, M, V>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -150,7 +150,7 @@ public:
         cpo_invocable<exscan_min_t,
             cpo_result_t<select_t, M, T, simd_element_type_t<T>>, V>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(M&& mask, T&& val,
+    static constexpr auto DPL_VECTORCALL operator()(T&& val, M&& mask,
         V&& init) noexcept(canonical_vector<T> && canonical_mask<M>) {
         using E = simd_element_type_t<T>;
         return exscan_min_t::operator()(
@@ -164,7 +164,7 @@ public:
         cpo_invocable<exscan_min_t,
             cpo_result_t<select_t, M, T, simd_element_type_t<T>>, V>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(M mask, T&& val, V&& init) {
+    static constexpr auto DPL_VECTORCALL operator()(T&& val, M mask, V&& init) {
         using E = simd_element_type_t<T>;
         return exscan_min_t::operator()(
             dx::select(mask, __DPL forward<T>(val), identity<E>()),

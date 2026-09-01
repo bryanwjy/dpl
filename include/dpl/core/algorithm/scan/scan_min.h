@@ -67,6 +67,7 @@ public:
     requires unqualified_canonical_mscan_min<T, launder_cmask_t<T, M>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(T val, M mask) noexcept {
+        static_assert(dx::any_of(mask));
         return scan_min(internal::abi<T>, dx::to_const_mask<T>(mask), val);
     }
 };
@@ -106,6 +107,7 @@ public:
     requires unqualified_extended_mscan_min<T, launder_cmask_t<T, M>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T&& val, M mask) {
+        static_assert(dx::any_of(mask));
         return scan_min(__DPL forward<T>(val), dx::to_const_mask<T>(mask));
     }
 };
@@ -153,6 +155,7 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(T&& val, M mask) noexcept(
         canonical_vector<T>) {
+        static_assert(dx::any_of(mask));
         using E = simd_element_type_t<T>;
         return scan_min_t::operator()(
             dx::select(mask, __DPL forward<T>(val), identity<E>()));

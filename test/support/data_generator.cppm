@@ -280,16 +280,16 @@ private:
 template <dpp::simd_abi A, dpp::simd_element_for<A> E>
 class array_generator : private scalar_generator<E> {
     using abi_traits = dpp::simd_abi_traits<A, E>;
-    using array_t = array<E, abi_traits::size>;
     using base_type = scalar_generator<E>;
 
 public:
     using base_type::base_type;
 
     template <rng_like Rng>
-    constexpr array_t operator()(Rng& rng) const
+    constexpr auto operator()(Rng& rng) const
         noexcept(dpp::fixed_width_abi<A>) {
         if constexpr (dpp::fixed_width_abi<A>) {
+            using array_t = array<E, abi_traits::size>;
             return [&]<size_t... Is>(dpl::index_sequence<Is...>) {
                 return array_t{
                     (dpl::ignore = Is, base_type::operator()(rng))...};
