@@ -39,26 +39,6 @@ public:
     static constexpr auto width = W;
     using typename base_type::underlying_type;
 
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) static constexpr bitset set_low(
-        size_t n) noexcept {
-        return ~bitset() >> (W - n);
-    }
-
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) static constexpr bitset set_high(
-        size_t n) noexcept {
-        return ~bitset() << (W - n);
-    }
-
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) static constexpr bitset clear_low(
-        size_t n) noexcept {
-        return set_high(W - n);
-    }
-
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) static constexpr bitset clear_high(
-        size_t n) noexcept {
-        return set_low(W - n);
-    }
-
 private:
     static constexpr underlying_type one = static_cast<underlying_type>(1);
 
@@ -75,6 +55,20 @@ public:
         }
     }();
     __DPL_HIDE_FROM_ABI constexpr bitset() noexcept : base_type{} {}
+
+    __DPL_HIDE_FROM_ABI explicit constexpr bitset(
+        same_as<low_bits_t> auto, size_t count) noexcept
+        : bitset(~bitset() >> (W - count)) {}
+
+    __DPL_HIDE_FROM_ABI explicit constexpr bitset(
+        same_as<high_bits_t> auto, size_t count) noexcept
+        : bitset(~bitset() << (W - count)) {}
+
+    __DPL_HIDE_FROM_ABI explicit constexpr bitset(
+        same_as<bit_range_t> auto, size_t offset, size_t count) noexcept
+        : bitset(__DPL low_bits, count) {
+        *this <<= offset;
+    }
 
     template <integral T = underlying_type>
     __DPL_HIDE_FROM_ABI explicit(signed_integral<T> ||

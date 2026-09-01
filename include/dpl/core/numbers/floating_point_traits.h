@@ -28,10 +28,11 @@ struct floating_point_traits<T> {
         __DPL countr_zero(__DPL to_bit_representation(static_cast<T>(1))) +
         1);
 
-    static constexpr auto signbit = bit_representation_t<T>::set_high(1);
+    static constexpr auto signbit =
+        bit_representation_t<T>(__DPL high_bits, 1);
 
     static constexpr auto mantissa_mask =
-        bit_representation_t<T>::set_low(digits - 1);
+        bit_representation_t<T>(__DPL low_bits, digits - 1);
 
     static constexpr auto leading_bit = bit_representation_t<T>();
 
@@ -52,11 +53,11 @@ struct floating_point_traits<T> {
 
     static constexpr auto digits = 64zu;
 
-    static constexpr auto signbit = bitset<80>::set_high(1);
+    static constexpr auto signbit = bitset<80>(__DPL high_bits, 1);
 
-    static constexpr auto mantissa_mask = bitset<80>::set_low(63);
+    static constexpr auto mantissa_mask = bitset<80>(__DPL low_bits, 63);
 
-    static constexpr auto leading_bit = bitset<80>::set_low(1) << 63;
+    static constexpr auto leading_bit = bitset<80>(__DPL bit_range, 63, 1);
 
     static constexpr auto exponent_mask =
         ~(signbit | mantissa_mask | leading_bit);

@@ -33,6 +33,22 @@ DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD) constexpr auto get(
     return value[I];
 }
 
+struct low_bits_t {
+    explicit constexpr low_bits_t() noexcept = default;
+};
+
+struct high_bits_t {
+    explicit constexpr high_bits_t() noexcept = default;
+};
+
+struct bit_range_t {
+    explicit constexpr bit_range_t() noexcept = default;
+};
+
+inline constexpr low_bits_t low_bits{};
+inline constexpr high_bits_t high_bits{};
+inline constexpr bit_range_t bit_range{};
+
 namespace details::utility {
 template <typename T>
 inline constexpr bool is_bitset_v = false;

@@ -213,7 +213,7 @@ public:
                         return array<dpl::bitset<abi_traits<E>::size()>, count>{
                             (dpl::test::bit_generator<abi_traits<E>::size() +
                                  idx * 0>()(rng) |
-                                bitset_t::set_low(1))...};
+                                bitset_t(dpl::low_bits, 1))...};
                     },
                     dpl::make_index_sequence<count>{});
             }();
