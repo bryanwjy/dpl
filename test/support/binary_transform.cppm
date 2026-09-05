@@ -44,12 +44,20 @@ class binary_transform {
         // merge-masked: active → vop, inactive → src
         {
             assert(dpp::all_of(cmp(op(src, all_true, lhs, rhs), vop)));
-            assert(dpp::none_of(cmp(op(src, all_false, lhs, rhs), vop)));
             assert(dpp::all_of(cmp(op(src, all_false, lhs, rhs), src)));
+            {
+                auto const actual = op(src, all_false, lhs, rhs);
+                assert(
+                    dpp::all_of(dpp::cmpeq(cmp(actual, vop), cmp(vop, src))));
+            }
 
-            auto const actual = op(src, alt_mask, lhs, rhs);
-            assert(dpp::all_of(cmp(actual, vop) == alt_mask));
-            assert(dpp::all_of(cmp(actual, src) == !alt_mask));
+            {
+                auto const actual = op(src, alt_mask, lhs, rhs);
+                assert(dpp::all_of(dpp::cmpeq(
+                    dpp::bwand(cmp(actual, vop), alt_mask), alt_mask)));
+                assert(dpp::all_of(dpp::cmpneq(
+                    dpp::bwandnot(cmp(actual, src), alt_mask), alt_mask)));
+            }
         }
 
         // zero-masked: op(vzero, mask, lhs, rhs) == op(dpp::zero, mask,
@@ -87,12 +95,19 @@ class binary_transform {
             constexpr none_cmask_t none_cmask;
             {
                 assert(dpp::all_of(cmp(op(src, all_cmask, lhs, rhs), vop)));
-                assert(dpp::none_of(cmp(op(src, none_cmask, lhs, rhs), vop)));
                 assert(dpp::all_of(cmp(op(src, none_cmask, lhs, rhs), src)));
-
-                auto const actual = op(src, alt_cmask, lhs, rhs);
-                assert(dpp::all_of(cmp(actual, vop) == alt_mask));
-                assert(dpp::all_of(cmp(actual, src) == !alt_mask));
+                {
+                    auto const actual = op(src, none_cmask, lhs, rhs);
+                    assert(dpp::all_of(
+                        dpp::cmpeq(cmp(actual, vop), cmp(vop, src))));
+                }
+                {
+                    auto const actual = op(src, alt_cmask, lhs, rhs);
+                    assert(dpp::all_of(dpp::cmpeq(
+                        dpp::bwand(cmp(actual, vop), alt_mask), alt_mask)));
+                    assert(dpp::all_of(dpp::cmpneq(
+                        dpp::bwandnot(cmp(actual, src), alt_mask), alt_mask)));
+                }
             }
 
             {

@@ -39,7 +39,7 @@ struct fallback_impl<clamp_t> {
     requires cpo_invocable<min_t, T, Hi> &&
         cpo_invocable<max_t, Lo, cpo_result_t<min_t, T, Hi>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr T DPL_VECTORCALL operator()(
+    static constexpr auto DPL_VECTORCALL operator()(
         T&& val, Lo&& low, Hi&& high) noexcept {
         return dx::max(__DPL forward<Lo>(low),
             dx::min(__DPL forward<T>(val), __DPL forward<Hi>(high)));
@@ -48,7 +48,7 @@ struct fallback_impl<clamp_t> {
     template <simd_vector T, broadcastable_to<T> Lo, vector_subsumed_by<T> Hi>
     requires cpo_invocable<clamp_t, T, canonical_type_t<T>, Hi>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr T DPL_VECTORCALL operator()(
+    static constexpr auto DPL_VECTORCALL operator()(
         T&& val, Lo&& low, Hi&& high) noexcept {
         return clamp_t::operator()(__DPL forward<T>(val),
             dx::broadcast<T>(__DPL forward<Lo>(low)), __DPL forward<Hi>(high));
@@ -57,7 +57,7 @@ struct fallback_impl<clamp_t> {
     template <simd_vector T, vector_subsumed_by<T> Lo, broadcastable_to<T> Hi>
     requires cpo_invocable<clamp_t, T, Lo, canonical_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr T DPL_VECTORCALL operator()(
+    static constexpr auto DPL_VECTORCALL operator()(
         T&& val, Lo&& low, Hi&& high) noexcept {
         return clamp_t::operator()(__DPL forward<T>(val),
             __DPL forward<Lo>(low),
@@ -67,7 +67,7 @@ struct fallback_impl<clamp_t> {
     template <simd_vector T, broadcastable_to<T> Lo, broadcastable_to<T> Hi>
     requires cpo_invocable<clamp_t, T, canonical_type_t<T>, canonical_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr T DPL_VECTORCALL operator()(
+    static constexpr auto DPL_VECTORCALL operator()(
         T&& val, Lo&& low, Hi&& high) noexcept {
         return clamp_t::operator()(__DPL forward<T>(val),
             dx::broadcast<T>(__DPL forward<Lo>(low)),
@@ -78,7 +78,7 @@ struct fallback_impl<clamp_t> {
         broadcastable_to<common_canonical_simd_t<Lo, Hi>> T>
     requires cpo_invocable<clamp_t, common_canonical_simd_t<Lo, Hi>, Lo, Hi>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr T DPL_VECTORCALL operator()(
+    static constexpr auto DPL_VECTORCALL operator()(
         T&& val, Lo&& low, Hi&& high) noexcept {
         using vec_t = common_canonical_simd_t<Lo, Hi>;
         return clamp_t::operator()(
@@ -90,7 +90,7 @@ struct fallback_impl<clamp_t> {
     requires cpo_invocable<clamp_t, canonical_type_t<Lo>, Lo,
         canonical_type_t<Lo>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr T DPL_VECTORCALL operator()(
+    static constexpr auto DPL_VECTORCALL operator()(
         T&& val, Lo&& low, Hi&& high) noexcept {
         return clamp_t::operator()(dx::broadcast<Lo>(__DPL forward<T>(val)),
             __DPL forward<Lo>(low),
@@ -101,16 +101,23 @@ struct fallback_impl<clamp_t> {
     requires cpo_invocable<clamp_t, canonical_type_t<Hi>, canonical_type_t<Hi>,
         Hi>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr T DPL_VECTORCALL operator()(
+    static constexpr auto DPL_VECTORCALL operator()(
         T&& val, Lo&& low, Hi&& high) noexcept {
         return clamp_t::operator()(dx::broadcast<Hi>(__DPL forward<T>(val)),
             dx::broadcast<Hi>(__DPL forward<Lo>(low)), __DPL forward<Hi>(high));
     }
 
+private:
+    template <typename V, typename L, typename H>
+    using result_t DPL_NODEBUG = cpo_result_t<fallback_impl, V, L, H>;
+
+    template <typename V, typename L, typename H>
+    using mask_t DPL_NODEBUG = simd_mask_type_t<result_t<V, L, H>>;
+
+public:
     template <unextended_type T, unextended_type Lo,
         unextended_terminal_of<clamp_t, T, Lo> Hi>
-    requires unqualified_canonical_mclamp<result_t<T, Lo, Hi>,
-        mask_t<T, Lo, Hi>, T, Lo, Hi>
+    requires cpo_invocable<fallback_impl, T, Lo, Hi>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr result_t<T, Lo, Hi> operator()(result_t<T, Lo, Hi> src,
         mask_t<T, Lo, Hi> mask, T&& val, Lo&& low, Hi&& high) noexcept {
@@ -120,19 +127,17 @@ struct fallback_impl<clamp_t> {
 
     template <unextended_type T, unextended_type Lo, unextended_type Hi,
         result_cmask_for<clamp_t, T, Lo, Hi> M>
-    requires unqualified_canonical_mclamp<result_t<T, Lo, Hi>,
-        launder_cmask_t<result_t<T, Lo, Hi>, M>, T, Lo, Hi>
+    requires cpo_invocable<fallback_impl, T, Lo, Hi>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(result_t<T, Lo, Hi> src, M mask, T&& val,
-        Lo&& low, Hi&& high) noexcept {
+    static constexpr result_t<T, Lo, Hi> operator()(result_t<T, Lo, Hi> src,
+        M mask, T&& val, Lo&& low, Hi&& high) noexcept {
         return dx::max(src, mask, __DPL forward<Lo>(low),
             dx::min(__DPL forward<T>(val), __DPL forward<Hi>(high)));
     }
 
     template <unextended_type T, unextended_type Lo,
         unextended_terminal_of<clamp_t, T, Lo> Hi>
-    requires unqualified_canonical_mclamp<dx::zero_t, mask_t<T, Lo, Hi>, T, Lo,
-        Hi>
+    requires cpo_invocable<fallback_impl, T, Lo, Hi>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr result_t<T, Lo, Hi> operator()(dx::zero_t zero,
         mask_t<T, Lo, Hi> mask, T&& val, Lo&& low, Hi&& high) noexcept {
@@ -142,10 +147,9 @@ struct fallback_impl<clamp_t> {
 
     template <unextended_type T, unextended_type Lo, unextended_type Hi,
         result_cmask_for<clamp_t, T, Lo, Hi> M>
-    requires unqualified_canonical_mclamp<dx::zero_t,
-        launder_cmask_t<result_t<T, Lo, Hi>, M>, T, Lo, Hi>
+    requires cpo_invocable<fallback_impl, T, Lo, Hi>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(
+    static constexpr result_t<T, Lo, Hi> operator()(
         dx::zero_t zero, M mask, T&& val, Lo&& low, Hi&& high) noexcept {
         return dx::max(zero, mask, __DPL forward<Lo>(low),
             dx::min(__DPL forward<T>(val), __DPL forward<Hi>(high)));
@@ -192,9 +196,7 @@ public:
         broadcastable_to<T> Hi>
     requires canonical_vector<Lo> && unqualified_canonical_clamp<T, Lo, Hi>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(T val, Lo low, Hi&& high) noexcept
-
-    {
+    static constexpr T operator()(T val, Lo low, Hi&& high) noexcept {
         return clamp(internal::abi<T>, val, low, __DPL forward<Hi>(high));
     }
 
@@ -263,8 +265,8 @@ public:
     requires unqualified_canonical_mclamp<result_t<T, Lo, Hi>,
         launder_cmask_t<result_t<T, Lo, Hi>, M>, T, Lo, Hi>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(result_t<T, Lo, Hi> src, M mask, T&& val,
-        Lo&& low, Hi&& high) noexcept {
+    static constexpr result_t<T, Lo, Hi> operator()(result_t<T, Lo, Hi> src,
+        M mask, T&& val, Lo&& low, Hi&& high) noexcept {
         return clamp(internal::abi<result_t<T, Lo, Hi>>, src,
             dx::to_const_mask<result_t<T, Lo, Hi>>(mask), __DPL forward<T>(val),
             __DPL forward<Lo>(low), __DPL forward<Hi>(high));
@@ -287,7 +289,7 @@ public:
     requires unqualified_canonical_mclamp<dx::zero_t,
         launder_cmask_t<result_t<T, Lo, Hi>, M>, T, Lo, Hi>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(
+    static constexpr result_t<T, Lo, Hi> operator()(
         dx::zero_t zero, M mask, T&& val, Lo&& low, Hi&& high) noexcept {
         return clamp(internal::abi<result_t<T, Lo, Hi>>, zero,
             dx::to_const_mask<result_t<T, Lo, Hi>>(mask), __DPL forward<T>(val),

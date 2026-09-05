@@ -6,9 +6,11 @@ module;
 #include <cassert>
 
 export module dpl.test.support:ternary_transform;
+
 import :span;
 import :comparison;
 import :bitset_helpers;
+import :data_generator;
 
 import dpl;
 
@@ -44,12 +46,20 @@ class ternary_transform {
         // merge-masked: active → vop, inactive → src
         {
             assert(dpp::all_of(cmp(op(src, all_true, lhs, mid, rhs), vop)));
-            assert(dpp::none_of(cmp(op(src, all_false, lhs, mid, rhs), vop)));
             assert(dpp::all_of(cmp(op(src, all_false, lhs, mid, rhs), src)));
+            {
+                auto const actual = op(src, all_false, lhs, mid, rhs);
+                assert(
+                    dpp::all_of(dpp::cmpeq(cmp(actual, vop), cmp(vop, src))));
+            }
 
-            auto const actual = op(src, alt_mask, lhs, mid, rhs);
-            assert(dpp::all_of(cmp(actual, vop) == alt_mask));
-            assert(dpp::all_of(cmp(actual, src) == !alt_mask));
+            {
+                auto const actual = op(src, alt_mask, lhs, mid, rhs);
+                assert(dpp::all_of(dpp::cmpeq(
+                    dpp::bwand(cmp(actual, vop), alt_mask), alt_mask)));
+                assert(dpp::all_of(dpp::cmpneq(
+                    dpp::bwandnot(cmp(actual, src), alt_mask), alt_mask)));
+            }
         }
 
         // zero-masked: op(vzero, mask, lhs, mid, rhs) == op(dpp::zero, mask,
@@ -89,13 +99,19 @@ class ternary_transform {
                 assert(
                     dpp::all_of(cmp(op(src, all_cmask, lhs, mid, rhs), vop)));
                 assert(
-                    dpp::none_of(cmp(op(src, none_cmask, lhs, mid, rhs), vop)));
-                assert(
                     dpp::all_of(cmp(op(src, none_cmask, lhs, mid, rhs), src)));
-
-                auto const actual = op(src, alt_cmask, lhs, mid, rhs);
-                assert(dpp::all_of(cmp(actual, vop) == alt_mask));
-                assert(dpp::all_of(cmp(actual, src) == !alt_mask));
+                {
+                    auto const actual = op(src, none_cmask, lhs, mid, rhs);
+                    assert(dpp::all_of(
+                        dpp::cmpeq(cmp(actual, vop), cmp(vop, src))));
+                }
+                {
+                    auto const actual = op(src, alt_cmask, lhs, mid, rhs);
+                    assert(dpp::all_of(dpp::cmpeq(
+                        dpp::bwand(cmp(actual, vop), alt_mask), alt_mask)));
+                    assert(dpp::all_of(dpp::cmpneq(
+                        dpp::bwandnot(cmp(actual, src), alt_mask), alt_mask)));
+                }
             }
 
             {

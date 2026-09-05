@@ -175,27 +175,6 @@ public:
         }
     }();
 
-private:
-    static constexpr E subtract(E lhs, E rhs) noexcept
-    requires dpl::integral<E>
-    {
-        if constexpr (dpl::signed_integral<E>) {
-            constexpr auto shift = dpl::type_bit_v<E> - 1;
-            auto const inter =
-                dpl::to_signed(static_cast<dpl::make_unsigned_t<E>>(
-                    dpl::to_unsigned(lhs) - dpl::to_unsigned(rhs)));
-
-            auto const lsign = lhs >> shift;
-            auto const rsign = rhs >> shift;
-            auto const isign = inter >> shift;
-            auto const overflowed =
-                static_cast<bool>((lsign ^ rsign) & (lsign ^ isign));
-            return overflowed ? maximum : inter;
-        } else {
-            return lhs - rhs;
-        }
-    }
-
 public:
     constexpr scalar_generator() noexcept : min_(minimum), max_(maximum) {}
 
@@ -209,7 +188,19 @@ public:
     constexpr E operator()(Rng& rng) const noexcept {
         using rtype = typename Rng::result_type;
         if constexpr (dpl::integral<E>) {
-            auto const delta = subtract(max_, min_);
+            if constexpr (dpl::signed_integral<E>) {
+                if ((min_ ^ max_) < 0) {
+                    auto const delta =
+                        dpl::to_unsigned(max_) - dpl::to_unsigned(min_);
+
+                    return delta == 0
+                        ? min_
+                        : static_cast<E>(dpl::to_signed(dpl::to_unsigned(min_) +
+                              rng() % static_cast<rtype>(delta)));
+                }
+            }
+
+            auto const delta = max_ - min_;
             return delta == 0
                 ? min_
                 : static_cast<E>(rng() % static_cast<rtype>(delta)) + min_;
