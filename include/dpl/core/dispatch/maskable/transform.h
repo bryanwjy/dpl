@@ -53,19 +53,19 @@ class maskable_transform_base : public maskable_operation_base<D> {
     template <typename... Ts>
     using result_t DPL_NODEBUG = cpo_result_t<D, Ts...>;
     template <typename... Ts>
-    using canonical_mask_t DPL_NODEBUG = simd_mask_type_t<result_t<Ts...>>;
+    using mask_t DPL_NODEBUG = simd_mask_type_t<result_t<Ts...>>;
 
 protected:
-    template <canonical_ornot_simd... Ts>
+    template <unextended_type... Ts>
     requires signature_compatible<D, Ts...> && cpo_invocable<D, Ts...> &&
         canonical_vector<result_t<Ts...>> &&
-        masked_transformable<D, result_t<Ts...>, result_t<Ts...>,
-            canonical_mask_t<Ts...>, Ts...>
+        masked_transformable<D, result_t<Ts...>, result_t<Ts...>, mask_t<Ts...>,
+            Ts...>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr result_t<Ts...> operator()(result_t<Ts...> src,
-        canonical_mask_t<Ts...> mask, Ts... args) noexcept {
+    static constexpr result_t<Ts...> operator()(
+        result_t<Ts...> src, mask_t<Ts...> mask, Ts... args) noexcept {
         using R = result_t<Ts...>;
-        using M = canonical_mask_t<Ts...>;
+        using M = mask_t<Ts...>;
         if constexpr (canonical_cpo_invocable_r<D, R, R, M, Ts...>) {
             if constexpr (all_same_abi<R, M, Ts...> &&
                 !inherits_from<D, basic_operation_base<D>>) {
@@ -88,16 +88,16 @@ protected:
         }
     }
 
-    template <canonical_ornot_simd... Ts>
+    template <unextended_type... Ts>
     requires signature_compatible<D, Ts...> && cpo_invocable<D, Ts...> &&
         canonical_vector<result_t<Ts...>> &&
-        masked_transformable<D, result_t<Ts...>, dx::zero_t,
-            canonical_mask_t<Ts...>, Ts...>
+        masked_transformable<D, result_t<Ts...>, dx::zero_t, mask_t<Ts...>,
+            Ts...>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr result_t<Ts...> operator()(
-        dx::zero_t zero, canonical_mask_t<Ts...> mask, Ts... args) noexcept {
+        dx::zero_t zero, mask_t<Ts...> mask, Ts... args) noexcept {
         using R = result_t<Ts...>;
-        using M = canonical_mask_t<Ts...>;
+        using M = mask_t<Ts...>;
         if constexpr (canonical_cpo_invocable_r<D, R, R, M, Ts...>) {
             if constexpr (all_same_abi<R, M, Ts...>) {
                 if consteval {
@@ -122,7 +122,7 @@ protected:
         }
     }
 
-    template <typename M, canonical_ornot_simd... Ts>
+    template <typename M, unextended_type... Ts>
     requires signature_compatible<D, Ts...> && cpo_invocable<D, Ts...> &&
         const_mask_for<M, result_t<Ts...>> &&
         canonical_vector<result_t<Ts...>> &&
@@ -153,7 +153,7 @@ protected:
         }
     }
 
-    template <typename M, canonical_ornot_simd... Ts>
+    template <typename M, unextended_type... Ts>
     requires signature_compatible<D, Ts...> && cpo_invocable<D, Ts...> &&
         const_mask_for<M, result_t<Ts...>> &&
         canonical_vector<result_t<Ts...>> &&
@@ -317,18 +317,14 @@ protected:
     }
 
     template <typename M, typename... Ts>
-    requires signature_compatible<D, Ts...> && cpo_invocable<D, Ts...> &&
-        simd_vector<result_t<Ts...>> &&
-        (exact_mask_for<M, result_t<Ts...>> ||
-            const_mask_for<remove_cvref_t<M>, result_t<Ts...>>) &&
-        requires {
-            operator()(
-                dx::zero, internal::declarg<M>(), internal::declarg<Ts>()...);
-        }
+    requires signature_compatible<D, Ts...> && requires {
+        operator()(
+            dx::zero, internal::declarg<M>(), internal::declarg<Ts>()...);
+    }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M&& mask, Ts&&... args) noexcept(
-        (canonical_ornot_simd<remove_cvref_t<M>> && ... &&
-            canonical_ornot_simd<remove_cvref_t<Ts>>)) {
+        (unextended_type<remove_cvref_t<M>> && ... &&
+            unextended_type<remove_cvref_t<Ts>>)) {
         return operator()(
             dx::zero, __DPL forward<M>(mask), __DPL forward<Ts>(args)...);
     }

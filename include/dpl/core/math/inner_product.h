@@ -58,17 +58,20 @@ struct inner_product_t :
     using operation_base<inner_product_t>::operator();
     using maskable_accumulation_base<inner_product_t>::operator();
 
-    template <simd_vector L, common_vector_with<L> R>
+    template <typename L, typename R>
+    requires cpo_invocable<dot_product_t, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        dx::zero_t zero, L&& lhs, R&& rhs) noexcept {
-        return dx::dot_product( __DPL forward<L>(lhs), __DPL forward<L>(rhs));
+    static constexpr cpo_result_t<dot_product_t, L, R> operator()(
+        dx::zero_t zero, L&& lhs,
+        R&& rhs) noexcept(unextended_type<L> && unextended_type<R>) {
+        return dx::dot_product( __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 };
 
 template <>
 struct operation_signature<inner_product_t> {
-    template <simd_vector S, simd_vector L, simd_vector R>
+    template <simd_vector S, typename L, typename R>
+    requires simd_vector<L> || simd_vector<R>
     static consteval void operator()(S&&, L&&, R&&) noexcept {}
 };
 
@@ -100,7 +103,7 @@ concept unqualified_canonical_minner_product =
     };
 
 template <typename M, typename S, typename L, typename R>
-concept unqualified_canonical_mzinner_product =
+concept unqualified_canonical_zminner_product =
     cpo_invocable<inner_product_t, S, L, R> &&
     same_as<S, cpo_result_t<inner_product_t, S, L, R>> && requires {
         {
@@ -120,45 +123,69 @@ struct canonical_impl<inner_product_t> {
         return inner_product(internal::abi<S>, src, lhs, rhs);
     }
 
-    template <canonical_vector L, common_vector_with<L> R,
-        canonical_inner_product_result<L, R> S>
-    requires canonical_vector<R> &&
-        unqualified_canonical_minner_product<S, simd_mask_type_t<S>, L, R>
+    template <canonical_vector L, broadcastable_to<L> R,
+        canonical_inner_product_result<L, L> S>
+    requires unqualified_canonical_inner_product<S, L, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr S operator()(S src, L lhs, R&& rhs) noexcept {
+        return inner_product(
+            internal::abi<S>, src, lhs, __DPL forward<R>(rhs));
+    }
+
+    template <canonical_vector R, broadcastable_to<R> L,
+        canonical_inner_product_result<R, R> S>
+    requires unqualified_canonical_inner_product<S, L, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr S operator()(S src, L&& lhs, R rhs) noexcept {
+        return inner_product(
+            internal::abi<S>, src, __DPL forward<L>(lhs), rhs);
+    }
+
+    template <canonical_vector S, broadcastable_to<S> L, broadcastable_to<S> R>
+    requires unqualified_canonical_inner_product<S, L, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr S operator()(S src, L&& lhs, R&& rhs) noexcept {
+        return inner_product(internal::abi<S>, src, __DPL forward<L>(lhs),
+            __DPL forward<R>(rhs));
+    }
+
+    template <unextended_type L, unextended_type R, canonical_vector S>
+    requires unqualified_canonical_minner_product<S, simd_mask_type_t<S>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr S operator()(
-        S src, simd_mask_type_t<S> mask, L lhs, R rhs) noexcept {
-        return inner_product(internal::abi<S>, src, mask, lhs, rhs);
+        S src, simd_mask_type_t<S> mask, L&& lhs, R&& rhs) noexcept {
+        return inner_product(internal::abi<S>, src, mask, __DPL forward<L>(lhs),
+            __DPL forward<R>(rhs));
     }
 
-    template <canonical_vector L, common_vector_with<L> R,
-        canonical_inner_product_result<L, R> S, const_mask_for<S> M>
-    requires canonical_vector<R> &&
-        unqualified_canonical_minner_product<S, launder_cmask_t<S, M>, L, R>
+    template <unextended_type L, unextended_type R, canonical_vector S,
+        const_mask_for<S> M>
+    requires unqualified_canonical_minner_product<S, launder_cmask_t<S, M>, L,
+        R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr S operator()(S src, M cmask, L lhs, R rhs) noexcept {
-        return inner_product(internal::abi<common_abi_t<L, R>>, src,
-            dx::to_const_mask<S>(cmask), lhs, rhs);
+    static constexpr S operator()(S src, M mask, L&& lhs, R&& rhs) noexcept {
+        return inner_product(internal::abi<S>, src, dx::to_const_mask<S>(mask),
+            __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 
-    template <canonical_vector L, common_vector_with<L> R,
-        canonical_inner_product_result<L, R> S>
-    requires canonical_vector<R> &&
-        unqualified_canonical_mzinner_product<simd_mask_type_t<S>, S, L, R>
+    template <unextended_type L, unextended_type R, canonical_vector S>
+    requires unqualified_canonical_zminner_product<simd_mask_type_t<S>, S, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(dx::zero_t zero, simd_mask_type_t<S> mask,
-        S src, L lhs, R rhs) noexcept {
-        return inner_product(internal::abi<S>, zero, mask, src, lhs, rhs);
+    static constexpr S operator()(dx::zero_t zero, simd_mask_type_t<S> mask,
+        S src, L&& lhs, R&& rhs) noexcept {
+        return inner_product(internal::abi<S>, zero, mask, src,
+            __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 
-    template <canonical_vector L, common_vector_with<L> R,
-        canonical_inner_product_result<L, R> S, const_mask_for<S> M>
-    requires canonical_vector<R> &&
-        unqualified_canonical_mzinner_product<launder_cmask_t<S, M>, S, L, R>
+    template <unextended_type L, unextended_type R, canonical_vector S,
+        const_mask_for<S> M>
+    requires unqualified_canonical_zminner_product<launder_cmask_t<S, M>, S, L,
+        R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
-        dx::zero_t zero, M cmask, S src, L lhs, R rhs) noexcept {
-        return inner_product(
-            internal::abi<S>, zero, dx::to_const_mask<S>(cmask), src, lhs, rhs);
+        dx::zero_t zero, M mask, S src, L&& lhs, R&& rhs) noexcept {
+        return inner_product(internal::abi<S>, zero, dx::to_const_mask<S>(mask),
+            src, __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 };
 
@@ -167,28 +194,30 @@ concept unqualified_extended_inner_product = requires {
     {
         inner_product(internal::declarg<S>(), internal::declarg<L>(),
             internal::declarg<R>())
-    } -> vector_with_common_abi<simd_abi_type_t<S>>;
+    } -> equivalent_vector_with<S>;
 };
 
 template <typename S, typename M, typename L, typename R>
 concept unqualified_extended_minner_product =
-    equivalent_vector_with<S, cpo_result_t<inner_product_t, S, L, R>> &&
+    cpo_invocable<inner_product_t, S, L, R> &&
+    equivalent_vector_with<cpo_result_t<inner_product_t, S, L, R>, S> &&
     requires {
         {
             inner_product(internal::declarg<S>(), internal::declarg<M>(),
                 internal::declarg<L>(), internal::declarg<R>())
-        } -> equivalent_vector_with<cpo_result_t<inner_product_t, S, L, R>>;
+        } -> equivalent_vector_with<S>;
     };
 
 template <typename M, typename S, typename L, typename R>
-concept unqualified_extended_mzinner_product =
-    equivalent_vector_with<S, cpo_result_t<inner_product_t, S, L, R>> &&
+concept unqualified_extended_zminner_product =
+    cpo_invocable<inner_product_t, S, L, R> &&
+    equivalent_vector_with<cpo_result_t<inner_product_t, S, L, R>, S> &&
     requires {
         {
             inner_product(dx::zero, internal::declarg<M>(),
                 internal::declarg<S>(), internal::declarg<L>(),
                 internal::declarg<R>())
-        } -> equivalent_vector_with<cpo_result_t<inner_product_t, S, L, R>>;
+        } -> equivalent_vector_with<S>;
     };
 
 template <>
@@ -204,8 +233,35 @@ public:
             __DPL forward<R>(rhs));
     }
 
-    template <simd_vector L, common_vector_with<L> R,
-        inner_product_result<L, R> S, exact_mask_for<S> M>
+    template <simd_vector L, broadcastable_to<L> R,
+        inner_product_result<L, L> S>
+    requires (extended_vector<S> || extended_vector<L>) &&
+        unqualified_extended_inner_product<S, L, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr S operator()(S src, L lhs, R&& rhs) noexcept {
+        return inner_product(__DPL forward<S>(src), __DPL forward<L>(lhs),
+            __DPL forward<R>(rhs));
+    }
+
+    template <simd_vector R, broadcastable_to<R> L,
+        inner_product_result<R, R> S>
+    requires (extended_vector<S> || extended_vector<R>) &&
+        unqualified_extended_inner_product<S, L, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr S operator()(S src, L&& lhs, R rhs) noexcept {
+        return inner_product(__DPL forward<S>(src), __DPL forward<L>(lhs),
+            __DPL forward<R>(rhs));
+    }
+
+    template <extended_vector S, broadcastable_to<S> L, broadcastable_to<S> R>
+    requires unqualified_extended_inner_product<S, L, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr S operator()(S src, L&& lhs, R&& rhs) noexcept {
+        return inner_product(__DPL forward<S>(src), __DPL forward<L>(lhs),
+            __DPL forward<R>(rhs));
+    }
+
+    template <typename L, typename R, simd_vector S, exact_mask_for<S> M>
     requires (extended_vector<S> || extended_mask<M> || extended_vector<L> ||
                  extended_vector<R>) &&
         unqualified_extended_minner_product<S, M, L, R>
@@ -215,22 +271,20 @@ public:
             __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 
-    template <simd_vector L, common_vector_with<L> R,
-        inner_product_result<L, R> S, const_mask_for<S> M>
+    template <typename L, typename R, simd_vector S, const_mask_for<S> M>
     requires (extended_vector<S> || extended_vector<L> || extended_vector<R>) &&
         unqualified_extended_minner_product<S, launder_cmask_t<S, M>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(S&& src, M cmask, L&& lhs, R&& rhs) {
+    static constexpr auto operator()(S&& src, M mask, L&& lhs, R&& rhs) {
         return inner_product( __DPL forward<S>(src),
-            dx::to_const_mask<S>(cmask), __DPL forward<L>(lhs),
+            dx::to_const_mask<S>(mask), __DPL forward<L>(lhs),
             __DPL forward<R>(rhs));
     }
 
-    template <simd_vector L, common_vector_with<L> R,
-        inner_product_result<L, R> S, exact_mask_for<S> M>
+    template <typename L, typename R, simd_vector S, exact_mask_for<S> M>
     requires (extended_vector<S> || extended_vector<L> || extended_vector<R> ||
                  extended_mask<M>) &&
-        unqualified_extended_mzinner_product<M, S, L, R>
+        unqualified_extended_zminner_product<M, S, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         dx::zero_t zero, M&& mask, S&& src, L&& lhs, R&& rhs) {
@@ -239,14 +293,13 @@ public:
             __DPL forward<R>(rhs));
     }
 
-    template <simd_vector L, common_vector_with<L> R,
-        inner_product_result<L, R> S, const_mask_for<S> M>
+    template <typename L, typename R, simd_vector S, const_mask_for<S> M>
     requires (extended_vector<S> || extended_vector<L> || extended_vector<R>) &&
-        unqualified_extended_mzinner_product<S, launder_cmask_t<S, M>, L, R>
+        unqualified_extended_zminner_product<launder_cmask_t<S, M>, S, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(dx::zero_t zero,
-        launder_cmask_t<S, M> cmask, S&& src, L&& lhs, R&& rhs) {
-        return inner_product(zero, dx::to_const_mask<S>(cmask),
+        launder_cmask_t<S, M> mask, S&& src, L&& lhs, R&& rhs) {
+        return inner_product(zero, dx::to_const_mask<S>(mask),
             __DPL forward<S>(src), __DPL forward<L>(lhs),
             __DPL forward<R>(rhs));
     }
@@ -325,6 +378,33 @@ struct fallback_impl<inner_product_t> {
                 return self(imm<I + 1>);
             }
         }();
+    }
+
+    template <canonical_vector L, broadcastable_to<L> R,
+        canonical_inner_product_result<L, L> S>
+    requires cpo_invocable<inner_product_t, S, L, L>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr S operator()(S src, L lhs, R&& rhs) noexcept {
+        return inner_product_t::operator()(
+            src, lhs, dx::broadcast<L>(__DPL forward<R>(rhs)));
+    }
+
+    template <canonical_vector R, broadcastable_to<R> L,
+        canonical_inner_product_result<R, R> S>
+    requires cpo_invocable<inner_product_t, S, R, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr S operator()(S src, L&& lhs, R rhs) noexcept {
+        return inner_product_t::operator()(
+            src, dx::broadcast<R>(__DPL forward<L>(lhs)), rhs);
+    }
+
+    template <canonical_vector S, broadcastable_to<S> L, broadcastable_to<S> R>
+    requires cpo_invocable<inner_product_t, S, S, S>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr S operator()(S src, L&& lhs, R&& rhs) noexcept {
+        return inner_product_t::operator()(src,
+            dx::broadcast<S>(__DPL forward<L>(lhs)),
+            dx::broadcast<S>(__DPL forward<R>(rhs)));
     }
 };
 

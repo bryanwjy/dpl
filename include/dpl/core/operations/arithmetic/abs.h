@@ -8,6 +8,7 @@
 #include "dpl/core/operations/arithmetic/negate.h"
 #include "dpl/core/operations/bitwise/bwandnot.h"
 #include "dpl/core/operations/compare/max.h"
+#include "dpl/core/operations/select.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/internal/abi.h"
@@ -44,94 +45,104 @@ struct operation_signature<abs_t> {
 template <>
 struct fallback_impl<abs_t> {
     template <canonical_vector T>
-    requires signed_integral<simd_element_type_t<T>> &&
-        cpo_invocable<negate_t, T> && cpo_invocable<max_t, T, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr T DPL_VECTORCALL operator()(T val) noexcept {
-        return dx::max(val, dx::negate(val));
+        using E DPL_NODEBUG = simd_element_type_t<T>;
+        if constexpr (unsigned_integral<E>) {
+            return val;
+        } else if constexpr (floating_point_like<E> &&
+            requires { floating_point_traits<E>::signbit; }) {
+            constexpr auto signbit =
+                __DPL bit_cast<E>(floating_point_traits<E>::signbit);
+            return dx::bwandnot(val, signbit);
+        } else {
+            return dx::max(val, dx::negate(val));
+        }
     }
 
     template <canonical_vector T>
-    requires unsigned_integral<simd_element_type_t<T>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr T DPL_VECTORCALL operator()(T val) noexcept {
-        return val;
-    }
-
-    template <canonical_vector T>
-    requires floating_point_like<simd_element_type_t<T>> &&
-        requires { floating_point_traits<simd_element_type_t<T>>::signbit; } &&
-        cpo_invocable<bwandnot_t, T, simd_element_type_t<T>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr T DPL_VECTORCALL operator()(T val) noexcept {
-        using E = simd_element_type_t<T>;
-        // signbit must be bit_representation_t<E>
-        constexpr auto signbit =
-            __DPL bit_cast<E>(floating_point_traits<E>::signbit);
-        return dx::bwandnot(val, signbit);
-    }
-
-    template <canonical_vector T>
-    requires floating_point_like<simd_element_type_t<T>> &&
-        requires { floating_point_traits<simd_element_type_t<T>>::signbit; } &&
-        cpo_invocable<bwandnot_t, T, simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr T DPL_VECTORCALL operator()(
         type_identity_t<T> src, simd_mask_type_t<T> mask, T val) noexcept {
-        using E = simd_element_type_t<T>;
-        constexpr auto signbit =
-            __DPL bit_cast<E>(floating_point_traits<E>::signbit);
-        return dx::bwandnot(src, mask, val, signbit);
+        using E DPL_NODEBUG = simd_element_type_t<T>;
+        if constexpr (unsigned_integral<E>) {
+            return dx::select(mask, val, src);
+        } else if constexpr (floating_point_like<E> &&
+            requires { floating_point_traits<E>::signbit; }) {
+            constexpr auto signbit =
+                __DPL bit_cast<E>(floating_point_traits<E>::signbit);
+            return dx::bwandnot(src, mask, val, signbit);
+        } else {
+            return dx::max(src, mask, val, dx::negate(val));
+        }
     }
 
     template <canonical_vector T, const_mask_for<T> M>
-    requires floating_point_like<simd_element_type_t<T>> &&
-        requires { floating_point_traits<simd_element_type_t<T>>::signbit; } &&
-        cpo_invocable<bwandnot_t, T, simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr T DPL_VECTORCALL operator()(
         type_identity_t<T> src, M mask, T val) noexcept {
-        using E = simd_element_type_t<T>;
-        constexpr auto signbit =
-            __DPL bit_cast<E>(floating_point_traits<E>::signbit);
-        return dx::bwandnot(src, mask, val, signbit);
+        using E DPL_NODEBUG = simd_element_type_t<T>;
+        if constexpr (unsigned_integral<E>) {
+            return dx::select(mask, val, src);
+        } else if constexpr (floating_point_like<E> &&
+            requires { floating_point_traits<E>::signbit; }) {
+            constexpr auto signbit =
+                __DPL bit_cast<E>(floating_point_traits<E>::signbit);
+            return dx::bwandnot(src, mask, val, signbit);
+        } else {
+            return dx::max(src, mask, val, dx::negate(val));
+        }
     }
 
     template <canonical_vector T>
-    requires floating_point_like<simd_element_type_t<T>> &&
-        requires { floating_point_traits<simd_element_type_t<T>>::signbit; } &&
-        cpo_invocable<bwandnot_t, T, simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr T DPL_VECTORCALL operator()(
         dx::zero_t zero, simd_mask_type_t<T> mask, T val) noexcept {
-        using E = simd_element_type_t<T>;
-        constexpr auto signbit =
-            __DPL bit_cast<E>(floating_point_traits<E>::signbit);
-        return dx::bwandnot(zero, mask, val, signbit);
+        using E DPL_NODEBUG = simd_element_type_t<T>;
+        if constexpr (unsigned_integral<E>) {
+            return dx::select(mask, val, zero);
+        } else if constexpr (floating_point_like<E> &&
+            requires { floating_point_traits<E>::signbit; }) {
+            constexpr auto signbit =
+                __DPL bit_cast<E>(floating_point_traits<E>::signbit);
+            return dx::bwandnot(zero, mask, val, signbit);
+        } else {
+            return dx::max(zero, mask, val, dx::negate(val));
+        }
     }
 
     template <canonical_vector T, const_mask_for<T> M>
-    requires floating_point_like<simd_element_type_t<T>> &&
-        requires { floating_point_traits<simd_element_type_t<T>>::signbit; } &&
-        cpo_invocable<bwandnot_t, T, simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr T DPL_VECTORCALL operator()(
         dx::zero_t zero, M mask, T val) noexcept {
-        using E = simd_element_type_t<T>;
-        constexpr auto signbit =
-            __DPL bit_cast<E>(floating_point_traits<E>::signbit);
-        return dx::bwandnot(zero, mask, val, signbit);
+        using E DPL_NODEBUG = simd_element_type_t<T>;
+        if constexpr (unsigned_integral<E>) {
+            return dx::select(mask, val, zero);
+        } else if constexpr (floating_point_like<E> &&
+            requires { floating_point_traits<E>::signbit; }) {
+            constexpr auto signbit =
+                __DPL bit_cast<E>(floating_point_traits<E>::signbit);
+            return dx::bwandnot(zero, mask, val, signbit);
+        } else {
+            return dx::max(zero, mask, val, dx::negate(val));
+        }
     }
 };
 
 template <typename S, typename M, typename T>
-concept unqualified_canonical_mabs = cpo_invocable<abs_t, T> &&
-    (!simd_type<S> || same_as<S, cpo_result_t<abs_t, T>>) &&
-    requires(S src, M mask, T val) {
-        {
-            abs(internal::abi<T>, src, mask, val)
-        } -> same_as<cpo_result_t<abs_t, T>>;
-    };
+concept unqualified_canonical_mabs_base = cpo_invocable<abs_t, T> && requires {
+    {
+        abs(internal::abi<T>, internal::declarg<S>(), internal::declarg<M>(),
+            internal::declarg<T>())
+    } -> same_as<T>;
+};
+
+template <typename M, typename T>
+concept unqualified_canonical_mabs = unqualified_canonical_mabs_base<T, M, T>;
+
+template <typename M, typename T>
+concept unqualified_canonical_zmabs =
+    unqualified_canonical_mabs_base<dx::zero_t, M, T>;
 
 template <>
 struct canonical_impl<abs_t> {
@@ -145,7 +156,7 @@ public:
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mabs<T, simd_mask_type_t<T>, T>
+    requires unqualified_canonical_mabs<simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
         type_identity_t<T> src, simd_mask_type_t<T> mask, T val) noexcept {
@@ -153,43 +164,49 @@ public:
     }
 
     template <canonical_vector T, const_mask_for<T> M>
-    requires unqualified_canonical_mabs<T, launder_cmask_t<T, M>, T>
+    requires unqualified_canonical_mabs<launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
-        type_identity_t<T> src, M cmask, T val) noexcept {
-        return abs(internal::abi<T>, src, dx::to_const_mask<T>(cmask), val);
+        type_identity_t<T> src, M mask, T val) noexcept {
+        return abs(internal::abi<T>, src, dx::to_const_mask<T>(mask), val);
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mabs<dx::zero_t, simd_mask_type_t<T>, T>
+    requires unqualified_canonical_zmabs<simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
         dx::zero_t zero, simd_mask_type_t<T> mask, T val) noexcept {
         return abs(internal::abi<T>, zero, mask, val);
     }
 
-    template <fixed_width_vector T, const_mask_for<T> M>
-    requires unqualified_canonical_mabs<dx::zero_t, launder_cmask_t<T, M>, T>
+    template <canonical_vector T, const_mask_for<T> M>
+    requires unqualified_canonical_zmabs<launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(dx::zero_t zero, M cmask, T val) noexcept {
-        return abs(internal::abi<T>, zero, dx::to_const_mask<T>(cmask), val);
+    static constexpr T operator()(dx::zero_t zero, M mask, T val) noexcept {
+        return abs(internal::abi<T>, zero, dx::to_const_mask<T>(mask), val);
     }
 };
 
-template <typename T, typename A = simd_abi_type_t<T>>
+template <typename T>
 concept unqualified_extended_abs = requires {
-    { abs(internal::declarg<T>()) } -> vector_with_common_abi<A>;
+    { abs(internal::declarg<T>()) } -> equivalent_vector_with<T>;
 };
 
 template <typename S, typename M, typename T>
-concept unqualified_extended_mabs = cpo_invocable<abs_t, T> &&
-    (!simd_type<S> || equivalent_vector_with<S, cpo_result_t<abs_t, T>>) &&
-    requires {
-        {
-            abs(internal::declarg<S>(), internal::declarg<M>(),
-                internal::declarg<T>())
-        } -> equivalent_vector_with<cpo_result_t<abs_t, T>>;
-    };
+concept unqualified_extended_mabs0 = cpo_invocable<abs_t, T> && requires {
+    {
+        abs(internal::declarg<S>(), internal::declarg<M>(),
+            internal::declarg<T>())
+    } -> equivalent_vector_with<T>;
+};
+
+template <typename S, typename M, typename T>
+concept unqualified_extended_mabs =
+    equivalent_vector_with<T, S> && unqualified_extended_mabs0<S, M, T>;
+
+template <typename M, typename T>
+concept unqualified_extended_zmabs =
+    unqualified_extended_mabs0<dx::zero_t, M, T>;
 
 template <>
 struct extended_impl<abs_t> {
@@ -221,15 +238,14 @@ public:
 
     template <simd_vector T, result_mask_for<abs_t, T> M>
     requires (extended_mask<M> || extended_vector<T>) &&
-        unqualified_extended_mabs<dx::zero_t, M, T>
+        unqualified_extended_zmabs<M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(dx::zero_t zero, M&& mask, T&& val) {
         return abs(zero, __DPL forward<M>(mask), __DPL forward<T>(val));
     }
 
     template <extended_vector T, result_cmask_for<abs_t, T> M>
-    requires unqualified_extended_mabs<dx::zero_t,
-        launder_cmask_t<cpo_result_t<abs_t, T>, M>, T>
+    requires unqualified_extended_zmabs<launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(dx::zero_t zero, M cmask, T&& val) {
         return abs(zero, dx::to_const_mask<cpo_result_t<abs_t, T>>(cmask),

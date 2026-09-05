@@ -79,6 +79,8 @@ using __DPL datapar::cpo::nmuladd;
 using __DPL datapar::cpo::nmulsac;
 using __DPL datapar::cpo::nmulsub;
 //
+using __DPL datapar::cpo::lerp;
+//
 using __DPL datapar::cpo::ceil;
 using __DPL datapar::cpo::floor;
 using __DPL datapar::cpo::round;

@@ -14,28 +14,28 @@ namespace datapar::internal {
 template <typename D>
 class operation_base {
 protected:
-    template <canonical_ornot_simd... Ts>
+    template <unextended_type... Ts>
     requires signature_compatible<D, Ts...> &&
         (fallback_cpo_invocable<D, Ts...> || canonical_cpo_invocable<D, Ts...>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(Ts... args) noexcept {
+    static constexpr auto operator()(Ts&&... args) noexcept {
         if constexpr (fallback_cpo_invocable<D, Ts...>) {
             if constexpr (canonical_cpo_invocable<D, Ts...>) {
                 if consteval {
-                    return impl::fallback<D>(args...);
+                    return impl::fallback<D>(__DPL forward<Ts>(args)...);
                 } else {
-                    return impl::canonical<D>(args...);
+                    return impl::canonical<D>(__DPL forward<Ts>(args)...);
                 }
             } else {
-                return impl::fallback<D>(args...);
+                return impl::fallback<D>(__DPL forward<Ts>(args)...);
             }
         } else {
-            return impl::canonical<D>(args...);
+            return impl::canonical<D>(__DPL forward<Ts>(args)...);
         }
     }
 
     template <typename... Ts>
-    requires signature_compatible<D, Ts...> && extended_arguments<Ts...> &&
+    requires extended_arguments<Ts...> && signature_compatible<D, Ts...> &&
         (extendable_operation<D, Ts...> ||
             requires {
                 requires (... || simd_expression<Ts>);

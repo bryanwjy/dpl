@@ -53,9 +53,9 @@ struct fallback_impl<countr_one_t> {
     requires fixed_width_abi<simd_abi_type_t<T>> &&
         integral<simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr count_vector_t<T>
+    static constexpr unsigned_canonical_vector_t<T>
         DPL_VECTORCALL operator()(T val) noexcept {
-        return internal::transform<count_vector_t<T>>(
+        return internal::transform<unsigned_canonical_vector_t<T>>(
             [](auto val) {
                 using uint_t = make_unsigned_t<simd_element_type_t<T>>;
                 auto const count = __DPL countr_one(__DPL to_unsigned(val));
@@ -73,16 +73,16 @@ struct fallback_impl<countr_one_t> {
 };
 
 template <typename T>
-concept unqualified_canonical_countr_one =
-    requires(T val) { countr_one(internal::abi<T>, val); };
+concept unqualified_canonical_countr_one = requires(T val) {
+    { countr_one(internal::abi<T>, val) };
+};
 
 template <typename S, typename M, typename T>
-concept unqualified_canonical_mcountr_one = cpo_invocable<countr_one_t, T> &&
-    (!simd_type<S> || same_as<S, cpo_result_t<countr_one_t, T>>) &&
-    requires(S src, M mask, T val) {
+concept unqualified_canonical_mcountr_one =
+    cpo_invocable<countr_one_t, T> && requires(S src, M mask, T val) {
         {
             countr_one(internal::abi<T>, src, mask, val)
-        } -> same_as<cpo_result_t<countr_one_t, T>>;
+        } -> same_as<unsigned_canonical_vector_t<T>>;
     };
 
 template <>
@@ -91,7 +91,7 @@ public:
     template <canonical_vector T>
     requires unqualified_canonical_countr_one<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr count_vector_t<T> operator()(T val) noexcept {
+    static constexpr unsigned_canonical_vector_t<T> operator()(T val) noexcept {
         return countr_one(internal::abi<T>, val);
     }
 
@@ -103,20 +103,21 @@ public:
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mcountr_one<count_vector_t<T>,
+    requires unqualified_canonical_mcountr_one<unsigned_canonical_vector_t<T>,
         simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr count_vector_t<T> operator()(
-        count_vector_t<T> src, simd_mask_type_t<T> mask, T val) noexcept {
+    static constexpr unsigned_canonical_vector_t<T> operator()(
+        unsigned_canonical_vector_t<T> src, simd_mask_type_t<T> mask,
+        T val) noexcept {
         return countr_one(internal::abi<T>, src, mask, val);
     }
 
     template <canonical_vector T, const_mask_for<T> M>
-    requires unqualified_canonical_mcountr_one<count_vector_t<T>,
+    requires unqualified_canonical_mcountr_one<unsigned_canonical_vector_t<T>,
         launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr count_vector_t<T> operator()(
-        count_vector_t<T> src, M cmask, T val) noexcept {
+    static constexpr unsigned_canonical_vector_t<T> operator()(
+        unsigned_canonical_vector_t<T> src, M cmask, T val) noexcept {
         return countr_one(
             internal::abi<T>, src, dx::to_const_mask<T>(cmask), val);
     }
@@ -125,7 +126,7 @@ public:
     requires unqualified_canonical_mcountr_one<dx::zero_t, simd_mask_type_t<T>,
         T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr count_vector_t<T> operator()(
+    static constexpr unsigned_canonical_vector_t<T> operator()(
         dx::zero_t zero, simd_mask_type_t<T> mask, T val) noexcept {
         return countr_one(internal::abi<T>, zero, mask, val);
     }
@@ -134,7 +135,7 @@ public:
     requires unqualified_canonical_mcountr_one<dx::zero_t,
         launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr count_vector_t<T> operator()(
+    static constexpr unsigned_canonical_vector_t<T> operator()(
         dx::zero_t zero, M cmask, T val) noexcept {
         return countr_one(
             internal::abi<T>, zero, dx::to_const_mask<T>(cmask), val);
@@ -143,7 +144,9 @@ public:
 
 template <typename T, typename A = simd_abi_type_t<T>>
 concept unqualified_extended_vector_countr_one = requires {
-    { countr_one(internal::declarg<T>()) } -> vector_with_common_abi<A>;
+    {
+        countr_one(internal::declarg<T>())
+    } -> equivalent_vector_with<unsigned_canonical_vector_t<T>>;
 };
 
 template <typename T>
@@ -152,16 +155,22 @@ concept unqualified_extended_mask_countr_one = requires {
 };
 
 template <typename S, typename M, typename T>
-concept unqualified_extended_mcountr_one = cpo_invocable<countr_one_t, T> &&
-    (!simd_type<S> ||
-        equivalent_vector_with<S, cpo_result_t<countr_one_t, T>>) &&
-    requires {
+concept unqualified_extended_mcountr_one_base =
+    cpo_invocable<countr_one_t, T> && requires {
         {
             countr_one(internal::declarg<S>(), internal::declarg<M>(),
                 internal::declarg<T>())
-        } -> equivalent_vector_with<
-            conditional_t<simd_type<S>, S, cpo_result_t<countr_one_t, T>>>;
+        } -> equivalent_vector_with<unsigned_canonical_vector_t<T>>;
     };
+
+template <typename S, typename M, typename T>
+concept unqualified_extended_mcountr_one =
+    unqualified_extended_mcountr_one_base<S, M, T> &&
+    equivalent_vector_with<S, unsigned_canonical_vector_t<T>>;
+
+template <typename M, typename T>
+concept unqualified_extended_zmcountr_one =
+    unqualified_extended_mcountr_one_base<dx::zero_t, M, T>;
 
 template <>
 struct extended_impl<countr_one_t> {
@@ -200,17 +209,16 @@ public:
 
     template <simd_vector T, result_mask_for<countr_one_t, T> M>
     requires (extended_mask<M> || extended_vector<T>) &&
-        unqualified_extended_mcountr_one<dx::zero_t, M, T>
+        unqualified_extended_zmcountr_one<M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(dx::zero_t zero, M&& mask, T&& val) {
         return countr_one(
             zero, __DPL forward<M>(mask), __DPL forward<T>(val));
     }
 
-    template <simd_vector T, result_cmask_for<countr_one_t, T> M>
-    requires extended_vector<T> &&
-        unqualified_extended_mcountr_one<dx::zero_t,
-            launder_cmask_t<cpo_result_t<countr_one_t, T>, M>, T>
+    template <extended_vector T, result_cmask_for<countr_one_t, T> M>
+    requires unqualified_extended_zmcountr_one<
+        launder_cmask_t<cpo_result_t<countr_one_t, T>, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(dx::zero_t zero, M cmask, T&& val) {
         return countr_one(zero,

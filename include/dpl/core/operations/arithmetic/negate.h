@@ -6,6 +6,7 @@
 // IWYU pragma: always_keep
 #include "dpl/core/operations/arithmetic/subtract.h"
 #include "dpl/core/operations/bitwise/bwxor.h"
+#include "dpl/core/operations/internal/broadcasting.h"
 #include "dpl/core/operations/internal/transform.h"
 
 #if !DPL_MODULES
@@ -42,29 +43,50 @@ struct operation_signature<negate_t> {
 template <>
 struct fallback_impl<negate_t> {
     template <canonical_vector T>
-    requires integral<simd_element_type_t<T>> &&
-        cpo_invocable<subtract_t, dx::zero_t, T>
+    requires cpo_invocable<subtract_t, dx::zero_t, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr T DPL_VECTORCALL operator()(T val) noexcept {
-        return dx::subtract(dx::zero, val);
+        using E DPL_NODEBUG = simd_element_type_t<T>;
+        if constexpr (floating_point_like<E> &&
+            requires { floating_point_traits<E>::signbit; }) {
+            constexpr auto signbit =
+                __DPL bit_cast<E>(floating_point_traits<E>::signbit);
+            return dx::bwxor(val, signbit);
+        } else {
+            return dx::subtract(dx::zero, val);
+        }
     }
 
     template <canonical_vector T>
-    requires integral<simd_element_type_t<T>> &&
-        cpo_invocable<subtract_t, dx::zero_t, T>
+    requires cpo_invocable<subtract_t, dx::zero_t, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr T DPL_VECTORCALL operator()(
         type_identity_t<T> src, simd_mask_type_t<T> mask, T val) noexcept {
-        return dx::subtract(src, mask, dx::zero, val);
+        using E DPL_NODEBUG = simd_element_type_t<T>;
+        if constexpr (floating_point_like<E> &&
+            requires { floating_point_traits<E>::signbit; }) {
+            constexpr auto signbit =
+                __DPL bit_cast<E>(floating_point_traits<E>::signbit);
+            return dx::bwxor(src, mask, val, signbit);
+        } else {
+            return dx::subtract(src, mask, dx::zero, val);
+        }
     }
 
     template <canonical_vector T, const_mask_for<T> M>
-    requires integral<simd_element_type_t<T>> &&
-        cpo_invocable<subtract_t, dx::zero_t, T>
+    requires cpo_invocable<subtract_t, dx::zero_t, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr T DPL_VECTORCALL operator()(
         type_identity_t<T> src, M mask, T val) noexcept {
-        return dx::subtract(src, mask, dx::zero, val);
+        using E DPL_NODEBUG = simd_element_type_t<T>;
+        if constexpr (floating_point_like<E> &&
+            requires { floating_point_traits<E>::signbit; }) {
+            constexpr auto signbit =
+                __DPL bit_cast<E>(floating_point_traits<E>::signbit);
+            return dx::bwxor(src, mask, val, signbit);
+        } else {
+            return dx::subtract(src, mask, dx::zero, val);
+        }
     }
 
     template <canonical_vector T>
@@ -73,7 +95,15 @@ struct fallback_impl<negate_t> {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr T DPL_VECTORCALL operator()(
         dx::zero_t zero, simd_mask_type_t<T> mask, T val) noexcept {
-        return dx::subtract(zero, mask, zero, val);
+        using E DPL_NODEBUG = simd_element_type_t<T>;
+        if constexpr (floating_point_like<E> &&
+            requires { floating_point_traits<E>::signbit; }) {
+            constexpr auto signbit =
+                __DPL bit_cast<E>(floating_point_traits<E>::signbit);
+            return dx::bwxor(zero, mask, val, signbit);
+        } else {
+            return dx::subtract(zero, mask, zero, val);
+        }
     }
 
     template <canonical_vector T, const_mask_for<T> M>
@@ -82,98 +112,47 @@ struct fallback_impl<negate_t> {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr T DPL_VECTORCALL operator()(
         dx::zero_t zero, M mask, T val) noexcept {
-        return dx::subtract(zero, mask, zero, val);
-    }
-
-    template <canonical_vector T>
-    requires floating_point_like<simd_element_type_t<T>> &&
-        requires { floating_point_traits<simd_element_type_t<T>>::signbit; } &&
-        cpo_invocable<bwxor_t, T, simd_element_type_t<T>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr T DPL_VECTORCALL operator()(T val) noexcept {
-        using E = simd_element_type_t<T>;
-        // signbit must be bit_representation_t<E>
-        constexpr auto signbit =
-            __DPL bit_cast<E>(floating_point_traits<E>::signbit);
-        return dx::bwxor(val, signbit);
-    }
-
-    template <canonical_vector T>
-    requires floating_point_like<simd_element_type_t<T>> &&
-        requires { floating_point_traits<simd_element_type_t<T>>::signbit; } &&
-        cpo_invocable<bwxor_t, T, simd_element_type_t<T>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr T DPL_VECTORCALL operator()(
-        type_identity_t<T> src, simd_mask_type_t<T> mask, T val) noexcept {
-        using E = simd_element_type_t<T>;
-        constexpr auto signbit =
-            __DPL bit_cast<E>(floating_point_traits<E>::signbit);
-        return dx::bwxor(src, mask, val, signbit);
-    }
-
-    template <canonical_vector T, const_mask_for<T> M>
-    requires floating_point_like<simd_element_type_t<T>> &&
-        requires { floating_point_traits<simd_element_type_t<T>>::signbit; } &&
-        cpo_invocable<bwxor_t, T, simd_element_type_t<T>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr T DPL_VECTORCALL operator()(
-        type_identity_t<T> src, M mask, T val) noexcept {
-        using E = simd_element_type_t<T>;
-        constexpr auto signbit =
-            __DPL bit_cast<E>(floating_point_traits<E>::signbit);
-        return dx::bwxor(src, mask, val, signbit);
-    }
-
-    template <canonical_vector T>
-    requires floating_point_like<simd_element_type_t<T>> &&
-        requires { floating_point_traits<simd_element_type_t<T>>::signbit; } &&
-        cpo_invocable<bwxor_t, T, simd_element_type_t<T>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr T DPL_VECTORCALL operator()(
-        dx::zero_t zero, simd_mask_type_t<T> mask, T val) noexcept {
-        using E = simd_element_type_t<T>;
-        constexpr auto signbit =
-            __DPL bit_cast<E>(floating_point_traits<E>::signbit);
-        return dx::bwxor(zero, mask, val, signbit);
-    }
-
-    template <canonical_vector T, const_mask_for<T> M>
-    requires floating_point_like<simd_element_type_t<T>> &&
-        requires { floating_point_traits<simd_element_type_t<T>>::signbit; } &&
-        cpo_invocable<bwxor_t, T, simd_element_type_t<T>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr T DPL_VECTORCALL operator()(
-        dx::zero_t zero, M mask, T val) noexcept {
-        using E = simd_element_type_t<T>;
-        constexpr auto signbit =
-            __DPL bit_cast<E>(floating_point_traits<E>::signbit);
-        return dx::bwxor(zero, mask, val, signbit);
+        using E DPL_NODEBUG = simd_element_type_t<T>;
+        if constexpr (floating_point_like<E> &&
+            requires { floating_point_traits<E>::signbit; }) {
+            constexpr auto signbit =
+                __DPL bit_cast<E>(floating_point_traits<E>::signbit);
+            return dx::bwxor(zero, mask, val, signbit);
+        } else {
+            return dx::subtract(zero, mask, zero, val);
+        }
     }
 };
 
 template <typename S, typename M, typename T>
-concept unqualified_canonical_mnegate = cpo_invocable<negate_t, T> &&
-    (!simd_type<S> || same_as<S, cpo_result_t<negate_t, T>>) &&
-    requires(S src, M mask, T val) {
+concept unqualified_canonical_mnegate_base =
+    cpo_invocable<negate_t, T> && requires {
         {
-            negate(internal::abi<T>, src, mask, val)
-        } -> same_as<cpo_result_t<negate_t, T>>;
+            negate(internal::abi<T>, internal::declarg<S>(),
+                internal::declarg<M>(), internal::declarg<T>())
+        } -> same_as<T>;
     };
+
+template <typename M, typename T>
+concept unqualified_canonical_mnegate =
+    unqualified_canonical_mnegate_base<T, M, T>;
+
+template <typename M, typename T>
+concept unqualified_canonical_zmnegate =
+    unqualified_canonical_mnegate_base<dx::zero_t, M, T>;
 
 template <>
 struct canonical_impl<negate_t> {
-public:
-    template <simd_abi A, simd_element_for<A> E>
+    template <canonical_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr basic_vector<E, A> operator()(
-        basic_vector<E, A> val) noexcept
-    requires requires { negate(internal::abi<A>, val); }
+    static constexpr T operator()(T val) noexcept
+    requires requires { negate(internal::abi<T>, val); }
     {
-        return negate(internal::abi<A>, val);
+        return negate(internal::abi<T>, val);
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mnegate<T, simd_mask_type_t<T>, T>
+    requires unqualified_canonical_mnegate<simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
         type_identity_t<T> src, simd_mask_type_t<T> mask, T val) noexcept {
@@ -181,43 +160,50 @@ public:
     }
 
     template <canonical_vector T, const_mask_for<T> M>
-    requires unqualified_canonical_mnegate<T, launder_cmask_t<T, M>, T>
+    requires unqualified_canonical_mnegate<launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
-        type_identity_t<T> src, M cmask, T val) noexcept {
-        return negate(internal::abi<T>, src, dx::to_const_mask<T>(cmask), val);
+        type_identity_t<T> src, M mask, T val) noexcept {
+        return negate(internal::abi<T>, src, dx::to_const_mask<T>(mask), val);
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mnegate<dx::zero_t, simd_mask_type_t<T>, T>
+    requires unqualified_canonical_zmnegate<simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
         dx::zero_t zero, simd_mask_type_t<T> mask, T val) noexcept {
         return negate(internal::abi<T>, zero, mask, val);
     }
 
-    template <fixed_width_vector T, const_mask_for<T> M>
-    requires unqualified_canonical_mnegate<dx::zero_t, launder_cmask_t<T, M>, T>
+    template <canonical_vector T, const_mask_for<T> M>
+    requires unqualified_canonical_zmnegate<launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(dx::zero_t zero, M cmask, T val) noexcept {
-        return negate(internal::abi<T>, zero, dx::to_const_mask<T>(cmask), val);
+    static constexpr T operator()(dx::zero_t zero, M mask, T val) noexcept {
+        return negate(internal::abi<T>, zero, dx::to_const_mask<T>(mask), val);
     }
 };
 
-template <typename T, typename A = simd_abi_type_t<T>>
+template <typename T>
 concept unqualified_extended_negate = requires {
-    { negate(internal::declarg<T>()) } -> vector_with_common_abi<A>;
+    { negate(internal::declarg<T>()) } -> equivalent_vector_with<T>;
 };
 
 template <typename S, typename M, typename T>
-concept unqualified_extended_mnegate = cpo_invocable<negate_t, T> &&
-    (!simd_type<S> || equivalent_vector_with<S, cpo_result_t<negate_t, T>>) &&
-    requires {
+concept unqualified_extended_mnegate_base =
+    cpo_invocable<negate_t, T> && requires {
         {
             negate(internal::declarg<S>(), internal::declarg<M>(),
                 internal::declarg<T>())
-        } -> equivalent_vector_with<cpo_result_t<negate_t, T>>;
+        } -> equivalent_vector_with<T>;
     };
+
+template <typename S, typename M, typename T>
+concept unqualified_extended_mnegate =
+    equivalent_vector_with<T, S> && unqualified_extended_mnegate_base<S, M, T>;
+
+template <typename M, typename T>
+concept unqualified_extended_zmnegate =
+    unqualified_extended_mnegate_base<dx::zero_t, M, T>;
 
 template <>
 struct extended_impl<negate_t> {
@@ -229,7 +215,7 @@ public:
         return negate(__DPL forward<T>(val));
     }
 
-    template <simd_vector S, exact_mask_for<S> M, vector_subsumed_by<S> T>
+    template <simd_vector S, exact_mask_for<S> M, equivalent_vector_with<S> T>
     requires (extended_vector<S> || extended_mask<M> || extended_vector<T>) &&
         unqualified_extended_mnegate<S, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -238,30 +224,28 @@ public:
             __DPL forward<T>(val));
     }
 
-    template <simd_vector S, const_mask_for<S> M, vector_subsumed_by<S> T>
+    template <simd_vector S, const_mask_for<S> M, equivalent_vector_with<S> T>
     requires (extended_vector<S> || extended_vector<T>) &&
         unqualified_extended_mnegate<S, launder_cmask_t<S, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(S&& src, M cmask, T&& val) {
-        return negate( __DPL forward<S>(src), dx::to_const_mask<S>(cmask),
+    static constexpr auto operator()(S&& src, M mask, T&& val) {
+        return negate( __DPL forward<S>(src), dx::to_const_mask<S>(mask),
             __DPL forward<T>(val));
     }
 
-    template <simd_vector T, result_mask_for<negate_t, T> M>
+    template <simd_vector T, exact_mask_for<T> M>
     requires (extended_mask<M> || extended_vector<T>) &&
-        unqualified_extended_mnegate<dx::zero_t, M, T>
+        unqualified_extended_zmnegate<M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(dx::zero_t zero, M&& mask, T&& val) {
         return negate(zero, __DPL forward<M>(mask), __DPL forward<T>(val));
     }
 
-    template <extended_vector T, result_cmask_for<negate_t, T> M>
-    requires unqualified_extended_mnegate<dx::zero_t,
-        launder_cmask_t<cpo_result_t<negate_t, T>, M>, T>
+    template <extended_vector T, const_mask_for<T> M>
+    requires unqualified_extended_zmnegate<launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(dx::zero_t zero, M cmask, T&& val) {
-        return negate(zero, dx::to_const_mask<cpo_result_t<negate_t, T>>(cmask),
-            __DPL forward<T>(val));
+    static constexpr auto operator()(dx::zero_t zero, M mask, T&& val) {
+        return negate(zero, dx::to_const_mask<T>(mask), __DPL forward<T>(val));
     }
 };
 } // namespace datapar::internal

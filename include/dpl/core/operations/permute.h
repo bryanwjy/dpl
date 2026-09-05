@@ -133,14 +133,22 @@ struct fallback_impl<permute_t> {
 };
 
 template <typename S, typename M, typename T, typename I>
-concept unqualified_canonical_mpermute = cpo_invocable<permute_t, T, I> &&
-    (!simd_type<S> || same_as<S, cpo_result_t<permute_t, T, I>>) && requires {
+concept unqualified_canonical_mpermute_base =
+    cpo_invocable<permute_t, T, I> && requires {
         {
-            permute(internal::abi<cpo_result_t<permute_t, T, I>>,
-                internal::declarg<S>(), internal::declarg<M>(),
-                internal::declarg<T>(), internal::declarg<I>())
-        } -> same_as<cpo_result_t<permute_t, T, I>>;
+            permute(internal::abi<T>, internal::declarg<S>(),
+                internal::declarg<M>(), internal::declarg<T>(),
+                internal::declarg<I>())
+        } -> same_as<T>;
     };
+
+template <typename M, typename T, typename I>
+concept unqualified_canonical_mpermute =
+    unqualified_canonical_mpermute_base<T, M, T, I>;
+
+template <typename M, typename T, typename I>
+concept unqualified_canonical_zmpermute =
+    unqualified_canonical_mpermute_base<dx::zero_t, M, T, I>;
 
 template <typename T>
 using launder_sequence_t DPL_NODEBUG =
@@ -160,7 +168,7 @@ public:
     }
 
     template <canonical_vector T, index_sequence_like R>
-    requires unqualified_canonical_mpermute<T, simd_mask_type_t<T>, T,
+    requires unqualified_canonical_mpermute<simd_mask_type_t<T>, T,
         launder_sequence_t<R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(type_identity_t<T> src,
@@ -171,7 +179,7 @@ public:
 
     template <canonical_vector T, const_mask_for<T> M, index_sequence_like R>
     requires canonical_vector<T> &&
-        unqualified_canonical_mpermute<T, launder_cmask_t<T, M>, T,
+        unqualified_canonical_mpermute<launder_cmask_t<T, M>, T,
             launder_sequence_t<R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
@@ -182,7 +190,7 @@ public:
     }
 
     template <canonical_vector T, index_sequence_like R>
-    requires unqualified_canonical_mpermute<dx::zero_t, simd_mask_type_t<T>, T,
+    requires unqualified_canonical_zmpermute<simd_mask_type_t<T>, T,
         launder_sequence_t<R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
@@ -193,7 +201,7 @@ public:
 
     template <canonical_vector T, const_mask_for<T> M, index_sequence_like R>
     requires canonical_vector<T> &&
-        unqualified_canonical_mpermute<dx::zero_t, launder_cmask_t<T, M>, T,
+        unqualified_canonical_zmpermute<launder_cmask_t<T, M>, T,
             launder_sequence_t<R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
@@ -214,7 +222,7 @@ public:
     }
 
     template <canonical_vector T, canonical_vindex_for<T> R>
-    requires unqualified_canonical_mpermute<T, simd_mask_type_t<T>, T, R>
+    requires unqualified_canonical_mpermute<simd_mask_type_t<T>, T, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(type_identity_t<T> src,
         simd_mask_type_t<T> mask, T val, R idx) noexcept {
@@ -223,7 +231,7 @@ public:
 
     template <canonical_vector T, canonical_vindex_for<T> R,
         result_cmask_for<permute_t, T, R> M>
-    requires unqualified_canonical_mpermute<T, launder_cmask_t<T, M>, T, R>
+    requires unqualified_canonical_mpermute<launder_cmask_t<T, M>, T, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
         type_identity_t<T> src, M cmask, T val, R idx) noexcept {
@@ -232,8 +240,7 @@ public:
     }
 
     template <canonical_vector T, canonical_vindex_for<T> R>
-    requires unqualified_canonical_mpermute<dx::zero_t, simd_mask_type_t<T>, T,
-        R>
+    requires unqualified_canonical_zmpermute<simd_mask_type_t<T>, T, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
         dx::zero_t zero, simd_mask_type_t<T> mask, T val, R idx) noexcept {
@@ -242,7 +249,7 @@ public:
 
     template <canonical_vector T, canonical_vindex_for<T> R,
         result_cmask_for<permute_t, T, R> M>
-    requires unqualified_canonical_mpermute<dx::zero_t,
+    requires unqualified_canonical_zmpermute<
         launder_cmask_t<cpo_result_t<permute_t, T, R>, M>, T, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
@@ -252,31 +259,37 @@ public:
     }
 };
 
-template <typename T, typename I, typename A = common_abi_t<T, I>>
+template <typename T, typename I>
 concept unqualified_extended_permute = requires {
     {
         permute(internal::declarg<T>(), internal::declarg<I>())
-    } -> vector_with_common_abi<A>;
+    } -> equivalent_vector_with<T>;
 };
 
 template <typename S, typename M, typename T, typename I>
-concept unqualified_extended_mpermute = cpo_invocable<permute_t, T, I> &&
-    (!simd_type<S> ||
-        equivalent_vector_with<S, cpo_result_t<permute_t, T, I>>) &&
-    requires {
+concept unqualified_extended_mpermute_base =
+    cpo_invocable<permute_t, T, I> && requires {
         {
-            permute(internal::abi<cpo_result_t<permute_t, T, I>>,
-                internal::declarg<S>(), internal::declarg<M>(),
-                internal::declarg<T>(), internal::declarg<I>())
-        } -> equivalent_vector_with<cpo_result_t<permute_t, T, I>>;
+            permute(internal::abi<T>, internal::declarg<S>(),
+                internal::declarg<M>(), internal::declarg<T>(),
+                internal::declarg<I>())
+        } -> equivalent_vector_with<T>;
     };
+
+template <typename S, typename M, typename T, typename I>
+concept unqualified_extended_mpermute =
+    unqualified_extended_mpermute_base<S, M, T, I> &&
+    equivalent_vector_with<S, T>;
+
+template <typename M, typename T, typename I>
+concept unqualified_extended_zmpermute =
+    unqualified_extended_mpermute_base<dx::zero_t, M, T, I>;
 
 template <>
 struct extended_impl<permute_t> {
 public:
     template <extended_vector L, index_sequence_like R>
-    requires unqualified_extended_permute<L, launder_sequence_t<R>,
-        simd_abi_type_t<L>>
+    requires unqualified_extended_permute<L, launder_sequence_t<R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L&& val, R idx) {
         return permute(__DPL forward<L>(val), __DPL to_index_sequence(idx));
@@ -298,16 +311,14 @@ public:
         unqualified_extended_mpermute<S, launder_cmask_t<S, M>, T,
             launder_sequence_t<R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(S&& src, M cmask, T&& val, R idx) {
-        return permute( __DPL forward<S>(src), dx::to_const_mask<S>(cmask),
+    static constexpr auto operator()(S&& src, M mask, T&& val, R idx) {
+        return permute( __DPL forward<S>(src), dx::to_const_mask<S>(mask),
             __DPL forward<T>(val), __DPL to_index_sequence(idx));
     }
 
-    template <simd_vector T, simd_mask M, index_sequence_like R>
+    template <simd_vector T, exact_mask_for<T> M, index_sequence_like R>
     requires (extended_mask<M> || extended_vector<T>) &&
-        cpo_invocable<permute_t, T, R> &&
-        exact_mask_for<M, cpo_result_t<permute_t, T, R>> &&
-        unqualified_extended_mpermute<dx::zero_t, M, T, launder_sequence_t<R>>
+        unqualified_extended_zmpermute<M, T, launder_sequence_t<R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         dx::zero_t zero, M&& mask, T&& val, R idx) {
@@ -315,16 +326,13 @@ public:
             __DPL to_index_sequence(idx));
     }
 
-    template <extended_vector T, index_sequence_like R,
-        result_cmask_for<permute_t, T, R> M>
-    requires unqualified_extended_mpermute<dx::zero_t,
-        launder_cmask_t<cpo_result_t<permute_t, T, R>, M>, T,
+    template <extended_vector T, const_mask_for<T> M, index_sequence_like R>
+    requires unqualified_extended_zmpermute<launder_cmask_t<T, M>, T,
         launder_sequence_t<R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(dx::zero_t zero, M cmask, T&& val, R idx) {
-        return permute(zero,
-            dx::to_const_mask<cpo_result_t<permute_t, T, R>>(cmask),
-            __DPL forward<T>(val), __DPL to_index_sequence(idx));
+    static constexpr auto operator()(dx::zero_t zero, M mask, T&& val, R idx) {
+        return permute(zero, dx::to_const_mask<T>(mask), __DPL forward<T>(val),
+            __DPL to_index_sequence(idx));
     }
 
     ///
@@ -350,16 +358,14 @@ public:
     requires (extended_vector<S> || extended_vector<T>) &&
         unqualified_extended_mpermute<S, launder_cmask_t<S, M>, T, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(S&& src, M cmask, T&& val, R idx) {
-        return permute( __DPL forward<S>(src), dx::to_const_mask<S>(cmask),
+    static constexpr auto operator()(S&& src, M mask, T&& val, R idx) {
+        return permute( __DPL forward<S>(src), dx::to_const_mask<S>(mask),
             __DPL forward<T>(val), idx);
     }
 
-    template <simd_vector T, simd_mask M, vindex_for<T> R>
+    template <simd_vector T, exact_mask_for<T> M, vindex_for<T> R>
     requires (extended_mask<M> || extended_vector<T>) &&
-        cpo_invocable<permute_t, T, R> &&
-        exact_mask_for<M, cpo_result_t<permute_t, T, R>> &&
-        unqualified_extended_mpermute<dx::zero_t, M, T, R>
+        unqualified_extended_zmpermute<M, T, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         dx::zero_t zero, M&& mask, T&& val, R idx) {
@@ -367,15 +373,12 @@ public:
             zero, __DPL forward<M>(mask), __DPL forward<T>(val), idx);
     }
 
-    template <extended_vector T, vindex_for<T> R,
-        result_cmask_for<permute_t, T, R> M>
-    requires unqualified_extended_mpermute<dx::zero_t,
-        launder_cmask_t<cpo_result_t<permute_t, T, R>, M>, T, R>
+    template <extended_vector T, const_mask_for<T> M, vindex_for<T> R>
+    requires unqualified_extended_zmpermute<launder_cmask_t<T, M>, T, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(dx::zero_t zero, M cmask, T&& val, R idx) {
-        return permute(zero,
-            dx::to_const_mask<cpo_result_t<permute_t, T, R>>(cmask),
-            __DPL forward<T>(val), idx);
+    static constexpr auto operator()(dx::zero_t zero, M mask, T&& val, R idx) {
+        return permute(
+            zero, dx::to_const_mask<T>(mask), __DPL forward<T>(val), idx);
     }
 };
 

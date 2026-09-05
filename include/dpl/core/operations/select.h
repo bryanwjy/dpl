@@ -11,7 +11,6 @@
 #  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/concepts/mask_compatibility.h"
 #  include "dpl/core/concepts/simd_type.h"
-#  include "dpl/core/dispatch/broadcastable/selection.h"
 #  include "dpl/core/dispatch/interface.h"
 #  include "dpl/core/dispatch/operation/primitive.h"
 #  include "dpl/core/immediate/const_mask.h"
@@ -26,11 +25,8 @@ __DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void select(...) noexcept = delete;
 
-struct select_t :
-    public primitive_operation_base<select_t>,
-    public selection_broadcastable_operation<select_t> {
+struct select_t : public primitive_operation_base<select_t> {
     using operation_base<select_t>::operator();
-    using selection_broadcastable_operation<select_t>::operator();
 };
 
 template <>
@@ -39,9 +35,9 @@ struct operation_signature<select_t> {
     requires simd_type<L> || simd_type<R>
     static consteval void operator()(M&&, L&&, R&&) noexcept {}
 
-    template <integral_constant_like M, typename L, typename R>
-    requires (!simd_mask<M>) && (simd_type<L> || simd_type<R>)
-    static consteval void operator()(M&&, L&&, R&&) noexcept {}
+    template <const_mask_like M, typename L, typename R>
+    requires simd_type<L> || simd_type<R>
+    static consteval void operator()(M, L&&, R&&) noexcept {}
 };
 
 struct bwand_t;
@@ -50,7 +46,7 @@ struct bwor_t;
 struct bwornot_t;
 
 template <>
-struct fallback_impl<select_t> : selection_broadcasting_fallback<select_t> {
+struct fallback_impl<select_t> {
 private:
     struct sbwand : operation_base<bwand_t> {
         using operation_base<bwand_t>::operator();
@@ -66,13 +62,9 @@ private:
     };
 
     template <typename L, typename R>
-    using common_mask_t DPL_NODEBUG = make_canonical_mask_t<
-        common_size_type_t<simd_element_type_t<L>, simd_element_type_t<R>>,
-        common_abi_t<L, R>>;
+    using common_mask_t DPL_NODEBUG = common_canonical_simd_t<L, R>;
 
 public:
-    using selection_broadcasting_fallback<select_t>::operator();
-
     template <canonical_vector T>
     requires fixed_width_abi<simd_abi_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
@@ -102,7 +94,6 @@ public:
     }
 
     template <canonical_vector T, const_mask_for<T> M>
-    requires fixed_width_abi<simd_abi_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(
         M mask, T lhs, T rhs) noexcept {
@@ -116,7 +107,6 @@ public:
     }
 
     template <canonical_mask L, equivalent_mask_with<L> R, const_mask_for<L> M>
-    requires fixed_width_abi<simd_abi_type_t<L>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(
         M mask, L lhs, R rhs) noexcept {
@@ -207,22 +197,55 @@ public:
         return bwor(
             static_cast<canonical_type_t<R>>(cmask), __DPL forward<R>(rhs));
     }
+
+    template <canonical_vector T, broadcastable_to<T> F>
+    requires cpo_invocable<select_t, simd_mask_type_t<T>, T, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr T DPL_VECTORCALL operator()(
+        simd_mask_type_t<T> mask, T tval, F&& fval) noexcept {
+        return select_t::operator()(
+            mask, tval, dx::broadcast<T>(__DPL forward<F>(fval)));
+    }
+
+    template <canonical_vector F, broadcastable_to<F> T>
+    requires cpo_invocable<select_t, simd_mask_type_t<F>, F, F>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr F DPL_VECTORCALL operator()(
+        simd_mask_type_t<F> mask, T&& tval, F fval) noexcept {
+        return select_t::operator()(
+            mask, dx::broadcast<F>(__DPL forward<T>(tval)), fval);
+    }
+
+    template <canonical_vector T, broadcastable_to<T> F, const_mask_for<T> M>
+    requires cpo_invocable<select_t, M, T, T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr T DPL_VECTORCALL operator()(
+        M mask, T tval, F&& fval) noexcept {
+        return select_t::operator()(
+            mask, tval, dx::broadcast<T>(__DPL forward<F>(fval)));
+    }
+
+    template <canonical_vector F, broadcastable_to<F> T, const_mask_for<F> M>
+    requires cpo_invocable<select_t, M, F, F>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr F DPL_VECTORCALL operator()(
+        M mask, T&& tval, F fval) noexcept {
+        return select_t::operator()(
+            mask, dx::broadcast<F>(__DPL forward<T>(tval)), fval);
+    }
 };
 
 template <>
 struct canonical_impl<select_t> {
 private:
     template <typename L, typename R>
-    using vresult_t DPL_NODEBUG =
-        make_canonical_vector_t<simd_element_type_t<L>, common_abi_t<L, R>>;
+    using vresult_t DPL_NODEBUG = common_canonical_simd_t<L, R>;
 
     template <typename L, typename R>
     using vmask_t DPL_NODEBUG = simd_mask_type_t<vresult_t<L, R>>;
 
     template <typename L, typename R>
-    using common_mask_t DPL_NODEBUG = make_canonical_mask_t<
-        common_size_type_t<simd_element_type_t<L>, simd_element_type_t<R>>,
-        common_abi_t<L, R>>;
+    using common_mask_t DPL_NODEBUG = common_canonical_simd_t<L, R>;
 
 public:
     template <canonical_vector L, common_vector_with<L> R>
@@ -678,7 +701,9 @@ struct selecti_t {
     requires requires { typename cmask_t<V>; } &&
         cpo_invocable<select_t, cmask_t<V>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L&& lhs, R&& rhs) noexcept {
+    static constexpr cpo_result_t<select_t, cmask_t<V>, L, R> operator()(
+        L&& lhs,
+        R&& rhs) noexcept(canonical_simd_type<L> && canonical_simd_type<R>) {
         return select_t::operator()(
             cmask_v<V>, __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }

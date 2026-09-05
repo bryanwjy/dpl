@@ -48,7 +48,18 @@ concept vector_with = simd_type_with<T, E, A> && simd_vector<T>;
 namespace atom {
 template <typename T, typename U>
 concept equivalent_mask_elements = simd_mask<T> && simd_mask<U> &&
-    common_size_with<simd_element_type_t<T>, simd_element_type_t<U>>;
+    (same_as<T, U> ||
+        common_size_with<simd_element_type_t<T>, simd_element_type_t<U>> ||
+        /**
+         * scalable ABI workaround
+         *
+         * Since scalable backend types cannot be encapsulated,
+         * the mask types may not be differentiated on certain backends,
+         * e.g. ARM SVE
+         */
+        same_as<
+            make_canonical_mask_t<simd_element_type_t<T>, common_abi_t<T, U>>,
+            make_canonical_mask_t<simd_element_type_t<U>, common_abi_t<U, T>>>);
 
 template <typename T, typename U>
 concept equivalent_vector_elements = simd_vector<T> && simd_vector<U> &&
@@ -64,8 +75,8 @@ concept vector_subsumed_by = common_vector_with<T, U> &&
     same_abi_as<common_abi_t<T, U>, simd_abi_type_t<U>>;
 
 template <typename T, typename U>
-concept common_mask_with = common_simd_type_with<T, U> && simd_mask<T> &&
-    simd_mask<U> && atom::equivalent_mask_elements<T, U>;
+concept common_mask_with = simd_mask<T> && simd_mask<U> &&
+    common_simd_type_with<T, U> && atom::equivalent_mask_elements<T, U>;
 
 template <typename T, typename U>
 concept mask_subsumed_by = common_mask_with<T, U> &&
@@ -100,7 +111,8 @@ struct common_canonical_simd<A, B> :
 
 template <simd_mask A, common_mask_with<A> B>
 struct common_canonical_simd<A, B> :
-    make_canonical_mask<simd_element_type_t<A>,
+    make_canonical_mask<
+        common_size_type_t<simd_element_type_t<A>, simd_element_type_t<B>>,
         common_abi_t<simd_abi_type_t<A>, simd_abi_type_t<B>>> {};
 
 template <typename T, typename U, typename... Ts>

@@ -44,6 +44,7 @@ DPL_DISABLE_WARNING(5244)
 #include "dpl/core/math/isnans.h"
 #include "dpl/core/math/isnormal.h"
 #include "dpl/core/math/ldexp.h"
+#include "dpl/core/math/lerp.h"
 #include "dpl/core/math/log2.h"
 #include "dpl/core/math/mulx.h"
 #include "dpl/core/math/pow.h"

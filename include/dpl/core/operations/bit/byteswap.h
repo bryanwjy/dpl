@@ -108,9 +108,9 @@ public:
     }
 };
 
-template <typename T, typename A = simd_abi_type_t<T>>
+template <typename T>
 concept unqualified_extended_byteswap = requires {
-    { byteswap(internal::declarg<T>()) } -> vector_with_common_abi<A>;
+    { byteswap(internal::declarg<T>()) } -> equivalent_vector_with<T>;
 };
 
 template <typename S, typename M, typename T>
@@ -120,8 +120,7 @@ concept unqualified_extended_mbyteswap = cpo_invocable<byteswap_t, T> &&
         {
             byteswap(internal::declarg<S>(), internal::declarg<M>(),
                 internal::declarg<T>())
-        } -> equivalent_vector_with<
-            conditional_t<simd_type<S>, S, cpo_result_t<byteswap_t, T>>>;
+        } -> equivalent_vector_with<T>;
     };
 
 template <>
@@ -160,9 +159,9 @@ public:
         return byteswap(zero, __DPL forward<M>(mask), __DPL forward<T>(val));
     }
 
-    template <simd_vector T, result_cmask_for<byteswap_t, T> M>
-    requires extended_vector<T> &&
-        unqualified_extended_mbyteswap<dx::zero_t, launder_cmask_t<T, M>, T>
+    template <extended_vector T, result_cmask_for<byteswap_t, T> M>
+    requires unqualified_extended_mbyteswap<dx::zero_t, launder_cmask_t<T, M>,
+        T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(dx::zero_t zero, M cmask, T&& val) {
         return byteswap(

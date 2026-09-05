@@ -14,7 +14,6 @@
 #  include "dpl/core/concepts/cpo_invocable.h"
 #  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/concepts/mask_compatibility.h"
-#  include "dpl/core/dispatch/broadcastable/binary.h"
 #  include "dpl/core/dispatch/interface.h"
 #  include "dpl/core/dispatch/maskable/transform.h"
 #  include "dpl/core/dispatch/operation/primitive.h"
@@ -42,11 +41,9 @@ void subadd(...) noexcept = delete;
 
 struct DPL_EMPTY_BASES subadd_t :
     public arithmetic_base<subadd_t>,
-    public maskable_transform_base<subadd_t>,
-    public binary_broadcastable_operation<subadd_t> {
+    public maskable_transform_base<subadd_t> {
     using operation_base<subadd_t>::operator();
     using maskable_transform_base<subadd_t>::operator();
-    using binary_broadcastable_operation<subadd_t>::operator();
 };
 
 template <>
@@ -57,7 +54,12 @@ struct operation_signature<subadd_t> {
 };
 
 template <>
-struct fallback_impl<subadd_t> : binary_broadcasting_fallback<subadd_t> {
+struct fallback_impl<subadd_t> : binary_canonical_broadcaster<subadd_t> {
+private:
+    template <typename L, typename R>
+    using result_t DPL_NODEBUG = cpo_result_t<addsub_t, L, R>;
+    template <typename L, typename R>
+    using mask_t DPL_NODEBUG = simd_mask_type_t<result_t<L, R>>;
 
     template <simd_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
@@ -73,88 +75,133 @@ struct fallback_impl<subadd_t> : binary_broadcasting_fallback<subadd_t> {
         }
     }
 
-    template <canonical_vector LT, common_vector_with<LT> RT>
-    requires canonical_vector<RT>
+public:
+    template <canonical_vector L, common_vector_with<L> R>
+    requires canonical_vector<R> && cpo_invocable<add_t, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(LT lhs, RT rhs) noexcept {
-        auto const opmask = make_opmask<RT>();
+    static constexpr common_canonical_simd_t<L, R>
+        DPL_VECTORCALL operator()(L lhs, R rhs) noexcept {
+        auto const opmask = make_opmask<R>();
         return dx::add(lhs, dx::negate(rhs, opmask, rhs));
     }
 
-    template <typename L, typename R>
-    using result_t DPL_NODEBUG =
-        cpo_result_t<add_t, L, cpo_result_t<negate_t, R>>;
+    using binary_canonical_broadcaster<subadd_t>::operator();
 
-    template <canonical_vector LT, common_vector_with<LT> RT>
-    requires canonical_vector<RT> &&
-        cpo_invocable<add_t, LT, cpo_result_t<negate_t, RT>>
+    template <unextended_type L, unextended_terminal_of<subadd_t, L> R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(result_t<LT, RT> src,
-        simd_mask_type_t<result_t<LT, RT>> mask, LT lhs, RT rhs) noexcept {
-        auto const opmask = make_opmask<RT>();
-        return dx::add(src, mask, lhs, dx::negate(rhs, opmask, rhs));
+    static constexpr result_t<L, R>
+        DPL_VECTORCALL operator()(
+            result_t<L, R> src, mask_t<L, R> mask, L&& lhs, R&& rhs) noexcept {
+        using DL DPL_NODEBUG = decay_t<L>;
+        using DR DPL_NODEBUG = decay_t<R>;
+        if constexpr (broadcastable_to<L, DR>) {
+            return addsub_t::operator()(src, mask,
+                dx::broadcast<DR>(__DPL forward<L>(lhs)),
+                __DPL forward<R>(rhs));
+        } else if constexpr (broadcastable_to<R, DL>) {
+            return addsub_t::operator()(src, mask, __DPL forward<L>(lhs),
+                dx::broadcast<DL>(__DPL forward<R>(rhs)));
+        } else {
+            auto const opmask = make_opmask<R>();
+            return dx::add(src, mask, lhs, dx::negate(rhs, opmask, rhs));
+        }
     }
 
-    template <typename M, canonical_vector LT, common_vector_with<LT> RT>
-    requires canonical_vector<RT> &&
-        cpo_invocable<add_t, LT, cpo_result_t<negate_t, RT>> &&
-        const_mask_for<M, result_t<LT, RT>>
+    template <unextended_type L, unextended_type R,
+        result_cmask_for<addsub_t, L, R> M>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(
-        result_t<LT, RT> src, M mask, LT lhs, RT rhs) {
-        auto const opmask = make_opmask<RT>();
-        return dx::add(src, mask, lhs, dx::negate(rhs, opmask, rhs));
+    static constexpr result_t<L, R>
+        DPL_VECTORCALL operator()(
+            result_t<L, R> src, M mask, L&& lhs, R&& rhs) noexcept {
+        using DL DPL_NODEBUG = decay_t<L>;
+        using DR DPL_NODEBUG = decay_t<R>;
+        if constexpr (broadcastable_to<L, DR>) {
+            return addsub_t::operator()(src, mask,
+                dx::broadcast<DR>(__DPL forward<L>(lhs)),
+                __DPL forward<R>(rhs));
+        } else if constexpr (broadcastable_to<R, DL>) {
+            return addsub_t::operator()(src, mask, __DPL forward<L>(lhs),
+                dx::broadcast<DL>(__DPL forward<R>(rhs)));
+        } else {
+            auto const opmask = make_opmask<R>();
+            return dx::add(src, mask, lhs, dx::negate(rhs, opmask, rhs));
+        }
     }
 
-    template <canonical_vector LT, common_vector_with<LT> RT>
-    requires canonical_vector<RT> &&
-        cpo_invocable<add_t, LT, cpo_result_t<negate_t, RT>>
+    template <unextended_type L, unextended_terminal_of<subadd_t, L> R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(dx::zero_t zero,
-        simd_mask_type_t<result_t<LT, RT>> mask, LT lhs, RT rhs) noexcept {
-        auto const opmask = make_opmask<RT>();
-        return dx::add(zero, mask, lhs, dx::negate(rhs, opmask, rhs));
+    static constexpr result_t<L, R>
+        DPL_VECTORCALL operator()(
+            dx::zero_t zero, mask_t<L, R> mask, L&& lhs, R&& rhs) noexcept {
+        using DL DPL_NODEBUG = decay_t<L>;
+        using DR DPL_NODEBUG = decay_t<R>;
+        if constexpr (broadcastable_to<L, DR>) {
+            return addsub_t::operator()(zero, mask,
+                dx::broadcast<DR>(__DPL forward<L>(lhs)),
+                __DPL forward<R>(rhs));
+        } else if constexpr (broadcastable_to<R, DL>) {
+            return addsub_t::operator()(zero, mask, __DPL forward<L>(lhs),
+                dx::broadcast<DL>(__DPL forward<R>(rhs)));
+        } else {
+            auto const opmask = make_opmask<R>();
+            return dx::add(zero, mask, lhs, dx::negate(rhs, opmask, rhs));
+        }
     }
 
-    template <typename M, canonical_vector LT, common_vector_with<LT> RT>
-    requires canonical_vector<RT> &&
-        cpo_invocable<add_t, LT, cpo_result_t<negate_t, RT>> &&
-        const_mask_for<M, cpo_result_t<add_t, LT, cpo_result_t<negate_t, RT>>>
+    template <unextended_type L, unextended_type R,
+        result_cmask_for<addsub_t, L, R> M>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(
-        dx::zero_t zero, M mask, LT lhs, RT rhs) noexcept {
-        auto const opmask = make_opmask<RT>();
-        return dx::add(zero, mask, lhs, dx::negate(rhs, opmask, rhs));
+    static constexpr result_t<L, R>
+        DPL_VECTORCALL operator()(
+            dx::zero_t zero, M mask, L&& lhs, R&& rhs) noexcept {
+        using DL DPL_NODEBUG = decay_t<L>;
+        using DR DPL_NODEBUG = decay_t<R>;
+        if constexpr (broadcastable_to<L, DR>) {
+            return addsub_t::operator()(zero, mask,
+                dx::broadcast<DR>(__DPL forward<L>(lhs)),
+                __DPL forward<R>(rhs));
+        } else if constexpr (broadcastable_to<R, DL>) {
+            return addsub_t::operator()(zero, mask, __DPL forward<L>(lhs),
+                dx::broadcast<DL>(__DPL forward<R>(rhs)));
+        } else {
+            auto const opmask = make_opmask<R>();
+            return dx::add(zero, mask, lhs, dx::negate(rhs, opmask, rhs));
+        }
     }
-
-    using binary_broadcasting_fallback<subadd_t>::operator();
 };
 
-template <typename L, typename R, typename A = common_abi_t<L, R>>
+template <typename L, typename R, typename T = common_canonical_simd_t<L, R>>
 concept unqualified_canonical_subadd = requires {
     {
-        subadd(internal::abi<A>, internal::declarg<L>(), internal::declarg<R>())
-    } -> canonical_vector;
+        subadd(internal::abi<T>, internal::declarg<L>(), internal::declarg<R>())
+    } -> same_as<T>;
 };
 
-template <typename S, typename M, typename L, typename R,
-    typename A = common_abi_t<L, R>>
-concept unqualified_canonical_msubadd = cpo_invocable<subadd_t, L, R> &&
-    (!simd_type<S> || same_as<S, cpo_result_t<subadd_t, L, R>>) && requires {
+template <typename S, typename M, typename L, typename R, typename T>
+concept unqualified_canonical_msubadd_base =
+    cpo_invocable<subadd_t, L, R> && requires {
         {
-            subadd(internal::abi<A>, internal::declarg<S>(),
+            subadd(internal::abi<T>, internal::declarg<S>(),
                 internal::declarg<M>(), internal::declarg<L>(),
                 internal::declarg<R>())
-        } -> same_as<cpo_result_t<subadd_t, L, R>>;
+        } -> same_as<T>;
     };
+
+template <typename M, typename L, typename R,
+    typename T = common_canonical_simd_t<L, R>>
+concept unqualified_canonical_msubadd =
+    unqualified_canonical_msubadd_base<T, M, L, R, T>;
+
+template <typename M, typename L, typename R,
+    typename T = common_canonical_simd_t<L, R>>
+concept unqualified_canonical_zmsubadd =
+    unqualified_canonical_msubadd_base<dx::zero_t, M, L, R, T>;
 
 template <>
 struct canonical_impl<subadd_t> {
 private:
     template <typename L, typename R>
-    using result_t DPL_NODEBUG =
-        make_canonical_vector_t<simd_element_type_t<L>, common_abi_t<L, R>>;
-
+    using result_t DPL_NODEBUG = cpo_result_t<subadd_t, L, R>;
     template <typename L, typename R>
     using mask_t DPL_NODEBUG = simd_mask_type_t<result_t<L, R>>;
 
@@ -162,109 +209,117 @@ public:
     template <canonical_vector L, common_vector_with<L> R>
     requires canonical_vector<R> && unqualified_canonical_subadd<L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr result_t<L, R> operator()(L lhs, R rhs) noexcept {
+    static constexpr common_canonical_simd_t<L, R> operator()(
+        L lhs, R rhs) noexcept {
         return subadd(internal::abi<common_abi_t<L, R>>, lhs, rhs);
     }
 
     template <canonical_vector L, broadcastable_to<L> R>
-    requires unqualified_canonical_subadd<L, R, simd_abi_type_t<L>>
+    requires unqualified_canonical_subadd<L, R, L>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr L operator()(L lhs, R&& rhs) noexcept {
         return subadd(internal::abi<L>, lhs, __DPL forward<R>(rhs));
     }
 
     template <canonical_vector R, broadcastable_to<R> L>
-    requires unqualified_canonical_subadd<L, R, simd_abi_type_t<R>>
+    requires unqualified_canonical_subadd<L, R, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr R operator()(L&& lhs, R rhs) noexcept {
         return subadd(internal::abi<R>, __DPL forward<L>(lhs), rhs);
     }
 
-    template <canonical_vector L, common_vector_with<L> R>
-    requires canonical_vector<R> &&
-        unqualified_canonical_msubadd<result_t<L, R>, mask_t<L, R>, L, R>
+    template <unextended_type L, unextended_terminal_of<subadd_t, L> R>
+    requires unqualified_canonical_msubadd<mask_t<L, R>, L, R, result_t<L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr result_t<L, R> operator()(
-        result_t<L, R> src, mask_t<L, R> mask, L lhs, R rhs) noexcept {
-        return subadd(internal::abi<common_abi_t<L, R>>, src, mask, lhs, rhs);
+        result_t<L, R> src, mask_t<L, R> mask, L&& lhs, R&& rhs) noexcept {
+        return subadd(internal::abi<result_t<L, R>>, src, mask,
+            __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 
-    template <canonical_vector L, common_vector_with<L> R,
-        const_mask_for<result_t<L, R>> M>
-    requires canonical_vector<R> &&
-        unqualified_canonical_msubadd<result_t<L, R>,
-            launder_cmask_t<result_t<L, R>, M>, L, R>
+    template <unextended_type L, unextended_type R, result_cmask_for<L, R> M>
+    requires unqualified_canonical_msubadd<launder_cmask_t<result_t<L, R>, M>,
+        L, R, result_t<L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr result_t<L, R> operator()(
-        result_t<L, R> src, M cmask, L lhs, R rhs) noexcept {
-        return subadd(internal::abi<common_abi_t<L, R>>, src,
-            dx::to_const_mask<result_t<L, R>>(cmask), lhs, rhs);
+        result_t<L, R> src, M mask, L&& lhs, R&& rhs) noexcept {
+        using T = result_t<L, R>;
+        return subadd(internal::abi<T>, src, dx::to_const_mask<T>(mask),
+            __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 
-    template <canonical_vector L, common_vector_with<L> R>
-    requires canonical_vector<R> &&
-        unqualified_canonical_msubadd<dx::zero_t, mask_t<L, R>, L, R>
+    template <unextended_type L, unextended_terminal_of<subadd_t, L> R>
+    requires unqualified_canonical_zmsubadd<mask_t<L, R>, L, R, result_t<L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr result_t<L, R> operator()(
-        dx::zero_t zero, mask_t<L, R> mask, L lhs, R rhs) noexcept {
-        return subadd(internal::abi<common_abi_t<L, R>>, zero, mask, lhs, rhs);
+        dx::zero_t zero, mask_t<L, R> mask, L&& lhs, R&& rhs) noexcept {
+        return subadd(internal::abi<result_t<L, R>>, zero, mask,
+            __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 
-    template <canonical_vector L, common_vector_with<L> R,
-        const_mask_for<result_t<L, R>> M>
-    requires canonical_vector<R> &&
-        unqualified_canonical_msubadd<dx::zero_t,
-            launder_cmask_t<result_t<L, R>, M>, L, R>
+    template <unextended_type L, unextended_type R, result_cmask_for<L, R> M>
+    requires unqualified_canonical_zmsubadd<launder_cmask_t<result_t<L, R>, M>,
+        L, R, result_t<L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr result_t<L, R> operator()(
-        dx::zero_t zero, M cmask, L lhs, R rhs) noexcept {
-        return subadd(internal::abi<common_abi_t<L, R>>, zero,
-            dx::to_const_mask<result_t<L, R>>(cmask), lhs, rhs);
+        dx::zero_t zero, M mask, L&& lhs, R&& rhs) noexcept {
+        using T = result_t<L, R>;
+        return subadd(internal::abi<T>, zero, dx::to_const_mask<T>(mask),
+            __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 };
 
-template <typename L, typename R, typename A = common_abi_t<L, R>>
+template <typename L, typename R, typename T>
 concept unqualified_extended_subadd = requires {
     {
         subadd(internal::declarg<L>(), internal::declarg<R>())
-    } -> vector_with_common_abi<A>;
+    } -> equivalent_vector_with<T>;
 };
 
 template <typename S, typename M, typename L, typename R>
-concept unqualified_extended_msubadd = cpo_invocable<subadd_t, L, R> &&
-    (!simd_type<S> ||
-        equivalent_vector_with<S, cpo_result_t<subadd_t, L, R>>) &&
-    requires {
+concept unqualified_extended_msubadd_base =
+    cpo_invocable<subadd_t, L, R> && requires {
         {
             subadd(internal::declarg<S>(), internal::declarg<M>(),
                 internal::declarg<L>(), internal::declarg<R>())
         } -> equivalent_vector_with<cpo_result_t<subadd_t, L, R>>;
     };
 
+template <typename S, typename M, typename L, typename R>
+concept unqualified_extended_msubadd =
+    equivalent_vector_with<S, cpo_result_t<subadd_t, L, R>> &&
+    unqualified_extended_msubadd_base<S, M, L, R>;
+
+template <typename M, typename L, typename R>
+concept unqualified_extended_zmsubadd =
+    unqualified_extended_msubadd_base<dx::zero_t, M, L, R>;
+
 template <>
 struct extended_impl<subadd_t> {
 public:
     template <simd_vector L, common_vector_with<L> R>
     requires (extended_vector<L> || extended_vector<R>) &&
-        unqualified_extended_subadd<L, R>
+        unqualified_extended_subadd<L, R, common_canonical_simd_t<L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L&& lhs, R&& rhs) {
         return subadd(__DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 
-    template <typename L, typename R>
-    requires (extended_vector<L> &&
-                 broadcastable_to<R, result_or_decayed_t<L>> &&
-                 unqualified_extended_subadd<L, R, simd_abi_type_t<L>>) ||
-        (extended_vector<R> && broadcastable_to<L, result_or_decayed_t<R>> &&
-            unqualified_extended_subadd<L, R, simd_abi_type_t<R>>)
+    template <extended_vector L, broadcastable_to<L> R>
+    requires unqualified_extended_subadd<L, R, L>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L&& lhs, R&& rhs) {
         return subadd(__DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 
-    template <simd_vector S, exact_mask_for<S> M, common_vector_with<S> L,
-        common_vector_with<L> R>
+    template <extended_vector R, broadcastable_to<R> L>
+    requires unqualified_extended_subadd<L, R, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(L&& lhs, R&& rhs) {
+        return subadd(__DPL forward<L>(lhs), __DPL forward<R>(rhs));
+    }
+
+    template <simd_vector S, exact_mask_for<S> M, typename L, typename R>
     requires (extended_vector<S> || extended_mask<M> || extended_vector<L> ||
                  extended_vector<R>) &&
         unqualified_extended_msubadd<S, M, L, R>
@@ -274,20 +329,18 @@ public:
             __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 
-    template <simd_vector S, const_mask_for<S> M, common_vector_with<S> L,
-        common_vector_with<L> R>
+    template <simd_vector S, const_mask_for<S> M, typename L, typename R>
     requires (extended_vector<S> || extended_vector<L> || extended_vector<R>) &&
         unqualified_extended_msubadd<S, launder_cmask_t<S, M>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(S&& src, M cmask, L&& lhs, R&& rhs) {
-        return subadd(src, dx::to_const_mask<S>(cmask), __DPL forward<L>(lhs),
+    static constexpr auto operator()(S&& src, M mask, L&& lhs, R&& rhs) {
+        return subadd(src, dx::to_const_mask<S>(mask), __DPL forward<L>(lhs),
             __DPL forward<R>(rhs));
     }
 
-    template <simd_vector L, common_vector_with<L> R,
-        result_mask_for<subadd_t, L, R> M>
+    template <typename L, typename R, result_mask_for<subadd_t, L, R> M>
     requires (extended_mask<M> || extended_vector<L> || extended_vector<R>) &&
-        unqualified_extended_msubadd<dx::zero_t, M, L, R>
+        unqualified_extended_zmsubadd<M, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         dx::zero_t zero, M&& mask, L&& lhs, R&& rhs) {
@@ -295,16 +348,15 @@ public:
             __DPL forward<R>(rhs));
     }
 
-    template <simd_vector L, common_vector_with<L> R,
-        result_cmask_for<subadd_t, L, R> M>
+    template <typename L, typename R, result_cmask_for<subadd_t, L, R> M>
     requires (extended_vector<L> || extended_vector<R>) &&
-        unqualified_extended_msubadd<dx::zero_t,
+        unqualified_extended_zmsubadd<
             launder_cmask_t<cpo_result_t<subadd_t, L, R>, M>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
-        dx::zero_t zero, M cmask, L&& lhs, R&& rhs) {
+        dx::zero_t zero, M mask, L&& lhs, R&& rhs) {
         return subadd(zero,
-            dx::to_const_mask<cpo_result_t<subadd_t, L, R>>(cmask),
+            dx::to_const_mask<cpo_result_t<subadd_t, L, R>>(mask),
             __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 };

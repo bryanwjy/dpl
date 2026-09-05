@@ -276,10 +276,11 @@ concept const_mask_like = enable_const_mask<remove_cv_t<T>> &&
     (integral_constant_like<T> || bitset_constant_like<T>);
 
 template <typename M, typename T>
-concept const_mask_for = fixed_width_simd_type<T> && const_mask_like<M> &&
+concept const_mask_for =
+    simd_type<T> && fixed_width_abi<simd_abi_type_t<T>> && const_mask_like<M> &&
     simd_abi_traits<T>::size >= __DPL bit_width(M::value);
 
-template <fixed_width_simd_type T, const_mask_for<T> M>
+template <simd_type T, const_mask_for<T> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 consteval auto to_const_mask(M) noexcept {
     constexpr auto width = simd_abi_traits<T>::size();

@@ -54,21 +54,21 @@ inline mask<common_size_type_t<L, R>>
     }
 }
 
-template <simd_element E>
-DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-inline vector<E> bwxor(abi_tag, vector<E> lhs, vector<E> rhs) noexcept
-requires requires { xmm::bwxor(lhs, rhs); }
-{
-    return xmm::bwxor(lhs, rhs);
-}
+// template <simd_element E>
+// DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+// inline vector<E> bwxor(abi_tag, vector<E> lhs, vector<E> rhs) noexcept
+// requires requires { xmm::bwxor(lhs, rhs); }
+// {
+//     return xmm::bwxor(lhs, rhs);
+// }
 
-template <simd_element L, simd_element R>
-DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-inline auto bwxor(abi_tag, mask<L> lhs, mask<R> rhs) noexcept
-requires requires { xmm::bwxor(lhs, rhs); }
-{
-    return xmm::bwxor(lhs, rhs);
-}
+// template <simd_element L, simd_element R>
+// DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+// inline auto bwxor(abi_tag, mask<L> lhs, mask<R> rhs) noexcept
+// requires requires { xmm::bwxor(lhs, rhs); }
+// {
+//     return xmm::bwxor(lhs, rhs);
+// }
 
 } // namespace datapar::xmm
 

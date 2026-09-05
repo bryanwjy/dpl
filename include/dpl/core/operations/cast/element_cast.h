@@ -47,44 +47,48 @@ public:
         return val;
     }
 
-    template <fixed_width_abi A, simd_element_for<A> FromE>
-    requires simd_element_for<ToE, A>
+    template <canonical_vector T>
+    requires fixed_width_abi<simd_abi_type_t<T>> &&
+        different_from<simd_element_type_t<T>, ToE> &&
+        explicitly_convertible_to<simd_element_type_t<T>, ToE>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_vector<ToE, A>
-        DPL_VECTORCALL operator()(basic_vector<FromE, A> val) noexcept {
-        using From = basic_vector<FromE, A>;
-        using To = basic_vector<ToE, A>;
-        return []<size_t... Is>(From val, index_sequence<Is...>) {
+    static constexpr rebind_simd_t<T, ToE>
+        DPL_VECTORCALL operator()(T val) noexcept {
+        using To = rebind_simd_t<T, ToE>;
+        return []<size_t... Is>(T val, index_sequence<Is...>) {
             constexpr auto extent =
-                simd_abi_traits<From>::size < simd_abi_traits<To>::size
-                ? simd_abi_traits<From>::size
+                simd_abi_traits<T>::size < simd_abi_traits<To>::size
+                ? simd_abi_traits<T>::size
                 : simd_abi_traits<To>::size;
             array_for<To> buffer{
                 (Is < extent ? static_cast<ToE>(val[Is]) : dx::zero_v<ToE>)...};
-            return dx::load<A>(aligned, buffer.data);
+            return dx::load<To>(aligned, buffer.data);
         }(val, iota_sequence<To>);
     }
 };
 
 template <typename ToE, typename S, typename M, typename T>
-concept unqualified_canonical_melement_cast =
-    cpo_invocable<element_cast_t<ToE>, T> &&
-    (!simd_type<S> || same_as<S, cpo_result_t<element_cast_t<ToE>, T>>) &&
-    requires(S src, M mask, T val) {
+concept unqualified_canonical_melement_cast_base =
+    cpo_invocable<element_cast_t<ToE>, T> && requires {
         {
-            element_cast<ToE>(
-                internal::abi<cpo_result_t<element_cast_t<ToE>, T>>, src, mask,
-                val)
-        } -> same_as<cpo_result_t<element_cast_t<ToE>, T>>;
+            element_cast(internal::abi<T>, internal::declarg<S>(),
+                internal::declarg<M>(), internal::declarg<T>())
+        } -> same_as<rebind_simd_t<T, ToE>>;
     };
+
+template <typename ToE, typename M, typename T>
+concept unqualified_canonical_melement_cast =
+    unqualified_canonical_melement_cast_base<ToE, rebind_simd_t<T, ToE>, M, T>;
+
+template <typename ToE, typename M, typename T>
+concept unqualified_canonical_zmelement_cast =
+    unqualified_canonical_melement_cast_base<ToE, dx::zero_t, M, T>;
 
 template <typename ToE>
 struct canonical_impl<element_cast_t<ToE>> {
 private:
     template <typename T>
-    using result_t DPL_NODEBUG =
-        make_canonical_vector_t<ToE, simd_abi_type_t<T>>;
-
+    using result_t DPL_NODEBUG = rebind_simd_t<T, ToE>;
     template <typename T>
     using mask_t DPL_NODEBUG = simd_mask_type_t<result_t<T>>;
 
@@ -98,8 +102,7 @@ public:
     }
 
     template <canonical_vector T>
-    requires canonical_vector<T> &&
-        unqualified_canonical_melement_cast<ToE, result_t<T>, mask_t<T>, T>
+    requires unqualified_canonical_melement_cast<ToE, mask_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr result_t<T> operator()(
         result_t<T> src, mask_t<T> mask, T val) noexcept {
@@ -107,8 +110,7 @@ public:
     }
 
     template <canonical_vector T, const_mask_for<T> M>
-    requires unqualified_canonical_melement_cast<ToE, result_t<T>,
-        launder_cmask_t<T, M>, T>
+    requires unqualified_canonical_melement_cast<ToE, launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr result_t<T> operator()(
         result_t<T> src, M cmask, T val) noexcept {
@@ -117,7 +119,7 @@ public:
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_melement_cast<ToE, dx::zero_t, mask_t<T>, T>
+    requires unqualified_canonical_zmelement_cast<ToE, mask_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr result_t<T> operator()(
         dx::zero_t zero, mask_t<T> mask, T val) noexcept {
@@ -125,8 +127,7 @@ public:
     }
 
     template <canonical_vector T, const_mask_for<T> M>
-    requires unqualified_canonical_melement_cast<ToE, dx::zero_t,
-        launder_cmask_t<T, M>, T>
+    requires unqualified_canonical_zmelement_cast<ToE, launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr result_t<T> operator()(
         dx::zero_t zero, M cmask, T val) noexcept {
@@ -135,29 +136,30 @@ public:
     }
 };
 
-template <typename To, typename From>
-concept unqualified_extended_element_cast =
-    simd_element_for<To, simd_abi_type_t<From>> &&
-    requires { typename rebind_simd_t<remove_cvref_t<From>, To>; } &&
-    common_simd_type_with<rebind_simd_t<remove_cvref_t<From>, To>, From> &&
-    (explicitly_convertible_to<From, rebind_simd_t<remove_cvref_t<From>, To>> ||
-        requires {
-            {
-                element_cast<To>(internal::declarg<From>())
-            } -> same_as<rebind_simd_t<remove_cvref_t<From>, To>>;
-        });
+template <typename ToE, typename T>
+concept unqualified_extended_element_cast = requires {
+    {
+        element_cast<ToE>(internal::declarg<T>())
+    } -> equivalent_vector_with<rebind_simd_t<remove_cvref_t<T>, ToE>>;
+};
 
 template <typename ToE, typename S, typename M, typename T>
-concept unqualified_extended_melement_cast =
-    cpo_invocable<element_cast_t<ToE>, T> &&
-    (!simd_type<S> ||
-        equivalent_vector_with<S, cpo_result_t<element_cast_t<ToE>, T>>) &&
-    requires {
+concept unqualified_extended_melement_cast_base =
+    cpo_invocable<element_cast_t<ToE>, T> && requires {
         {
             element_cast<ToE>(internal::declarg<S>(), internal::declarg<M>(),
                 internal::declarg<T>())
-        } -> equivalent_vector_with<cpo_result_t<element_cast_t<ToE>, T>>;
+        } -> equivalent_vector_with<rebind_simd_t<remove_cvref_t<T>, ToE>>;
     };
+
+template <typename ToE, typename S, typename M, typename T>
+concept unqualified_extended_melement_cast =
+    equivalent_vector_with<S, rebind_simd_t<T, ToE>> &&
+    unqualified_extended_melement_cast_base<ToE, S, M, T>;
+
+template <typename ToE, typename M, typename T>
+concept unqualified_extended_zmelement_cast =
+    unqualified_extended_melement_cast_base<ToE, dx::zero_t, M, T>;
 
 template <typename ToE>
 struct extended_impl<element_cast_t<ToE>> {
@@ -187,14 +189,14 @@ public:
     requires (extended_vector<S> || extended_vector<T>) &&
         unqualified_extended_melement_cast<ToE, S, launder_cmask_t<S, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(S&& src, M cmask, T&& val) {
+    static constexpr auto operator()(S&& src, M mask, T&& val) {
         return element_cast<ToE>( __DPL forward<S>(src),
-            dx::to_const_mask<S>(cmask), __DPL forward<T>(val));
+            dx::to_const_mask<S>(mask), __DPL forward<T>(val));
     }
 
     template <simd_vector T, result_mask_for<element_cast_t<ToE>, T> M>
     requires (extended_mask<M> || extended_vector<T>) &&
-        unqualified_extended_melement_cast<ToE, dx::zero_t, M, T>
+        unqualified_extended_zmelement_cast<ToE, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(dx::zero_t zero, M&& mask, T&& val) {
         return element_cast<ToE>(
@@ -202,12 +204,12 @@ public:
     }
 
     template <extended_vector T, result_cmask_for<element_cast_t<ToE>, T> M>
-    requires unqualified_extended_melement_cast<ToE, dx::zero_t,
-        launder_cmask_t<cpo_result_t<element_cast_t<ToE>, T>, M>, T>
+    requires unqualified_extended_zmelement_cast<ToE,
+        launder_cmask_t<rebind_simd_t<T, ToE>, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(dx::zero_t zero, M cmask, T&& val) {
+    static constexpr auto operator()(dx::zero_t zero, M mask, T&& val) {
         return element_cast<ToE>(zero,
-            dx::to_const_mask<cpo_result_t<element_cast_t<ToE>, T>>(cmask),
+            dx::to_const_mask<rebind_simd_t<T, ToE>>(mask),
             __DPL forward<T>(val));
     }
 };

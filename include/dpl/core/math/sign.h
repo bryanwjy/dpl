@@ -44,108 +44,181 @@ struct DPL_EMPTY_BASES sign_t :
 
 template <>
 struct operation_signature<sign_t> {
-    static consteval void operator()(
-        simd_vector auto&&, simd_vector auto&&) noexcept {}
+    template <typename L, typename R>
+    requires simd_vector<L> || simd_vector<R>
+    static consteval void operator()(L&&, R&&) noexcept {}
 };
 
-template <typename L, typename R>
+template <>
+struct fallback_impl<sign_t> : binary_canonical_broadcaster<sign_t> {
+
+    template <canonical_vector L, same_as<L> R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr L DPL_VECTORCALL operator()(L lhs, R rhs) noexcept {
+        using E = simd_element_type_t<L>;
+        if constexpr (unsigned_integral<E>) {
+            return dx::select(dx::cmpeq(dx::zero, rhs), dx::zero, lhs);
+        } else if constexpr (floating_point_like<E>) {
+            return dx::bwxor(lhs, dx::bwand(rhs, dx::msb));
+        } else {
+            return dx::select(dx::cmpeq(dx::zero, rhs), dx::zero,
+                dx::negate(lhs, dx::cmplt(rhs, dx::zero), lhs));
+        }
+    }
+
+    using binary_canonical_broadcaster<sign_t>::operator();
+};
+
+template <typename L, typename R, typename T = common_canonical_simd_t<L, R>>
 concept unqualified_canonical_sign = requires {
     {
-        sign(internal::abi<L>, internal::declarg<L>(), internal::declarg<R>())
-    } -> same_as<L>;
+        sign(internal::abi<T>, internal::declarg<L>(), internal::declarg<R>())
+    } -> same_as<T>;
 };
 
-template <typename S, typename M, typename L, typename R>
-concept unqualified_canonical_msign = cpo_invocable<sign_t, L, R> &&
-    (!simd_type<S> || same_as<S, cpo_result_t<sign_t, L, R>>) && requires {
+template <typename S, typename M, typename L, typename R, typename T>
+concept unqualified_canonical_msign_base =
+    cpo_invocable<sign_t, L, R> && requires {
         {
-            sign(internal::abi<L>, internal::declarg<S>(),
+            sign(internal::abi<T>, internal::declarg<S>(),
                 internal::declarg<M>(), internal::declarg<L>(),
                 internal::declarg<R>())
-        } -> same_as<cpo_result_t<sign_t, L, R>>;
+        } -> same_as<T>;
     };
+
+template <typename M, typename L, typename R,
+    typename T = common_canonical_simd_t<L, R>>
+concept unqualified_canonical_msign =
+    unqualified_canonical_msign_base<T, M, L, R, T>;
+
+template <typename M, typename L, typename R,
+    typename T = common_canonical_simd_t<L, R>>
+concept unqualified_canonical_zmsign =
+    unqualified_canonical_msign_base<dx::zero_t, M, L, R, T>;
 
 template <>
 struct canonical_impl<sign_t> {
+private:
+    template <typename L, typename R>
+    using result_t DPL_NODEBUG = cpo_result_t<sign_t, L, R>;
+    template <typename L, typename R>
+    using mask_t DPL_NODEBUG = simd_mask_type_t<result_t<L, R>>;
+
 public:
-    template <canonical_vector L, vector_subsumed_by<L> R = L>
+    template <canonical_vector L, same_as<L> R>
     requires canonical_vector<R> && unqualified_canonical_sign<L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr L operator()(L lhs, R rhs) noexcept {
-        return sign(internal::abi<L>, lhs, rhs);
+    static constexpr common_canonical_simd_t<L, R> operator()(
+        L lhs, R rhs) noexcept {
+        return sign(internal::abi<common_abi_t<L, R>>, lhs, rhs);
     }
 
-    template <canonical_vector L, vector_subsumed_by<L> R = L>
-    requires canonical_vector<R> &&
-        unqualified_canonical_msign<L, simd_mask_type_t<L>, L, R>
+    template <canonical_vector L, broadcastable_to<L> R>
+    requires unqualified_canonical_sign<L, R, L>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr L operator()(type_identity_t<L> src,
-        simd_mask_type_t<L> mask, L lhs, R rhs) noexcept {
-        return sign(internal::abi<L>, src, mask, lhs, rhs);
+    static constexpr L operator()(L lhs, R&& rhs) noexcept {
+        return sign(internal::abi<L>, lhs, __DPL forward<R>(rhs));
     }
 
-    template <canonical_vector L, const_mask_for<L> M,
-        vector_subsumed_by<L> R = L>
-    requires canonical_vector<R> &&
-        unqualified_canonical_msign<L, launder_cmask_t<L, M>, L, R>
+    template <canonical_vector R, broadcastable_to<R> L>
+    requires unqualified_canonical_sign<L, R, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr L operator()(
-        type_identity_t<L> src, M cmask, L lhs, R rhs) noexcept {
-        return sign(
-            internal::abi<L>, src, dx::to_const_mask<L>(cmask), lhs, rhs);
+    static constexpr R operator()(L&& lhs, R rhs) noexcept {
+        return sign(internal::abi<R>, __DPL forward<L>(lhs), rhs);
     }
 
-    template <canonical_vector L, vector_subsumed_by<L> R = L>
-    requires canonical_vector<R> &&
-        unqualified_canonical_msign<dx::zero_t, simd_mask_type_t<L>, L, R>
+    template <unextended_type L, unextended_terminal_of<sign_t, L> R>
+    requires unqualified_canonical_msign<mask_t<L, R>, L, R, result_t<L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr L operator()(
-        dx::zero_t zero, simd_mask_type_t<L> mask, L lhs, R rhs) noexcept {
-        return sign(internal::abi<L>, zero, mask, lhs, rhs);
+    static constexpr result_t<L, R> operator()(
+        result_t<L, R> src, mask_t<L, R> mask, L&& lhs, R&& rhs) noexcept {
+        return sign(internal::abi<result_t<L, R>>, src, mask,
+            __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 
-    template <canonical_vector L, const_mask_for<L> M,
-        vector_subsumed_by<L> R = L>
-    requires canonical_vector<R> &&
-        unqualified_canonical_msign<dx::zero_t, launder_cmask_t<L, M>, L, R>
+    template <unextended_type L, unextended_type R, result_cmask_for<L, R> M>
+    requires unqualified_canonical_msign<launder_cmask_t<result_t<L, R>, M>, L,
+        R, result_t<L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr L operator()(
-        dx::zero_t zero, M cmask, L lhs, R rhs) noexcept {
-        return sign(
-            internal::abi<L>, zero, dx::to_const_mask<L>(cmask), lhs, rhs);
+    static constexpr result_t<L, R> operator()(
+        result_t<L, R> src, M mask, L&& lhs, R&& rhs) noexcept {
+        using T = result_t<L, R>;
+        return sign(internal::abi<T>, src, dx::to_const_mask<T>(mask),
+            __DPL forward<L>(lhs), __DPL forward<R>(rhs));
+    }
+
+    template <unextended_type L, unextended_terminal_of<sign_t, L> R>
+    requires unqualified_canonical_zmsign<mask_t<L, R>, L, R, result_t<L, R>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr result_t<L, R> operator()(
+        dx::zero_t zero, mask_t<L, R> mask, L&& lhs, R&& rhs) noexcept {
+        return sign(internal::abi<result_t<L, R>>, zero, mask,
+            __DPL forward<L>(lhs), __DPL forward<R>(rhs));
+    }
+
+    template <unextended_type L, unextended_type R, result_cmask_for<L, R> M>
+    requires unqualified_canonical_zmsign<launder_cmask_t<result_t<L, R>, M>, L,
+        R, result_t<L, R>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr result_t<L, R> operator()(
+        dx::zero_t zero, M mask, L&& lhs, R&& rhs) noexcept {
+        using T = result_t<L, R>;
+        return sign(internal::abi<T>, zero, dx::to_const_mask<T>(mask),
+            __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 };
 
-template <typename L, typename R = L, typename A = common_abi_t<L, R>>
+template <typename L, typename R, typename T>
 concept unqualified_extended_sign = requires {
     {
         sign(internal::declarg<L>(), internal::declarg<R>())
-    } -> vector_with_common_abi<A>;
+    } -> equivalent_vector_with<T>;
 };
 
 template <typename S, typename M, typename L, typename R>
-concept unqualified_extended_msign = cpo_invocable<sign_t, L, R> &&
-    (!simd_type<S> || equivalent_vector_with<S, cpo_result_t<sign_t, L, R>>) &&
-    requires {
+concept unqualified_extended_msign_base =
+    cpo_invocable<sign_t, L, R> && requires {
         {
             sign(internal::declarg<S>(), internal::declarg<M>(),
                 internal::declarg<L>(), internal::declarg<R>())
         } -> equivalent_vector_with<cpo_result_t<sign_t, L, R>>;
     };
 
+template <typename S, typename M, typename L, typename R>
+concept unqualified_extended_msign =
+    equivalent_vector_with<S, cpo_result_t<sign_t, L, R>> &&
+    unqualified_extended_msign_base<S, M, L, R>;
+
+template <typename M, typename L, typename R>
+concept unqualified_extended_zmsign =
+    unqualified_extended_msign_base<dx::zero_t, M, L, R>;
+
 template <>
 struct extended_impl<sign_t> {
 public:
-    template <simd_vector L, vector_subsumed_by<L> R>
+    template <simd_vector L, equivalent_vector_with<L> R>
     requires (extended_vector<L> || extended_vector<R>) &&
-        unqualified_extended_sign<L, R>
+        unqualified_extended_sign<L, R, common_canonical_simd_t<L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L&& lhs, R&& rhs) {
         return sign(__DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 
-    template <simd_vector S, exact_mask_for<S> M, equivalent_vector_with<S> L,
-        vector_subsumed_by<L> R>
+    template <extended_vector L, broadcastable_to<L> R>
+    requires unqualified_extended_sign<L, R, L>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(L&& lhs, R&& rhs) {
+        return sign(__DPL forward<L>(lhs), __DPL forward<R>(rhs));
+    }
+
+    template <extended_vector R, broadcastable_to<R> L>
+    requires unqualified_extended_sign<L, R, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(L&& lhs, R&& rhs) {
+        return sign(__DPL forward<L>(lhs), __DPL forward<R>(rhs));
+    }
+
+    template <simd_vector S, exact_mask_for<S> M, typename L, typename R>
     requires (extended_vector<S> || extended_mask<M> || extended_vector<L> ||
                  extended_vector<R>) &&
         unqualified_extended_msign<S, M, L, R>
@@ -155,20 +228,18 @@ public:
             __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 
-    template <simd_vector S, const_mask_for<S> M, equivalent_vector_with<S> L,
-        vector_subsumed_by<L> R>
+    template <simd_vector S, const_mask_for<S> M, typename L, typename R>
     requires (extended_vector<S> || extended_vector<L> || extended_vector<R>) &&
         unqualified_extended_msign<S, launder_cmask_t<S, M>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(S&& src, M cmask, L&& lhs, R&& rhs) {
-        return sign(src, dx::to_const_mask<S>(cmask), __DPL forward<L>(lhs),
+    static constexpr auto operator()(S&& src, M mask, L&& lhs, R&& rhs) {
+        return sign(src, dx::to_const_mask<S>(mask), __DPL forward<L>(lhs),
             __DPL forward<R>(rhs));
     }
 
-    template <simd_vector L, vector_subsumed_by<L> R,
-        result_mask_for<sign_t, L, R> M>
+    template <typename L, typename R, result_mask_for<sign_t, L, R> M>
     requires (extended_mask<M> || extended_vector<L> || extended_vector<R>) &&
-        unqualified_extended_msign<dx::zero_t, M, L, R>
+        unqualified_extended_zmsign<M, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         dx::zero_t zero, M&& mask, L&& lhs, R&& rhs) {
@@ -176,42 +247,18 @@ public:
             __DPL forward<R>(rhs));
     }
 
-    template <simd_vector L, vector_subsumed_by<L> R,
-        result_cmask_for<sign_t, L, R> M>
+    template <typename L, typename R, result_cmask_for<sign_t, L, R> M>
     requires (extended_vector<L> || extended_vector<R>) &&
-        unqualified_extended_msign<dx::zero_t,
+        unqualified_extended_zmsign<
             launder_cmask_t<cpo_result_t<sign_t, L, R>, M>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
-        dx::zero_t zero, M cmask, L&& lhs, R&& rhs) {
-        return sign(zero, dx::to_const_mask<cpo_result_t<sign_t, L, R>>(cmask),
+        dx::zero_t zero, M mask, L&& lhs, R&& rhs) {
+        return sign(zero, dx::to_const_mask<cpo_result_t<sign_t, L, R>>(mask),
             __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 };
 
-template <>
-struct fallback_impl<sign_t> {
-    template <canonical_vector T>
-    requires integral<simd_element_type_t<T>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr T DPL_VECTORCALL operator()(
-        T lhs, type_identity_t<T> rhs) noexcept {
-        if constexpr (unsigned_integral<simd_element_type_t<T>>) {
-            return dx::select(dx::cmpeq(dx::zero, rhs), dx::zero, lhs);
-        } else {
-            return dx::select(dx::cmpeq(dx::zero, rhs), dx::zero,
-                dx::negate(lhs, dx::cmplt(rhs, dx::zero), lhs));
-        }
-    }
-
-    template <canonical_vector T>
-    requires floating_point_like<simd_element_type_t<T>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr T DPL_VECTORCALL operator()(
-        T lhs, type_identity_t<T> rhs) noexcept {
-        return dx::bwxor(lhs, dx::bwand(rhs, dx::msb));
-    }
-};
 } // namespace datapar::internal
 
 namespace datapar {

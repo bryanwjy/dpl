@@ -21,20 +21,20 @@ namespace datapar::xmm {
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<float> DPL_VECTORCALL fnmadd(
     vector<float> lhs, vector<float> mid, vector<float> rhs) noexcept {
-    return _mm_fnmadd_ps(+lhs, +mid, +rhs);
+    return _mm_fnmsub_ps(+lhs, +mid, +rhs);
 }
 
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<double> DPL_VECTORCALL fnmadd(
     vector<double> lhs, vector<double> mid, vector<double> rhs) noexcept {
-    return _mm_fnmadd_pd(+lhs, +mid, +rhs);
+    return _mm_fnmsub_pd(+lhs, +mid, +rhs);
 }
 
 #  if DPL_SIMD_X86_AVX512FP16 & DPL_SIMD_X86_AVX512VL
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<ext::float16> DPL_VECTORCALL fnmadd(vector<ext::float16> lhs,
     vector<ext::float16> mid, vector<ext::float16> rhs) noexcept {
-    return _mm_fnmadd_ph(+lhs, +mid, +rhs);
+    return _mm_fnmsub_ph(+lhs, +mid, +rhs);
 }
 #  endif
 
@@ -77,7 +77,7 @@ DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<float>
     DPL_VECTORCALL fnmadd(vector<float> lhs, cmask_t<float, M> mask,
         vector<float> mid, vector<float> rhs) noexcept {
-    return _mm_mask_fnmadd_ps(+lhs, M, +mid, +rhs);
+    return _mm_mask_fnmsub_ps(+lhs, M, +mid, +rhs);
 }
 
 template <imask_t<float> M>
@@ -85,7 +85,7 @@ DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<float>
     DPL_VECTORCALL fnmadd(dx::zero_t, cmask_t<float, M> mask, vector<float> lhs,
         vector<float> mid, vector<float> rhs) noexcept {
-    return _mm_maskz_fnmadd_ps(M, +lhs, +mid, +rhs);
+    return _mm_maskz_fnmsub_ps(M, +lhs, +mid, +rhs);
 }
 
 template <imask_t<float> M>
@@ -93,7 +93,7 @@ DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<float>
     DPL_VECTORCALL fnmadd(vector<float> lhs, vector<float> mid,
         vector<float> rhs, cmask_t<float, M> mask) noexcept {
-    return _mm_mask3_fnmadd_ps(+lhs, +mid, +rhs, M);
+    return _mm_mask3_fnmsub_ps(+lhs, +mid, +rhs, M);
 }
 
 template <imask_t<ext::bfloat16> M>
@@ -188,7 +188,7 @@ DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<double>
     DPL_VECTORCALL fnmadd(vector<double> lhs, cmask_t<double, M> mask,
         vector<double> mid, vector<double> rhs) noexcept {
-    return _mm_mask_fnmadd_pd(+lhs, M, +mid, +rhs);
+    return _mm_mask_fnmsub_pd(+lhs, M, +mid, +rhs);
 }
 
 template <imask_t<double> M>
@@ -196,14 +196,14 @@ DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<double>
     DPL_VECTORCALL fnmadd(dx::zero_t, cmask_t<double, M> mask,
         vector<double> lhs, vector<double> mid, vector<double> rhs) noexcept {
-    return _mm_maskz_fnmadd_pd(M, +lhs, +mid, +rhs);
+    return _mm_maskz_fnmsub_pd(M, +lhs, +mid, +rhs);
 }
 template <imask_t<double> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<double>
     DPL_VECTORCALL fnmadd(vector<double> lhs, vector<double> mid,
         vector<double> rhs, cmask_t<double, M> mask) noexcept {
-    return _mm_mask3_fnmadd_pd(+lhs, +mid, +rhs, M);
+    return _mm_mask3_fnmsub_pd(+lhs, +mid, +rhs, M);
 }
 #    endif
 
@@ -214,7 +214,7 @@ inline vector<ext::float16>
     DPL_VECTORCALL fnmadd(vector<ext::float16> lhs,
         cmask_t<ext::float16, M> mask, vector<ext::float16> mid,
         vector<ext::float16> rhs) noexcept {
-    return _mm_mask_fnmadd_ph(+lhs, M, +mid, +rhs);
+    return _mm_mask_fnmsub_ph(+lhs, M, +mid, +rhs);
 }
 
 template <imask_t<ext::float16> M>
@@ -223,7 +223,7 @@ inline vector<ext::float16>
     DPL_VECTORCALL fnmadd(dx::zero_t, cmask_t<ext::float16, M> mask,
         vector<ext::float16> lhs, vector<ext::float16> mid,
         vector<ext::float16> rhs) noexcept {
-    return _mm_maskz_fnmadd_ph(M, +lhs, +mid, +rhs);
+    return _mm_maskz_fnmsub_ph(M, +lhs, +mid, +rhs);
 }
 
 template <imask_t<ext::float16> M>
@@ -231,7 +231,7 @@ DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<ext::float16>
     DPL_VECTORCALL fnmadd(vector<ext::float16> lhs, vector<ext::float16> mid,
         vector<ext::float16> rhs, cmask_t<ext::float16, M> mask) noexcept {
-    return _mm_mask3_fnmadd_ph(+lhs, +mid, +rhs, M);
+    return _mm_mask3_fnmsub_ph(+lhs, +mid, +rhs, M);
 }
 #    endif
 

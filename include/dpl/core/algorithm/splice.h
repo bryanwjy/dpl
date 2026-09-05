@@ -105,77 +105,67 @@ public:
     }
 };
 
+template <typename M, typename L, typename R = L, typename T = L>
+concept unqualified_canonical_splice = requires {
+    {
+        splice(internal::abi<T>, internal::declarg<M>(), internal::declarg<L>(),
+            internal::declarg<R>())
+    } -> same_as<T>;
+};
+
 template <>
 struct canonical_impl<splice_t> {
 public:
     template <canonical_vector L, same_as<L> R>
+    requires unqualified_canonical_splice<simd_mask_type_t<L>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr L operator()(
-        simd_mask_type_t<L> mask, L lhs, R rhs) noexcept
-    requires requires { splice(internal::abi<L>, mask, lhs, rhs); }
-    {
+        simd_mask_type_t<L> mask, L lhs, R rhs) noexcept {
         return splice(internal::abi<L>, mask, lhs, rhs);
     }
 
-    template <canonical_vector L, const_mask_for<L> M, same_as<L> R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr L operator()(
-        simd_mask_type_t<L> mask, L lhs, R rhs) noexcept
-    requires requires { splice(internal::abi<L>, mask, lhs, rhs); }
-    {
-        return splice(internal::abi<L>, dx::to_const_mask<L>(mask), lhs, rhs);
-    }
-
     template <canonical_vector R, broadcastable_to<R> L>
+    requires unqualified_canonical_splice<simd_mask_type_t<R>, L, R, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr R operator()(
-        simd_mask_type_t<R> mask, L&& lhs, R rhs) noexcept
-    requires requires {
-        splice(internal::abi<R>, mask, __DPL forward<L>(lhs), rhs);
-    }
-    {
-        return splice(internal::abi<R>, mask, __DPL forward<L>(lhs), rhs);
-    }
-
-    template <canonical_vector R, broadcastable_to<R> L>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr L operator()(
-        simd_mask_type_t<L> mask, L&& lhs, R rhs) noexcept
-    requires requires {
-        splice(internal::abi<R>, mask, __DPL forward<L>(lhs), rhs);
-    }
-    {
+        simd_mask_type_t<R> mask, L&& lhs, R rhs) noexcept {
         return splice(internal::abi<R>, dx::to_const_mask<R>(mask),
             __DPL forward<L>(lhs), rhs);
     }
 
     template <canonical_vector L, broadcastable_to<L> R>
+    requires unqualified_canonical_splice<simd_mask_type_t<L>, L, R, L>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr L operator()(
-        simd_mask_type_t<L> mask, L lhs, R&& rhs) noexcept
-    requires requires {
-        splice(internal::abi<L>, mask, lhs, __DPL forward<R>(rhs));
-    }
-    {
+        simd_mask_type_t<L> mask, L lhs, R&& rhs) noexcept {
         return splice(internal::abi<R>, mask, lhs, __DPL forward<R>(rhs));
     }
 
-    template <canonical_vector L, const_mask_for<L> M, broadcastable_to<L> R>
+    template <canonical_vector L, same_as<L> R, const_mask_for<L> M>
+    requires unqualified_canonical_splice<launder_cmask_t<L, M>, L, R, L>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr L operator()(M mask, L lhs, R&& rhs) noexcept
-    requires requires {
-        splice(internal::abi<L>, mask, lhs, __DPL forward<R>(rhs));
+    static constexpr L operator()(M mask, L lhs, R rhs) noexcept {
+        return splice(internal::abi<L>, dx::to_const_mask<L>(mask), lhs, rhs);
     }
-    {
+
+    template <canonical_vector R, broadcastable_to<R> L, const_mask_for<R> M>
+    requires unqualified_canonical_splice<launder_cmask_t<R, M>, L, R, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr R operator()(M mask, L&& lhs, R rhs) noexcept {
+        return splice(internal::abi<R>, mask, __DPL forward<L>(lhs), rhs);
+    }
+
+    template <canonical_vector L, broadcastable_to<L> R, const_mask_for<L> M>
+    requires unqualified_canonical_splice<launder_cmask_t<L, M>, L, R, L>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr L operator()(M mask, L lhs, R&& rhs) noexcept {
         return splice(internal::abi<L>, mask, lhs, __DPL forward<R>(rhs));
     }
 };
 
-template <typename M, typename L, typename R, typename A = common_abi_t<L, R>>
+template <typename M, typename L, typename R, typename T = L>
 concept unqualified_extended_splice = requires(M mask, L lhs, R rhs) {
-    {
-        splice(mask, lhs, rhs)
-    } -> equivalent_vector_with<common_canonical_simd_t<L, R>>;
+    { splice(mask, lhs, rhs) } -> equivalent_vector_with<T>;
 };
 
 template <>
@@ -201,7 +191,7 @@ public:
 
     template <simd_vector R, exact_mask_for<R> M, broadcastable_to<R> L>
     requires (extended_vector<R> || extended_mask<M>) &&
-        unqualified_extended_splice<M, L, R, simd_abi_type_t<R>>
+        unqualified_extended_splice<M, L, R, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M&& mask, L&& lhs, R&& rhs) noexcept {
         return splice(__DPL forward<M>(mask), __DPL forward<L>(lhs),
@@ -209,7 +199,7 @@ public:
     }
 
     template <extended_vector R, const_mask_for<R> M, broadcastable_to<R> L>
-    requires unqualified_extended_splice<M, L, R, simd_abi_type_t<R>>
+    requires unqualified_extended_splice<M, L, R, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, L&& lhs, R&& rhs) noexcept {
         return splice(dx::to_const_mask<L>(mask), __DPL forward<L>(lhs),
@@ -218,7 +208,7 @@ public:
 
     template <simd_vector L, exact_mask_for<L> M, broadcastable_to<L> R>
     requires (extended_vector<L> || extended_mask<M>) &&
-        unqualified_extended_splice<M, L, R, simd_abi_type_t<L>>
+        unqualified_extended_splice<M, L, R, L>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M&& mask, L&& lhs, R&& rhs) noexcept {
         return splice(__DPL forward<M>(mask), __DPL forward<L>(lhs),
@@ -226,7 +216,7 @@ public:
     }
 
     template <extended_vector L, const_mask_for<L> M, broadcastable_to<L> R>
-    requires unqualified_extended_splice<M, L, R, simd_abi_type_t<L>>
+    requires unqualified_extended_splice<M, L, R, L>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M mask, L&& lhs, R&& rhs) noexcept {
         return splice(dx::to_const_mask<L>(mask), __DPL forward<L>(lhs),

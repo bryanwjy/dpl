@@ -70,17 +70,16 @@ template <>
 struct canonical_impl<lookup_t> {
 public:
     template <canonical_vector T, canonical_vindex_for<T> I>
-    requires unqualified_canonical_lookup<dx::zero_t, T, I>
+    requires unqualified_canonical_lookup<T, I, dx::zero_t>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(T val, I idx, dx::zero_t zero) noexcept {
         return lookup(internal::abi<T>, val, idx, zero);
     }
 
-    template <canonical_vector T, canonical_vindex_for<T> I>
-    requires unqualified_canonical_lookup<T, T, I>
+    template <canonical_vector T, canonical_vindex_for<T> I, same_as<T> S>
+    requires unqualified_canonical_lookup<T, I, S>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(
-        T val, I idx, type_identity_t<T> src) noexcept {
+    static constexpr T operator()(T val, I idx, S src) noexcept {
         return lookup(internal::abi<T>, val, idx, src);
     }
 };
@@ -90,7 +89,7 @@ concept unqualified_extended_lookup = requires {
     {
         lookup(internal::declarg<T>(), internal::declarg<I>(),
             internal::declarg<S>())
-    } -> vector_with_common_abi<simd_abi_type_t<T>>;
+    } -> equivalent_vector_with<T>;
 };
 
 template <>
@@ -106,7 +105,7 @@ public:
 
     template <simd_vector T, vindex_for<T> I, equivalent_vector_with<T> S>
     requires (extended_vector<T> || extended_vector<I> || extended_vector<S>) &&
-        unqualified_extended_lookup<S, T, I>
+        unqualified_extended_lookup<T, I, S>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T&& val, I&& idx, S&& src) {
         return lookup(__DPL forward<T>(val), __DPL forward<I>(idx),

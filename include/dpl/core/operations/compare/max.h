@@ -11,7 +11,6 @@
 #  include "dpl/core/basic/internal/abi.h"
 #  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/concepts/simd_abi.h"
-#  include "dpl/core/dispatch/broadcastable/binary.h"
 #  include "dpl/core/dispatch/interface.h"
 #  include "dpl/core/dispatch/maskable/transform.h"
 #  include "dpl/core/dispatch/operation/primitive.h"
@@ -24,11 +23,9 @@ void max(...) noexcept = delete;
 
 struct DPL_EMPTY_BASES max_t :
     public primitive_operation_base<max_t>,
-    public maskable_transform_base<max_t>,
-    public binary_broadcastable_operation<max_t> {
+    public maskable_transform_base<max_t> {
     using operation_base<max_t>::operator();
     using maskable_transform_base<max_t>::operator();
-    using binary_broadcastable_operation<max_t>::operator();
 
     template <totally_ordered L, totally_ordered_with<L> R = L>
     requires (!simd_type<L> && !simd_type<R>) &&
@@ -37,21 +34,21 @@ struct DPL_EMPTY_BASES max_t :
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr common_type_t<L, R> operator()(L lhs, R rhs) noexcept {
 #if DPL_HAS_BUILTIN(__builtin_fmax)
-        if constexpr (dpl::same_as<double, common_type_t<L, R>>) {
+        if constexpr (same_as<double, common_type_t<L, R>>) {
             return __builtin_fmax(lhs, rhs);
         } else
 #  if DPL_SUPPORTS_FLOAT64
-            if constexpr (dpl::same_as<float64, common_type_t<L, R>>) {
+            if constexpr (same_as<float64, common_type_t<L, R>>) {
             return __builtin_fmax(lhs, rhs);
         } else
 #  endif
 #endif
 #if DPL_HAS_BUILTIN(__builtin_fmaxf)
-            if constexpr (dpl::same_as<float, common_type_t<L, R>>) {
+            if constexpr (same_as<float, common_type_t<L, R>>) {
             return __builtin_fmaxf(lhs, rhs);
         } else
 #  if DPL_SUPPORTS_FLOAT32
-            if constexpr (dpl::same_as<float32, common_type_t<L, R>>) {
+            if constexpr (same_as<float32, common_type_t<L, R>>) {
             return __builtin_fmaxf(lhs, rhs);
         } else
 #  endif
@@ -93,7 +90,7 @@ struct operation_signature<max_t> {
 };
 
 template <>
-struct fallback_impl<max_t> : binary_broadcasting_fallback<max_t> {
+struct fallback_impl<max_t> : binary_canonical_broadcaster<max_t> {
 
     template <canonical_vector T>
     requires totally_ordered<simd_element_type_t<T>>
@@ -106,142 +103,159 @@ struct fallback_impl<max_t> : binary_broadcasting_fallback<max_t> {
         }
     }
 
-    using binary_broadcasting_fallback<max_t>::operator();
+    using binary_canonical_broadcaster<max_t>::operator();
 };
 
-template <typename L, typename R, typename A = common_abi_t<L, R>>
+template <typename L, typename R, typename T = common_canonical_simd_t<L, R>>
 concept unqualified_canonical_max = requires {
     {
-        max(internal::abi<A>, internal::declarg<L>(), internal::declarg<R>())
-    } -> canonical_vector;
+        max(internal::abi<T>, internal::declarg<L>(), internal::declarg<R>())
+    } -> same_as<T>;
 };
 
-template <typename S, typename M, typename L, typename R,
-    typename A = common_abi_t<L, R>>
-concept unqualified_canonical_mmax = cpo_invocable<max_t, L, R> &&
-    (!simd_type<S> || same_as<S, cpo_result_t<max_t, L, R>>) && requires {
+template <typename S, typename M, typename L, typename R, typename T>
+concept unqualified_canonical_mmax_base =
+    cpo_invocable<max_t, L, R> && requires {
         {
-            max(internal::abi<A>, internal::declarg<S>(),
+            max(internal::abi<T>, internal::declarg<S>(),
                 internal::declarg<M>(), internal::declarg<L>(),
                 internal::declarg<R>())
-        } -> same_as<cpo_result_t<max_t, L, R>>;
+        } -> same_as<T>;
     };
+
+template <typename M, typename L, typename R,
+    typename T = common_canonical_simd_t<L, R>>
+concept unqualified_canonical_mmax =
+    unqualified_canonical_mmax_base<T, M, L, R, T>;
+
+template <typename M, typename L, typename R,
+    typename T = common_canonical_simd_t<L, R>>
+concept unqualified_canonical_zmmax =
+    unqualified_canonical_mmax_base<dx::zero_t, M, L, R, T>;
 
 template <>
 struct canonical_impl<max_t> {
 private:
     template <typename L, typename R>
-    using result_t DPL_NODEBUG = common_canonical_simd_t<L, R>;
-
+    using result_t DPL_NODEBUG = cpo_result_t<max_t, L, R>;
     template <typename L, typename R>
-    using mask_t DPL_NODEBUG = simd_mask_type_t<common_canonical_simd_t<L, R>>;
+    using mask_t DPL_NODEBUG = simd_mask_type_t<result_t<L, R>>;
 
 public:
     template <canonical_vector L, common_vector_with<L> R>
     requires canonical_vector<R> && unqualified_canonical_max<L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr result_t<L, R> operator()(L lhs, R rhs) noexcept {
+    static constexpr common_canonical_simd_t<L, R> operator()(
+        L lhs, R rhs) noexcept {
         return max(internal::abi<common_abi_t<L, R>>, lhs, rhs);
     }
 
     template <canonical_vector L, broadcastable_to<L> R>
-    requires unqualified_canonical_max<L, R, simd_abi_type_t<L>>
+    requires unqualified_canonical_max<L, R, L>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr L operator()(L lhs, R&& rhs) noexcept {
         return max(internal::abi<L>, lhs, __DPL forward<R>(rhs));
     }
 
     template <canonical_vector R, broadcastable_to<R> L>
-    requires unqualified_canonical_max<L, R, simd_abi_type_t<R>>
+    requires unqualified_canonical_max<L, R, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr R operator()(L&& lhs, R rhs) noexcept {
         return max(internal::abi<R>, __DPL forward<L>(lhs), rhs);
     }
 
-    template <canonical_vector L, common_vector_with<L> R>
-    requires canonical_vector<R> &&
-        unqualified_canonical_mmax<result_t<L, R>, mask_t<L, R>, L, R>
+    template <unextended_type L, unextended_terminal_of<max_t, L> R>
+    requires unqualified_canonical_mmax<mask_t<L, R>, L, R, result_t<L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr result_t<L, R> operator()(
-        result_t<L, R> src, mask_t<L, R> mask, L lhs, R rhs) noexcept {
-        return max(internal::abi<common_abi_t<L, R>>, src, mask, lhs, rhs);
+        result_t<L, R> src, mask_t<L, R> mask, L&& lhs, R&& rhs) noexcept {
+        return max(internal::abi<result_t<L, R>>, src, mask,
+            __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 
-    template <canonical_vector L, common_vector_with<L> R,
-        const_mask_for<result_t<L, R>> M>
-    requires canonical_vector<R> &&
-        unqualified_canonical_mmax<result_t<L, R>,
-            launder_cmask_t<result_t<L, R>, M>, L, R>
+    template <unextended_type L, unextended_type R, result_cmask_for<L, R> M>
+    requires unqualified_canonical_mmax<launder_cmask_t<result_t<L, R>, M>, L,
+        R, result_t<L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr result_t<L, R> operator()(
-        result_t<L, R> src, M cmask, L lhs, R rhs) noexcept {
-        return max(internal::abi<common_abi_t<L, R>>, src,
-            dx::to_const_mask<result_t<L, R>>(cmask), lhs, rhs);
+        result_t<L, R> src, M mask, L&& lhs, R&& rhs) noexcept {
+        using T = result_t<L, R>;
+        return max(internal::abi<T>, src, dx::to_const_mask<T>(mask),
+            __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 
-    template <canonical_vector L, common_vector_with<L> R>
-    requires canonical_vector<R> &&
-        unqualified_canonical_mmax<dx::zero_t, mask_t<L, R>, L, R>
+    template <unextended_type L, unextended_terminal_of<max_t, L> R>
+    requires unqualified_canonical_zmmax<mask_t<L, R>, L, R, result_t<L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr result_t<L, R> operator()(
-        dx::zero_t zero, mask_t<L, R> mask, L lhs, R rhs) noexcept {
-        return max(internal::abi<common_abi_t<L, R>>, zero, mask, lhs, rhs);
+        dx::zero_t zero, mask_t<L, R> mask, L&& lhs, R&& rhs) noexcept {
+        return max(internal::abi<result_t<L, R>>, zero, mask,
+            __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 
-    template <canonical_vector L, common_vector_with<L> R,
-        const_mask_for<result_t<L, R>> M>
-    requires canonical_vector<R> &&
-        unqualified_canonical_mmax<dx::zero_t,
-            launder_cmask_t<result_t<L, R>, M>, L, R>
+    template <unextended_type L, unextended_type R, result_cmask_for<L, R> M>
+    requires unqualified_canonical_zmmax<launder_cmask_t<result_t<L, R>, M>, L,
+        R, result_t<L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr result_t<L, R> operator()(
-        dx::zero_t zero, M cmask, L lhs, R rhs) noexcept {
-        return max(internal::abi<common_abi_t<L, R>>, zero,
-            dx::to_const_mask<result_t<L, R>>(cmask), lhs, rhs);
+        dx::zero_t zero, M mask, L&& lhs, R&& rhs) noexcept {
+        using T = result_t<L, R>;
+        return max(internal::abi<T>, zero, dx::to_const_mask<T>(mask),
+            __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 };
 
-template <typename L, typename R, typename A = common_abi_t<L, R>>
+template <typename L, typename R, typename T>
 concept unqualified_extended_max = requires {
     {
         max(internal::declarg<L>(), internal::declarg<R>())
-    } -> vector_with_common_abi<A>;
+    } -> equivalent_vector_with<T>;
 };
 
 template <typename S, typename M, typename L, typename R>
-concept unqualified_extended_mmax = cpo_invocable<max_t, L, R> &&
-    (!simd_type<S> || equivalent_vector_with<S, cpo_result_t<max_t, L, R>>) &&
-    requires {
+concept unqualified_extended_mmax_base =
+    cpo_invocable<max_t, L, R> && requires {
         {
             max(internal::declarg<S>(), internal::declarg<M>(),
                 internal::declarg<L>(), internal::declarg<R>())
         } -> equivalent_vector_with<cpo_result_t<max_t, L, R>>;
     };
 
+template <typename S, typename M, typename L, typename R>
+concept unqualified_extended_mmax =
+    equivalent_vector_with<S, cpo_result_t<max_t, L, R>> &&
+    unqualified_extended_mmax_base<S, M, L, R>;
+
+template <typename M, typename L, typename R>
+concept unqualified_extended_zmmax =
+    unqualified_extended_mmax_base<dx::zero_t, M, L, R>;
+
 template <>
 struct extended_impl<max_t> {
 public:
     template <simd_vector L, common_vector_with<L> R>
     requires (extended_vector<L> || extended_vector<R>) &&
-        unqualified_extended_max<L, R>
+        unqualified_extended_max<L, R, common_canonical_simd_t<L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L&& lhs, R&& rhs) {
         return max(__DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 
-    template <typename L, typename R>
-    requires (extended_vector<L> &&
-                 broadcastable_to<R, result_or_decayed_t<L>> &&
-                 unqualified_extended_max<L, R, simd_abi_type_t<L>>) ||
-        (extended_vector<R> && broadcastable_to<L, result_or_decayed_t<R>> &&
-            unqualified_extended_max<L, R, simd_abi_type_t<R>>)
+    template <extended_vector L, broadcastable_to<L> R>
+    requires unqualified_extended_max<L, R, L>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L&& lhs, R&& rhs) {
         return max(__DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 
-    template <simd_vector S, exact_mask_for<S> M, common_vector_with<S> L,
-        common_vector_with<L> R>
+    template <extended_vector R, broadcastable_to<R> L>
+    requires unqualified_extended_max<L, R, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(L&& lhs, R&& rhs) {
+        return max(__DPL forward<L>(lhs), __DPL forward<R>(rhs));
+    }
+
+    template <simd_vector S, exact_mask_for<S> M, typename L, typename R>
     requires (extended_vector<S> || extended_mask<M> || extended_vector<L> ||
                  extended_vector<R>) &&
         unqualified_extended_mmax<S, M, L, R>
@@ -251,20 +265,18 @@ public:
             __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 
-    template <simd_vector S, const_mask_for<S> M, common_vector_with<S> L,
-        common_vector_with<L> R>
+    template <simd_vector S, const_mask_for<S> M, typename L, typename R>
     requires (extended_vector<S> || extended_vector<L> || extended_vector<R>) &&
         unqualified_extended_mmax<S, launder_cmask_t<S, M>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(S&& src, M cmask, L&& lhs, R&& rhs) {
-        return max(src, dx::to_const_mask<S>(cmask), __DPL forward<L>(lhs),
+    static constexpr auto operator()(S&& src, M mask, L&& lhs, R&& rhs) {
+        return max(src, dx::to_const_mask<S>(mask), __DPL forward<L>(lhs),
             __DPL forward<R>(rhs));
     }
 
-    template <simd_vector L, common_vector_with<L> R,
-        result_mask_for<max_t, L, R> M>
+    template <typename L, typename R, result_mask_for<max_t, L, R> M>
     requires (extended_mask<M> || extended_vector<L> || extended_vector<R>) &&
-        unqualified_extended_mmax<dx::zero_t, M, L, R>
+        unqualified_extended_zmmax<M, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         dx::zero_t zero, M&& mask, L&& lhs, R&& rhs) {
@@ -272,15 +284,14 @@ public:
             __DPL forward<R>(rhs));
     }
 
-    template <simd_vector L, common_vector_with<L> R,
-        result_cmask_for<max_t, L, R> M>
+    template <typename L, typename R, result_cmask_for<max_t, L, R> M>
     requires (extended_vector<L> || extended_vector<R>) &&
-        unqualified_extended_mmax<dx::zero_t,
+        unqualified_extended_zmmax<
             launder_cmask_t<cpo_result_t<max_t, L, R>, M>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
-        dx::zero_t zero, M cmask, L&& lhs, R&& rhs) {
-        return max(zero, dx::to_const_mask<cpo_result_t<max_t, L, R>>(cmask),
+        dx::zero_t zero, M mask, L&& lhs, R&& rhs) {
+        return max(zero, dx::to_const_mask<cpo_result_t<max_t, L, R>>(mask),
             __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 };

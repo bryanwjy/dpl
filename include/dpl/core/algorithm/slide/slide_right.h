@@ -61,22 +61,27 @@ struct fallback_impl<slide_right_t> {
             __DPL forward<L>(lhs), __DPL forward<R>(rhs), simd_size - num);
     }
 
-    template <canonical_vector L, broadcastable_to<L> R>
+    template <simd_vector L, broadcastable_to<L> R>
+    requires cpo_invocable<slide_right_t, L, canonical_type_t<L>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr L operator()(L lhs, R&& rhs, size_t count) noexcept {
-        return operator()(
-            lhs, dx::broadcast<L>(__DPL forward<R>(rhs)), count);
+    static constexpr cpo_result_t<slide_right_t, L, canonical_type_t<L>>
+    operator()(L&& lhs, R&& rhs, size_t count) noexcept(canonical_vector<L>) {
+        return slide_right_t::operator()( __DPL forward<L>(lhs),
+            dx::broadcast<L>(__DPL forward<R>(rhs)), count);
     }
 
-    template <canonical_vector R, broadcastable_to<R> L>
+    template <simd_vector R, broadcastable_to<R> L>
+    requires cpo_invocable<slide_right_t, L, canonical_type_t<L>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr R operator()(L&& lhs, R rhs, size_t count) noexcept {
-        return operator()(
-            dx::broadcast<R>(__DPL forward<L>(lhs)), rhs, count);
+    static constexpr cpo_result_t<slide_right_t, R, canonical_type_t<R>>
+    operator()(L&& lhs, R&& rhs, size_t count) noexcept(canonical_vector<L>) {
+        return slide_right_t::operator()(
+            dx::broadcast<R>(__DPL forward<L>(lhs)), __DPL forward<R>(rhs),
+            count);
     }
 };
 
-template <typename L, typename R, typename N = size_t,
+template <typename L, typename R = L, typename N = size_t,
     typename T = common_canonical_simd_t<L, R>>
 concept unqualified_canonical_slide_right = requires {
     {
@@ -85,27 +90,31 @@ concept unqualified_canonical_slide_right = requires {
     } -> same_as<T>;
 };
 
-template <typename S, typename M, typename L, typename R, typename N = size_t,
-    typename A = common_abi_t<L, R>>
+template <typename S, typename M, typename L, typename R, typename N = size_t>
 concept unqualified_canonical_mslide_right =
-    cpo_invocable<slide_right_t, L, R, N> &&
-    (!simd_type<S> || same_as<S, cpo_result_t<slide_right_t, L, R, N>>) &&
-    requires {
+    cpo_invocable<slide_right_t, L, R, N> && requires {
         {
-            slide_right(internal::abi<A>, internal::declarg<S>(),
-                internal::declarg<M>(), internal::declarg<L>(),
-                internal::declarg<R>(), internal::declarg<N>())
+            slide_right(internal::abi<cpo_result_t<slide_right_t, L, R, N>>,
+                internal::declarg<S>(), internal::declarg<M>(),
+                internal::declarg<L>(), internal::declarg<R>(),
+                internal::declarg<N>())
         } -> same_as<cpo_result_t<slide_right_t, L, R, N>>;
     };
 
 template <>
 struct canonical_impl<slide_right_t> {
-    template <canonical_vector T>
-    requires unqualified_canonical_slide_right<T, T>
+private:
+    template <typename L, typename R>
+    using result_t DPL_NODEBUG = conditional_t<canonical_vector<L>, L, R>;
+    template <typename L, typename R>
+    using mask_t DPL_NODEBUG = simd_mask_type_t<result_t<L, R>>;
+
+public:
+    template <canonical_vector L, same_as<L> R>
+    requires unqualified_canonical_slide_right<L>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(
-        T lhs, type_identity_t<T> rhs, size_t count) noexcept {
-        return slide_right(internal::abi<T>, lhs, rhs, count);
+    static constexpr L operator()(L lhs, R rhs, size_t count) noexcept {
+        return slide_right(internal::abi<L>, lhs, rhs, count);
     }
 
     template <canonical_vector L, broadcastable_to<L> R>
@@ -124,124 +133,130 @@ struct canonical_impl<slide_right_t> {
             internal::abi<R>, __DPL forward<L>(lhs), rhs, count);
     }
 
-    template <canonical_vector T>
-    requires unqualified_canonical_mslide_right<T, simd_mask_type_t<T>, T, T>
+    template <unextended_type L, unextended_type R>
+    requires unqualified_canonical_mslide_right<result_t<L, R>, mask_t<L, R>, L,
+        R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(type_identity_t<T> src,
-        simd_mask_type_t<T> mask, T lhs, type_identity_t<T> rhs,
-        size_t count) noexcept {
-        return slide_right(internal::abi<T>, src, mask, lhs, rhs, count);
+    static constexpr result_t<L, R> operator()(result_t<L, R> src,
+        mask_t<L, R> mask, L&& lhs, R&& rhs, size_t count) noexcept {
+        return slide_right(internal::abi<result_t<L, R>>, src, mask,
+            __DPL forward<L>(lhs), __DPL forward<R>(rhs), count);
     }
 
-    template <canonical_vector T, const_mask_for<T> M>
-    requires unqualified_canonical_mslide_right<T, launder_cmask_t<T, M>, T, T>
+    template <unextended_type L, unextended_type R,
+        result_cmask_for<L, R, size_t> M>
+    requires unqualified_canonical_mslide_right<result_t<L, R>,
+        launder_cmask_t<result_t<L, R>, M>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(type_identity_t<T> src, M cmask, T lhs,
-        type_identity_t<T> rhs, size_t count) noexcept {
-        return slide_right(internal::abi<T>, src, dx::to_const_mask<T>(cmask),
-            lhs, rhs, count);
+    static constexpr result_t<L, R> operator()(
+        result_t<L, R> src, M mask, L&& lhs, R&& rhs, size_t count) noexcept {
+        return slide_right(internal::abi<result_t<L, R>>, src,
+            dx::to_const_mask<result_t<L, R>>(mask), __DPL forward<L>(lhs),
+            __DPL forward<R>(rhs), count);
     }
 
-    template <canonical_vector T>
-    requires unqualified_canonical_mslide_right<dx::zero_t, simd_mask_type_t<T>,
-        T, T>
+    template <unextended_type L, unextended_type R>
+    requires unqualified_canonical_mslide_right<dx::zero_t, mask_t<L, R>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(dx::zero_t zero, simd_mask_type_t<T> mask,
-        T lhs, type_identity_t<T> rhs, size_t count) noexcept {
-        return slide_right(internal::abi<T>, zero, mask, lhs, rhs, count);
+    static constexpr result_t<L, R> operator()(dx::zero_t zero,
+        mask_t<L, R> mask, L&& lhs, R&& rhs, size_t count) noexcept {
+        return slide_right(internal::abi<result_t<L, R>>, zero, mask,
+            __DPL forward<L>(lhs), __DPL forward<R>(rhs), count);
     }
 
-    template <canonical_vector T, const_mask_for<T> M>
+    template <unextended_type L, unextended_type R,
+        result_cmask_for<L, R, size_t> M>
     requires unqualified_canonical_mslide_right<dx::zero_t,
-        launder_cmask_t<T, M>, T, T>
+        launder_cmask_t<result_t<L, R>, M>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(dx::zero_t zero, M cmask, T lhs,
-        type_identity_t<T> rhs, size_t count) noexcept {
-        return slide_right(internal::abi<T>, zero, dx::to_const_mask<T>(cmask),
-            lhs, rhs, count);
+    static constexpr result_t<L, R> operator()(
+        dx::zero_t zero, M mask, L&& lhs, R&& rhs, size_t count) noexcept {
+        return slide_right(internal::abi<result_t<L, R>>, zero,
+            dx::to_const_mask<result_t<L, R>>(mask), __DPL forward<L>(lhs),
+            __DPL forward<R>(rhs), count);
     }
 
     ///
-    template <canonical_vector T, integral_constant_like N>
-    requires unqualified_canonical_slide_right<T, T, N>
+    template <canonical_vector L, same_as<L> R, integral_constant_like N>
+    requires unqualified_canonical_slide_right<L, R, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(
-        T lhs, type_identity_t<T> rhs, N count) noexcept {
-        return slide_right(internal::abi<T>, lhs, rhs, count);
+    static constexpr L operator()(L lhs, R rhs, N count) noexcept {
+        return slide_right(internal::abi<L>, lhs, rhs, count);
     }
 
     template <canonical_vector L, broadcastable_to<L> R,
         integral_constant_like N>
     requires unqualified_canonical_slide_right<L, L, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr L operator()(L lhs, R&& rhs, size_t count) noexcept {
-        return slide_right(internal::abi<L>, lhs,
-            dx::broadcast<R>(__DPL forward<R>(rhs)), count);
+    static constexpr L operator()(L lhs, R&& rhs, N count) noexcept {
+        return slide_right(
+            internal::abi<L>, lhs, __DPL forward<R>(rhs), count);
     }
 
     template <canonical_vector R, broadcastable_to<R> L,
         integral_constant_like N>
     requires unqualified_canonical_slide_right<R, R, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr R operator()(L&& lhs, R rhs, size_t count) noexcept {
-        return slide_right(internal::abi<R>,
-            dx::broadcast<R>(__DPL forward<L>(lhs)), rhs, count);
+    static constexpr R operator()(L&& lhs, R rhs, N count) noexcept {
+        return slide_right(
+            internal::abi<R>, __DPL forward<L>(lhs), rhs, count);
     }
 
-    template <canonical_vector T, integral_constant_like N>
-    requires unqualified_canonical_mslide_right<T, simd_mask_type_t<T>, T, T, N>
+    template <unextended_type L, unextended_type R, integral_constant_like N>
+    requires unqualified_canonical_mslide_right<result_t<L, R>, mask_t<L, R>, L,
+        R, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(type_identity_t<T> src,
-        simd_mask_type_t<T> mask, T lhs, type_identity_t<T> rhs,
-        N count) noexcept {
-        return slide_right(internal::abi<T>, src, mask, lhs, rhs, count);
+    static constexpr result_t<L, R> operator()(result_t<L, R> src,
+        mask_t<L, R> mask, L&& lhs, R&& rhs, N count) noexcept {
+        return slide_right(internal::abi<result_t<L, R>>, src, mask,
+            __DPL forward<L>(lhs), __DPL forward<R>(rhs), count);
     }
 
-    template <canonical_vector T, const_mask_for<T> M, integral_constant_like N>
-    requires unqualified_canonical_mslide_right<T, launder_cmask_t<T, M>, T, T,
-        N>
+    template <unextended_type L, unextended_type R, integral_constant_like N,
+        result_cmask_for<L, R, N> M>
+    requires unqualified_canonical_mslide_right<result_t<L, R>,
+        launder_cmask_t<result_t<L, R>, M>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(type_identity_t<T> src, M cmask, T lhs,
-        type_identity_t<T> rhs, N count) noexcept {
-        return slide_right(internal::abi<T>, src, dx::to_const_mask<T>(cmask),
-            lhs, rhs, count);
+    static constexpr result_t<L, R> operator()(
+        result_t<L, R> src, M mask, L&& lhs, R&& rhs, N count) noexcept {
+        return slide_right(internal::abi<result_t<L, R>>, src,
+            dx::to_const_mask<result_t<L, R>>(mask), __DPL forward<L>(lhs),
+            __DPL forward<R>(rhs), count);
     }
 
-    template <canonical_vector T, integral_constant_like N>
-    requires unqualified_canonical_mslide_right<dx::zero_t, simd_mask_type_t<T>,
-        T, T, N>
+    template <unextended_type L, unextended_type R, integral_constant_like N>
+    requires unqualified_canonical_mslide_right<dx::zero_t, mask_t<L, R>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(dx::zero_t zero, simd_mask_type_t<T> mask,
-        T lhs, type_identity_t<T> rhs, N count) noexcept {
-        return slide_right(internal::abi<T>, zero, mask, lhs, rhs, count);
+    static constexpr result_t<L, R> operator()(dx::zero_t zero,
+        mask_t<L, R> mask, L&& lhs, R&& rhs, N count) noexcept {
+        return slide_right(internal::abi<result_t<L, R>>, zero, mask,
+            __DPL forward<L>(lhs), __DPL forward<R>(rhs), count);
     }
 
-    template <canonical_vector T, const_mask_for<T> M, integral_constant_like N>
+    template <unextended_type L, unextended_type R, integral_constant_like N,
+        result_cmask_for<L, R, N> M>
     requires unqualified_canonical_mslide_right<dx::zero_t,
-        launder_cmask_t<T, M>, T, T, N>
+        launder_cmask_t<result_t<L, R>, M>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(dx::zero_t zero, M cmask, T lhs,
-        type_identity_t<T> rhs, N count) noexcept {
-        return slide_right(internal::abi<T>, zero, dx::to_const_mask<T>(cmask),
-            lhs, rhs, count);
+    static constexpr result_t<L, R> operator()(
+        dx::zero_t zero, M mask, L&& lhs, R&& rhs, N count) noexcept {
+        return slide_right(internal::abi<result_t<L, R>>, zero,
+            dx::to_const_mask<result_t<L, R>>(mask), __DPL forward<L>(lhs),
+            __DPL forward<R>(rhs), count);
     }
 };
 
-template <typename L, typename R, typename N = size_t>
+template <typename L, typename R, typename T, typename N = size_t>
 concept unqualified_extended_slide_right = requires {
     {
         slide_right(internal::declarg<L>(), internal::declarg<R>(),
             internal::declarg<N>())
-    } -> vector_with_common_abi<
-        simd_abi_type_t<conditional_t<simd_vector<L>, L, R>>>;
+    } -> equivalent_vector_with<T>;
 };
 
 template <typename S, typename M, typename L, typename R, typename N = size_t>
-concept unqualified_extended_mslide_right =
-    cpo_invocable<slide_right_t, L, R, N> &&
-    (!simd_type<S> ||
-        equivalent_vector_with<S, cpo_result_t<slide_right_t, L, R, N>>) &&
-    requires {
+concept unqualified_extended_mslide_right_base =
+    cpo_invocable<slide_right_t, L, R, N> && requires {
         {
             slide_right(internal::declarg<S>(), internal::declarg<M>(),
                 internal::declarg<L>(), internal::declarg<R>(),
@@ -249,33 +264,41 @@ concept unqualified_extended_mslide_right =
         } -> equivalent_vector_with<cpo_result_t<slide_right_t, L, R, N>>;
     };
 
+template <typename S, typename M, typename L, typename R, typename N = size_t>
+concept unqualified_extended_mslide_right =
+    unqualified_extended_mslide_right_base<S, M, L, R, N> &&
+    equivalent_vector_with<S, cpo_result_t<slide_right_t, L, R, N>>;
+
+template <typename M, typename L, typename R, typename N = size_t>
+concept unqualified_extended_zmslide_right =
+    unqualified_extended_mslide_right_base<dx::zero_t, M, L, R, N>;
+
 template <>
 struct extended_impl<slide_right_t> {
 public:
     template <simd_vector L, equivalent_vector_with<L> R>
     requires (extended_vector<L> || extended_vector<R>) &&
-        unqualified_extended_slide_right<L, R>
+        unqualified_extended_slide_right<L, R, L>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L&& lhs, R&& rhs, size_t count) {
         return slide_right(__DPL forward<L>(lhs), __DPL forward<R>(rhs), count);
     }
 
     template <extended_vector L, broadcastable_to<L> R>
-    requires unqualified_extended_slide_right<L, R>
+    requires unqualified_extended_slide_right<L, R, L>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr L operator()(L lhs, R&& rhs, size_t count) noexcept {
+    static constexpr auto operator()(L lhs, R&& rhs, size_t count) noexcept {
         return slide_right(__DPL forward<L>(lhs), __DPL forward<R>(rhs), count);
     }
 
     template <extended_vector R, broadcastable_to<R> L>
-    requires unqualified_extended_slide_right<L, R>
+    requires unqualified_extended_slide_right<L, R, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr R operator()(L&& lhs, R rhs, size_t count) noexcept {
+    static constexpr auto operator()(L&& lhs, R rhs, size_t count) noexcept {
         return slide_right(__DPL forward<L>(lhs), __DPL forward<R>(rhs), count);
     }
 
-    template <simd_vector S, exact_mask_for<S> M, equivalent_vector_with<S> L,
-        equivalent_vector_with<L> R>
+    template <simd_vector S, exact_mask_for<S> M, typename L, typename R>
     requires (extended_vector<S> || extended_mask<M> || extended_vector<L> ||
                  extended_vector<R>) &&
         unqualified_extended_mslide_right<S, M, L, R>
@@ -286,21 +309,20 @@ public:
             __DPL forward<L>(lhs), __DPL forward<R>(rhs), count);
     }
 
-    template <simd_vector S, const_mask_for<S> M, equivalent_vector_with<S> L,
-        equivalent_vector_with<L> R>
+    template <simd_vector S, const_mask_for<S> M, typename L, typename R>
     requires (extended_vector<S> || extended_vector<L> || extended_vector<R>) &&
         unqualified_extended_mslide_right<S, launder_cmask_t<S, M>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
-        S&& src, M cmask, L&& lhs, R&& rhs, size_t count) {
-        return slide_right(src, dx::to_const_mask<S>(cmask),
+        S&& src, M mask, L&& lhs, R&& rhs, size_t count) {
+        return slide_right(src, dx::to_const_mask<S>(mask),
             __DPL forward<L>(lhs), __DPL forward<R>(rhs), count);
     }
 
-    template <simd_vector L, equivalent_vector_with<L> R,
+    template <typename L, typename R,
         result_mask_for<slide_right_t, L, R, size_t> M>
     requires (extended_mask<M> || extended_vector<L> || extended_vector<R>) &&
-        unqualified_extended_mslide_right<dx::zero_t, M, L, R>
+        unqualified_extended_zmslide_right<M, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         dx::zero_t zero, M&& mask, L&& lhs, R&& rhs, size_t count) {
@@ -308,16 +330,16 @@ public:
             __DPL forward<R>(rhs), count);
     }
 
-    template <simd_vector L, equivalent_vector_with<L> R,
+    template <typename L, typename R,
         result_cmask_for<slide_right_t, L, R, size_t> M>
     requires (extended_vector<L> || extended_vector<R>) &&
-        unqualified_extended_mslide_right<dx::zero_t,
+        unqualified_extended_zmslide_right<
             launder_cmask_t<cpo_result_t<slide_right_t, L, R, size_t>, M>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
-        dx::zero_t zero, M cmask, L&& lhs, R&& rhs, size_t count) {
+        dx::zero_t zero, M mask, L&& lhs, R&& rhs, size_t count) {
         return slide_right(zero,
-            dx::to_const_mask<cpo_result_t<slide_right_t, L, R, size_t>>(cmask),
+            dx::to_const_mask<cpo_result_t<slide_right_t, L, R, size_t>>(mask),
             __DPL forward<L>(lhs), __DPL forward<R>(rhs), count);
     }
 
@@ -325,7 +347,7 @@ public:
     template <simd_vector L, equivalent_vector_with<L> R,
         integral_constant_like N>
     requires (extended_vector<L> || extended_vector<R>) &&
-        unqualified_extended_slide_right<L, R, N>
+        unqualified_extended_slide_right<L, R, L, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L&& lhs, R&& rhs, N count) {
         return slide_right(__DPL forward<L>(lhs), __DPL forward<R>(rhs), count);
@@ -333,22 +355,22 @@ public:
 
     template <extended_vector L, broadcastable_to<L> R,
         integral_constant_like N>
-    requires unqualified_extended_slide_right<L, R>
+    requires unqualified_extended_slide_right<L, R, L, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr L operator()(L lhs, R&& rhs, N count) noexcept {
+    static constexpr auto operator()(L lhs, R&& rhs, N count) noexcept {
         return slide_right(__DPL forward<L>(lhs), __DPL forward<R>(rhs), count);
     }
 
     template <extended_vector R, broadcastable_to<R> L,
         integral_constant_like N>
-    requires unqualified_extended_slide_right<L, R>
+    requires unqualified_extended_slide_right<L, R, R, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr R operator()(L&& lhs, R rhs, N count) noexcept {
+    static constexpr auto operator()(L&& lhs, R rhs, N count) noexcept {
         return slide_right(__DPL forward<L>(lhs), __DPL forward<R>(rhs), count);
     }
 
-    template <simd_vector S, exact_mask_for<S> M, equivalent_vector_with<S> L,
-        equivalent_vector_with<L> R, integral_constant_like N>
+    template <simd_vector S, exact_mask_for<S> M, typename L, typename R,
+        integral_constant_like N>
     requires (extended_vector<S> || extended_mask<M> || extended_vector<L> ||
                  extended_vector<R>) &&
         unqualified_extended_mslide_right<S, M, L, R, N>
@@ -359,21 +381,21 @@ public:
             __DPL forward<L>(lhs), __DPL forward<R>(rhs), count);
     }
 
-    template <simd_vector S, const_mask_for<S> M, equivalent_vector_with<S> L,
-        equivalent_vector_with<L> R, integral_constant_like N>
+    template <simd_vector S, const_mask_for<S> M, typename L, typename R,
+        integral_constant_like N>
     requires (extended_vector<S> || extended_vector<L> || extended_vector<R>) &&
         unqualified_extended_mslide_right<S, launder_cmask_t<S, M>, L, R, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
-        S&& src, M cmask, L&& lhs, R&& rhs, N count) {
-        return slide_right(src, dx::to_const_mask<S>(cmask),
+        S&& src, M mask, L&& lhs, R&& rhs, N count) {
+        return slide_right(src, dx::to_const_mask<S>(mask),
             __DPL forward<L>(lhs), __DPL forward<R>(rhs), count);
     }
 
-    template <simd_vector L, equivalent_vector_with<L> R,
-        integral_constant_like N, result_mask_for<slide_right_t, L, R, N> M>
+    template <typename L, typename R, integral_constant_like N,
+        result_mask_for<slide_right_t, L, R, N> M>
     requires (extended_mask<M> || extended_vector<L> || extended_vector<R>) &&
-        unqualified_extended_mslide_right<dx::zero_t, M, L, R, N>
+        unqualified_extended_zmslide_right<M, L, R, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         dx::zero_t zero, M&& mask, L&& lhs, R&& rhs, N count) {
@@ -381,23 +403,23 @@ public:
             __DPL forward<R>(rhs), count);
     }
 
-    template <simd_vector L, equivalent_vector_with<L> R,
-        integral_constant_like N, result_cmask_for<slide_right_t, L, R, N> M>
+    template <typename L, typename R, integral_constant_like N,
+        result_cmask_for<slide_right_t, L, R, N> M>
     requires (extended_vector<L> || extended_vector<R>) &&
-        unqualified_extended_mslide_right<dx::zero_t,
+        unqualified_extended_zmslide_right<
             launder_cmask_t<cpo_result_t<slide_right_t, L, R, N>, M>, L, R, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
-        dx::zero_t zero, M cmask, L&& lhs, R&& rhs, N count) {
+        dx::zero_t zero, M mask, L&& lhs, R&& rhs, N count) {
         return slide_right(zero,
-            dx::to_const_mask<cpo_result_t<slide_right_t, L, R, N>>(cmask),
+            dx::to_const_mask<cpo_result_t<slide_right_t, L, R, N>>(mask),
             __DPL forward<L>(lhs), __DPL forward<R>(rhs), count);
     }
 };
 
 template <size_t V>
 struct slide_righti_t {
-    template <simd_vector L, equivalent_vector_with<L> R>
+    template <typename L, typename R>
     requires cpo_invocable<slide_right_t, L, R, immediate<V>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L&& lhs, R&& rhs) noexcept(

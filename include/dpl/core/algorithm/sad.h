@@ -65,7 +65,7 @@ concept unqualified_canonical_msad = cpo_invocable<sad_t, S, L, R> &&
     };
 
 template <typename M, typename S, typename L, typename R>
-concept unqualified_canonical_mzsad = cpo_invocable<sad_t, S, L, R> &&
+concept unqualified_canonical_zmsad = cpo_invocable<sad_t, S, L, R> &&
     same_as<S, cpo_result_t<sad_t, S, L, R>> && requires {
         {
             sad(internal::abi<S>, dx::zero, internal::declarg<M>(),
@@ -85,46 +85,62 @@ private:
         return sad(internal::abi<S>, src, lhs, rhs);
     }
 
-    template <canonical_vector L, common_vector_with<L> R,
-        canonical_sad_result<L, R> S>
+    template <canonical_vector L, broadcastable_to<L> R,
+        canonical_sad_result<L, L> S>
+    requires unqualified_canonical_sad<S, L, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr S operator()(S src, L lhs, R&& rhs) noexcept {
+        return sad(internal::abi<S>, src, lhs, __DPL forward<R>(rhs));
+    }
+
+    template <canonical_vector R, broadcastable_to<R> L,
+        canonical_sad_result<R, R> S>
+    requires unqualified_canonical_sad<S, L, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr S operator()(S src, L&& lhs, R rhs) noexcept {
+        return sad(internal::abi<S>, src, __DPL forward<L>(lhs), rhs);
+    }
+
+    template <canonical_vector S, unextended_type L, unextended_type R>
     requires unqualified_canonical_msad<S, simd_mask_type_t<S>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr S operator()(
-        S src, simd_mask_type_t<S> mask, L lhs, R rhs) noexcept {
-        return sad(internal::abi<S>, src, mask, lhs, rhs);
+        S src, simd_mask_type_t<S> mask, L&& lhs, R&& rhs) noexcept {
+        return sad(internal::abi<S>, src, mask, __DPL forward<L>(lhs),
+            __DPL forward<R>(rhs));
     }
 
-    template <canonical_vector L, common_vector_with<L> R,
-        canonical_sad_result<L, R> S, const_mask_for<S> M>
+    template <canonical_vector S, const_mask_for<S> M, unextended_type L,
+        unextended_type R>
     requires unqualified_canonical_msad<S, launder_cmask_t<S, M>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr S operator()(S src, M cmask, L lhs, R rhs) noexcept {
-        return sad(internal::abi<common_abi_t<L, R>>, src,
-            dx::to_const_mask<S>(cmask), lhs, rhs);
+    static constexpr S operator()(S src, M mask, L&& lhs, R&& rhs) noexcept {
+        return sad(internal::abi<S>, src, dx::to_const_mask<S>(mask),
+            __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 
-    template <canonical_vector L, common_vector_with<L> R,
-        canonical_sad_result<L, R> S>
-    requires unqualified_canonical_mzsad<simd_mask_type_t<S>, S, L, R>
+    template <canonical_vector S, unextended_type L, unextended_type R>
+    requires unqualified_canonical_zmsad<simd_mask_type_t<S>, S, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(dx::zero_t zero, simd_mask_type_t<S> mask,
-        S src, L lhs, R rhs) noexcept {
-        return sad(internal::abi<S>, zero, mask, src, lhs, rhs);
+        S src, L&& lhs, R&& rhs) noexcept {
+        return sad(internal::abi<S>, zero, mask, src, __DPL forward<L>(lhs),
+            __DPL forward<R>(rhs));
     }
 
-    template <canonical_vector L, common_vector_with<L> R,
-        canonical_sad_result<L, R> S, const_mask_for<S> M>
-    requires unqualified_canonical_mzsad<launder_cmask_t<S, M>, S, L, R>
+    template <canonical_vector S, const_mask_for<S> M, unextended_type L,
+        unextended_type R>
+    requires unqualified_canonical_zmsad<launder_cmask_t<S, M>, S, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
-        dx::zero_t zero, M cmask, S src, L lhs, R rhs) noexcept {
-        return sad(
-            internal::abi<S>, zero, dx::to_const_mask<S>(cmask), src, lhs, rhs);
+        dx::zero_t zero, M mask, S src, L&& lhs, R&& rhs) noexcept {
+        return sad(internal::abi<S>, zero, dx::to_const_mask<S>(mask), src,
+            __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 };
 
 template <typename S, typename L, typename R>
-concept unqualified_extended_sad = sad_result<S, L, R> && requires {
+concept unqualified_extended_sad = requires {
     {
         sad(internal::declarg<S>(), internal::declarg<L>(),
             internal::declarg<R>())
@@ -132,28 +148,28 @@ concept unqualified_extended_sad = sad_result<S, L, R> && requires {
 };
 
 template <typename S, typename M, typename L, typename R>
-concept unqualified_extended_msad = sad_result<S, L, R> &&
+concept unqualified_extended_msad = cpo_invocable<sad_t, S, L, R> &&
     equivalent_vector_with<S, cpo_result_t<sad_t, S, L, R>> && requires {
         {
             sad(internal::declarg<S>(), internal::declarg<M>(),
                 internal::declarg<L>(), internal::declarg<R>())
-        } -> equivalent_vector_with<cpo_result_t<sad_t, S, L, R>>;
+        } -> equivalent_vector_with<S>;
     };
 
 template <typename M, typename S, typename L, typename R>
-concept unqualified_extended_mzsad = sad_result<S, L, R> &&
+concept unqualified_extended_mzsad = cpo_invocable<sad_t, S, L, R> &&
     equivalent_vector_with<S, cpo_result_t<sad_t, S, L, R>> && requires {
         {
             sad(dx::zero, internal::declarg<M>(), internal::declarg<S>(),
                 internal::declarg<L>(), internal::declarg<R>())
-        } -> equivalent_vector_with<cpo_result_t<sad_t, S, L, R>>;
+        } -> equivalent_vector_with<S>;
     };
 
 template <>
 struct extended_impl<sad_t> {
 public:
-    template <simd_vector S, simd_vector L, common_vector_with<L> R>
-    requires (extended_vector<S> || extended_vector<L> || extended_vector<R>) &&
+    template <simd_vector L, common_vector_with<L> R, sad_result<L, R> S>
+    requires (extended_vector<L> || extended_vector<R> || extended_vector<S>) &&
         unqualified_extended_sad<S, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(S&& src, L&& lhs, R&& rhs) {
@@ -161,8 +177,25 @@ public:
             __DPL forward<R>(rhs));
     }
 
-    template <simd_vector L, common_vector_with<L> R, sad_result<L, R> S,
-        exact_mask_for<S> M>
+    template <simd_vector L, broadcastable_to<L> R, sad_result<L, L> S>
+    requires (extended_vector<L> || extended_vector<S>) &&
+        unqualified_extended_sad<S, L, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(S&& src, L&& lhs, R&& rhs) {
+        return sad(__DPL forward<S>(src), __DPL forward<L>(lhs),
+            __DPL forward<R>(rhs));
+    }
+
+    template <simd_vector R, broadcastable_to<R> L, sad_result<R, R> S>
+    requires (extended_vector<R> || extended_vector<S>) &&
+        unqualified_extended_sad<S, L, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(S&& src, L&& lhs, R&& rhs) {
+        return sad(__DPL forward<S>(src), __DPL forward<L>(lhs),
+            __DPL forward<R>(rhs));
+    }
+
+    template <simd_vector S, exact_mask_for<S> M, typename L, typename R>
     requires (extended_vector<S> || extended_mask<M> || extended_vector<L> ||
                  extended_vector<R>) &&
         unqualified_extended_msad<S, M, L, R>
@@ -172,18 +205,16 @@ public:
             __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 
-    template <simd_vector L, common_vector_with<L> R, sad_result<L, R> S,
-        const_mask_for<S> M>
+    template <simd_vector S, const_mask_for<S> M, typename L, typename R>
     requires (extended_vector<S> || extended_vector<L> || extended_vector<R>) &&
         unqualified_extended_msad<S, launder_cmask_t<S, M>, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(S&& src, M cmask, L&& lhs, R&& rhs) {
-        return sad( __DPL forward<S>(src), dx::to_const_mask<S>(cmask),
+    static constexpr auto operator()(S&& src, M mask, L&& lhs, R&& rhs) {
+        return sad( __DPL forward<S>(src), dx::to_const_mask<S>(mask),
             __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 
-    template <simd_vector L, common_vector_with<L> R, sad_result<L, R> S,
-        exact_mask_for<S> M>
+    template <simd_vector S, exact_mask_for<S> M, typename L, typename R>
     requires (extended_vector<S> || extended_vector<L> || extended_vector<R> ||
                  extended_mask<M>) &&
         unqualified_extended_mzsad<M, S, L, R>
@@ -194,14 +225,13 @@ public:
             __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 
-    template <simd_vector L, common_vector_with<L> R, sad_result<L, R> S,
-        const_mask_for<S> M>
+    template <simd_vector S, const_mask_for<S> M, typename L, typename R>
     requires (extended_vector<S> || extended_vector<L> || extended_vector<R>) &&
-        unqualified_extended_mzsad<S, launder_cmask_t<S, M>, L, R>
+        unqualified_extended_mzsad<launder_cmask_t<S, M>, S, L, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(dx::zero_t zero,
-        launder_cmask_t<S, M> cmask, S&& src, L&& lhs, R&& rhs) {
-        return sad(zero, dx::to_const_mask<S>(cmask), __DPL forward<S>(src),
+        launder_cmask_t<S, M> mask, S&& src, L&& lhs, R&& rhs) {
+        return sad(zero, dx::to_const_mask<S>(mask), __DPL forward<S>(src),
             __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 };
@@ -280,6 +310,23 @@ struct fallback_impl<sad_t> {
                 return self(imm<I + 1>);
             }
         }();
+    }
+
+    template <simd_vector L, broadcastable_to<L> R, sad_result<L, L> S>
+    requires cpo_invocable<sad_t, S, L, canonical_type_t<L>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(S&& src, L&& lhs, R&& rhs) noexcept {
+
+        return sad_t::operator()(__DPL forward<S>(src),
+            __DPL forward<L>(lhs), dx::broadcast<L>(__DPL forward<R>(rhs)));
+    }
+
+    template <simd_vector R, broadcastable_to<R> L, sad_result<R, R> S>
+    requires cpo_invocable<sad_t, S, canonical_type_t<R>, R>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(S&& src, L&& lhs, R&& rhs) noexcept {
+        return sad_t::operator()(__DPL forward<S>(src),
+            dx::broadcast<R>(__DPL forward<L>(lhs)), __DPL forward<R>(rhs));
     }
 };
 

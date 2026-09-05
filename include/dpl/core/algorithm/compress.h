@@ -56,21 +56,18 @@ concept unqualified_canonical_zcompress = requires(T val, M mask) {
 
 template <>
 struct canonical_impl<compress_t> {
-    template <canonical_vector T>
-    requires unqualified_canonical_compress<T, simd_mask_type_t<T>,
-        type_identity_t<T>>
+    template <canonical_vector T, same_as<T> S>
+    requires unqualified_canonical_compress<T, simd_mask_type_t<T>, S>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
-        T val, simd_mask_type_t<T> mask, type_identity_t<T> src) noexcept {
+        T val, simd_mask_type_t<T> mask, S src) noexcept {
         return compress(internal::abi<T>, val, mask, src);
     }
 
-    template <canonical_vector T, const_mask_for<T> M>
-    requires unqualified_canonical_compress<T, launder_cmask_t<T, M>,
-        type_identity_t<T>>
+    template <canonical_vector T, const_mask_for<T> M, same_as<T> S>
+    requires unqualified_canonical_compress<T, launder_cmask_t<T, M>, S>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(
-        T val, M mask, type_identity_t<T> src) noexcept {
+    static constexpr T operator()(T val, M mask, S src) noexcept {
         return compress(internal::abi<T>, val, dx::to_const_mask<T>(mask), src);
     }
 

@@ -21,10 +21,5 @@ concept vshift_vector_for =
     simd_vector<T> && integral<simd_element_type_t<T>> &&
     common_abi_with<simd_abi_type_t<L>, simd_abi_type_t<T>>;
 
-template <typename T, typename L>
-concept canonical_vshift_vector_for =
-    vshift_vector_for<T, L> && canonical_vector<T> &&
-    common_size_with<simd_element_type_t<L>, simd_element_type_t<T>>;
-
 } // namespace datapar::internal
 __DPL_DEFAULT_NAMESPACE_END

@@ -6,6 +6,8 @@
 #include "dpl/core/operations/arithmetic/subtract.h"
 #include "dpl/core/operations/bit/common.h"
 #include "dpl/core/operations/bitwise.h"
+#include "dpl/core/operations/compare/cmpeq.h"
+#include "dpl/core/operations/compare/cmpneq.h"
 #include "dpl/core/operations/reinterpret.h"
 
 #if !DPL_MODULES
@@ -66,7 +68,7 @@ struct fallback_impl<rotr_t> {
         using A = simd_abi_type_t<T>;
         using uint_t = make_unsigned_t<E>;
         // almost always power of 2, so modulus- should optimize to bwand
-        constexpr auto digits = dpl::type_bit_v<uint_t>;
+        constexpr auto digits = __DPL type_bit_v<uint_t>;
         count %= digits;
         auto const rcount = digits - count;
         auto const uval = dx::reinterpret<uint_t>(val);
@@ -89,83 +91,74 @@ struct fallback_impl<rotr_t> {
     }
 
     template <canonical_mask T>
-    requires fixed_width_mask<T> && cpo_invocable<to_bitset_t, T>
+    requires cpo_invocable<to_bitset_t, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr T DPL_VECTORCALL operator()(T val, size_t size) noexcept {
         using bitset_t = invoke_result_t<to_bitset_t, T>;
         return dx::from_bitset<T>(__DPL rotr(dx::to_bitset(val), size));
     }
 
-    template <canonical_vector L, canonical_vector R>
+    template <canonical_vector L>
     requires integral<simd_element_type_t<L>> &&
-        integral<simd_element_type_t<R>> &&
-        same_abi_as<simd_abi_type_t<L>, simd_abi_type_t<R>> &&
-        common_size_with<simd_element_type_t<L>, simd_element_type_t<R>> &&
-        (__DPL has_single_bit(sizeof(simd_element_type_t<L>)) &&
-            __DPL has_single_bit(sizeof(simd_element_type_t<R>)))
+        (__DPL has_single_bit(sizeof(simd_element_type_t<L>)))
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr L DPL_VECTORCALL operator()(L val, R count) noexcept {
-        using RE = simd_element_type_t<R>;
-        if constexpr (signed_integral<RE>) {
-            return operator()(val, dx::reinterpret<make_unsigned_t<RE>>(count));
-        } else {
-            using A = simd_abi_type_t<L>;
-            using LE = simd_element_type_t<L>;
-            using uint_t = make_unsigned_t<LE>;
-            constexpr auto digits = dpl::type_bit_v<LE>;
-            auto const dig = dx::broadcast<RE, A>(static_cast<RE>(digits));
-            count = dx::bwand(count, dx::subtract(dig, 1));
-            auto const rcount = dx::subtract(digits, count);
-            auto const uval = dx::reinterpret<uint_t>(val);
-            auto const result = [&]() {
-                if consteval {
-                    return dx::bwor(dx::bwshift_right(uval, count),
-                        dx::bwshift_left(
-                            dx::select(count == dx::zero, dx::zero, uval),
-                            dx::select(count == dx::zero, dx::zero, rcount)));
-                } else {
-                    return dx::bwor(dx::bwshift_right(uval, count),
-                        dx::bwshift_left(count != dx::zero, uval, rcount));
-                }
-            }();
-            return dx::reinterpret<LE>(result);
-        }
+    static constexpr L DPL_VECTORCALL operator()(
+        L val, unsigned_canonical_vector_t<L> count) noexcept {
+        using A = simd_abi_type_t<L>;
+        using LE = simd_element_type_t<L>;
+        using R = unsigned_canonical_vector_t<L>;
+        using uint_t = make_unsigned_t<LE>;
+        constexpr auto digits = __DPL type_bit_v<LE>;
+        auto const vdigits = dx::broadcast<R>(digits);
+        count = dx::bwand(count, dx::subtract(vdigits, 1));
+        auto const rcount = dx::subtract(digits, count);
+        auto const uval = dx::reinterpret<uint_t>(val);
+        auto const result = [&]() {
+            if consteval {
+                auto const count_iszero = dx::cmpeq(count, dx::zero);
+                return dx::bwor(dx::bwshift_right(uval, count),
+                    dx::bwshift_left(dx::select(count_iszero, dx::zero, uval),
+                        dx::select(count_iszero, dx::zero, rcount)));
+            } else {
+                auto const count_isnotzero = dx::cmpneq(count, dx::zero);
+                return dx::bwor(dx::bwshift_right(uval, count),
+                    dx::bwshift_left(count_isnotzero, uval, rcount));
+            }
+        }();
+        return dx::reinterpret<LE>(result);
     }
 };
 
-template <typename T, typename N = size_t, typename A = simd_abi_type_t<T>>
-concept unqualified_canonical_rotr = requires {
-    {
-        rotr(internal::abi<A>, internal::declarg<T>(), internal::declarg<N>())
-    } -> same_as<rebind_simd_t<T, simd_element_type_t<T>, A>>;
-};
-
 template <typename T, typename N = size_t>
-concept unqualified_canonical_mask_rotr = requires {
+concept unqualified_canonical_rotr = requires {
     {
         rotr(internal::abi<T>, internal::declarg<T>(), internal::declarg<N>())
     } -> same_as<T>;
 };
 
 template <typename S, typename M, typename T, typename N = size_t>
-concept unqualified_canonical_mrotr = cpo_invocable<rotr_t, T, N> &&
-    (!simd_type<S> || same_as<S, cpo_result_t<rotr_t, T, N>>) && requires {
+concept unqualified_canonical_mrotr_base =
+    cpo_invocable<rotr_t, T, N> && requires {
         {
-            rotr(internal::abi<cpo_result_t<rotr_t, T, N>>,
-                internal::declarg<S>(), internal::declarg<M>(),
-                internal::declarg<T>(), internal::declarg<N>())
-        } -> same_as<cpo_result_t<rotr_t, T, N>>;
+            rotr(internal::abi<T>, internal::declarg<S>(),
+                internal::declarg<M>(), internal::declarg<T>(),
+                internal::declarg<N>())
+        } -> same_as<T>;
     };
+
+template <typename M, typename T, typename N = size_t>
+concept unqualified_canonical_mrotr =
+    unqualified_canonical_mrotr_base<T, M, T, N>;
+
+template <typename M, typename T, typename N = size_t>
+concept unqualified_canonical_zmrotr =
+    unqualified_canonical_mrotr_base<dx::zero_t, M, T, N>;
 
 template <>
 struct canonical_impl<rotr_t> {
 private:
-    template <typename L, typename R>
-    using vresult_t DPL_NODEBUG =
-        make_canonical_vector_t<simd_element_type_t<L>, common_abi_t<L, R>>;
-
-    template <typename L, typename R>
-    using vmask_t DPL_NODEBUG = simd_mask_type_t<vresult_t<L, R>>;
+    template <typename T>
+    using vcount_t DPL_NODEBUG = unsigned_canonical_vector_t<T>;
 
 public:
     template <canonical_vector T>
@@ -176,14 +169,14 @@ public:
     }
 
     template <canonical_mask T>
-    requires unqualified_canonical_mask_rotr<T>
+    requires unqualified_canonical_rotr<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(T val, size_t count) noexcept {
         return rotr(internal::abi<T>, val, count);
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mrotr<T, simd_mask_type_t<T>, T>
+    requires unqualified_canonical_mrotr<simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(type_identity_t<T> src,
         simd_mask_type_t<T> mask, T val, size_t count) noexcept {
@@ -191,7 +184,7 @@ public:
     }
 
     template <canonical_vector T, const_mask_for<T> M>
-    requires unqualified_canonical_mrotr<T, launder_cmask_t<T, M>, T>
+    requires unqualified_canonical_mrotr<launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
         type_identity_t<T> src, M cmask, T val, size_t count) noexcept {
@@ -200,7 +193,7 @@ public:
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mrotr<dx::zero_t, simd_mask_type_t<T>, T>
+    requires unqualified_canonical_zmrotr<simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(dx::zero_t zero, simd_mask_type_t<T> mask,
         T val, size_t count) noexcept {
@@ -208,7 +201,7 @@ public:
     }
 
     template <canonical_vector T, const_mask_for<T> M>
-    requires unqualified_canonical_mrotr<dx::zero_t, launder_cmask_t<T, M>, T>
+    requires unqualified_canonical_zmrotr<launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
         dx::zero_t zero, M cmask, T val, size_t count) noexcept {
@@ -225,14 +218,14 @@ public:
     }
 
     template <canonical_mask T, integral_constant_like N>
-    requires unqualified_canonical_mask_rotr<T, N>
+    requires unqualified_canonical_rotr<T, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(T val, N count) noexcept {
         return rotr(internal::abi<T>, val, count);
     }
 
     template <canonical_vector T, integral_constant_like N>
-    requires unqualified_canonical_mrotr<T, simd_mask_type_t<T>, T, N>
+    requires unqualified_canonical_mrotr<simd_mask_type_t<T>, T, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(type_identity_t<T> src,
         simd_mask_type_t<T> mask, T val, N count) noexcept {
@@ -240,7 +233,7 @@ public:
     }
 
     template <canonical_vector T, const_mask_for<T> M, integral_constant_like N>
-    requires unqualified_canonical_mrotr<T, launder_cmask_t<T, M>, T, N>
+    requires unqualified_canonical_mrotr<launder_cmask_t<T, M>, T, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
         type_identity_t<T> src, M cmask, T val, N count) noexcept {
@@ -249,7 +242,7 @@ public:
     }
 
     template <canonical_vector T, integral_constant_like N>
-    requires unqualified_canonical_mrotr<dx::zero_t, simd_mask_type_t<T>, T, N>
+    requires unqualified_canonical_zmrotr<simd_mask_type_t<T>, T, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
         dx::zero_t zero, simd_mask_type_t<T> mask, T val, N count) noexcept {
@@ -257,8 +250,7 @@ public:
     }
 
     template <canonical_vector T, const_mask_for<T> M, integral_constant_like N>
-    requires canonical_vector<T> &&
-        unqualified_canonical_mrotr<dx::zero_t, launder_cmask_t<T, M>, T, N>
+    requires unqualified_canonical_zmrotr<launder_cmask_t<T, M>, T, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
         dx::zero_t zero, M cmask, T val, N count) noexcept {
@@ -267,144 +259,144 @@ public:
     }
 
     ///
-    template <canonical_vector L, canonical_vrot_vector_for<L> R>
-    requires unqualified_canonical_rotr<L, R, common_abi_t<L, R>>
+    template <canonical_vector T>
+    requires unqualified_canonical_rotr<T, vcount_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr vresult_t<L, R> operator()(L lhs, R rhs) noexcept {
-        return rotr(internal::abi<common_abi_t<L, R>>, lhs, rhs);
+    static constexpr T operator()(T lhs, vcount_t<T> rhs) noexcept {
+        return rotr(internal::abi<T>, lhs, rhs);
     }
 
-    template <canonical_vector L, canonical_vrot_vector_for<L> R>
-    requires unqualified_canonical_mrotr<vresult_t<L, R>, vmask_t<L, R>, L, R>
+    template <canonical_vector T>
+    requires unqualified_canonical_mrotr<simd_mask_type_t<T>, T, vcount_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr vresult_t<L, R> operator()(
-        vresult_t<L, R> src, vmask_t<L, R> mask, L lhs, R rhs) noexcept {
-        return rotr(internal::abi<common_abi_t<L, R>>, src, mask, lhs, rhs);
+    static constexpr T operator()(type_identity_t<T> src,
+        simd_mask_type_t<T> mask, T lhs, vcount_t<T> rhs) noexcept {
+        return rotr(internal::abi<T>, src, mask, lhs, rhs);
     }
 
-    template <canonical_vector L, canonical_vrot_vector_for<L> R,
-        const_mask_for<vresult_t<L, R>> M>
-    requires unqualified_canonical_mrotr<vresult_t<L, R>,
-        launder_cmask_t<vresult_t<L, R>, M>, L, R>
+    template <canonical_vector T, const_mask_for<T> M>
+    requires unqualified_canonical_mrotr<launder_cmask_t<T, M>, T, vcount_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr vresult_t<L, R> operator()(
-        vresult_t<L, R> src, M cmask, L lhs, R rhs) noexcept {
-        return rotr(internal::abi<common_abi_t<L, R>>, src,
-            dx::to_const_mask<vresult_t<L, R>>(cmask), lhs, rhs);
+    static constexpr T operator()(
+        type_identity_t<T> src, M mask, T lhs, vcount_t<T> rhs) noexcept {
+        return rotr(
+            internal::abi<T>, src, dx::to_const_mask<T>(mask), lhs, rhs);
     }
 
-    template <canonical_vector L, canonical_vrot_vector_for<L> R>
-    requires unqualified_canonical_mrotr<dx::zero_t, vmask_t<L, R>, L, R>
+    template <canonical_vector T>
+    requires unqualified_canonical_zmrotr<simd_mask_type_t<T>, T, vcount_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr vresult_t<L, R> operator()(
-        dx::zero_t zero, vmask_t<L, R> mask, L lhs, R rhs) noexcept {
-        return rotr(internal::abi<common_abi_t<L, R>>, zero, mask, lhs, rhs);
+    static constexpr T operator()(dx::zero_t zero, simd_mask_type_t<T> mask,
+        T lhs, vcount_t<T> rhs) noexcept {
+        return rotr(internal::abi<T>, zero, mask, lhs, rhs);
     }
 
-    template <canonical_vector L, canonical_vrot_vector_for<L> R,
-        const_mask_for<vresult_t<L, R>> M>
-    requires unqualified_canonical_mrotr<dx::zero_t,
-        launder_cmask_t<vresult_t<L, R>, M>, L, R>
+    template <canonical_vector T, const_mask_for<T> M>
+    requires unqualified_canonical_zmrotr<launder_cmask_t<T, M>, T, vcount_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr vresult_t<L, R> operator()(
-        dx::zero_t zero, M cmask, L lhs, R rhs) noexcept {
-        return rotr(internal::abi<common_abi_t<L, R>>, zero,
-            dx::to_const_mask<vresult_t<L, R>>(cmask), lhs, rhs);
+    static constexpr T operator()(
+        dx::zero_t zero, M mask, T lhs, vcount_t<T> rhs) noexcept {
+        return rotr(
+            internal::abi<T>, zero, dx::to_const_mask<T>(mask), lhs, rhs);
     }
+};
+
+template <typename T, typename N = size_t>
+concept unqualified_extended_rotr = requires {
+    {
+        rotr(internal::declarg<T>(), internal::declarg<N>())
+    } -> equivalent_vector_with<T>;
 };
 
 template <typename T, typename N = size_t>
 concept unqualified_extended_mask_rotr = requires {
     {
         rotr(internal::declarg<T>(), internal::declarg<N>())
-    } -> mask_with_common_abi<simd_abi_type_t<T>>;
-};
-
-template <typename T, typename N = size_t, typename A = simd_abi_type_t<T>>
-concept unqualified_extended_rotr = requires {
-    {
-        rotr(internal::declarg<T>(), internal::declarg<N>())
-    } -> vector_with_common_abi<A>;
+    } -> equivalent_mask_with<T>;
 };
 
 template <typename S, typename M, typename T, typename N = size_t>
-concept unqualified_extended_mrotr = cpo_invocable<rotr_t, T, N> &&
-    (!simd_type<S> || equivalent_vector_with<S, cpo_result_t<rotr_t, T, N>>) &&
-    requires {
+concept unqualified_extended_mrotr_base =
+    cpo_invocable<rotr_t, T, N> && requires {
         {
             rotr(internal::declarg<S>(), internal::declarg<M>(),
                 internal::declarg<T>(), internal::declarg<N>())
-        } -> equivalent_vector_with<cpo_result_t<rotr_t, T, N>>;
+        } -> equivalent_vector_with<T>;
     };
+
+template <typename S, typename M, typename T, typename N = size_t>
+concept unqualified_extended_mrotr =
+    unqualified_extended_mrotr_base<S, M, T, N> && equivalent_vector_with<S, T>;
+
+template <typename M, typename T, typename N = size_t>
+concept unqualified_extended_zmrotr =
+    unqualified_extended_mrotr_base<dx::zero_t, M, T, N>;
 
 template <>
 struct extended_impl<rotr_t> {
 public:
-    template <extended_mask L>
-    requires unqualified_extended_mask_rotr<L>
+    template <extended_mask T>
+    requires unqualified_extended_rotr<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L&& lhs, size_t shift) {
-        return rotr(__DPL forward<L>(lhs), shift);
+    static constexpr auto operator()(T&& lhs, size_t shift) {
+        return rotr(__DPL forward<T>(lhs), shift);
     }
 
-    template <extended_mask L, integral_constant_like R>
-    requires unqualified_extended_mask_rotr<L, R>
+    template <extended_mask T, integral_constant_like N>
+    requires unqualified_extended_mask_rotr<T, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L&& lhs, R shift) {
-        return rotr(__DPL forward<L>(lhs), shift);
+    static constexpr auto operator()(T&& lhs, N shift) {
+        return rotr(__DPL forward<T>(lhs), shift);
     }
     ///
 
-    template <simd_vector L, vrot_vector_for<L> R>
-    requires (extended_simd_type<L> || extended_simd_type<R>) &&
-        unqualified_extended_rotr<L, R, common_abi_t<L, R>>
+    template <simd_vector T, vrot_vector_for<T> N>
+    requires (extended_vector<T> || extended_vector<N>) &&
+        unqualified_extended_rotr<T, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(L&& lhs, R&& rhs) {
-        return rotr(__DPL forward<L>(lhs), __DPL forward<L>(rhs));
+    static constexpr auto operator()(T&& lhs, N&& rhs) {
+        return rotr(__DPL forward<T>(lhs), __DPL forward<N>(rhs));
     }
 
-    template <simd_vector S, exact_mask_for<S> M, common_vector_with<S> L,
-        vrot_vector_for<L> R>
-    requires (extended_vector<S> || extended_mask<M> || extended_vector<L> ||
-                 extended_vector<R>) &&
-        unqualified_extended_mrotr<S, M, L, R>
+    template <simd_vector S, exact_mask_for<S> M, simd_vector T,
+        vrot_vector_for<T> N>
+    requires (extended_vector<S> || extended_mask<M> || extended_vector<T> ||
+                 extended_vector<N>) &&
+        unqualified_extended_mrotr<S, M, T, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(S&& src, M&& mask, L&& lhs, R&& rhs) {
+    static constexpr auto operator()(S&& src, M&& mask, T&& lhs, N&& rhs) {
         return rotr(__DPL forward<S>(src), __DPL forward<M>(mask),
-            __DPL forward<L>(lhs), __DPL forward<R>(rhs));
+            __DPL forward<T>(lhs), __DPL forward<N>(rhs));
     }
 
-    template <simd_vector S, const_mask_for<S> M, common_vector_with<S> L,
-        vrot_vector_for<L> R>
-    requires (extended_vector<S> || extended_vector<L> || extended_vector<R>) &&
-        unqualified_extended_mrotr<S, launder_cmask_t<S, M>, L, R>
+    template <simd_vector S, const_mask_for<S> M, simd_vector T,
+        vrot_vector_for<T> N>
+    requires (extended_vector<S> || extended_vector<T> || extended_vector<N>) &&
+        unqualified_extended_mrotr<S, launder_cmask_t<S, M>, T, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(S&& src, M cmask, L&& lhs, R&& rhs) {
-        return rotr(src, dx::to_const_mask<S>(cmask), __DPL forward<L>(lhs),
-            __DPL forward<R>(rhs));
+    static constexpr auto operator()(S&& src, M mask, T&& lhs, N&& rhs) {
+        return rotr(src, dx::to_const_mask<S>(mask), __DPL forward<T>(lhs),
+            __DPL forward<N>(rhs));
     }
 
-    template <simd_vector L, vrot_vector_for<L> R,
-        result_mask_for<rotr_t, L, R> M>
-    requires (extended_mask<M> || extended_vector<L> || extended_vector<R>) &&
-        unqualified_extended_mrotr<dx::zero_t, M, L, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        dx::zero_t zero, M&& mask, L&& lhs, R&& rhs) {
-        return rotr(zero, __DPL forward<M>(mask), __DPL forward<L>(lhs),
-            __DPL forward<R>(rhs));
-    }
-
-    template <simd_vector L, vrot_vector_for<L> R,
-        result_cmask_for<rotr_t, L, R> M>
-    requires (extended_vector<L> || extended_vector<R>) &&
-        unqualified_extended_mrotr<dx::zero_t,
-            launder_cmask_t<cpo_result_t<rotr_t, L, R>, M>, L, R>
+    template <simd_vector T, vrot_vector_for<T> N, exact_mask_for<T> M>
+    requires (extended_mask<M> || extended_vector<T> || extended_vector<N>) &&
+        unqualified_extended_zmrotr<M, T, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
-        dx::zero_t zero, M cmask, L&& lhs, R&& rhs) {
-        return rotr(zero, dx::to_const_mask<cpo_result_t<rotr_t, L, R>>(cmask),
-            __DPL forward<L>(lhs), __DPL forward<R>(rhs));
+        dx::zero_t zero, M&& mask, T&& lhs, N&& rhs) {
+        return rotr(zero, __DPL forward<M>(mask), __DPL forward<T>(lhs),
+            __DPL forward<N>(rhs));
+    }
+
+    template <simd_vector T, vrot_vector_for<T> N, const_mask_for<T> M>
+    requires (extended_vector<T> || extended_vector<N>) &&
+        unqualified_extended_zmrotr<launder_cmask_t<T, M>, T, N>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(
+        dx::zero_t zero, M mask, T&& lhs, N&& rhs) {
+        return rotr(zero, dx::to_const_mask<T>(mask), __DPL forward<T>(lhs),
+            __DPL forward<N>(rhs));
     }
     ///
     template <extended_vector T>
@@ -414,7 +406,7 @@ public:
         return rotr(__DPL forward<T>(val), count);
     }
 
-    template <simd_vector S, exact_mask_for<S> M, vector_subsumed_by<S> T>
+    template <simd_vector S, exact_mask_for<S> M, equivalent_vector_with<S> T>
     requires (extended_vector<S> || extended_mask<M> || extended_vector<T>) &&
         unqualified_extended_mrotr<S, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -423,34 +415,31 @@ public:
             __DPL forward<T>(val), count);
     }
 
-    template <simd_vector S, const_mask_for<S> M, vector_subsumed_by<S> T>
+    template <simd_vector S, const_mask_for<S> M, equivalent_vector_with<S> T>
     requires (extended_vector<S> || extended_vector<T>) &&
         unqualified_extended_mrotr<S, launder_cmask_t<S, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(S&& src, M cmask, T&& val, size_t count) {
-        return rotr( __DPL forward<S>(src), dx::to_const_mask<S>(cmask),
+    static constexpr auto operator()(S&& src, M mask, T&& val, size_t count) {
+        return rotr( __DPL forward<S>(src), dx::to_const_mask<S>(mask),
             __DPL forward<T>(val), count);
     }
 
-    template <simd_vector T, result_mask_for<rotr_t, T, size_t> M>
+    template <simd_vector T, exact_mask_for<T> M>
     requires (extended_mask<M> || extended_vector<T>) &&
-        unqualified_extended_mrotr<dx::zero_t, M, T>
+        unqualified_extended_zmrotr<M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         dx::zero_t zero, M&& mask, T&& val, size_t count) {
         return rotr(zero, mask, __DPL forward<T>(val), count);
     }
 
-    template <simd_vector T, result_cmask_for<rotr_t, T, size_t> M>
-    requires extended_vector<T> &&
-        unqualified_extended_mrotr<dx::zero_t,
-            launder_cmask_t<cpo_result_t<rotr_t, T, size_t>, M>, T>
+    template <extended_vector T, const_mask_for<T> M>
+    requires unqualified_extended_zmrotr<launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         dx::zero_t zero, M cmask, T&& val, size_t count) {
-        return rotr(zero,
-            dx::to_const_mask<cpo_result_t<rotr_t, T, size_t>>(cmask),
-            __DPL forward<T>(val), count);
+        return rotr(
+            zero, dx::to_const_mask<T>(cmask), __DPL forward<T>(val), count);
     }
 
     ///
@@ -461,7 +450,7 @@ public:
         return rotr(__DPL forward<T>(val), count);
     }
 
-    template <simd_vector S, exact_mask_for<S> M, vector_subsumed_by<S> T,
+    template <simd_vector S, exact_mask_for<S> M, equivalent_vector_with<S> T,
         integral_constant_like N>
     requires (extended_vector<S> || extended_mask<M> || extended_vector<T>) &&
         unqualified_extended_mrotr<S, M, T, N>
@@ -471,7 +460,7 @@ public:
             __DPL forward<T>(val), count);
     }
 
-    template <simd_vector S, const_mask_for<S> M, vector_subsumed_by<S> T,
+    template <simd_vector S, const_mask_for<S> M, equivalent_vector_with<S> T,
         integral_constant_like N>
     requires (extended_vector<S> || extended_vector<T>) &&
         unqualified_extended_mrotr<S, launder_cmask_t<S, M>, T, N>
@@ -481,10 +470,9 @@ public:
             __DPL forward<T>(val), count);
     }
 
-    template <simd_vector T, integral_constant_like N,
-        result_mask_for<rotr_t, T, N> M>
+    template <simd_vector T, integral_constant_like N, exact_mask_for<T> M>
     requires (extended_mask<M> || extended_vector<T>) &&
-        unqualified_extended_mrotr<dx::zero_t, M, T, N>
+        unqualified_extended_zmrotr<M, T, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         dx::zero_t zero, M&& mask, T&& val, N count) {
@@ -492,14 +480,13 @@ public:
             zero, __DPL forward<M>(mask), __DPL forward<T>(val), count);
     }
 
-    template <extended_vector T, integral_constant_like N,
-        result_cmask_for<rotr_t, T, N> M>
-    requires unqualified_extended_mrotr<dx::zero_t, launder_cmask_t<T, M>, T, N>
+    template <extended_vector T, integral_constant_like N, const_mask_for<T> M>
+    requires unqualified_extended_zmrotr<launder_cmask_t<T, M>, T, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         dx::zero_t zero, M cmask, T&& val, N count) {
-        return rotr(zero, dx::to_const_mask<cpo_result_t<rotr_t, T, N>>(cmask),
-            __DPL forward<T>(val), count);
+        return rotr(
+            zero, dx::to_const_mask<T>(cmask), __DPL forward<T>(val), count);
     }
 };
 

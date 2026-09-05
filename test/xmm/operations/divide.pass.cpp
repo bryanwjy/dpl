@@ -21,6 +21,12 @@ int main() {
     using abi_t = xmm::abi_tag;
     using types =
         dpl::type_pack<float, double, dpl::ext::float16, dpl::ext::bfloat16>;
+    static_assert(dpl::same_as<
+        dpl::invoke_result_t<dpl::decay_t<decltype(dpp::divide)>,
+            dpp::basic_vector<dpl::ext::float16, abi_t>,
+            dpp::basic_vector<dpl::ext::float16, abi_t>>::value_type,
+        dpl::ext::float16>);
+    static_assert(dpl::floating_point_like<dpl::ext::float16>);
     constexpr auto run = []() {
         dpl::test::mt19937 engine;
         return dpl::test::division<abi_t>::run_all(types{}, engine);

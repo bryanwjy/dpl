@@ -34,20 +34,6 @@ struct reinterpret_t : public primitive_operation_base<reinterpret_t<E>> {
     using operation_base<reinterpret_t<E>>::operator();
 };
 
-// TODO: remove this specialization
-template <simd_type T>
-struct reinterpret_t<T> : public reinterpret_t<simd_element_type_t<T>> {
-    static_assert(is_object_v<T> && !is_const_v<T> && !is_volatile_v<T>);
-    template <simd_type U>
-    requires cpo_invocable<reinterpret_t<simd_element_type_t<T>>, U>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(U&& val) noexcept(canonical_simd_type<U>) {
-        static_assert(same_as<simd_abi_type_t<T>, simd_abi_type_t<U>>);
-        using base DPL_NODEBUG = reinterpret_t<simd_element_type_t<T>>;
-        return base::operator()(__DPL forward<U>(val));
-    }
-};
-
 template <typename E>
 struct operation_signature<reinterpret_t<E>> {
     static consteval void operator()(simd_type auto&&) noexcept {}
@@ -63,43 +49,45 @@ struct fallback_impl<reinterpret_t<ToE>> {
         return __DPL forward<T>(val);
     }
 
-    template <fixed_width_abi A, simd_element_for<A> FromE>
-    requires simd_element_for<ToE, A> &&
-        (sizeof(basic_vector<FromE, A>) == sizeof(basic_vector<ToE, A>))
+    template <canonical_vector T>
+    requires fixed_width_abi<simd_abi_type_t<T>> &&
+        (sizeof(T) == sizeof(rebind_simd_t<T, ToE>))
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_vector<ToE, A> operator()(
-        basic_vector<FromE, A> from) noexcept {
-        using to_vector = typename simd_abi_traits<ToE, A>::native_vector;
-        using from_vector = typename simd_abi_traits<FromE, A>::native_vector;
+    static constexpr rebind_simd_t<T, ToE> operator()(T from) noexcept {
+        using To DPL_NODEBUG = rebind_simd_t<T, ToE>;
+        using to_vector DPL_NODEBUG =
+            typename simd_abi_traits<To>::native_vector;
+        using from_vector DPL_NODEBUG =
+            typename simd_abi_traits<T>::native_vector;
         if constexpr (same_as<to_vector, from_vector>) {
             return +from;
         } else if consteval {
             // Workaround MSVC's unions
-            array_for<FromE, A> buffer;
+            array_for<T> buffer;
             dx::store(from, buffer.data);
-            return dx::load<A>(__DPL bit_cast<array_for<ToE, A>>(buffer).data);
+            return dx::load<To>( __DPL bit_cast<array_for<To>>(buffer).data);
         } else {
-            return __DPL bit_cast<basic_vector<ToE, A>>(from);
+            return __DPL bit_cast<To>(from);
         }
     }
 
-    template <fixed_width_abi A, simd_element_for<A> FromE>
-    requires simd_element_for<ToE, A> && common_size_with<FromE, ToE>
+    template <canonical_vector T>
+    requires common_size_with<simd_element_type_t<T>, ToE>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_mask<ToE, A> operator()(
-        basic_mask<FromE, A> from) noexcept {
-        using to_mask = typename simd_abi_traits<ToE, A>::native_mask;
-        using from_mask = typename simd_abi_traits<FromE, A>::native_mask;
-        constexpr auto width = typename simd_abi_traits<FromE, A>::size();
+    static constexpr rebind_simd_t<T, ToE> operator()(T from) noexcept {
+        using To = rebind_simd_t<T, ToE>;
+        using to_mask = typename simd_abi_traits<To>::native_mask;
+        using from_mask = typename simd_abi_traits<T>::native_mask;
+        constexpr auto width = typename simd_abi_traits<T>::size();
         if constexpr (same_as<to_mask, from_mask>) {
             return +from;
         } else if consteval {
             // Workaround MSVC's unions
             return [&]<size_t... Is>(index_sequence<Is...>) {
-                return dx::from_bitset<ToE, A>(bitset<width>(from[imm<Is>]...));
-            }(iota_sequence<FromE, A>);
+                return dx::from_bitset<To>(bitset<width>(from[imm<Is>]...));
+            }(iota_sequence<T>);
         } else {
-            return __DPL bit_cast<basic_mask<ToE, A>>(from);
+            return __DPL bit_cast<To>(from);
         }
     }
 };

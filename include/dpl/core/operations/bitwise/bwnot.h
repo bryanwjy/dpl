@@ -6,6 +6,7 @@
 // IWYU pragma: always_keep
 
 #include "dpl/core/operations/bitwise/bwandnot.h"
+#include "dpl/core/operations/internal/broadcasting.h"
 #include "dpl/core/operations/internal/transform.h"
 
 #if !DPL_MODULES
@@ -38,48 +39,47 @@ struct fallback_impl<bwnot_t> {
     template <typename E>
     using bitset_t DPL_NODEBUG = bitset<__DPL type_bit_v<E>>;
 
-    template <simd_abi A, simd_element_for<A> E>
-    requires cpo_invocable<bwandnot_t, all_bits_t, basic_vector<E, A>> ||
-        (sizeof(bitset_t<E>) == sizeof(E))
+    template <canonical_vector T>
+    requires cpo_invocable<bwandnot_t, all_bits_t, T> ||
+        requires { typename bit_representation_t<simd_element_type_t<T>>; }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_vector<E, A>
-        DPL_VECTORCALL operator()(basic_vector<E, A> val) noexcept {
-        if constexpr (cpo_invocable<bwandnot_t, all_bits_t,
-                          basic_vector<E, A>>) {
+    static constexpr T DPL_VECTORCALL operator()(T val) noexcept {
+        if constexpr (cpo_invocable<bwandnot_t, all_bits_t, T>) {
             return bwandnot_t::operator()(dx::all_bits, val);
         } else {
-            return internal::transform<basic_vector<E, A>>(
+            return internal::transform<T>(
                 [](auto val) {
-                    auto const negated = ~__DPL bit_cast<bitset_t<E>>(val);
-                    return __DPL bit_cast<E>(negated);
+                    return __DPL bit_cast<simd_element_type_t<T>>(
+                        ~__DPL to_bit_representation(val));
                 },
                 val);
         }
     }
 
-    template <simd_abi A, simd_element_for<A> E>
-    requires cpo_invocable<bwandnot_t, basic_mask<E, A>, true_type> ||
-        cpo_invocable<to_bitset_t, basic_mask<E, A>>
+    template <canonical_mask T>
+    requires cpo_invocable<to_bitset_t, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr basic_mask<E, A>
-        DPL_VECTORCALL operator()(basic_mask<E, A> val) noexcept {
-        if constexpr (cpo_invocable<bwandnot_t, basic_mask<E, A>, true_type>) {
-            return bwandnot_t::operator()(true_type{}, val);
-        } else {
-            return dx::from_bitset<E, A>(~dx::to_bitset(val));
-        }
+    static constexpr T DPL_VECTORCALL operator()(T val) noexcept {
+        return dx::from_bitset<T>(~dx::to_bitset(val));
     }
 };
 
 template <typename S, typename M, typename T>
-concept unqualified_canonical_mbwnot = cpo_invocable<bwnot_t, T> &&
-    (!simd_type<S> || same_as<S, cpo_result_t<bwnot_t, T>>) && requires {
+concept unqualified_canonical_mbwnot_base =
+    cpo_invocable<bwnot_t, T> && requires {
         {
-            bwnot(internal::abi<cpo_result_t<bwnot_t, T>>,
-                internal::declarg<S>(), internal::declarg<M>(),
-                internal::declarg<T>())
-        } -> same_as<cpo_result_t<bwnot_t, T>>;
+            bwnot(internal::abi<T>, internal::declarg<S>(),
+                internal::declarg<M>(), internal::declarg<T>())
+        } -> same_as<T>;
     };
+
+template <typename M, typename T>
+concept unqualified_canonical_mbwnot =
+    unqualified_canonical_mbwnot_base<T, M, T>;
+
+template <typename M, typename T>
+concept unqualified_canonical_zmbwnot =
+    unqualified_canonical_mbwnot_base<dx::zero_t, M, T>;
 
 template <>
 struct canonical_impl<bwnot_t> {
@@ -101,66 +101,62 @@ public:
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mbwnot<T, simd_mask_type_t<T>, T>
+    requires unqualified_canonical_mbwnot<simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
+    static constexpr T operator()(
         type_identity_t<T> src, simd_mask_type_t<T> mask, T val) noexcept {
         return bwnot(internal::abi<T>, src, mask, val);
     }
 
     template <canonical_vector T, const_mask_for<T> M>
-    requires unqualified_canonical_mbwnot<T, launder_cmask_t<T, M>, T>
+    requires unqualified_canonical_mbwnot<launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        type_identity_t<T> src, M cmask, T val) noexcept {
-        return bwnot(internal::abi<T>, src, dx::to_const_mask<T>(cmask), val);
+    static constexpr T operator()(
+        type_identity_t<T> src, M mask, T val) noexcept {
+        return bwnot(internal::abi<T>, src, dx::to_const_mask<T>(mask), val);
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mbwnot<dx::zero_t, simd_mask_type_t<T>, T>
+    requires unqualified_canonical_zmbwnot<simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
+    static constexpr T operator()(
         dx::zero_t zero, simd_mask_type_t<T> mask, T val) noexcept {
         return bwnot(internal::abi<T>, zero, mask, val);
     }
 
     template <canonical_vector T, const_mask_for<T> M>
-    requires unqualified_canonical_mbwnot<dx::zero_t, launder_cmask_t<T, M>, T>
+    requires unqualified_canonical_zmbwnot<launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(dx::zero_t zero, M cmask, T val) noexcept {
-        return bwnot(internal::abi<T>, zero, dx::to_const_mask<T>(cmask), val);
+    static constexpr T operator()(dx::zero_t zero, M mask, T val) noexcept {
+        return bwnot(internal::abi<T>, zero, dx::to_const_mask<T>(mask), val);
     }
 };
 
-template <typename T, typename A = simd_abi_type_t<T>>
-concept unqualified_extended_mask_bwnot = requires {
-    { bwnot(internal::declarg<T>()) } -> mask_with_common_abi<A>;
-};
-
-template <typename T, typename A = simd_abi_type_t<T>>
+template <typename T>
 concept unqualified_extended_bwnot = requires {
-    { bwnot(internal::declarg<T>()) } -> vector_with_common_abi<A>;
+    { bwnot(internal::declarg<T>()) } -> equivalent_vector_with<T>;
 };
 
 template <typename S, typename M, typename T>
-concept unqualified_extended_mbwnot = cpo_invocable<bwnot_t, T> &&
-    (!simd_type<S> || equivalent_vector_with<S, cpo_result_t<bwnot_t, T>>) &&
-    requires {
+concept unqualified_extended_mbwnot_base =
+    cpo_invocable<bwnot_t, T> && requires {
         {
             bwnot(internal::declarg<S>(), internal::declarg<M>(),
                 internal::declarg<T>())
-        } -> equivalent_vector_with<cpo_result_t<bwnot_t, T>>;
+        } -> equivalent_vector_with<T>;
     };
+
+template <typename S, typename M, typename T>
+concept unqualified_extended_mbwnot =
+    equivalent_vector_with<T, S> && unqualified_extended_mbwnot_base<S, M, T>;
+
+template <typename M, typename T>
+concept unqualified_extended_zmbwnot =
+    unqualified_extended_mbwnot_base<dx::zero_t, M, T>;
+
 template <>
 struct extended_impl<bwnot_t> {
 public:
-    template <extended_mask T>
-    requires unqualified_extended_mask_bwnot<T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T&& val) {
-        return bwnot(__DPL forward<T>(val));
-    }
-
     template <extended_vector T>
     requires unqualified_extended_bwnot<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -168,7 +164,7 @@ public:
         return bwnot(__DPL forward<T>(val));
     }
 
-    template <simd_vector S, exact_mask_for<S> M, vector_subsumed_by<S> T>
+    template <simd_vector S, exact_mask_for<S> M, equivalent_vector_with<S> T>
     requires (extended_vector<S> || extended_mask<M> || extended_vector<T>) &&
         unqualified_extended_mbwnot<S, M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -177,30 +173,28 @@ public:
             __DPL forward<T>(val));
     }
 
-    template <simd_vector S, const_mask_for<S> M, vector_subsumed_by<S> T>
+    template <simd_vector S, const_mask_for<S> M, equivalent_vector_with<S> T>
     requires (extended_vector<S> || extended_vector<T>) &&
         unqualified_extended_mbwnot<S, launder_cmask_t<S, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(S&& src, M cmask, T&& val) {
-        return bwnot( __DPL forward<S>(src), dx::to_const_mask<S>(cmask),
+    static constexpr auto operator()(S&& src, M mask, T&& val) {
+        return bwnot( __DPL forward<S>(src), dx::to_const_mask<S>(mask),
             __DPL forward<T>(val));
     }
 
-    template <simd_vector T, result_mask_for<bwnot_t, T> M>
+    template <simd_vector T, exact_mask_for<T> M>
     requires (extended_mask<M> || extended_vector<T>) &&
-        unqualified_extended_mbwnot<dx::zero_t, M, T>
+        unqualified_extended_zmbwnot<M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(dx::zero_t zero, M&& mask, T&& val) {
         return bwnot(zero, __DPL forward<M>(mask), __DPL forward<T>(val));
     }
 
-    template <extended_vector T, result_cmask_for<bwnot_t, T> M>
-    requires unqualified_extended_mbwnot<dx::zero_t,
-        launder_cmask_t<cpo_result_t<bwnot_t, T>, M>, T>
+    template <extended_vector T, const_mask_for<T> M>
+    requires unqualified_extended_zmbwnot<launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(dx::zero_t zero, M cmask, T&& val) {
-        return bwnot(zero, dx::to_const_mask<cpo_result_t<bwnot_t, T>>(cmask),
-            __DPL forward<T>(val));
+    static constexpr auto operator()(dx::zero_t zero, M mask, T&& val) {
+        return bwnot(zero, dx::to_const_mask<T>(mask), __DPL forward<T>(val));
     }
 };
 

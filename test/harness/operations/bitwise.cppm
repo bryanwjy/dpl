@@ -141,7 +141,7 @@ public:
         dpp::simd_primitive_operation auto bwop, rng_like Rng>
     requires (bwop == dpp::bwshift_left || bwop == dpp::bwshift_right)
     static constexpr bool run(Rng& engine) {
-        using shift_t = dpp::signed_representation_t<E>;
+        using shift_t = dpp::unsigned_representation_t<E>;
         constexpr E offset =
             bwop == dpp::bwshift_left ? max<E> * max<E> : static_cast<E>(0);
         dpl::test::array_generator<abi_t, E> const data_generator(

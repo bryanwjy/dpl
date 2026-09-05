@@ -54,47 +54,49 @@ class maskable_accumulation_base : public maskable_operation_base<D> {
     using this_type = maskable_accumulation_base;
 
 protected:
-    template <canonical_vector S, canonical_ornot_simd... Ts>
+    template <canonical_vector S, unextended_type... Ts>
     requires signature_compatible<D, S, Ts...> && cpo_invocable<D, S, Ts...> &&
-        canonical_vector<result_t<S, Ts...>> &&
         same_as<S, result_t<S, Ts...>> &&
         cpo_invocable<select_t, canonical_mask_t<S, Ts...>, result_t<S, Ts...>,
             S>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr result_t<S, Ts...> operator()(
-        S src, canonical_mask_t<S, Ts...> mask, Ts... args) noexcept {
+        S src, canonical_mask_t<S, Ts...> mask, Ts&&... args) noexcept {
         using M = canonical_mask_t<S, Ts...>;
         if constexpr (canonical_cpo_invocable_r<D, S, S, M, Ts...>) {
             if constexpr (all_same_abi<S, M, Ts...>) {
                 if consteval {
                     if constexpr (fallback_cpo_invocable_r<D, S, S, M, Ts...>) {
-                        return impl::fallback<D>(src, mask, args...);
+                        return impl::fallback<D>(
+                            src, mask, __DPL forward<Ts>(args)...);
                     } else {
-                        return fwd::select(
-                            mask, D::operator()(src, args...), src);
+                        return fwd::select(mask,
+                            D::operator()(src, __DPL forward<Ts>(args)...),
+                            src);
                     }
                 } else {
-                    return impl::canonical<D>(src, mask, args...);
+                    return impl::canonical<D>(
+                        src, mask, __DPL forward<Ts>(args)...);
                 }
             } else {
-                return impl::canonical<D>(src, mask, args...);
+                return impl::canonical<D>(
+                    src, mask, __DPL forward<Ts>(args)...);
             }
         } else if constexpr (fallback_cpo_invocable_r<D, S, S, M, Ts...>) {
-            return impl::fallback<D>(src, mask, args...);
+            return impl::fallback<D>(src, mask, __DPL forward<Ts>(args)...);
         } else {
-            return fwd::select(mask, D::operator()(src, args...), src);
+            return fwd::select(
+                mask, D::operator()(src, __DPL forward<Ts>(args)...), src);
         }
     }
 
-    template <canonical_vector S, canonical_ornot_simd... Ts>
+    template <unextended_type S, unextended_type... Ts>
     requires signature_compatible<D, S, Ts...> && cpo_invocable<D, S, Ts...> &&
-        canonical_vector<result_t<S, Ts...>> &&
-        same_as<S, result_t<S, Ts...>> &&
         cpo_invocable<select_t, canonical_mask_t<S, Ts...>, result_t<S, Ts...>,
-            zero_t>
+            dx::zero_t>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr result_t<S, Ts...> operator()(dx::zero_t zero,
-        canonical_mask_t<S, Ts...> mask, S src, Ts... args) noexcept {
+        canonical_mask_t<S, Ts...> mask, S&& src, Ts&&... args) noexcept {
         using M = canonical_mask_t<S, Ts...>;
         if constexpr (canonical_cpo_invocable_r<D, S, dx::zero_t, M, S,
                           Ts...>) {
@@ -102,88 +104,108 @@ protected:
                 if consteval {
                     if constexpr (fallback_cpo_invocable_r<D, S, dx::zero_t, M,
                                       S, Ts...>) {
-                        return impl::fallback<D>(zero, mask, src, args...);
+                        return impl::fallback<D>(zero, mask,
+                            __DPL forward<S>(src), __DPL forward<Ts>(args)...);
                     } else {
-                        return fwd::select(
-                            mask, D::operator()(src, args...), zero);
+                        return fwd::select(mask,
+                            D::operator()(__DPL forward<S>(src),
+                                __DPL forward<Ts>(args)...),
+                            zero);
                     }
                 } else {
-                    return impl::canonical<D>(zero, mask, src, args...);
+                    return impl::canonical<D>(zero, mask, __DPL forward<S>(src),
+                        __DPL forward<Ts>(args)...);
                 }
             } else {
-                return impl::canonical<D>(zero, mask, src, args...);
+                return impl::canonical<D>(zero, mask, __DPL forward<S>(src),
+                    __DPL forward<Ts>(args)...);
             }
         } else if constexpr (fallback_cpo_invocable_r<D, S, dx::zero_t, M, S,
                                  Ts...>) {
-            return impl::fallback<D>(zero, mask, src, args...);
+            return impl::fallback<D>(zero, mask, __DPL forward<S>(src),
+                __DPL forward<Ts>(args)...);
         } else {
-            return fwd::select(mask, D::operator()(src, args...), zero);
+            return fwd::select(mask,
+                D::operator()(
+                    __DPL forward<S>(src), __DPL forward<Ts>(args)...),
+                zero);
         }
     }
 
-    template <canonical_vector S, typename M, canonical_ornot_simd... Ts>
+    template <canonical_vector S, typename M, unextended_type... Ts>
     requires signature_compatible<D, S, Ts...> && cpo_invocable<D, S, Ts...> &&
-        canonical_vector<result_t<S, Ts...>> &&
         same_as<S, result_t<S, Ts...>> &&
         const_mask_for<M, result_t<S, Ts...>> &&
         cpo_invocable<select_t, M, result_t<S, Ts...>, S>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr result_t<S, Ts...> operator()(
-        S src, M mask, Ts... args) noexcept {
+        S src, M mask, Ts&&... args) noexcept {
         using R = result_t<S, Ts...>;
         if constexpr (canonical_cpo_invocable_r<D, S, S, M, Ts...>) {
             if constexpr (all_same_abi<S, Ts...>) {
                 if consteval {
                     if constexpr (fallback_cpo_invocable_r<D, S, S, M, Ts...>) {
-                        return impl::fallback<D>(src, mask, args...);
+                        return impl::fallback<D>(
+                            src, mask, __DPL forward<Ts>(args)...);
                     } else {
-                        return fwd::select(
-                            mask, D::operator()(src, args...), src);
+                        return fwd::select(mask,
+                            D::operator()(src, __DPL forward<Ts>(args)...),
+                            src);
                     }
                 } else {
-                    return impl::canonical<D>(src, mask, args...);
+                    return impl::canonical<D>(
+                        src, mask, __DPL forward<Ts>(args)...);
                 }
             } else {
-                return impl::canonical<D>(src, mask, args...);
+                return impl::canonical<D>(
+                    src, mask, __DPL forward<Ts>(args)...);
             }
         } else if constexpr (fallback_cpo_invocable_r<D, S, S, M, Ts...>) {
-            return impl::fallback<D>(src, mask, args...);
+            return impl::fallback<D>(src, mask, __DPL forward<Ts>(args)...);
         } else {
-            return fwd::select(mask, D::operator()(src, args...), src);
+            return fwd::select(
+                mask, D::operator()(src, __DPL forward<Ts>(args)...), src);
         }
     }
 
-    template <canonical_vector S, typename M, canonical_ornot_simd... Ts>
+    template <typename M, unextended_type S, unextended_type... Ts>
     requires signature_compatible<D, S, Ts...> && cpo_invocable<D, S, Ts...> &&
-        canonical_vector<result_t<S, Ts...>> &&
-        equivalent_vector_with<S, result_t<S, Ts...>> &&
         const_mask_for<M, result_t<S, Ts...>> &&
         cpo_invocable<select_t, M, result_t<S, Ts...>, dx::zero_t>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr result_t<S, Ts...> operator()(
-        dx::zero_t zero, M mask, S src, Ts... args) noexcept {
+        dx::zero_t zero, M mask, S&& src, Ts&&... args) noexcept {
         using R = result_t<S, Ts...>;
         if constexpr (canonical_cpo_invocable_r<D, dx::zero_t, M, S, Ts...>) {
             if constexpr (all_same_abi<S, Ts...>) {
                 if consteval {
                     if constexpr (fallback_cpo_invocable_r<D, dx::zero_t, M, S,
                                       Ts...>) {
-                        return impl::fallback<D>(zero, mask, src, args...);
+                        return impl::fallback<D>(zero, mask,
+                            __DPL forward<S>(src), __DPL forward<Ts>(args)...);
                     } else {
-                        return fwd::select(
-                            mask, D::operator()(src, args...), zero);
+                        return fwd::select(mask,
+                            D::operator()(__DPL forward<S>(src),
+                                __DPL forward<Ts>(args)...),
+                            zero);
                     }
                 } else {
-                    return impl::canonical<D>(zero, mask, src, args...);
+                    return impl::canonical<D>(zero, mask, __DPL forward<S>(src),
+                        __DPL forward<Ts>(args)...);
                 }
             } else {
-                return impl::canonical<D>(zero, mask, src, args...);
+                return impl::canonical<D>(zero, mask, __DPL forward<S>(src),
+                    __DPL forward<Ts>(args)...);
             }
         } else if constexpr (fallback_cpo_invocable_r<D, dx::zero_t, M, S,
                                  Ts...>) {
-            return impl::fallback<D>(zero, mask, src, args...);
+            return impl::fallback<D>(zero, mask, __DPL forward<S>(src),
+                __DPL forward<Ts>(args)...);
         } else {
-            return fwd::select(mask, D::operator()(src, args...), zero);
+            return fwd::select(mask,
+                D::operator()(
+                    __DPL forward<S>(src), __DPL forward<Ts>(args)...),
+                zero);
         }
     }
 
@@ -222,12 +244,11 @@ protected:
         }
     }
 
-    template <simd_vector S, exact_mask_for<S> M, typename... Ts,
-        simd_vector R = remove_cvref_t<S>>
+    template <typename M, typename S, typename... Ts>
     requires signature_compatible<D, S, Ts...> &&
-        extended_arguments<M, S, Ts...> && cpo_invocable<D, S, Ts...> &&
-        equivalent_vector_with<S, result_t<S, Ts...>> &&
-        (extendable_operation_r<D, R, dx::zero_t, M, S, Ts...> ||
+        result_mask_for<M, D, S, Ts...> && extended_arguments<M, S, Ts...> &&
+        (extendable_operation_r<D, cpo_result_t<D, S, Ts...>, dx::zero_t, M, S,
+             Ts...> ||
             requires {
                 requires simd_expression<M> ||
                     (simd_expression<S> || ... || simd_expression<Ts>);
@@ -236,10 +257,13 @@ protected:
                     internal::declarg<result_or_identity_t<M>>(),
                     internal::declarg<result_or_identity_t<S>>(),
                     internal::declarg<result_or_identity_t<Ts>>()...);
-            } || fallback_cpo_invocable_r<D, R, dx::zero_t, M, S, Ts...>)
+            } ||
+            fallback_cpo_invocable_r<D, cpo_result_t<D, S, Ts...>, dx::zero_t,
+                M, S, Ts...>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         dx::zero_t zero, M&& mask, S&& src, Ts&&... args) {
+        using R = cpo_result_t<D, S, Ts...>;
         if constexpr (extended_cpo_invocable_r<D, R, dx::zero_t, M, S, Ts...>) {
             return impl::extended<D>(zero, __DPL forward<M>(mask),
                 __DPL forward<S>(src), __DPL forward<Ts>(args)...);
@@ -294,23 +318,24 @@ protected:
         }
     }
 
-    template <simd_vector S, const_mask_for<S> M, typename... Ts,
-        simd_vector R = remove_cvref_t<S>>
+    template <typename M, typename S, typename... Ts>
     requires signature_compatible<D, S, Ts...> &&
-        extended_arguments<S, Ts...> && cpo_invocable<D, S, Ts...> &&
-        equivalent_vector_with<S, result_t<S, Ts...>> &&
-        (extendable_operation_r<D, R, dx::zero_t, launder_cmask_t<R, M>, S,
-             Ts...> ||
+        extended_arguments<S, Ts...> && result_cmask_for<M, D, S, Ts...> &&
+        (extendable_operation_r<D, cpo_result_t<D, S, Ts...>, dx::zero_t,
+             launder_cmask_t<cpo_result_t<D, S, Ts...>, M>, S, Ts...> ||
             requires {
                 requires (simd_expression<S> || ... || simd_expression<Ts>);
                 // protected
                 operator()(dx::zero, internal::declarg<M>(),
                     internal::declarg<result_or_identity_t<S>>(),
                     internal::declarg<result_or_identity_t<Ts>>()...);
-            } || fallback_cpo_invocable_r<D, R, dx::zero_t, M, S, Ts...>)
+            } ||
+            fallback_cpo_invocable_r<D, cpo_result_t<D, S, Ts...>, dx::zero_t,
+                M, S, Ts...>)
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
         dx::zero_t zero, M mask, S&& src, Ts&&... args) {
+        using R = cpo_result_t<D, S, Ts...>;
         if constexpr (extended_cpo_invocable_r<D, R, dx::zero_t, M, S, Ts...>) {
             return impl::extended<D>(zero, mask, __DPL forward<S>(src),
                 __DPL forward<Ts>(args)...);
@@ -330,17 +355,16 @@ protected:
         }
     }
 
-    template <typename M, simd_vector S, typename... Ts>
-    requires signature_compatible<D, S, Ts...> && cpo_invocable<D, S, Ts...> &&
-        (exact_mask_for<M, S> || const_mask_for<remove_cvref_t<M>, S>) &&
-        requires {
-            operator()(dx::zero, internal::declarg<M>(), internal::declarg<S>(),
-                internal::declarg<Ts>()...);
-        }
+    template <typename M, typename S, typename... Ts>
+    requires signature_compatible<D, S, Ts...> && requires {
+        operator()(dx::zero, internal::declarg<M>(), internal::declarg<S>(),
+            internal::declarg<Ts>()...);
+    }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(M&& mask, S&& src, Ts&&... args) noexcept(
-        (canonical_ornot_simd<M> &&
-            (canonical_ornot_simd<S> && ... && canonical_ornot_simd<Ts>))) {
+        (unextended_type<remove_cvref_t<M>> &&
+            (unextended_type<remove_cvref_t<S>> && ... &&
+                unextended_type<remove_cvref_t<Ts>>))) {
         return operator()(dx::zero, __DPL forward<M>(mask),
             __DPL forward<S>(src), __DPL forward<Ts>(args)...);
     }

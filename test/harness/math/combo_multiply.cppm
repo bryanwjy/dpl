@@ -29,18 +29,18 @@ class combo_multiply {
         } else if constexpr (mulop == dpp::mulsub) {
             return lhs * mid - rhs;
         } else if constexpr (mulop == dpp::nmuladd) {
-            return rhs - lhs * mid;
+            return -(rhs + lhs * mid);
         } else if constexpr (mulop == dpp::nmulsub) {
-            return -rhs - lhs * mid;
+            return rhs - lhs * mid;
         } else if constexpr (mulop == dpp::mulacc) {
             return lhs + mid * rhs;
         } else if constexpr (mulop == dpp::mulsac) {
             return mid * rhs - lhs;
         } else if constexpr (mulop == dpp::nmulacc) {
-            return lhs - mid * rhs;
+            return -(lhs + mid * rhs);
         } else {
             static_assert(mulop == dpp::nmulsac);
-            return -lhs - mid * rhs;
+            return lhs - mid * rhs;
         }
     }
 

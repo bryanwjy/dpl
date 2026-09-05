@@ -30,7 +30,7 @@ struct operation_signature<hmax_t> {
     static consteval void operator()(T&&, M&&) noexcept {}
 
     template <simd_vector T, const_mask_for<T> M>
-    static consteval void operator()(T&&, M&&) noexcept {}
+    static consteval void operator()(T&&, M) noexcept {}
 };
 
 template <typename T>

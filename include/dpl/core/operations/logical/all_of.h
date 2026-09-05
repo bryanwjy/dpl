@@ -39,7 +39,7 @@ template <>
 struct fallback_impl<all_of_t> {
 
     template <canonical_mask T>
-    requires fixed_width_mask<T> && cpo_invocable<to_bitset_t, T> &&
+    requires cpo_invocable<to_bitset_t, T> &&
         requires(T val) { dx::to_bitset(val); }
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr bool DPL_VECTORCALL operator()(T val) noexcept {

@@ -19,7 +19,8 @@ struct broadcast_t;
 
 template <typename T, typename U>
 concept broadcastable_to = !simd_type<T> && (simd_type<U> || simd_abi<U>) &&
-    internal::cpo_invocable<internal::broadcast_t<U>, T>;
+    internal::cpo_invocable<internal::broadcast_t<U>, T> &&
+    noexcept(internal::broadcast_t<U>{}(internal::declarg<T>()));
 
 } // namespace datapar
 

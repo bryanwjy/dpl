@@ -95,6 +95,14 @@ struct fallback_impl<to_simd_mask_t> {
     static constexpr auto DPL_VECTORCALL operator()(T&& val) noexcept {
         return dx::cmpneq(__DPL forward<T>(val), dx::zero);
     }
+
+    template <simd_vector T>
+    requires cpo_invocable<cmpneq_t, T, dx::zero_t>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(
+        assume_normalized_mask_t, T&& val) noexcept {
+        return dx::cmpneq(__DPL forward<T>(val), dx::zero);
+    }
 };
 
 template <>
@@ -107,13 +115,20 @@ struct canonical_impl<to_simd_mask_t> {
     {
         return to_simd_mask(internal::abi<T>, val);
     }
+
+    template <canonical_vector T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr simd_mask_type_t<T> operator()(
+        assume_normalized_mask_t assumption, T val) noexcept
+    requires requires { to_simd_mask(internal::abi<T>, assumption, val); }
+    {
+        return to_simd_mask(internal::abi<T>, assumption, val);
+    }
 };
 
 template <typename T>
 concept unqualified_extended_to_simd_mask = requires {
-    {
-        to_simd_mask(internal::declarg<T>())
-    } -> mask_with_common_abi<simd_abi_type_t<T>>;
+    { to_simd_mask(internal::declarg<T>()) } -> exact_mask_for<T>;
 };
 
 template <>
@@ -123,6 +138,19 @@ struct extended_impl<to_simd_mask_t> {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto extended(T&& val) {
         return to_simd_mask(__DPL forward<T>(val));
+    }
+
+    template <extended_vector T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(
+        assume_normalized_mask_t assumption, T&& val) noexcept
+    requires requires {
+        {
+            to_simd_mask(assumption, __DPL forward<T>(val))
+        } -> exact_mask_for<T>;
+    }
+    {
+        return to_simd_mask(assumption, __DPL forward<T>(val));
     }
 };
 } // namespace datapar::internal
