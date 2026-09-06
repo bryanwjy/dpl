@@ -88,16 +88,20 @@ public:
             if not consteval {
                 constexpr auto lanes = abi_traits<E>::size();
                 test::bit_generator<lanes> mask_generator;
-                constexpr auto count = lanes < 128 ? lanes : 128;
+                constexpr auto max = lanes > dpl::type_bit_v<size_t>
+                    ? 128
+                    : static_cast<size_t>(
+                          dpl::to_underlying(~dpl::bitset<lanes>()));
+                constexpr auto count = max < 128 ? max : 128;
                 auto const src = data_generator(engine);
-                for (auto i = 0; i < 128; ++i) {
+                for (auto i = 0zu; i < count; ++i) {
                     auto const mask = mask_generator(engine);
-                    for (auto i = 0zu; i < expected.size(); ++i) {
-                        if (mask[i]) {
-                            expected[i] =
-                                expected_op(val[i], minval[i], maxval[i]);
+                    for (auto j = 0zu; j < expected.size(); ++j) {
+                        if (mask[j]) {
+                            expected[j] =
+                                expected_op(val[j], minval[j], maxval[j]);
                         } else {
-                            expected[i] = src[i];
+                            expected[j] = src[j];
                         }
                     }
 
@@ -110,9 +114,9 @@ public:
                         },
                         expected, test::bitcmp);
 
-                    for (auto i = 0zu; i < expected.size(); ++i) {
-                        if (!mask[i]) {
-                            expected[i] = 0;
+                    for (auto j = 0zu; j < expected.size(); ++j) {
+                        if (!mask[j]) {
+                            expected[j] = 0;
                         }
                     }
 

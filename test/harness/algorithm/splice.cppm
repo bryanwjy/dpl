@@ -76,14 +76,16 @@ public:
         }
 
         if constexpr (dpp::fixed_width_abi<A>) {
+            constexpr auto lanes = abi_traits<E>::size();
+            using bitset_t = dpl::bitset<lanes>;
             constexpr auto count = 4zu;
             constexpr auto masks = []() {
                 return dpl::apply(
                     [](auto... idx) {
                         test::mt19937 rng{};
-                        return array<dpl::bitset<abi_traits<E>::size()>, count>{
-                            (dpl::test::bit_generator<abi_traits<E>::size() +
-                                idx * 0>()(rng))...};
+                        dpl::test::bit_generator<abi_traits<E>::size()> bitgen;
+                        return array<bitset_t, count>{
+                            (dpl::ignore = idx, bitgen(rng))...};
                     },
                     dpl::make_index_sequence<count>{});
             }();

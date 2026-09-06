@@ -63,7 +63,7 @@ class arithmetic {
         static constexpr E sqrtmax = []() {
             if constexpr (dpl::integral<E>) {
                 constexpr auto shift = dpl::type_bit_v<E> / 2;
-                return dpl::integral_traits<E>::max_value >> shift;
+                return (dpl::integral_traits<E>::max_value >> shift) - 1;
             } else {
                 constexpr auto bias =
                     dpl::floating_point_traits<E>::exponent_bias;
@@ -83,7 +83,7 @@ class arithmetic {
         static constexpr E sqrtmin = []() {
             if constexpr (dpl::integral<E>) {
                 constexpr auto shift = dpl::type_bit_v<E> / 2;
-                return dpl::integral_traits<E>::min_value >> shift;
+                return (dpl::integral_traits<E>::min_value >> shift) + 1;
             } else {
                 return -sqrtmax;
             }

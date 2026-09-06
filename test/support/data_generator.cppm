@@ -189,21 +189,39 @@ public:
         using rtype = typename Rng::result_type;
         if constexpr (dpl::integral<E>) {
             if constexpr (dpl::signed_integral<E>) {
-                if ((min_ ^ max_) < 0) {
-                    auto const delta =
-                        dpl::to_unsigned(max_) - dpl::to_unsigned(min_);
+                if constexpr (sizeof(E) == sizeof(rtype)) {
+                    auto const umin = dpl::to_unsigned(min_);
+                    auto const umax = dpl::to_unsigned(max_);
+                    auto const span = umax - umin;
+                    if (span ==
+                        integral_traits<dpl::make_unsigned_t<E>>::max_value) {
+                        return rng();
+                    }
 
-                    return delta == 0
-                        ? min_
-                        : static_cast<E>(dpl::to_signed(dpl::to_unsigned(min_) +
-                              rng() % static_cast<rtype>(delta)));
+                    auto rand = rng();
+                    for (auto const t = -span % span; rand < t;) {
+                        rand = rng();
+                    }
+
+                    return rand % span;
+                }
+
+                if ((min_ ^ max_) < 0) {
+                    using srtype = dpl::make_signed_t<rtype>;
+                    auto const delta = dpl::to_unsigned(
+                        static_cast<srtype>(max_) - static_cast<srtype>(min_));
+                    if (delta == 0) {
+                        return min_;
+                    }
+
+                    auto const rand = static_cast<rtype>(min_) + rng() % delta;
+                    using uint_t = dpl::make_unsigned_t<E>;
+                    return dpl::to_signed(static_cast<uint_t>(rand));
                 }
             }
 
-            auto const delta = max_ - min_;
-            return delta == 0
-                ? min_
-                : static_cast<E>(rng() % static_cast<rtype>(delta)) + min_;
+            auto const delta = static_cast<rtype>(max_ - min_);
+            return delta == 0 ? min_ : static_cast<E>(rng() % delta) + min_;
         } else {
             using bitset_t = dpl::bitset<dpl::type_bit_v<E>>;
             using uint_t = dpp::unsigned_representation_t<E>;

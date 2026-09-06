@@ -261,11 +261,10 @@ struct fallback_impl<sad_t> {
 
         if constexpr (dx::simd_canonical_invocable<hsum_t,
                           common_canonical_simd_t<L, R>>) {
-            return dx::add(src, dx::hsum(abs_diff(lhs, rhs)));
+            return dx::add(src, abs_diff(lhs, rhs));
         } else {
             // one less broadcast
-            return dx::add(
-                src, internal::reduction(abs_diff(lhs, rhs), dx::add));
+            return dx::add(src, abs_diff(lhs, rhs));
         }
     }
 
