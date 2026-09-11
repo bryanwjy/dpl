@@ -29,51 +29,54 @@ public:
     }
 
     template <dpp::simd_element_for<A> E, rng_like Rng>
-    static constexpr bool run(Rng& engine)
-    requires dpp::fixed_width_abi<A>
-    {
-        constexpr auto lanes = abi_traits<E>::size();
-        using bitset_t = dpl::bitset<lanes>;
-        constexpr auto all_false = bitset_t();
-        constexpr auto all_true = ~all_false;
+    static constexpr bool run(Rng& engine) {
+        auto const lanes = abi_traits<E>::size();
+        auto const mall_false = dpp::broadcast<A, E>(false);
+        auto const mall_true = dpp::broadcast<A, E>(true);
 
         {
-            auto const vall_false = dpp::from_bitset<A, E>(all_false);
-            assert(dpp::none_of(vall_false));
-            assert(!dpp::all_of(vall_false));
-            assert(!dpp::any_of(vall_false));
-            assert(!dpp::some_of(vall_false));
+            assert(dpp::none_of(mall_false));
+            assert(!dpp::all_of(mall_false));
+            assert(!dpp::any_of(mall_false));
+            assert(!dpp::some_of(mall_false));
         }
 
         {
-            auto const vall_true = dpp::from_bitset<A, E>(all_true);
-            assert(!dpp::none_of(vall_true));
-            assert(dpp::all_of(vall_true));
-            assert(dpp::any_of(vall_true));
-            assert(!dpp::some_of(vall_true));
+            assert(!dpp::none_of(mall_true));
+            assert(dpp::all_of(mall_true));
+            assert(dpp::any_of(mall_true));
+            assert(!dpp::some_of(mall_true));
         }
 
-        {
-            constexpr test::scalar_generator<size_t> shift_generator(
-                1zu, lanes);
-            auto const shift = shift_generator(engine);
-            auto const some_true = all_true >> shift;
-            auto const vsome_true = dpp::from_bitset<A, E>(some_true);
-            assert(!dpp::none_of(vsome_true));
-            assert(!dpp::all_of(vsome_true));
-            assert(dpp::any_of(vsome_true));
-            assert(dpp::some_of(vsome_true));
-        }
+        auto const vzero = dpp::broadcast<A, E>(dpp::zero);
+        for (test::mask_generator<A, E> const mask_generator;
+            auto const _ : linear_counter([]() {
+                if consteval {
+                    return 4zu < abi_traits<E>::size() ? 4zu
+                                                       : abi_traits<E>::size();
+                } else {
+                    return abi_traits<E>::size();
+                }
+            }())) {
+            auto const mask = mask_generator(engine);
 
-        constexpr test::bit_generator<lanes> bit_generator;
-        for (auto i = 0zu; i < lanes; ++i) {
-            auto const mask = bit_generator(engine);
-            auto const vmask = dpp::from_bitset<A, E>(mask);
-            auto const pop = dpl::popcount(mask);
-            assert(pop == 0 || dpp::any_of(vmask));
-            assert(pop != mask.size() || dpp::all_of(vmask));
-            assert(pop == 0 || pop == mask.size() || dpp::some_of(vmask));
-            assert(pop != 0 || dpp::none_of(vmask));
+            auto const expected = [&]() {
+                auto const vmask = dpp::select(mask, vzero, dpp::all_bits);
+                dynamic_array<E> amask(lanes);
+                dpp::store(vmask, amask.data());
+                auto count = 0zu;
+                for (auto const val : amask) {
+                    count += val == 0;
+                }
+
+                return dpl::bitset<4>(count == 0, count == lanes, count != 0,
+                    count - 1 < lanes - 1);
+                // for some_of: if count == 0 -> overflow to size_t max
+            }();
+            assert(dpp::none_of(mask) == expected[0]);
+            assert(dpp::all_of(mask) == expected[1]);
+            assert(dpp::any_of(mask) == expected[2]);
+            assert(dpp::some_of(mask) == expected[3]);
         }
 
         return true;

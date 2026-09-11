@@ -15,6 +15,26 @@ namespace dpp = dpl::datapar;
 
 export template <dpp::simd_abi A>
 class lookup {
+    template <typename E>
+    using abi_traits = dpp::simd_abi_traits<A, E>;
+
+    template <typename E>
+    static constexpr linear_counter test_count() noexcept {
+        auto const lanes = abi_traits<E>::size();
+        auto const limit = []() {
+            if consteval {
+                return 4zu;
+            } else {
+                return 128zu;
+            }
+        }();
+
+        auto max = lanes >= dpl::type_bit_v<size_t>
+            ? limit
+            : static_cast<size_t>((1zu << lanes) - 1);
+        return linear_counter(max < limit ? max : limit);
+    }
+
 public:
     template <rng_like Rng, dpp::simd_element_for<A>... Es>
     static constexpr bool run_all(dpl::type_pack<Es...> pack, Rng& engine) {
@@ -27,49 +47,41 @@ public:
 
     template <dpp::simd_element_for<A> E, rng_like Rng>
     static constexpr bool run(Rng& engine) {
-        test::array_generator<A, E> const data_generator(test::half_range);
         using index_t = dpp::signed_representation_t<E>;
-        constexpr auto lanes = dpp::simd_abi_traits<A, E>::size();
+        auto const lanes = dpp::simd_abi_traits<A, E>::size();
+        test::array_generator<A, E> const data_generator;
+        test::mask_generator<A, E> const mask_generator;
         test::array_generator<A, index_t> const idx_generator(0, 2 * lanes);
-        test::scalar_generator<E> const src_generator(
-            dpp::max_value_v<E> / 4 * 3, dpp::max_value_v<E>);
 
-        for (auto i = 0; i < 3; ++i) {
+        for (auto const _ : test_count<E>()) {
             auto const val = data_generator(engine);
             auto const idx = idx_generator(engine);
-            auto const src = src_generator(engine);
 
-            auto expected = val;
             {
-                for (auto i = 0zu; i < expected.size(); ++i) {
-                    expected[i] = idx[i] < val.size() ? val[idx[i]] : src;
-                }
+                auto const src = data_generator(engine);
+                auto const expected = [&] {
+                    auto expected = val;
+                    for (auto const i : linear_counter(expected)) {
+                        expected[i] =
+                            idx[i] < val.size() ? val[idx[i]] : src[i];
+                    }
 
-                auto const vval = dpp::load<A>(val.data());
-                auto const vidx = dpp::load<A>(idx.data());
-                auto const vexpected = dpp::load<A>(expected.data());
-                auto const vactual =
-                    dpp::lookup(vval, vidx, dpp::broadcast<A, E>(src));
-                assert(dpp::all_of(test::bitcmp(vactual, vexpected)));
+                    return expected;
+                }();
+                test::operation_fixture<A>::test(
+                    test::bitcmp, expected, dpp::lookup, val, idx, src);
             }
-        }
-
-        for (auto i = 0; i < 3; ++i) {
-            auto const val = data_generator(engine);
-            auto const idx = idx_generator(engine);
-
-            auto expected = val;
             {
-                for (auto i = 0zu; i < expected.size(); ++i) {
-                    expected[i] =
-                        idx[i] < val.size() ? val[idx[i]] : static_cast<E>(0);
-                }
-
-                auto const vval = dpp::load<A>(val.data());
-                auto const vidx = dpp::load<A>(idx.data());
-                auto const vexpected = dpp::load<A>(expected.data());
-                auto const vactual = dpp::lookup(vval, vidx, dpp::zero);
-                assert(dpp::all_of(test::bitcmp(vactual, vexpected)));
+                auto const expected = [&] {
+                    auto expected = val;
+                    for (auto const i : linear_counter(expected)) {
+                        expected[i] = idx[i] < val.size() ? val[idx[i]]
+                                                          : static_cast<E>(0);
+                    }
+                    return expected;
+                }();
+                test::operation_fixture<A>::test(
+                    test::bitcmp, expected, dpp::lookup, val, idx, dpp::zero);
             }
         }
 

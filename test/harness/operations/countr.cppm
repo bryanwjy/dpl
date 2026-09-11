@@ -18,6 +18,40 @@ class countr {
     template <typename E>
     using abi_traits = dpp::simd_abi_traits<A, E>;
 
+    template <typename E>
+    static constexpr linear_counter test_count() noexcept {
+        auto lanes = dpp::simd_abi_traits<A, E>::size();
+        auto const limit = []() {
+            if consteval {
+                return 4zu;
+            } else {
+                return 128zu;
+            }
+        }();
+
+        auto max = lanes >= dpl::type_bit_v<size_t>
+            ? limit
+            : static_cast<size_t>((1zu << lanes) - 1);
+        return linear_counter(max < limit ? max : limit);
+    }
+
+    template <typename E>
+    static constexpr void run_const_mask_test(auto func) noexcept {
+        [&]<size_t I = 0, serialized_mt19937 S = {}>(this auto self,
+            dpp::immediate<I> = dpp::imm<I>, mt19937_type<S> = {}) {
+            if constexpr (I < test_count<E>().size()) {
+                constexpr auto lanes = dpp::simd_abi_traits<A, E>::size();
+                constexpr bit_generator<lanes> bitgen;
+                constexpr auto pair = S.generate_with(bitgen);
+                constexpr auto cmask = dpp::deduce_const_mask_v<pair.value>;
+
+                func(cmask);
+                self(dpp::imm<I + 1>, mt19937_type<pair.state>{});
+            }
+        }
+        ();
+    }
+
 public:
     template <rng_like Rng, dpp::simd_element_for<A>... Es>
     static constexpr bool run_all(dpl::type_pack<Es...> pack, Rng& engine) {
@@ -35,60 +69,115 @@ public:
         test::array_generator<A, E> const data_generator;
         test::array_generator<A, count_t> const src_generator(
             dpl::type_bit_v<E>, dpl::integral_traits<count_t>::max_value);
-        for (auto i = 0zu; i < 3; ++i) {
+        test::mask_generator<A, E> const mask_generator;
+        auto const vtrue = dpp::broadcast<A, E>(true);
+        auto const vfalse = dpp::broadcast<A, E>(false);
+
+        for (auto const _ : test_count<E>()) {
             auto const data = data_generator(engine);
             auto const src = src_generator(engine);
-            auto const expected = [&]() {
-                auto result = src;
-                for (auto i = 0zu; i < result.size(); ++i) {
-                    result[i] = dpl::countr_zero(dpl::to_unsigned(data[i]));
-                }
-                return result;
-            }();
 
-            test::unary_transform<A>::template test<E>(
-                data, dpp::countr_zero, expected);
-            auto const idx = i < src.size() ? i : i % src.size();
-            test::unary_transform<A>::template test_masked<E>(
-                data, dpp::countr_zero, src[idx]);
-        }
+            {
+                auto const expected = [&]() {
+                    auto result = src;
+                    for (auto const i : linear_counter(result)) {
+                        result[i] = dpl::countr_zero(dpl::to_unsigned(data[i]));
+                    }
+                    return result;
+                }();
 
-        if constexpr (dpp::fixed_width_abi<A>) {
-            test::bit_generator<abi_traits<E>::size> const bit_generator;
-            for (auto i = 0zu; i < 3; ++i) {
-                auto const data = bit_generator(engine);
-                auto const expected = dpl::to_unsigned(dpl::countr_zero(data));
-                assert(
-                    dpp::countr_zero(dpp::from_bitset<A, E>(data)) == expected);
+                test::operation_fixture<A>::test(
+                    expected, dpp::countr_zero, data);
+            }
+
+            test::operation_fixture<A>::test_masked(
+                dpp::countr_zero, src, vtrue, data);
+            test::operation_fixture<A>::test_masked(
+                dpp::countr_zero, src, vfalse, data);
+
+            auto const mask = mask_generator(engine);
+            test::operation_fixture<A>::test_masked(
+                dpp::countr_zero, src, mask, data);
+            test::operation_fixture<A>::test_masked(
+                dpp::countr_zero, dpp::zero, mask, data);
+
+            {
+                auto idx =
+                    dpp::element_cast<count_t>(dpp::lane_index<A, count_t>());
+                auto aidx = src_generator(engine);
+                dpp::store(dpp::select(mask, idx, dpp::all_bits), aidx.data());
+                auto const expected = [&]() -> count_t {
+                    for (auto const i : linear_counter(aidx)) {
+                        if (aidx[i] < abi_traits<E>::size()) {
+                            return aidx[i];
+                        }
+                    }
+
+                    return abi_traits<E>::size();
+                }();
+
+                assert(dpp::countr_zero(mask) == expected);
             }
         }
 
-        for (auto i = 0zu; i < 3; ++i) {
+        for (auto const _ : test_count<E>()) {
             auto const data = data_generator(engine);
             auto const src = src_generator(engine);
-            auto const expected = [&]() {
-                auto result = src;
-                for (auto i = 0zu; i < result.size(); ++i) {
-                    result[i] = dpl::countr_one(dpl::to_unsigned(data[i]));
-                }
-                return result;
-            }();
+            {
+                auto const expected = [&]() {
+                    auto result = src;
+                    for (auto const i : linear_counter(result)) {
+                        result[i] = dpl::countr_one(dpl::to_unsigned(data[i]));
+                    }
+                    return result;
+                }();
 
-            test::unary_transform<A>::template test<E>(
-                data, dpp::countr_one, expected);
-            auto const idx = i < src.size() ? i : i % src.size();
-            test::unary_transform<A>::template test_masked<E>(
-                data, dpp::countr_one, src[idx]);
+                test::operation_fixture<A>::test(
+                    expected, dpp::countr_one, data);
+            }
+            test::operation_fixture<A>::test_masked(
+                dpp::countr_one, src, vtrue, data);
+            test::operation_fixture<A>::test_masked(
+                dpp::countr_one, src, vfalse, data);
+
+            auto const mask = mask_generator(engine);
+            test::operation_fixture<A>::test_masked(
+                dpp::countr_one, src, mask, data);
+            test::operation_fixture<A>::test_masked(
+                dpp::countr_one, dpp::zero, mask, data);
+
+            {
+                auto idx =
+                    dpp::element_cast<count_t>(dpp::lane_index<A, count_t>());
+                auto aidx = src_generator(engine);
+                dpp::store(dpp::select(mask, dpp::all_bits, idx), aidx.data());
+                auto const expected = [&]() -> count_t {
+                    for (auto const i : linear_counter(aidx)) {
+                        if (aidx[i] < abi_traits<E>::size()) {
+                            return aidx[i];
+                        }
+                    }
+
+                    return abi_traits<E>::size();
+                }();
+                assert(dpp::countr_one(mask) == expected);
+            }
         }
 
         if constexpr (dpp::fixed_width_abi<A>) {
-            test::bit_generator<abi_traits<E>::size> const bit_generator;
-            for (auto i = 0zu; i < 3; ++i) {
-                auto const data = bit_generator(engine);
-                auto const expected = dpl::to_unsigned(dpl::countr_one(data));
-                assert(
-                    dpp::countr_one(dpp::from_bitset<A, E>(data)) == expected);
-            }
+            run_const_mask_test<E>([&](auto cmask) {
+                auto const data = data_generator(engine);
+                auto const src = src_generator(engine);
+                operation_fixture<A>::test_masked(
+                    dpp::countr_zero, src, cmask, data);
+                operation_fixture<A>::test_masked(
+                    dpp::countr_zero, dpp::zero, cmask, data);
+
+                operation_fixture<A>::test_masked(
+                    dpp::countr_one, src, cmask, data);
+                operation_fixture<A>::test_masked(
+                    dpp::countr_one, dpp::zero, cmask, data);
+            });
         }
 
         return true;

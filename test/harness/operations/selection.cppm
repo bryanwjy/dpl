@@ -15,90 +15,100 @@ namespace dpp = dpl::datapar;
 
 export template <dpp::simd_abi A>
 class selection {
-    using abi_t = A;
     template <typename E>
-    using abi_traits = dpp::simd_abi_traits<abi_t, E>;
+    using abi_traits = dpp::simd_abi_traits<A, E>;
+
     template <typename E>
-    using vec_t = dpp::basic_vector<E, abi_t>;
+    static constexpr linear_counter test_count() noexcept {
+        auto lanes = dpp::simd_abi_traits<A, E>::size();
+        auto const limit = []() {
+            if consteval {
+                return 4zu;
+            } else {
+                return 128zu;
+            }
+        }();
+
+        auto max = lanes >= dpl::type_bit_v<size_t>
+            ? limit
+            : static_cast<size_t>((1zu << lanes) - 1);
+        return linear_counter(max < limit ? max : limit);
+    }
+
+    template <typename E>
+    static constexpr void run_const_mask_test(auto func) noexcept {
+        [&]<size_t I = 0, serialized_mt19937 S = {}>(this auto self,
+            dpp::immediate<I> = dpp::imm<I>, mt19937_type<S> = {}) {
+            if constexpr (I < test_count<E>().size()) {
+                constexpr auto lanes = dpp::simd_abi_traits<A, E>::size();
+                constexpr bit_generator<lanes> bitgen;
+                constexpr auto pair = S.generate_with(bitgen);
+                constexpr auto cmask = dpp::deduce_const_mask_v<pair.value>;
+
+                func(cmask);
+                self(dpp::imm<I + 1>, mt19937_type<pair.state>{});
+            }
+        }
+        ();
+    }
 
     template <dpp::simd_element_for<A> E, rng_like Rng>
-    static constexpr void vector_run(Rng& engine)
-    requires dpp::fixed_width_abi<A>
-    {
-        test::array_generator<abi_t, E> const data_generator;
-        test::bit_generator<abi_traits<E>::size> const bit_generator;
-        for (auto i = 0zu; i < 4; ++i) {
+    static constexpr void vector_run(Rng& engine) {
+        test::array_generator<A, E> const data_generator;
+        test::mask_generator<A, E> const mask_generator;
+        auto const vzero = dpp::broadcast<A, E>(dpp::zero);
 
+        for (auto const _ : test_count<E>()) {
             auto const lhs = data_generator(engine);
             auto const rhs = data_generator(engine);
-            auto const mask = bit_generator(engine);
-            auto const vmask = dpp::from_bitset<abi_t>(mask);
-            auto expected = lhs;
-            for (auto i = 0zu; i < mask.size(); ++i) {
-                if (!mask[i]) {
-                    expected[i] = rhs[i];
+            auto const mmask = mask_generator(engine);
+            constexpr bool negatable = requires {
+                { !mmask } -> dpp::simd_mask;
+            };
+            auto const amask = test::to_mask_array<E, A>(mmask, vzero);
+            auto expected = [&]() {
+                auto result = test::make_array<E, A>();
+                for (auto const i : linear_counter(amask)) {
+                    result[i] = amask[i] != 0 ? lhs[i] : rhs[i];
                 }
+                return result;
+            }();
+
+            test::operation_fixture<A>::test(
+                test::bitcmp, expected, dpp::select, mmask, lhs, rhs);
+            if constexpr (negatable) {
+                test::operation_fixture<A>::test(
+                    test::bitcmp, expected, dpp::select, !mmask, rhs, lhs);
             }
 
-            test::binary_transform<abi_t>::template test<E>(
-                lhs, rhs,
-                [vmask](vec_t<E> lhs, vec_t<E> rhs) noexcept {
-                    return dpp::select(vmask, lhs, rhs);
-                },
-                expected, test::bitcmp);
-
-            // Test negated mask
-            test::binary_transform<abi_t>::template test<E>(
-                lhs, rhs,
-                [vmask](vec_t<E> lhs, vec_t<E> rhs) noexcept {
-                    return dpp::select(!vmask, rhs, lhs);
-                },
-                expected, test::bitcmp);
-
-            for (auto i = 0zu; i < mask.size(); ++i) {
-                if (!mask[i]) {
+            for (auto const i : linear_counter(amask)) {
+                if (amask[i] == 0) {
                     expected[i] = 0;
                 }
             }
 
-            test::unary_transform<abi_t>::template test<E>(
-                lhs,
-                [vmask](vec_t<E> lhs) noexcept {
-                    return dpp::select(vmask, lhs, dpp::zero);
-                },
-                expected, test::bitcmp);
+            test::operation_fixture<A>::test(
+                test::bitcmp, expected, dpp::select, mmask, lhs, dpp::zero);
+            if constexpr (negatable)
+                test::operation_fixture<A>::test(test::bitcmp, expected,
+                    dpp::select, !mmask, dpp::zero, lhs);
 
-            test::unary_transform<abi_t>::template test<E>(
-                lhs,
-                [vmask](vec_t<E> lhs) noexcept {
-                    return dpp::select(!vmask, dpp::zero, lhs);
-                },
-                expected, test::bitcmp);
-
-            for (auto i = 0zu; i < mask.size(); ++i) {
-                if (mask[i]) {
+            for (auto const i : linear_counter(amask)) {
+                if (amask[i] != 0) {
                     expected[i] = 0;
                 } else {
                     expected[i] = lhs[i];
                 }
             }
 
-            test::unary_transform<abi_t>::template test<E>(
-                lhs,
-                [vmask](vec_t<E> arg) noexcept {
-                    return dpp::select(vmask, dpp::zero, arg);
-                },
-                expected, test::bitcmp);
+            test::operation_fixture<A>::test(
+                test::bitcmp, expected, dpp::select, mmask, dpp::zero, lhs);
+            if constexpr (negatable)
+                test::operation_fixture<A>::test(test::bitcmp, expected,
+                    dpp::select, !mmask, lhs, dpp::zero);
 
-            test::unary_transform<abi_t>::template test<E>(
-                lhs,
-                [vmask](vec_t<E> arg) noexcept {
-                    return dpp::select(!vmask, arg, dpp::zero);
-                },
-                expected, test::bitcmp);
-
-            for (auto i = 0zu; i < mask.size(); ++i) {
-                if (!mask[i]) {
+            for (auto const i : linear_counter(amask)) {
+                if (amask[i] == 0) {
                     expected[i] =
                         dpl::bit_cast<E>(~dpl::bit_representation_t<E>());
                 } else {
@@ -106,22 +116,14 @@ class selection {
                 }
             }
 
-            test::unary_transform<abi_t>::template test<E>(
-                lhs,
-                [vmask](vec_t<E> lhs) noexcept {
-                    return dpp::select(vmask, lhs, dpp::all_bits);
-                },
-                expected, test::bitcmp);
+            test::operation_fixture<A>::test(
+                test::bitcmp, expected, dpp::select, mmask, lhs, dpp::all_bits);
+            if constexpr (negatable)
+                test::operation_fixture<A>::test(test::bitcmp, expected,
+                    dpp::select, !mmask, dpp::all_bits, lhs);
 
-            test::unary_transform<abi_t>::template test<E>(
-                lhs,
-                [vmask](vec_t<E> lhs) noexcept {
-                    return dpp::select(!vmask, dpp::all_bits, lhs);
-                },
-                expected, test::bitcmp);
-
-            for (auto i = 0zu; i < mask.size(); ++i) {
-                if (mask[i]) {
+            for (auto const i : linear_counter(amask)) {
+                if (amask[i] != 0) {
                     expected[i] =
                         dpl::bit_cast<E>(~dpl::bit_representation_t<E>());
                 } else {
@@ -129,151 +131,107 @@ class selection {
                 }
             }
 
-            test::unary_transform<abi_t>::template test<E>(
-                lhs,
-                [vmask](vec_t<E> arg) noexcept {
-                    return dpp::select(vmask, dpp::all_bits, arg);
-                },
-                expected, test::bitcmp);
-
-            test::unary_transform<abi_t>::template test<E>(
-                lhs,
-                [vmask](vec_t<E> arg) noexcept {
-                    return dpp::select(!vmask, arg, dpp::all_bits);
-                },
-                expected, test::bitcmp);
+            test::operation_fixture<A>::test(
+                test::bitcmp, expected, dpp::select, mmask, dpp::all_bits, lhs);
+            if constexpr (negatable)
+                test::operation_fixture<A>::test(test::bitcmp, expected,
+                    dpp::select, !mmask, lhs, dpp::all_bits);
         }
 
-        {
-            constexpr auto lanes = abi_traits<E>::size();
-            using alt_cmask_t =
-                dpp::const_mask<lanes, test::repeat_byte<lanes>(0x55)>;
-            constexpr auto mask = dpp::to_bitset(alt_cmask_t());
-            auto const lhs = data_generator(engine);
-            auto const rhs = data_generator(engine);
-            auto expected = lhs;
-            for (auto i = 0zu; i < mask.size(); ++i) {
-                if (!mask[i]) {
-                    expected[i] = rhs[i];
-                }
-            }
-
-            test::binary_transform<abi_t>::template test<E>(
-                lhs, rhs,
-                [](vec_t<E> lhs, vec_t<E> rhs) noexcept {
-                    return dpp::select(alt_cmask_t(), lhs, rhs);
-                },
-                expected, test::bitcmp);
-
-            for (auto i = 0zu; i < mask.size(); ++i) {
-                if (!mask[i]) {
-                    expected[i] = 0;
-                }
-            }
-
-            test::unary_transform<abi_t>::template test<E>(
-                lhs,
-                [](vec_t<E> lhs) noexcept {
-                    return dpp::select(alt_cmask_t(), lhs, dpp::zero);
-                },
-                expected, test::bitcmp);
-
-            for (auto i = 0zu; i < mask.size(); ++i) {
-                if (mask[i]) {
-                    expected[i] = 0;
-                } else {
-                    expected[i] = lhs[i];
-                }
-            }
-
-            test::unary_transform<abi_t>::template test<E>(
-                lhs,
-                [](vec_t<E> lhs) noexcept {
-                    return dpp::select(alt_cmask_t(), dpp::zero, lhs);
-                },
-                expected, test::bitcmp);
-
-            for (auto i = 0zu; i < mask.size(); ++i) {
-                if (!mask[i]) {
-                    expected[i] =
-                        dpl::bit_cast<E>(~dpl::bit_representation_t<E>());
-                } else {
-                    expected[i] = lhs[i];
-                }
-            }
-
-            test::unary_transform<abi_t>::template test<E>(
-                lhs,
-                [](vec_t<E> lhs) noexcept {
-                    return dpp::select(alt_cmask_t(), lhs, dpp::all_bits);
-                },
-                expected, test::bitcmp);
-
-            for (auto i = 0zu; i < mask.size(); ++i) {
-                if (mask[i]) {
-                    expected[i] =
-                        dpl::bit_cast<E>(~dpl::bit_representation_t<E>());
-                } else {
-                    expected[i] = lhs[i];
-                }
-            }
-
-            test::unary_transform<abi_t>::template test<E>(
-                lhs,
-                [](vec_t<E> lhs) noexcept {
-                    return dpp::select(alt_cmask_t(), dpp::all_bits, lhs);
-                },
-                expected, test::bitcmp);
+        if constexpr (dpp::fixed_width_abi<A>) {
+            auto const vlhs = dpp::load<A>(data_generator(engine).data());
+            auto const vrhs = dpp::load<A>(data_generator(engine).data());
+            run_const_mask_test<E>([&](auto cmask) {
+                auto const mmask =
+                    dpp::from_bitset<A, E>(dpp::to_bitset(cmask));
+                test::operation_fixture<A>::test(test::bitcmp,
+                    dpp::select(mmask, vlhs, vrhs), dpp::select, cmask, vlhs,
+                    vrhs);
+                test::operation_fixture<A>::test(test::bitcmp,
+                    dpp::select(mmask, vlhs, dpp::zero), dpp::select, cmask,
+                    vlhs, dpp::zero);
+                test::operation_fixture<A>::test(test::bitcmp,
+                    dpp::select(mmask, dpp::zero, vlhs), dpp::select, cmask,
+                    dpp::zero, vlhs);
+                test::operation_fixture<A>::test(test::bitcmp,
+                    dpp::select(mmask, vlhs, dpp::all_bits), dpp::select, cmask,
+                    vlhs, dpp::all_bits);
+                test::operation_fixture<A>::test(test::bitcmp,
+                    dpp::select(mmask, dpp::all_bits, vlhs), dpp::select, cmask,
+                    dpp::all_bits, vlhs);
+            });
         }
     }
 
     template <dpp::simd_element_for<A> E, rng_like Rng>
-    static constexpr void mask_run(Rng& engine)
-    requires dpp::fixed_width_abi<A>
-    {
-        test::bit_generator<abi_traits<E>::size> const bit_generator;
-        for (auto i = 0zu; i < 4; ++i) {
-            auto const lhs = bit_generator(engine);
-            auto const rhs = bit_generator(engine);
-            auto const mask = bit_generator(engine);
-            auto const vlhs = dpp::from_bitset<abi_t>(lhs);
-            auto const vrhs = dpp::from_bitset<abi_t>(rhs);
-            auto const vmask = dpp::from_bitset<abi_t>(mask);
-
-            auto expected = (lhs & mask) | (rhs & ~mask);
-            auto const vexpected = [&]() {
-                return dpp::from_bitset<abi_t>(expected);
+    static constexpr void mask_run(Rng& engine) {
+        test::mask_generator<A, E> const mask_generator;
+        for (auto const i : test_count<E>()) {
+            auto const mlhs = mask_generator(engine);
+            auto const mrhs = mask_generator(engine);
+            auto const mmask = mask_generator(engine);
+            constexpr bool negatable = requires {
+                { !mmask } -> dpp::simd_mask;
             };
-            assert(dpp::all_of(dpp::select(vmask, vlhs, vrhs) == vexpected()));
-            assert(dpp::all_of(dpp::select(!vmask, vrhs, vlhs) == vexpected()));
 
-            expected = lhs & mask;
+            auto mexpected =
+                dpp::bwor(dpp::bwand(mlhs, mmask), dpp::bwandnot(mrhs, mmask));
+            assert(dpp::all_of(
+                dpp::cmpeq(mexpected, dpp::select(mmask, mlhs, mrhs))));
+            if constexpr (negatable)
+                assert(dpp::all_of(
+                    dpp::cmpeq(mexpected, dpp::select(!mmask, mrhs, mlhs))));
 
+            mexpected = dpp::bwand(mlhs, mmask);
             assert(dpp::all_of(
-                dpp::select(vmask, vlhs, dpp::zero) == vexpected()));
-            assert(dpp::all_of(
-                dpp::select(!vmask, dpp::zero, vlhs) == vexpected()));
+                dpp::cmpeq(mexpected, dpp::select(mmask, mlhs, dpp::zero))));
+            if constexpr (negatable)
+                assert(dpp::all_of(dpp::cmpeq(
+                    mexpected, dpp::select(!mmask, dpp::zero, mlhs))));
 
-            expected = lhs & ~mask;
+            mexpected = dpp::bwandnot(mlhs, mmask);
+            assert(dpp::all_of(
+                dpp::cmpeq(mexpected, dpp::select(mmask, dpp::zero, mlhs))));
+            if constexpr (negatable)
+                assert(dpp::all_of(dpp::cmpeq(
+                    mexpected, dpp::select(!mmask, mlhs, dpp::zero))));
 
-            assert(dpp::all_of(
-                dpp::select(vmask, dpp::zero, vlhs) == vexpected()));
-            assert(dpp::all_of(
-                dpp::select(!vmask, vlhs, dpp::zero) == vexpected()));
+            mexpected = dpp::bwornot(mlhs, mmask);
+            assert(dpp::all_of(dpp::cmpeq(
+                mexpected, dpp::select(mmask, mlhs, dpp::all_bits))));
+            if constexpr (negatable)
+                assert(dpp::all_of(dpp::cmpeq(
+                    mexpected, dpp::select(!mmask, dpp::all_bits, mlhs))));
 
-            expected = lhs | ~mask;
+            mexpected = dpp::bwor(mlhs, mmask);
+            assert(dpp::all_of(dpp::cmpeq(
+                mexpected, dpp::select(mmask, dpp::all_bits, mlhs))));
+            if constexpr (negatable)
+                assert(dpp::all_of(dpp::cmpeq(
+                    mexpected, dpp::select(!mmask, mlhs, dpp::all_bits))));
+        }
 
-            assert(dpp::all_of(
-                dpp::select(vmask, vlhs, dpp::all_bits) == vexpected()));
-            assert(dpp::all_of(
-                dpp::select(!vmask, dpp::all_bits, vlhs) == vexpected()));
-
-            expected = lhs | mask;
-
-            assert(dpp::all_of(
-                dpp::select(vmask, dpp::all_bits, vlhs) == vexpected()));
-            assert(dpp::all_of(
-                dpp::select(!vmask, vlhs, dpp::all_bits) == vexpected()));
+        if constexpr (dpp::fixed_width_abi<A>) {
+            auto const mlhs = mask_generator(engine);
+            auto const mrhs = mask_generator(engine);
+            run_const_mask_test<E>([&](auto cmask) {
+                auto const mmask =
+                    dpp::from_bitset<A, E>(dpp::to_bitset(cmask));
+                test::operation_fixture<A>::test(dpp::select(mmask, mlhs, mrhs),
+                    dpp::select, cmask, mlhs, mrhs);
+                test::operation_fixture<A>::test(
+                    dpp::select(mmask, mlhs, dpp::zero), dpp::select, cmask,
+                    mlhs, dpp::zero);
+                test::operation_fixture<A>::test(
+                    dpp::select(mmask, dpp::zero, mlhs), dpp::select, cmask,
+                    dpp::zero, mlhs);
+                test::operation_fixture<A>::test(
+                    dpp::select(mmask, mlhs, dpp::all_bits), dpp::select, cmask,
+                    mlhs, dpp::all_bits);
+                test::operation_fixture<A>::test(
+                    dpp::select(mmask, dpp::all_bits, mlhs), dpp::select, cmask,
+                    dpp::all_bits, mlhs);
+            });
         }
     }
 

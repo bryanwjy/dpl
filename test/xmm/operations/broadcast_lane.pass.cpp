@@ -12,10 +12,10 @@ import dpl.test.harness.operations.lane_broadcast;
 //
 // Forms tested:
 //   (1) dpp::broadcast_lane(vec, idx)                  -- unmasked, always
-//   available (2) dpp::broadcast_lane(src, mask, vec, idx)       --
-//   merge-masked (3) dpp::broadcast_lane(dpp::zero, mask, vec, idx) --
-//   zero-masked explicit (4) dpp::broadcast_lane(mask, vec, idx)            --
-//   zero-masked alias (== form 3)
+//   available
+//   (2) dpp::broadcast_lane(src, mask, vec, idx)       -- merge-masked
+//   (3) dpp::broadcast_lane(dpp::zero, mask, vec, idx) -- zero-masked explicit
+//   (4) dpp::broadcast_lane(mask, vec, idx)            -- zero-masked alias
 
 int main() {
     namespace dpp = dpl::datapar;

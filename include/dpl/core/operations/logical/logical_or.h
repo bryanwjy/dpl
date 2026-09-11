@@ -23,24 +23,25 @@ void logical_or(...) noexcept = delete;
 
 struct logical_or_t : private logical_base<logical_or_t> {
     using operation_base<logical_or_t>::operator();
+
+    template <simd_mask L, common_mask_with<L> R, common_mask_with<L> T0,
+        common_mask_with<L>... Ts>
+    requires cpo_invocable<logical_or_t, L, R> &&
+        cpo_invocable<logical_or_t, cpo_result_t<logical_or_t, L, R>, T0, Ts...>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(L&& lhs, R&& rhs, T0&& head,
+        Ts&&... tail) noexcept(canonical_mask<L> && canonical_mask<R> &&
+        (canonical_mask<T0> && ... && canonical_mask<Ts>)) {
+        return operator()(operator()(
+                              __DPL forward<L>(lhs), __DPL forward<R>(rhs)),
+            __DPL forward<T0>(head), __DPL forward<Ts>(tail)...);
+    }
 };
 
 template <>
 struct operation_signature<logical_or_t> {
     template <simd_mask L, simd_mask R>
     static consteval void operator()(L&&, R&&) noexcept {}
-
-    template <simd_mask L, common_mask_with<L> R, common_mask_with<L>... Ts>
-    requires cpo_invocable<logical_or_t, L, R> &&
-        cpo_invocable<logical_or_t, cpo_result_t<logical_or_t, L, R>, Ts...>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    constexpr auto DPL_VECTORCALL operator()(
-        L&& lhs, R&& rhs, Ts&&... tail) noexcept(canonical_mask<L> &&
-        canonical_mask<R> && (... && canonical_mask<Ts>)) {
-        return operator()(operator()(
-                              __DPL forward<L>(lhs), __DPL forward<R>(rhs)),
-            __DPL forward<Ts>(tail)...);
-    }
 };
 
 template <>

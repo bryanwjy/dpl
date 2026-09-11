@@ -16,7 +16,9 @@ inline namespace cpo {
 using __DPL datapar::cpo::evaluate;
 }
 
+using __DPL datapar::maskable_simd_accumulation;
 using __DPL datapar::maskable_simd_operation;
+using __DPL datapar::maskable_simd_predicate;
 using __DPL datapar::same_operation_as;
 using __DPL datapar::simd_algorithm_operation;
 using __DPL datapar::simd_basic_operation;
@@ -27,7 +29,9 @@ using __DPL datapar::simd_math_operation;
 using __DPL datapar::simd_operation;
 using __DPL datapar::simd_primitive_operation;
 
+using __DPL datapar::is_maskable_simd_accumulation;
 using __DPL datapar::is_maskable_simd_operation;
+using __DPL datapar::is_maskable_simd_predicate;
 using __DPL datapar::is_simd_algorithm_operation;
 using __DPL datapar::is_simd_basic_operation;
 using __DPL datapar::is_simd_canonical_invocable;

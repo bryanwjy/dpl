@@ -3,7 +3,9 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/dispatch/maskable/accumulation.h"
 #include "dpl/core/dispatch/maskable/base.h"
+#include "dpl/core/dispatch/maskable/predicate.h"
 #include "dpl/core/dispatch/operation/algorithm.h"
 #include "dpl/core/dispatch/operation/base.h"
 #include "dpl/core/dispatch/operation/math.h"
@@ -46,6 +48,16 @@ concept maskable_simd_operation = simd_operation<D> &&
     internal::inherits_from<remove_cv_t<D>,
         internal::maskable_operation_base<remove_cv_t<D>>>;
 
+template <typename D>
+concept maskable_simd_accumulation = simd_operation<D> &&
+    internal::inherits_from<remove_cv_t<D>,
+        internal::maskable_accumulation_base<remove_cv_t<D>>>;
+
+template <typename D>
+concept maskable_simd_predicate = simd_operation<D> &&
+    internal::inherits_from<remove_cv_t<D>,
+        internal::maskable_predicate_base<remove_cv_t<D>>>;
+
 template <typename L, auto R>
 concept same_operation_as =
     simd_operation<L> && simd_operation<remove_cvref_t<decltype(R)>> &&
@@ -82,6 +94,12 @@ concept simd_canonical_invocable =
 }
 [[nodiscard]] consteval bool is_maskable_simd_operation(auto cpo) noexcept {
     return maskable_simd_operation<decltype(cpo)>;
+}
+[[nodiscard]] consteval bool is_maskable_simd_accumulation(auto cpo) noexcept {
+    return maskable_simd_accumulation<decltype(cpo)>;
+}
+[[nodiscard]] consteval bool is_maskable_simd_predicate(auto cpo) noexcept {
+    return maskable_simd_predicate<decltype(cpo)>;
 }
 
 // Use == for same_operation_as

@@ -1,6 +1,6 @@
 // Copyright 2025-2026 Bryan Wong
-// @dpl[clang].compile-flags: -fconstexpr-steps=2000000
-// @dpl[msvc].compile-flags: /constexpr:steps2000000
+// @dpl[clang].compile-flags: -fconstexpr-steps=3000000
+// @dpl[msvc].compile-flags: /constexpr:steps3000000
 #include "../common.h"
 
 import dpl.xmm;
@@ -24,7 +24,7 @@ int main() {
         dpl::ext::float16, dpl::ext::bfloat16>;
     constexpr auto run = []() {
         dpl::test::mt19937 engine;
-        return dpl::test::signop<abi_t>::run_all<dpp::negate>(types{}, engine);
+        return dpl::test::negate<abi_t>::run_all(types{}, engine);
     };
 
     static_assert(run());

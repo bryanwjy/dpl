@@ -33,9 +33,44 @@ private:
         }
     }
 
+    template <typename E>
+    static constexpr linear_counter test_count() noexcept {
+        auto lanes = dpp::simd_abi_traits<A, E>::size();
+        auto const limit = []() {
+            if consteval {
+                return 4zu;
+            } else {
+                return 128zu;
+            }
+        }();
+
+        auto max = lanes >= dpl::type_bit_v<size_t>
+            ? limit
+            : static_cast<size_t>((1zu << lanes) - 1);
+        return linear_counter(max < limit ? max : limit);
+    }
+
+    template <typename E>
+    static constexpr void run_const_mask_test(auto func) noexcept {
+        [&]<size_t I = 0, serialized_mt19937 S = {}>(this auto self,
+            dpp::immediate<I> = dpp::imm<I>, mt19937_type<S> = {}) {
+            if constexpr (I < test_count<E>().size()) {
+                constexpr auto lanes = dpp::simd_abi_traits<A, E>::size();
+                constexpr bit_generator<lanes> bitgen;
+                constexpr auto pair = S.generate_with(bitgen);
+                constexpr auto cmask = dpp::deduce_const_mask_v<pair.value>;
+
+                func(cmask);
+                self(dpp::imm<I + 1>, mt19937_type<pair.state>{});
+            }
+        }
+        ();
+    }
+
 public:
     template <rng_like Rng, dpp::simd_element_for<A>... Es>
     static constexpr bool run_all(dpl::type_pack<Es...> from, Rng& engine) {
+        // Test is only for integrals
         static_assert((... && integral<Es>));
         return dpl::pack::all_of(
             [&]<typename E>(dpl::type_identity<E>) {
@@ -72,8 +107,13 @@ public:
                 return test::array_generator<A, E>{};
             }
         }();
-        test::array_generator<A, To> const addend_generator(test::half_range);
-        for (auto i = 0zu; i < 5; ++i) {
+        test::array_generator<A, To> const addend_generator(
+            test::half_range<To>);
+        test::mask_generator<A, To> const mask_generator;
+        auto const vtrue = dpp::broadcast<To, A>(true);
+        auto const vfalse = dpp::broadcast<To, A>(false);
+
+        for (auto const _ : test_count<E>()) {
             auto const lhs = data_generator(engine);
             auto const rhs = data_generator(engine);
             auto const addend = addend_generator(engine);
@@ -97,121 +137,29 @@ public:
                 return result;
             }();
 
-            // TODO Fix assignment harness
-            auto const vaddend = dpp::load<To, A>(addend.data());
-            dpl::test::binary_transform<A>::template test<E>(
-                lhs, rhs,
-                [vaddend](auto vlhs, auto vrhs) {
-                    return dpp::sad(vaddend, vlhs, vrhs);
-                },
-                expected);
-
-            if constexpr (dpp::fixed_width_abi<A>) {
-                constexpr auto lanes = abi_traits<To>::size();
-                constexpr auto loop_count = []() {
-                    auto max = lanes > dpl::type_bit_v<size_t>
-                        ? 128
-                        : static_cast<size_t>(
-                              dpl::to_underlying(~dpl::bitset<lanes>()));
-                    return max < 128 ? max : 128;
-                }();
-
-                test::bit_generator<lanes> mask_generator;
-                for (auto i = 0zu; i < loop_count; ++i) {
-                    auto mexpected = expected;
-                    auto const mask = mask_generator(engine);
-                    for (auto j = 0zu; j < mexpected.size(); ++j) {
-                        if (!mask[j]) {
-                            mexpected[j] = addend[j];
-                        }
-                    }
-
-                    auto const vmask = dpp::from_bitset<A, To>(mask);
-                    test::binary_transform<A>::template test<E>(
-                        lhs, rhs,
-                        [vaddend, vmask](auto vlhs, auto vrhs) {
-                            return dpp::sad(vaddend, vmask, vlhs, vrhs);
-                        },
-                        mexpected, test::bitcmp);
-
-                    for (auto j = 0zu; j < mexpected.size(); ++j) {
-                        if (!mask[j]) {
-                            mexpected[j] = 0;
-                        }
-                    }
-
-                    test::binary_transform<A>::template test<E>(
-                        lhs, rhs,
-                        [vaddend, vmask](auto vlhs, auto vrhs) {
-                            return dpp::sad(
-                                dpp::zero, vmask, vaddend, vlhs, vrhs);
-                        },
-                        mexpected, test::bitcmp);
-
-                    test::binary_transform<A>::template test<E>(
-                        lhs, rhs,
-                        [vaddend, vmask](auto vlhs, auto vrhs) {
-                            return dpp::sad(vmask, vaddend, vlhs, vrhs);
-                        },
-                        mexpected, test::bitcmp);
-                }
-
-                using bitset_t = dpl::bitset<lanes>;
-                constexpr auto const_count = 4zu;
-                constexpr auto masks = [lanes]() {
-                    return dpl::apply(
-                        [lanes](auto... idx) {
-                            test::mt19937 rng{};
-                            dpl::test::bit_generator<lanes> bitgen;
-                            return array<bitset_t, const_count>{
-                                (dpl::ignore = idx, bitgen(rng))...};
-                        },
-                        dpl::make_index_sequence<const_count>{});
-                }();
-                dpl::pack::for_each(
-                    [&]<size_t I>(dpl::size_constant<I>) {
-                        auto mexpected = expected;
-                        constexpr auto mask = masks[I];
-                        using cmask_t = dpp::const_mask<mask.size(),
-                            dpl::to_underlying(mask)>;
-
-                        for (auto j = 0zu; j < mexpected.size(); ++j) {
-                            if (!mask[j]) {
-                                mexpected[j] = addend[j];
-                            }
-                        }
-
-                        test::binary_transform<A>::template test<E>(
-                            lhs, rhs,
-                            [vaddend](auto vlhs, auto vrhs) {
-                                return dpp::sad(vaddend, cmask_t{}, vlhs, vrhs);
-                            },
-                            mexpected, test::bitcmp);
-
-                        for (auto j = 0zu; j < mexpected.size(); ++j) {
-                            if (!mask[j]) {
-                                mexpected[j] = 0;
-                            }
-                        }
-
-                        test::binary_transform<A>::template test<E>(
-                            lhs, rhs,
-                            [vaddend](auto vlhs, auto vrhs) {
-                                return dpp::sad(
-                                    dpp::zero, cmask_t{}, vaddend, vlhs, vrhs);
-                            },
-                            mexpected, test::bitcmp);
-
-                        test::binary_transform<A>::template test<E>(
-                            lhs, rhs,
-                            [vaddend](auto vlhs, auto vrhs) {
-                                return dpp::sad(cmask_t{}, vaddend, vlhs, vrhs);
-                            },
-                            mexpected, test::bitcmp);
-                    },
-                    dpl::make_index_sequence<const_count>{});
-            }
+            operation_fixture<A>::test(expected, dpp::sad, addend, lhs, rhs);
+            operation_fixture<A>::test_masked(
+                dpp::sad, addend, vtrue, lhs, rhs);
+            operation_fixture<A>::test_masked(
+                dpp::sad, addend, vfalse, lhs, rhs);
+            auto const mask = mask_generator(engine);
+            operation_fixture<A>::test_masked(dpp::sad, addend, mask, lhs, rhs);
+            operation_fixture<A>::test_masked(
+                dpp::sad, dpp::zero, mask, addend, lhs, rhs);
         }
+
+        if constexpr (dpp::fixed_width_abi<A>) {
+            auto const lhs = data_generator(engine);
+            auto const rhs = data_generator(engine);
+            auto const addend = addend_generator(engine);
+            run_const_mask_test<To>([&](auto cmask) {
+                operation_fixture<A>::test_masked(
+                    dpp::sad, addend, cmask, lhs, rhs);
+                operation_fixture<A>::test_masked(
+                    dpp::sad, dpp::zero, cmask, addend, lhs, rhs);
+            });
+        }
+
         return true;
     }
 };

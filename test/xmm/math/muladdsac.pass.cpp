@@ -26,12 +26,12 @@ int main() {
 
     using types =
         dpl::type_pack<float, double, dpl::ext::float16, dpl::ext::bfloat16>;
-    static_assert([]() {
+    constexpr auto run = []() {
         dpl::test::mt19937 engine;
         return dpl::test::muladdsac<abi_t>::run_all(types{}, engine);
-    }());
+    };
 
-    dpl::test::mt19937 engine;
-    assert(dpl::test::muladdsac<abi_t>::run_all(types{}, engine));
+    static_assert(run());
+    assert(run());
     return 0;
 }

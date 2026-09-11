@@ -10,7 +10,6 @@ import dpl;
 import :array;
 import :dynamic_array;
 import :span;
-import :bitset_helpers;
 
 namespace dpl::test {
 namespace dpp = dpl::datapar;
@@ -141,12 +140,6 @@ using mt19937 = mt_engine<dpl::uint64, 64, 312, 156, 31, 0xb5026f5aa96619e9ull,
     29, 0x5555555555555555ull, 17, 0x71d67fffeda60000ull, 37,
     0xfff7eee000000000ull, 43, 6364136223846793005ull>;
 
-struct half_range_t {
-    explicit constexpr half_range_t() noexcept = default;
-};
-
-inline constexpr half_range_t half_range{};
-
 template <typename T>
 concept rng_like = requires(T& rng) {
     typename T::result_type;
@@ -154,12 +147,52 @@ concept rng_like = requires(T& rng) {
     { rng() } noexcept -> dpl::same_as<typename T::result_type>;
 };
 
-template <typename E>
-class scalar_generator {
-    static_assert(dpl::integral<E> || dpl::floating_point_like<E>);
+template <rng_like Rng>
+requires dpl::is_trivially_copyable_v<Rng>
+struct serialized_rng {
+    alignas(Rng) char data[sizeof(Rng)];
 
-public:
-    static constexpr E minimum = []() {
+    consteval serialized_rng(Rng const& src) noexcept
+        : serialized_rng(dpl::bit_cast<serialized_rng>(src)) {}
+
+    consteval serialized_rng() noexcept
+    requires dpl::default_initializable<Rng>
+        : serialized_rng(Rng{}) {}
+
+    template <typename T>
+    struct result {
+        T value;
+        serialized_rng state;
+    };
+
+    template <typename G>
+    consteval auto generate_with(
+        this serialized_rng self, G const& generator) noexcept {
+        auto rng = dpl::bit_cast<Rng>(self);
+        auto val = generator(rng);
+        return result<decltype(val)>{
+            .value = val, .state = dpl::bit_cast<Rng>(rng)};
+    }
+};
+
+using serialized_mt19937 = serialized_rng<mt19937>;
+template <serialized_mt19937 S>
+using mt19937_type = dpl::integral_constant<serialized_mt19937, S>;
+
+template <typename T, typename E>
+concept data_range = requires {
+    typename T::value_type;
+    requires same_as<typename T::value_type, E>;
+    T::min;
+    T::max;
+    typename dpl::integral_constant<typename T::value_type, T::min>;
+    typename dpl::integral_constant<typename T::value_type, T::max>;
+};
+
+template <typename E>
+struct full_range_t {
+    using value_type = E;
+    static constexpr E min = []() {
         if constexpr (dpl::integral<E>) {
             return dpl::integral_traits<E>::min_value;
         } else {
@@ -167,22 +200,31 @@ public:
         }
     }();
 
-    static constexpr E maximum = []() {
+    static constexpr E max = []() {
         if constexpr (dpl::integral<E>) {
             return dpl::integral_traits<E>::max_value;
         } else {
             return dpp::max_value_v<E>;
         }
     }();
+};
+
+template <typename E>
+inline constexpr full_range_t<E> full_range{};
+
+template <typename E>
+class scalar_generator {
+    static_assert(dpl::integral<E> || dpl::floating_point_like<E>);
 
 public:
-    constexpr scalar_generator() noexcept : min_(minimum), max_(maximum) {}
+    constexpr scalar_generator() noexcept : scalar_generator(full_range<E>) {}
 
     constexpr scalar_generator(E min, E max) noexcept : min_(min), max_(max) {}
 
-    explicit constexpr scalar_generator(half_range_t) noexcept
-        : min_(minimum / 2)
-        , max_(maximum / 2) {}
+    template <data_range<E> R>
+    explicit constexpr scalar_generator(R) noexcept
+        : min_(R::min)
+        , max_(R::max) {}
 
     template <rng_like Rng>
     constexpr E operator()(Rng& rng) const noexcept {
@@ -203,7 +245,7 @@ public:
                         rand = rng();
                     }
 
-                    return rand % span;
+                    return dpl::to_signed(rand % span + umin);
                 }
 
                 if ((min_ ^ max_) < 0) {
@@ -232,7 +274,7 @@ public:
                 return dpp::nan;
             }
 
-            auto const signed_min = dpl::bit_cast<bitset_t>(min_) &
+            auto const signed_min = dpl::bit_cast<bitset_t>(min) &
                 floating_point_traits<E>::signbit;
             auto const signed_max = dpl::bit_cast<bitset_t>(max) &
                 floating_point_traits<E>::signbit;
@@ -362,5 +404,113 @@ public:
         }(dpl::make_index_sequence<count>{});
     }
 };
+
+template <dpp::simd_abi A, dpp::simd_element_for<A> E>
+class mask_generator;
+
+template <dpp::fixed_width_abi A, dpp::simd_element_for<A> E>
+class mask_generator<A, E> :
+    private bit_generator<dpp::simd_abi_traits<A, E>::size> {
+private:
+    using base_type = bit_generator<dpp::simd_abi_traits<A, E>::size>;
+
+public:
+    template <rng_like Rng>
+    constexpr auto operator()(Rng& rng) const noexcept {
+        return dpp::from_bitset<A, E>(base_type::operator()(rng));
+    }
+};
+
+template <dpp::scalable_abi A, dpp::simd_element_for<A> E>
+class mask_generator<A, E> :
+    private array_generator<A, dpp::unsigned_representation_t<E>> {
+private:
+    using value_type = dpp::unsigned_representation_t<E>;
+    using base_type = array_generator<A, value_type>;
+
+public:
+    constexpr mask_generator() noexcept : base_type() {}
+
+    template <rng_like Rng>
+    constexpr auto operator()(Rng& rng) const noexcept {
+        auto mod = dpp::bwand(
+            base_type::operator()(rng), dpp::broadcast<value_type, A>(2u));
+        return dpp::reinterpret<E>(
+            dpp::cmpeq(mod, dpp::broadcast<value_type, A>(1u)));
+    }
+};
+
+template <typename E>
+struct sqrt_range_t {
+    using value_type = E;
+
+    static constexpr E max = []() {
+        if constexpr (dpl::integral<E>) {
+            constexpr auto shift = dpl::type_bit_v<E> / 2;
+            return (dpl::integral_traits<E>::max_value >> shift) - 1;
+        } else {
+            constexpr auto bias = dpl::floating_point_traits<E>::exponent_bias;
+            constexpr auto exp = dpl::floating_point_traits<E>::exponent_mask;
+            constexpr auto shift = dpl::countr_zero(exp);
+            // minus 1 for reduced range, so that sqrt * sqrt < max_value
+            constexpr auto sqrt =
+                dpl::bitset<dpl::type_bit_v<E>>(
+                    ((dpl::to_underlying(exp >> shift) - bias) >> 1) + bias - 1)
+                << shift;
+            return dpl::bit_cast<E>(sqrt);
+        }
+    }();
+
+    static constexpr E min = []() {
+        if constexpr (dpl::integral<E>) {
+            constexpr auto shift = dpl::type_bit_v<E> / 2;
+            return (dpl::integral_traits<E>::min_value >> shift) + 1;
+        } else {
+            return -sqrt_range_t::max;
+        }
+    }();
+};
+
+template <typename E>
+struct half_range_t {
+    using value_type = E;
+    static constexpr E max = full_range_t<E>::max / 2;
+    static constexpr E min = full_range_t<E>::min / 2;
+};
+
+template <typename E>
+inline constexpr half_range_t<E> half_range{};
+template <typename E>
+inline constexpr sqrt_range_t<E> sqrt_range{};
+
+template <typename E, dpp::simd_abi A>
+requires dpp::simd_element_for<E, A>
+constexpr auto make_array() noexcept(dpp::fixed_width_abi<A>) {
+    if constexpr (dpp::scalable_abi<A>) {
+        return dynamic_array<E>(dpp::simd_abi_traits<A, E>::size());
+    } else {
+        constexpr auto lanes = dpp::simd_abi_traits<A, E>::size();
+        return array<E, lanes>{};
+    }
+}
+
+template <typename E, dpp::simd_abi A, dpp::canonical_mask M>
+requires dpp::simd_element_for<E, A>
+constexpr auto to_mask_vector(M mask,
+    dpp::make_canonical_vector_t<E, A> vzero = dpp::broadcast<A, E>(
+        dpp::zero)) noexcept {
+    return dpp::select(mask, dpp::all_bits, vzero);
+}
+
+template <typename E, dpp::simd_abi A, dpp::canonical_mask M>
+requires dpp::simd_element_for<E, A>
+constexpr auto to_mask_array(M mask,
+    dpp::make_canonical_vector_t<E, A> vzero = dpp::broadcast<A, E>(
+        dpp::zero)) noexcept(dpp::fixed_width_abi<A>) {
+    auto amask = test::make_array<E, A>();
+    dpp::store(test::to_mask_vector<E, A>(mask, vzero), amask.data());
+    return amask;
+}
+
 } // namespace support
 } // namespace dpl::test

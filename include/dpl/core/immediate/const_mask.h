@@ -68,7 +68,7 @@ public:
     static constexpr size_t width = W;
     static constexpr value_type value = []() {
         if constexpr (integral<value_type>) {
-            return (V & static_cast<value_type>((1ll << W) - 1));
+            return dpl::to_underlying(dpl::bitset<W>(V));
         } else {
             return V;
         }
@@ -339,6 +339,13 @@ using cmask_t DPL_NODEBUG =
 template <auto V>
 requires requires { typename cmask_t<V>; }
 inline constexpr cmask_t<V> cmask_v{};
+
+template <auto V>
+using deduce_const_mask_t = cmask_t<V>;
+
+template <auto V>
+requires requires { typename cmask_t<V>; }
+inline constexpr cmask_t<V> deduce_const_mask_v{};
 
 template <template_barrier_t = template_barrier, const_mask_like M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)

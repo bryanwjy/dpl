@@ -26,13 +26,7 @@ int main() {
 
     constexpr auto run = []() {
         dpl::test::mt19937 engine;
-        return dpl::pack::all_of(
-            [&](auto cbwop) {
-                constexpr auto bwop = cbwop();
-                return dpl::test::bitwise_mask<abi_t>::run_all<bwop>(
-                    types{}, engine);
-            },
-            ops{});
+        return dpl::test::bitwise_mask<abi_t>::run_all(types{}, engine);
     };
 
     static_assert(run());

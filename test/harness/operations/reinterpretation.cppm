@@ -34,11 +34,11 @@ public:
         test::array_generator<abi_t, dpl::uint64> const data_generator;
 
         // Go through a few iterations
-        for (auto i = 0zu; i < 8; ++i) {
+        for (auto const i : linear_counter(8)) {
             auto const data = data_generator(engine);
             auto const expected = test::reinterpret_array<E>(data);
-            test::unary_transform<abi_t>::template test<uint64>(
-                data, dpp::reinterpret<E>, expected, test::bitcmp);
+            operation_fixture<A>::test(
+                test::bitcmp, expected, dpp::reinterpret<E>, data);
         }
 
         return true;

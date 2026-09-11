@@ -18,6 +18,38 @@ class lane_broadcast {
     template <typename E>
     using abi_traits = dpp::simd_abi_traits<A, E>;
 
+    template <typename E>
+    static constexpr linear_counter test_count() noexcept {
+        auto lanes = abi_traits<E>::size();
+        auto const limit = []() {
+            if consteval {
+                return 4zu;
+            } else {
+                return abi_traits<E>::size();
+            }
+        }();
+
+        return linear_counter(
+            lanes < limit ? static_cast<size_t>(lanes) : limit);
+    }
+
+    template <typename E>
+    static constexpr void run_const_mask_test(auto func) noexcept {
+        [&]<size_t I = 0, serialized_mt19937 S = {}>(this auto self,
+            dpp::immediate<I> = dpp::imm<I>, mt19937_type<S> = {}) {
+            if constexpr (I < test_count<E>().size()) {
+                constexpr auto lanes = dpp::simd_abi_traits<A, E>::size();
+                constexpr bit_generator<lanes> bitgen;
+                constexpr auto pair = S.generate_with(bitgen);
+                constexpr auto cmask = dpp::deduce_const_mask_v<pair.value>;
+
+                func(cmask);
+                self(dpp::imm<I + 1>, mt19937_type<pair.state>{});
+            }
+        }
+        ();
+    }
+
 public:
     template <rng_like Rng, dpp::simd_element_for<A>... Es>
     static constexpr bool run_all(dpl::type_pack<Es...> pack, Rng& engine) {
@@ -30,60 +62,84 @@ public:
 
     template <dpp::simd_element_for<A> E, rng_like Rng>
     static constexpr bool run(Rng& engine) {
-        test::array_generator<A, E> const data_generator(test::half_range);
-        test::scalar_generator<E> const src_generator(
-            dpp::max_value_v<E> / 4 * 3, dpp::max_value_v<E>);
-        auto const lhs = data_generator(engine);
-        auto const src = src_generator(engine);
-        constexpr auto count = dpp::min(abi_traits<E>::size(), 4zu);
-        auto expected = lhs;
+        test::array_generator<A, E> const data_generator;
+        test::scalar_generator<size_t> const idx_generator(
+            0zu, abi_traits<E>::size());
+        test::mask_generator<A, E> const mask_generator;
 
-        for (auto i = 0zu; i < count; ++i) {
+        auto const vtrue = dpp::broadcast<A, E>(true);
+        auto const vfalse = dpp::broadcast<A, E>(false);
+
+        for (auto const _ : test_count<E>()) {
+            auto const lhs = data_generator(engine);
+            auto const src = data_generator(engine);
+            auto const idx = idx_generator(engine);
+            auto expected = lhs;
             for (auto& val : expected) {
-                val = lhs[i];
+                val = lhs[idx];
             }
 
-            auto const broadcast = [i](auto... args) {
-                return dpp::broadcast_lane(args..., i);
-            };
-
-            dpl::test::unary_transform<A>::template test<E>(
-                lhs, broadcast, expected, test::bitcmp);
-            dpl::test::unary_transform<A>::template test_masked<E>(
-                lhs, broadcast, src);
+            test::operation_fixture<A>::test(
+                test::bitcmp, expected, dpp::broadcast_lane, lhs, idx);
+            auto const mask = mask_generator(engine);
+            test::operation_fixture<A>::test_masked(
+                dpp::broadcast_lane, src, mask, lhs, idx);
+            test::operation_fixture<A>::test_masked(
+                dpp::broadcast_lane, src, vtrue, lhs, idx);
+            test::operation_fixture<A>::test_masked(
+                dpp::broadcast_lane, src, vfalse, lhs, idx);
+            test::operation_fixture<A>::test_masked(
+                dpp::broadcast_lane, dpp::zero, vfalse, lhs, idx);
         }
+
+        run_const_mask_test<E>([&](auto cmask) {
+            auto const lhs = data_generator(engine);
+            auto const idx = idx_generator(engine);
+            auto const src = data_generator(engine);
+            test::operation_fixture<A>::test_masked(
+                dpp::broadcast_lane, src, cmask, lhs, idx);
+            test::operation_fixture<A>::test_masked(
+                dpp::broadcast_lane, dpp::zero, cmask, lhs, idx);
+        });
+
         // OOB is implementation-defined, not tested
 
+        // There is no way to ensure index bounds for scalable ABIs
+        // they should typically fallback to runtime index anyway
+        // so only fixed-width ABIs are tested for immediate indices
         if constexpr (dpp::fixed_width_abi<A>) {
-            dpl::pack::for_each(
-                [&]<size_t I>(dpl::size_constant<I>) {
-                    constexpr auto offset = [count]() {
-                        if constexpr (abi_traits<E>::size() > count) {
-                            test::mt19937 rng{};
-                            return test::scalar_generator<size_t>(0zu, count)(
-                                rng);
-                        } else {
-                            return 0zu;
-                        }
-                    }();
-                    constexpr auto stride =
-                        abi_traits<E>::size() > count ? count : 1zu;
-                    constexpr auto idx = dpp::min(
-                        I * stride + offset, abi_traits<E>::size() - 1);
-                    auto const broadcasti = [idx](auto... args) {
-                        return dpp::broadcast_lane(args..., dpp::imm<idx>);
-                    };
+            [&]<size_t I = 0zu, serialized_mt19937 S = {}>(this auto self,
+                dpp::immediate<I> = dpp::imm<I>, mt19937_type<S> = {}) {
+                if constexpr (I < test_count<E>().size()) {
+                    constexpr test::scalar_generator<size_t> cshift_generator(
+                        0zu, abi_traits<E>::size());
 
+                    constexpr auto pair = S.generate_with(cshift_generator);
+                    constexpr auto cidx = dpp::imm<pair.value>;
+
+                    auto const lhs = data_generator(engine);
+                    auto const src = data_generator(engine);
+                    auto expected = lhs;
                     for (auto& val : expected) {
-                        val = lhs[idx];
+                        val = lhs[cidx];
                     }
 
-                    dpl::test::unary_transform<A>::template test<E>(
-                        lhs, broadcasti, expected, test::bitcmp);
-                    dpl::test::unary_transform<A>::template test_masked<E>(
-                        lhs, broadcasti, src);
-                },
-                dpl::make_index_sequence<count>{});
+                    test::operation_fixture<A>::test(
+                        test::bitcmp, expected, dpp::broadcast_lane, lhs, cidx);
+                    auto const mask = mask_generator(engine);
+                    test::operation_fixture<A>::test_masked(
+                        dpp::broadcast_lane, src, mask, lhs, cidx);
+                    test::operation_fixture<A>::test_masked(
+                        dpp::broadcast_lane, src, vtrue, lhs, cidx);
+                    test::operation_fixture<A>::test_masked(
+                        dpp::broadcast_lane, src, vfalse, lhs, cidx);
+                    test::operation_fixture<A>::test_masked(
+                        dpp::broadcast_lane, dpp::zero, vfalse, lhs, cidx);
+
+                    self(dpp::imm<I + 1>, mt19937_type<pair.state>{});
+                }
+            }
+            ();
         }
 
         return true;

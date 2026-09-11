@@ -1,6 +1,6 @@
 // Copyright 2025-2026 Bryan Wong
-// @dpl[clang].compile-flags: -fconstexpr-steps=10000000
-// @dpl[msvc].compile-flags: /constexpr:steps10000000
+// @dpl[clang].compile-flags: -fconstexpr-steps=5000000
+// @dpl[msvc].compile-flags: /constexpr:steps5000000
 
 #include "../common.h"
 
@@ -29,7 +29,7 @@ int main() {
         return dpl::test::permutation<abi_t>::run_all(types{}, engine);
     };
 
-    // static_assert(run());
+    static_assert(run());
     assert(run());
     return 0;
 }

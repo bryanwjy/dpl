@@ -17,169 +17,128 @@ export template <dpp::simd_abi A>
 class bitwise_mask {
     using abi_t = A;
     template <typename E>
-    using mask_t = dpp::basic_mask<E, A>;
+    using mask_t = dpp::make_canonical_mask_t<E, A>;
     template <typename E>
     using abi_traits = dpp::simd_abi_traits<abi_t, E>;
-    template <typename E>
-    // Only works for fixed_width
-    using bitset_t = dpl::bitset<abi_traits<E>::size>;
-
-    template <auto Op>
-    struct expected_op_t {
-        template <size_t N>
-        static constexpr dpl::bitset<N> operator()(
-            dpl::bitset<N> lhs, dpl::bitset<N> rhs) noexcept
-        requires (Op != dpp::bwshift_left && Op != dpp::bwshift_right &&
-            Op != dpp::bwnot)
-        {
-            if constexpr (Op == dpp::bwand) {
-                return lhs & rhs;
-            } else if constexpr (Op == dpp::bwor) {
-                return lhs | rhs;
-            } else if constexpr (Op == dpp::bwandnot) {
-                return lhs & ~rhs;
-            } else if constexpr (Op == dpp::bwornot) {
-                return lhs | ~rhs;
-            } else {
-                static_assert(Op == dpp::bwxor);
-                return lhs ^ rhs;
-            }
-        }
-
-        template <size_t N>
-        static constexpr dpl::bitset<N> operator()(dpl::bitset<N> arg) noexcept
-        requires (Op == dpp::bwnot)
-        {
-            return ~arg;
-        }
-
-        template <size_t N>
-        static constexpr dpl::bitset<N> operator()(
-            dpl::bitset<N> lhs, size_t rhs) noexcept
-        requires (Op == dpp::bwshift_left || Op == dpp::bwshift_right)
-        {
-            if constexpr (Op == dpp::bwshift_right) {
-                return lhs >> rhs;
-            } else {
-                return lhs << rhs;
-            }
-        }
-    };
-
-    template <auto bwop>
-    static constexpr expected_op_t<bwop> expected_op;
 
     template <typename E>
-    static constexpr auto equal(mask_t<E> actual, bitset_t<E> expected) noexcept
-    requires dpp::fixed_width_abi<abi_t>
-    {
-        return dpp::to_bitset(actual) == expected &&
-            dpp::all_of(actual == dpp::from_bitset<abi_t, E>(expected)) &&
-            actual.size() == expected.size();
+    static constexpr linear_counter test_count() noexcept {
+        auto const lanes = dpp::simd_abi_traits<A, E>::size();
+        if consteval {
+            constexpr auto limit = 4zu;
+            return linear_counter(lanes < limit ? lanes : limit);
+        } else {
+            return linear_counter(dpp::simd_abi_traits<A, E>::size());
+        }
+    }
+
+    template <typename E>
+    static constexpr bool demorgans(mask_t<E> lhs, mask_t<E> rhs) noexcept {
+        return dpp::all_of(dpp::cmpeq(dpp::bwnot(dpp::bwand(lhs, rhs)),
+            dpp::bwor(dpp::bwnot(lhs), dpp::bwnot(rhs))));
     }
 
 public:
-    template <dpp::simd_primitive_operation auto bwop, rng_like Rng,
-        dpp::simd_element_for<A>... Es>
+    template <rng_like Rng, dpp::simd_element_for<A>... Es>
     static constexpr bool run_all(dpl::type_pack<Es...> pack, Rng& engine) {
         return dpl::pack::all_of(
             [&]<typename E>(dpl::type_identity<E> tp) {
-                return bitwise_mask::template run<E, bwop>(engine);
+                return bitwise_mask::template run<E>(engine);
             },
             pack);
     }
 
-    template <dpp::simd_element_for<A> E,
-        dpp::simd_primitive_operation auto bwop, rng_like Rng>
-    static constexpr bool run(Rng& engine)
-    requires dpp::fixed_width_abi<abi_t>
-    {
-        auto const data_generator = []() {
-            if constexpr (dpl::integral_bitset_type<bitset_t<E>>) {
-                using type = typename bitset_t<E>::underlying_type;
-                return [gen = dpl::test::scalar_generator<type>{}](
-                           Rng& engine) { return bitset_t<E>(gen(engine)); };
-            } else {
-                return
-                    [gen = dpl::test::scalar_generator<size_t>{}](Rng& engine) {
-                        using chunk_t = dpl::bitset<dpl::type_bit_v<size_t>>;
-                        constexpr auto chunks =
-                            bitset_t<E>::size() / dpl::type_bit_v<size_t>;
-                        return dpl::apply(
-                            [&](auto... idx) {
-                                chunk_t const args[sizeof...(idx)] = {
-                                    ((void)idx, chunk_t(gen(engine)))...};
-                                return bitset_t<E>(args[idx]...);
-                            },
-                            dpl::make_index_sequence<chunks>{});
-                    };
-            }
-        }();
-        if constexpr (bwop == dpp::bwshift_left || bwop == dpp::bwshift_right) {
-            auto const lhs = data_generator(engine);
-            dpl::test::scalar_generator<size_t> const shift_generator(
-                0zu, mask_t<E>::size());
+    template <dpp::simd_element_for<A> E, rng_like Rng>
+    static constexpr bool run(Rng& engine) {
+        mask_generator<A, E> const generator;
 
-            for (auto i = 0zu; i < abi_traits<E>::size(); ++i) {
-                if consteval {
-                    if (abi_traits<E>::size() > 16 && i % 3 > 0) {
-                        break;
-                    }
-                }
-
-                auto const expected = expected_op<bwop>(lhs, i);
-                assert(
-                    equal(bwop(dpp::from_bitset<abi_t, E>(lhs), i), expected));
-            }
-
-            // Shifting out of range produces zero
-            assert(equal(
-                bwop(dpp::from_bitset<abi_t, E>(lhs), abi_traits<E>::size()),
-                bitset_t<E>()));
-            assert(equal(bwop(dpp::from_bitset<abi_t, E>(lhs),
-                             abi_traits<E>::size() + 1),
-                bitset_t<E>()));
-            assert(equal(bwop(dpp::from_bitset<abi_t, E>(lhs),
-                             abi_traits<E>::size() + 2),
-                bitset_t<E>()));
-            assert(dpl::pack::all_of(
-                [&](auto idx) {
-                    return equal(bwop(dpp::from_bitset<abi_t, E>(lhs),
-                                     dpp::imm<idx() + abi_traits<E>::size()>),
-                        bitset_t<E>());
-                },
-                dpl::make_index_sequence<4>{}));
-
-            return dpl::pack::all_of(
-                [&](auto idx) {
-                    if consteval {
-                        if constexpr (abi_traits<E>::size() > 16 &&
-                            idx() % 3 > 0) {
-                            return true;
-                        }
-                    }
-
-                    auto const expected = expected_op<bwop>(lhs, idx);
-                    return equal(
-                        bwop(dpp::from_bitset<abi_t, E>(lhs), idx), expected);
-                },
-                dpl::make_index_sequence<abi_traits<E>::size()>{});
-        } else if constexpr (bwop == dpp::bwnot) {
-            auto const arg = data_generator(engine);
-            using result_type = decltype(bwop(dpp::from_bitset<abi_t, E>(arg)));
-            static_assert(dpl::same_as<result_type, mask_t<E>>);
-            auto const expected = expected_op<bwop>(arg);
-            return equal(bwop(dpp::from_bitset<abi_t, E>(arg)), expected);
-        } else {
-            if constexpr (bwop != dpp::bwshift_left &&
-                bwop != dpp::bwshift_right && bwop != dpp::bwnot) {}
-            auto const lhs = data_generator(engine);
-            auto const rhs = data_generator(engine);
-            auto const expected = expected_op<bwop>(lhs, rhs);
-            return equal(bwop(dpp::from_bitset<abi_t, E>(lhs),
-                             dpp::from_bitset<abi_t, E>(rhs)),
-                expected);
+        // tests bwnot, bwand, bwor
+        for (auto const _ : test_count<E>()) {
+            auto const lhs = generator(engine);
+            auto const rhs = generator(engine);
+            assert(demorgans<E>(lhs, rhs));
         }
+
+        for (auto const _ : test_count<E>()) {
+            auto const lhs = generator(engine);
+            auto const rhs = generator(engine);
+            assert(dpp::all_of(dpp::cmpeq(
+                dpp::bwandnot(lhs, rhs), dpp::bwand(lhs, dpp::bwnot(rhs)))));
+            assert(dpp::all_of(dpp::cmpeq(
+                dpp::bwornot(lhs, rhs), dpp::bwor(lhs, dpp::bwnot(rhs)))));
+        }
+
+        auto const vnone = dpp::broadcast<E, A>(false);
+        for (auto const _ : test_count<E>()) {
+            auto const lhs = generator(engine);
+            auto const rhs = generator(engine);
+            assert(dpp::none_of(dpp::bwxor(lhs, lhs)));
+            assert(dpp::all_of(
+                dpp::cmpeq(dpp::bwxor(dpp::bwxor(lhs, rhs), rhs), lhs)));
+            assert(dpp::all_of(dpp::cmpeq(dpp::bwxor(lhs, vnone), lhs)));
+        }
+
+        scalar_generator<size_t> const shift_generator(
+            0zu, abi_traits<E>::size());
+        if constexpr (dpp::fixed_width_abi<A>) {
+            auto const lanes = abi_traits<E>::size();
+            for (auto const _ : test_count<E>()) {
+                auto const lhs = generator(engine);
+                auto const lbits = dpp::to_bitset(lhs);
+                auto const shift = shift_generator(engine);
+
+                assert(dpp::to_bitset(dpp::bwshift_left(lhs, shift)) ==
+                    (lbits << shift));
+                assert(dpp::to_bitset(dpp::bwshift_right(lhs, shift)) ==
+                    (lbits >> shift));
+            }
+        } else {
+            using sint_t = dpp::signed_representation_t<E>;
+            auto const vzero = dpp::broadcast<E, A>(dpp::zero);
+            for (auto const _ : test_count<E>()) {
+                auto const lhs = generator(engine);
+                auto const vlhs = dpp::select(lhs, dpp::all_bits, vzero);
+                auto const shift = shift_generator(engine);
+
+                {
+                    auto const shifted = dpp::bwshift_left(lhs, shift);
+                    auto const vshifted =
+                        dpp::select(shifted, dpp::all_bits, vzero);
+                    auto const vexpected = [&]() {
+                        dynamic_array<sint_t> alhs(abi_traits<E>::size());
+                        dynamic_array<sint_t> ashifted(abi_traits<E>::size());
+                        dpp::store(vlhs, alhs.data());
+                        for (auto const i : linear_counter(alhs)) {
+                            ashifted[i] =
+                                i < shift ? dpp::zero_v<E> : alhs[i - shift];
+                        }
+                        return dpp::load<A>(ashifted.data());
+                    }();
+
+                    assert(dpp::all_of(dpp::cmpeq(vexpected, vshifted)));
+                }
+                {
+                    auto const shifted = dpp::bwshift_right(lhs, shift);
+                    auto const vshifted =
+                        dpp::select(shifted, dpp::all_bits, vzero);
+                    auto const vexpected = [&]() {
+                        dynamic_array<sint_t> alhs(abi_traits<E>::size());
+                        dynamic_array<sint_t> ashifted(abi_traits<E>::size());
+                        dpp::store(vlhs, alhs.data());
+                        for (auto const i : linear_counter(alhs)) {
+                            ashifted[i] = i + shift < alhs.size()
+                                ? alhs[i + shift]
+                                : dpp::zero_v<E>;
+                        }
+
+                        return dpp::load<A>(ashifted.data());
+                    }();
+                    assert(dpp::all_of(dpp::cmpeq(vexpected, vshifted)));
+                }
+            }
+        }
+
+        return true;
     }
 };
 } // namespace dpl::test

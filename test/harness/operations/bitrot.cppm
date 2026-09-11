@@ -32,6 +32,39 @@ class bitrot {
         return static_cast<E>(dpl::rotl(dpl::to_unsigned(lhs), rhs));
     }
 
+    template <typename E>
+    static constexpr size_t test_count() noexcept {
+        auto lanes = abi_traits<E>::size();
+        auto const limit = []() {
+            if consteval {
+                return 4zu;
+            } else {
+                return 128zu;
+            }
+        }();
+
+        auto max = lanes >= dpl::type_bit_v<size_t>
+            ? limit
+            : static_cast<size_t>((1zu << lanes) - 1);
+        return max < limit ? max : limit;
+    }
+
+    template <typename E>
+    static consteval auto make_const_bits() noexcept {
+        constexpr auto const_count = test_count<E>();
+        return dpl::apply(
+            [const_count](auto... idx) {
+                constexpr auto lanes = dpp::simd_abi_traits<A, E>::size();
+                using bitset_t = dpl::bitset<lanes>;
+                using array_t = array<bitset_t, const_count>;
+
+                test::mt19937 rng; // TODO consteval RNG?
+                dpl::test::bit_generator<lanes> bitgen;
+                return array_t{(dpl::ignore = idx, bitgen(rng))...};
+            },
+            dpl::make_index_sequence<const_count>{});
+    }
+
 public:
     template <rng_like Rng, dpp::simd_element_for<A>... Es>
     static constexpr bool run_all(dpl::type_pack<Es...> pack, Rng& engine) {
@@ -47,29 +80,46 @@ public:
         dpl::test::array_generator<A, E> const data_generator;
         using shift_t = dpl::make_unsigned_t<E>;
         dpl::test::array_generator<A, shift_t> const shift_generator;
+        mask_generator<A, E> mask_generator;
         auto const lhs = data_generator(engine);
         auto const rhs = shift_generator(engine);
-        auto const src =
-            -lhs[dpl::test::scalar_generator<shift_t>{}(engine) % lhs.size()];
+        auto const src = data_generator(engine);
+        auto const vmask = mask_generator(engine);
 
         auto expected = lhs;
         for (auto i = 0zu; i < expected.size(); ++i) {
             expected[i] = expected_op(lhs[i], rhs[i]);
         }
 
-        dpl::test::unary_transform<A>::template test<E>(
-            lhs,
-            [rhs = dpp::load<shift_t, A>(rhs.data())](
-                auto... args) { return rotop(args..., rhs); },
-            expected, test::bitcmp);
-        dpl::test::unary_transform<A>::template test_masked<E>(
-            lhs,
-            [rhs = dpp::load<shift_t, A>(rhs.data())](
-                auto... args) { return rotop(args..., rhs); },
-            src);
+        test::operation_fixture<A>::test(
+            test::bitcmp, expected, rotop, lhs, rhs);
+        test::operation_fixture<A>::test_masked(rotop, src, vmask, lhs, rhs);
+        test::operation_fixture<A>::test_masked(
+            rotop, dpp::zero, vmask, lhs, rhs);
 
         if constexpr (dpp::fixed_width_abi<A>) {
-            constexpr auto count = 8zu;
+            constexpr auto count = test_count<E>();
+            constexpr auto masks = make_const_bits<E>();
+            dpl::pack::for_each(
+                [&]<size_t I>(dpl::size_constant<I>) {
+                    auto const lhs = data_generator(engine);
+                    auto const rhs = shift_generator(engine);
+                    auto const src = data_generator(engine);
+                    constexpr auto mask = masks[I];
+                    using cmask_t =
+                        dpp::const_mask<mask.size(), dpl::to_underlying(mask)>;
+                    constexpr cmask_t cmask;
+
+                    test::operation_fixture<A>::test_masked(
+                        rotop, src, cmask, lhs, rhs);
+                    test::operation_fixture<A>::test_masked(
+                        rotop, dpp::zero, cmask, lhs, rhs);
+                },
+                dpl::make_index_sequence<count>{});
+        }
+
+        if constexpr (dpp::fixed_width_abi<A>) {
+            constexpr auto count = test_count<E>();
             dpl::pack::for_each(
                 [&]<size_t I, size_t S = dpl::type_bit_v<E> / count>(
                     dpl::size_constant<I>, dpl::size_constant<S> = {}) {
@@ -77,40 +127,35 @@ public:
                         test::mt19937 rng{};
                         return test::scalar_generator<size_t>(0zu, S)(rng);
                     }();
-                    auto const rotatei = [offset](auto... args) {
-                        return rotop(args..., dpp::imm<I * S + offset>);
-                    };
+
+                    constexpr auto crhs = dpp::imm<I * S + offset>;
+
                     for (auto i = 0zu; i < expected.size(); ++i) {
-                        expected[i] = expected_op(lhs[i], I * S + offset);
+                        expected[i] = expected_op(lhs[i], crhs);
                     }
 
-                    dpl::test::unary_transform<A>::template test<E>(
-                        lhs, rotatei, expected, test::bitcmp);
-                    dpl::test::unary_transform<A>::template test_masked<E>(
-                        lhs, rotatei, src);
+                    test::operation_fixture<A>::test(
+                        test::bitcmp, expected, rotop, lhs, crhs);
+                    test::operation_fixture<A>::test_masked(
+                        rotop, src, vmask, lhs, crhs);
+                    test::operation_fixture<A>::test_masked(
+                        rotop, dpp::zero, vmask, lhs, crhs);
                 },
                 dpl::make_index_sequence<count>{});
         }
 
-        for (auto i = 0zu; i < dpl::type_bit_v<E>; ++i) {
-            if consteval {
-                // reduce compile time
-                auto const rand = shift_generator.scalar(engine);
-                if (rand % 7 > 4) {
-                    break;
-                }
-            }
-
+        for (auto i = 0zu; i < test_count<E>(); ++i) {
+            auto const srhs = shift_generator.scalar(engine);
             for (auto j = 0zu; j < expected.size(); ++j) {
-                expected[j] = expected_op(lhs[j], i);
+                expected[j] = expected_op(lhs[j], srhs);
             }
 
-            auto const rotate = [i](auto... args) { return rotop(args..., i); };
-
-            dpl::test::unary_transform<A>::template test<E>(
-                lhs, rotate, expected, test::bitcmp);
-            dpl::test::unary_transform<A>::template test_masked<E>(
-                lhs, rotate, src);
+            test::operation_fixture<A>::test(
+                test::bitcmp, expected, rotop, lhs, srhs);
+            test::operation_fixture<A>::test_masked(
+                rotop, src, vmask, lhs, srhs);
+            test::operation_fixture<A>::test_masked(
+                rotop, dpp::zero, vmask, lhs, srhs);
         }
 
         return true;

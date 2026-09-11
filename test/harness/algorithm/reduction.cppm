@@ -84,10 +84,12 @@ private:
     template <typename E>
     using abi_traits = dpp::simd_abi_traits<A, E>;
     template <typename E>
-    using data = test::array<E, abi_traits<E>::size>;
+    using array_t = decltype(test::make_array<E, A>());
+    template <typename E>
+    using mask_t = decltype(dpp::broadcast<A, E>(true));
 
     template <dpp::simd_element_for<A> E>
-    static constexpr E expected_op(data<E> const& val) noexcept {
+    static constexpr E expected_op(array_t<E> const& val) noexcept {
         auto result = [&] {
             if constexpr (dpl::floating_point_like<E> && rop == dpp::hsum) {
                 // TODO deal with MSVC
@@ -111,10 +113,8 @@ private:
 
     template <dpp::simd_element_for<A> E>
     static constexpr E expected_op(
-        data<E> const& val, dpl::bitset<abi_traits<E>::size> mask) noexcept
-    requires dpp::fixed_width_abi<A>
-    {
-        auto const first = dpl::countr_zero(mask);
+        array_t<E> const& val, mask_t<E> mask) noexcept {
+        auto const first = dpp::countr_zero(mask);
         auto result = [&] {
             if constexpr (dpl::floating_point_like<E> && rop == dpp::hsum) {
                 // TODO deal with MSVC
@@ -123,8 +123,9 @@ private:
                 return val[first];
             }
         }();
+        auto const amask = to_mask_array<E, A>(mask);
         for (auto i = first + 1; i < val.size(); ++i) {
-            if (mask[i]) {
+            if (amask[i] != 0) {
                 if constexpr (rop == dpp::hsum) {
                     result += val[i];
                 } else if constexpr (rop == dpp::hmax) {
@@ -138,6 +139,44 @@ private:
         return result;
     }
 
+    template <typename E>
+    static constexpr linear_counter test_count() noexcept {
+        auto lanes = dpp::simd_abi_traits<A, E>::size();
+        auto const limit = []() {
+            if consteval {
+                return 4zu;
+            } else {
+                return 128zu;
+            }
+        }();
+
+        auto max = lanes >= dpl::type_bit_v<size_t>
+            ? limit
+            : static_cast<size_t>((1zu << lanes) - 1);
+        return linear_counter(max < limit ? max : limit);
+    }
+
+    template <typename E>
+    static constexpr void run_const_mask_test(auto func) noexcept {
+        [&]<size_t I = 0, serialized_mt19937 S = {}>(this auto self,
+            dpp::immediate<I> = dpp::imm<I>, mt19937_type<S> = {}) {
+            if constexpr (I < test_count<E>().size()) {
+                constexpr auto lanes = dpp::simd_abi_traits<A, E>::size();
+                constexpr bit_generator<lanes> bitgen;
+                constexpr auto pair = S.generate_with(bitgen);
+                constexpr auto cmask = dpp::deduce_const_mask_v<pair.value>;
+
+                if constexpr (dpp::none_of(cmask)) {
+                    self(dpp::imm<I>, mt19937_type<pair.state>{});
+                } else {
+                    func(cmask);
+                    self(dpp::imm<I + 1>, mt19937_type<pair.state>{});
+                }
+            }
+        }
+        ();
+    }
+
 public:
     template <rng_like Rng, dpp::simd_element_for<A>... Es>
     static constexpr bool run_all(dpl::type_pack<Es...> pack, Rng& engine) {
@@ -149,97 +188,41 @@ public:
     }
 
     template <dpp::simd_element_for<A> E, rng_like Rng>
-    static constexpr bool run(Rng& engine)
-    requires dpp::fixed_width_abi<A>
-    {
+    static constexpr bool run(Rng& engine) {
         constexpr auto width = abi_traits<E>::size();
         reduction_data_generator<rop, A, E> const data_generator;
-        test::bit_generator<width> mask_generator;
-        auto const loop_count = []() {
-            if consteval {
-                return 3;
-            } else {
-                return 128;
-            }
-        }();
+        test::mask_generator<A, E> const mask_generator;
 
-        for (auto i = 0; i < loop_count; ++i) {
+        for (auto const _ : test_count<E>()) {
             auto const val = data_generator(engine);
             auto const mask = [&] {
                 auto mask = mask_generator(engine);
-                while (!mask) {
+                while (dpp::none_of(mask)) {
                     mask = mask_generator(engine);
                 }
                 return mask;
             }();
-            auto const vval = dpp::load<A>(val.data());
-            auto const vmask = dpp::from_bitset<A, E>(mask);
 
             {
-                auto const expected = expected_op(val);
-                auto const actual = rop(vval);
-                if constexpr (dpl::is_integral_v<E>) {
-                    assert(test::bitcmp(actual, expected));
-                } else {
-                    using sint_t = dpp::signed_representation_t<E>;
-                    auto diff = __DPL bit_cast<sint_t>(actual) -
-                        __DPL bit_cast<sint_t>(expected);
-                    diff = diff < 0 ? -diff : diff;
-                    assert(diff < 2); // less than 2 ulp
-                }
+
+                auto const expected = expected_op<E>(val);
+                test::operation_fixture<A>::test(
+                    precision_cmp<2>, expected, rop, val);
             }
             {
-                auto const expected = expected_op(val, mask);
-                auto const actual = rop(vval, vmask);
-                if constexpr (dpl::is_integral_v<E>) {
-                    assert(test::bitcmp(actual, expected));
-                } else {
-                    using sint_t = dpp::signed_representation_t<E>;
-                    auto diff = __DPL bit_cast<sint_t>(actual) -
-                        __DPL bit_cast<sint_t>(expected);
-                    diff = diff < 0 ? -diff : diff;
-                    assert(diff < 2); // less than 2 ulp
-                }
+                auto const expected = expected_op<E>(val, mask);
+                test::operation_fixture<A>::test(
+                    precision_cmp<2>, expected, rop, val, mask);
             }
         }
 
-        {
-            constexpr auto count = 3zu;
-            constexpr auto masks = []() {
-                return dpl::apply(
-                    [](auto... idx) {
-                        test::mt19937 rng{};
-                        using bitset_t = dpl::bitset<abi_traits<E>::size()>;
-                        return array<dpl::bitset<abi_traits<E>::size()>, count>{
-                            (dpl::test::bit_generator<abi_traits<E>::size() +
-                                 idx * 0>()(rng) |
-                                bitset_t(dpl::low_bits, 1))...};
-                    },
-                    dpl::make_index_sequence<count>{});
-            }();
-
-            dpl::pack::for_each(
-                [&]<size_t I>(dpl::size_constant<I>) {
-                    auto const val = data_generator(engine);
-                    auto const cmask = dpp::const_mask<masks[I].size(),
-                        dpl::to_underlying(masks[I])>{};
-
-                    auto const vval = dpp::load<A>(val.data());
-                    {
-                        auto const expected = expected_op(val, masks[I]);
-                        auto const actual = rop(vval, cmask);
-                        if constexpr (dpl::is_integral_v<E>) {
-                            assert(test::bitcmp(actual, expected));
-                        } else {
-                            using sint_t = dpp::signed_representation_t<E>;
-                            auto diff = __DPL bit_cast<sint_t>(actual) -
-                                __DPL bit_cast<sint_t>(expected);
-                            diff = diff < 0 ? -diff : diff;
-                            assert(diff < 2); // less than 2 ulp
-                        }
-                    }
-                },
-                dpl::make_index_sequence<count>{});
+        if constexpr (dpp::fixed_width_abi<A>) {
+            auto const val = data_generator(engine);
+            run_const_mask_test<E>([&](auto cmask) {
+                auto const expected = expected_op<E>(val, cmask);
+                test::operation_fixture<A>::test(
+                    precision_cmp<2>, expected, rop, val, cmask);
+            });
         }
 
         return true;
@@ -256,6 +239,23 @@ using hmax = reduction<A, dpp::hmax>;
 export template <dpp::simd_abi A>
 class reduce {
 
+    template <typename E>
+    static constexpr linear_counter test_count() noexcept {
+        auto lanes = dpp::simd_abi_traits<A, E>::size();
+        auto const limit = []() {
+            if consteval {
+                return 4zu;
+            } else {
+                return 128zu;
+            }
+        }();
+
+        auto max = lanes >= dpl::type_bit_v<size_t>
+            ? limit
+            : static_cast<size_t>((1zu << lanes) - 1);
+        return linear_counter(max < limit ? max : limit);
+    }
+
 public:
     template <rng_like Rng, dpp::simd_element_for<A>... Es>
     static constexpr bool run_all(dpl::type_pack<Es...> pack, Rng& engine) {
@@ -268,34 +268,21 @@ public:
 
     template <dpp::simd_element_for<A> E, rng_like Rng>
     static constexpr bool run(Rng& engine) {
-        auto const loop_count = []() {
-            if consteval {
-                return 3;
-            } else {
-                return 128;
-            }
-        }();
-
         reduction_data_generator<dpp::hmax, A, E> const max_generator;
         reduction_data_generator<dpp::hmin, A, E> const min_generator;
 
-        for (auto i = 0; i < loop_count; ++i) {
-
-            // Summation introduces error complexity, ignore it for now
-            // This is anyway just a check for the generic reduction
+        for (auto const _ : test_count<E>()) {
             {
-                auto const val = max_generator(engine);
-                auto const vval = dpp::load<A>(val.data());
-                auto const expected = dpp::hmax(vval);
-                auto const actual = dpp::reduce(vval, dpp::max);
-                assert(test::bitcmp(actual, expected));
+                auto const val = dpp::load<A>(max_generator(engine).data());
+                auto const expected = dpp::hmax(val);
+                test::operation_fixture<A>::test(
+                    precision_cmp<2>, expected, dpp::reduce, val, dpp::max);
             }
             {
-                auto const val = min_generator(engine);
-                auto const vval = dpp::load<A>(val.data());
-                auto const expected = dpp::hmin(vval);
-                auto const actual = dpp::reduce(vval, dpp::min);
-                assert(test::bitcmp(actual, expected));
+                auto const val = dpp::load<A>(min_generator(engine).data());
+                auto const expected = dpp::hmin(val);
+                test::operation_fixture<A>::test(
+                    precision_cmp<2>, expected, dpp::reduce, val, dpp::min);
             }
         }
 

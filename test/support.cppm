@@ -5,13 +5,10 @@ module;
 #include "dpl/config.h"
 
 export module dpl.test.support;
-export import :ternary_assignment;
-export import :ternary_transform;
-export import :binary_transform;
-export import :unary_transform;
+export import :linear_counter;
 export import :data_generator;
 export import :comparison;
-export import :predicate;
+export import :operation_fixture;
 export import :span;
 export import :array;
 export import :math_check;

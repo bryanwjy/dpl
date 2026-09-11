@@ -42,7 +42,8 @@ template <canonical_mask T>
 requires different_from<T, simd_native_type_t<T>>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
 constexpr negated_mask<T> make_negated_mask(T val) noexcept {
-    return negated_mask<T>(val);
+    auto mmask = dx::to_native_type(val);
+    return negated_mask<T>(mmask);
 }
 
 template <canonical_mask T>
@@ -73,9 +74,6 @@ public:
     __DPL_HIDE_FROM_ABI constexpr negated_mask(
         simd_native_type_t<T> native) noexcept
         : mask_(native) {}
-
-    __DPL_HIDE_FROM_ABI explicit constexpr negated_mask(T mask) noexcept
-        : negated_mask(dx::to_native_type(mask)) {}
 
     template <different_from<T> U>
     requires common_mask_with<T, U> &&

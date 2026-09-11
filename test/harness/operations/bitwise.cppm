@@ -75,32 +75,38 @@ class bitwise {
     static constexpr expected_op_t<bwop> expected_op{};
 
     template <typename E>
-    static constexpr E max = []() {
-        if constexpr (dpl::integral<E>) {
-            constexpr auto shift = dpl::type_bit_v<E> / 2;
-            return dpl::integral_traits<E>::max_value >> shift;
-        } else {
-            constexpr auto bias = dpl::floating_point_traits<E>::exponent_bias;
-            constexpr auto exp = dpl::floating_point_traits<E>::exponent_mask;
-            constexpr auto shift = dpl::countr_zero(exp);
-            // minus 1 for reduced range, so that sqrt * sqrt < max_value
-            constexpr auto sqrt =
-                dpl::bitset<dpl::type_bit_v<E>>(
-                    ((dpl::to_underlying(exp >> shift) - bias) >> 1) + bias - 1)
-                << shift;
-            return dpl::bit_cast<E>(sqrt);
-        }
-    }();
+    static constexpr linear_counter test_count() noexcept {
+        auto lanes = dpp::simd_abi_traits<A, E>::size();
+        auto const limit = []() {
+            if consteval {
+                return 4zu;
+            } else {
+                return 128zu;
+            }
+        }();
+
+        auto max = lanes >= dpl::type_bit_v<size_t>
+            ? limit
+            : static_cast<size_t>((1zu << lanes) - 1);
+        return linear_counter(max < limit ? max : limit);
+    }
 
     template <typename E>
-    static constexpr E min = []() {
-        if constexpr (dpl::integral<E>) {
-            constexpr auto shift = dpl::type_bit_v<E> / 2;
-            return dpl::integral_traits<E>::min_value >> shift;
-        } else {
-            return -max<E>;
+    static constexpr void run_const_mask_test(auto func) noexcept {
+        [&]<size_t I = 0, serialized_mt19937 S = {}>(this auto self,
+            dpp::immediate<I> = dpp::imm<I>, mt19937_type<S> = {}) {
+            if constexpr (I < test_count<E>().size()) {
+                constexpr auto lanes = dpp::simd_abi_traits<A, E>::size();
+                constexpr bit_generator<lanes> bitgen;
+                constexpr auto pair = S.generate_with(bitgen);
+                constexpr auto cmask = dpp::deduce_const_mask_v<pair.value>;
+
+                func(cmask);
+                self(dpp::imm<I + 1>, mt19937_type<pair.state>{});
+            }
         }
-    }();
+        ();
+    }
 
 public:
     template <dpp::simd_primitive_operation auto bwop, rng_like Rng,
@@ -118,21 +124,42 @@ public:
     requires (bwop != dpp::bwshift_left && bwop != dpp::bwshift_right &&
         bwop != dpp::bwnot)
     static constexpr bool run(Rng& engine) {
-        dpl::test::array_generator<abi_t, E> const data_generator(
-            min<E>, max<E>);
-        auto const lhs = data_generator(engine);
-        auto const rhs = data_generator(engine);
-        auto const src = max<E> * max<E>;
+        test::array_generator<abi_t, E> const data_generator(
+            test::sqrt_range<E>);
+        test::mask_generator<A, E> const mask_generator;
+        auto const vtrue = dpp::broadcast<E, A>(true);
+        auto const vfalse = dpp::broadcast<E, A>(false);
 
-        auto expected = lhs;
-        for (auto i = 0zu; i < expected.size(); ++i) {
-            expected[i] = expected_op<bwop>(lhs[i], rhs[i]);
+        for (auto _ : test_count<E>()) {
+            auto const lhs = data_generator(engine);
+            auto const rhs = data_generator(engine);
+            auto const src = data_generator(engine);
+
+            auto expected = lhs;
+            for (auto const i : linear_counter(expected)) {
+                expected[i] = expected_op<bwop>(lhs[i], rhs[i]);
+            }
+
+            operation_fixture<A>::test(test::bitcmp, expected, bwop, lhs, rhs);
+            operation_fixture<A>::test_masked(bwop, src, vtrue, lhs, rhs);
+            operation_fixture<A>::test_masked(bwop, src, vfalse, lhs, rhs);
+            operation_fixture<A>::test_masked(
+                bwop, src, mask_generator(engine), lhs, rhs);
+            operation_fixture<A>::test_masked(
+                bwop, dpp::zero, mask_generator(engine), lhs, rhs);
         }
 
-        dpl::test::binary_transform<abi_t>::template test<E>(
-            lhs, rhs, bwop, expected, test::bitcmp);
-        dpl::test::binary_transform<abi_t>::template test_masked<E>(
-            lhs, rhs, bwop, src);
+        if constexpr (dpp::fixed_width_abi<A>) {
+            auto const lhs = data_generator(engine);
+            auto const rhs = data_generator(engine);
+            auto const src = data_generator(engine);
+
+            run_const_mask_test<E>([&](auto cmask) {
+                operation_fixture<A>::test_masked(bwop, src, cmask, lhs, rhs);
+                operation_fixture<A>::test_masked(
+                    bwop, dpp::zero, cmask, lhs, rhs);
+            });
+        }
 
         return true;
     }
@@ -142,84 +169,84 @@ public:
     requires (bwop == dpp::bwshift_left || bwop == dpp::bwshift_right)
     static constexpr bool run(Rng& engine) {
         using shift_t = dpp::unsigned_representation_t<E>;
-        constexpr E offset =
-            bwop == dpp::bwshift_left ? max<E> * max<E> : static_cast<E>(0);
-        dpl::test::array_generator<abi_t, E> const data_generator(
-            min<E> + offset, max<E> + offset);
-        dpl::test::array_generator<abi_t, shift_t> const shift_generator(
+        test::array_generator<A, E> const data_generator;
+        test::array_generator<A, shift_t> const shift_generator(
             0, dpl::type_bit_v<E>);
+        test::mask_generator<A, E> const mask_generator;
 
-        constexpr E src_min = bwop == dpp::bwshift_left ? min<E> : max<E>;
-        constexpr E src_max =
-            bwop == dpp::bwshift_left ? min<E> + offset : dpp::max_value_v<E>;
-        dpl::test::scalar_generator<E> const src_generator(src_min, src_max);
+        auto const vtrue = dpp::broadcast<E, A>(true);
+        auto const vfalse = dpp::broadcast<E, A>(false);
         auto const lhs = data_generator(engine);
         auto const rhs = shift_generator(engine);
-        auto const src = src_generator(engine);
+        auto const src = data_generator(engine);
 
-        auto expected = lhs;
-        for (auto i = 0zu; i < expected.size(); ++i) {
-            expected[i] = expected_op<bwop>(lhs[i], rhs[i]);
+        for (auto _ : test_count<E>()) {
+            auto expected = lhs;
+            for (auto const i : linear_counter(expected)) {
+                expected[i] = expected_op<bwop>(lhs[i], rhs[i]);
+            }
+
+            operation_fixture<A>::test(test::bitcmp, expected, bwop, lhs, rhs);
+            operation_fixture<A>::test_masked(bwop, src, vtrue, lhs, rhs);
+            operation_fixture<A>::test_masked(bwop, src, vfalse, lhs, rhs);
+            operation_fixture<A>::test_masked(
+                bwop, src, mask_generator(engine), lhs, rhs);
+            operation_fixture<A>::test_masked(
+                bwop, dpp::zero, mask_generator(engine), lhs, rhs);
         }
-
-        dpl::test::unary_transform<abi_t>::template test<E>(
-            lhs,
-            [rhs = dpp::load<shift_t, abi_t>(rhs.data())](
-                auto... args) { return bwop(args..., rhs); },
-            expected, test::bitcmp);
-        dpl::test::unary_transform<abi_t>::template test_masked<E>(
-            lhs,
-            [rhs = dpp::load<shift_t, abi_t>(rhs.data())](
-                auto... args) { return bwop(args..., rhs); },
-            src);
 
         if constexpr (dpp::fixed_width_abi<A>) {
-            dpl::pack::for_each(
-                [&](auto idx) {
-                    auto const shifteri = [idx](auto... args) {
-                        return bwop(args..., idx);
-                    };
-                    for (auto i = 0zu; i < expected.size(); ++i) {
-                        expected[i] = expected_op<bwop>(lhs[i], idx);
-                    }
-                    if constexpr (idx() % 3 > 0) {
-                        if consteval {
-                            return;
-                        } else {
-                            dpl::test::unary_transform<abi_t>::template test<E>(
-                                lhs, shifteri, expected, test::bitcmp);
-                            dpl::test::unary_transform<
-                                abi_t>::template test_masked<E>(lhs, shifteri,
-                                src);
-                        }
-                    } else {
-                        dpl::test::unary_transform<abi_t>::template test<E>(
-                            lhs, shifteri, expected, test::bitcmp);
-                        dpl::test::unary_transform<abi_t>::template test_masked<
-                            E>(lhs, shifteri, src);
-                    }
-                },
-                dpl::make_index_sequence<dpl::type_bit_v<E> / 2>{});
+            run_const_mask_test<E>([&](auto cmask) {
+                operation_fixture<A>::test_masked(bwop, src, cmask, lhs, rhs);
+                operation_fixture<A>::test_masked(
+                    bwop, dpp::zero, cmask, lhs, rhs);
+            });
         }
 
-        for (auto i = 0zu; i < dpl::type_bit_v<E>; ++i) {
-            if consteval {
-                // reduce compile time
-                if (i % 3 > 0) {
-                    break;
+        [&]<size_t I = 0zu, serialized_mt19937 S = {}>(this auto self,
+            dpp::immediate<I> = dpp::imm<I>, mt19937_type<S> = {}) {
+            if constexpr (I < test_count<E>().size()) {
+                constexpr test::scalar_generator<size_t> cshift_generator(
+                    0zu, dpl::type_bit_v<E>);
+
+                constexpr auto pair = S.generate_with(cshift_generator);
+                constexpr auto crhs = dpp::imm<pair.value>;
+                auto const vmask = mask_generator(engine);
+
+                auto expected = lhs;
+                for (auto const i : linear_counter(expected)) {
+                    expected[i] = expected_op<bwop>(lhs[i], crhs);
                 }
+
+                test::operation_fixture<A>::test(
+                    test::bitcmp, expected, bwop, lhs, crhs);
+                test::operation_fixture<A>::test_masked(
+                    bwop, src, vmask, lhs, crhs);
+                test::operation_fixture<A>::test_masked(
+                    bwop, dpp::zero, vmask, lhs, crhs);
+
+                self(dpp::imm<I + 1>, mt19937_type<pair.state>{});
+            }
+        }
+        ();
+
+        for (auto _ : test_count<E>()) {
+            auto const lhs = data_generator(engine);
+            auto const vmask = mask_generator(engine);
+            auto const srhs = shift_generator.scalar(engine);
+            auto const src = data_generator(engine);
+
+            auto expected = lhs;
+            for (auto const j : linear_counter(expected)) {
+                expected[j] = expected_op<bwop>(lhs[j], srhs);
             }
 
-            for (auto j = 0zu; j < expected.size(); ++j) {
-                expected[j] = expected_op<bwop>(lhs[j], i);
-            }
-
-            auto const shifter = [i](auto... args) { return bwop(args..., i); };
-
-            dpl::test::unary_transform<abi_t>::template test<E>(
-                lhs, shifter, expected, test::bitcmp);
-            dpl::test::unary_transform<abi_t>::template test_masked<E>(
-                lhs, shifter, src);
+            test::operation_fixture<A>::test(
+                test::bitcmp, expected, bwop, lhs, srhs);
+            test::operation_fixture<A>::test_masked(
+                bwop, src, vmask, lhs, srhs);
+            test::operation_fixture<A>::test_masked(
+                bwop, dpp::zero, vmask, lhs, srhs);
         }
 
         return true;
@@ -229,22 +256,41 @@ public:
         dpp::simd_primitive_operation auto bwop, rng_like Rng>
     requires (bwop == dpp::bwnot)
     static constexpr bool run(Rng& engine) {
-        dpl::test::array_generator<abi_t, E> const data_generator(
-            dpl::test::half_range);
-        dpl::test::scalar_generator<E> const src_generator(
-            dpp::max_value_v<E> / 4 * 3, dpp::max_value_v<E>);
+        test::array_generator<abi_t, E> const data_generator(
+            test::sqrt_range<E>);
+        test::mask_generator<A, E> const mask_generator;
+        auto const vtrue = dpp::broadcast<E, A>(true);
+        auto const vfalse = dpp::broadcast<E, A>(false);
 
-        auto const data = data_generator(engine);
-        auto const src = src_generator(engine);
-        auto expected = data;
-        for (auto& val : expected) {
-            val = expected_op<bwop>(val);
+        for (auto _ : test_count<E>()) {
+            auto const arg = data_generator(engine);
+            auto const src = data_generator(engine);
+
+            auto expected = arg;
+            for (auto& val : expected) {
+                val = expected_op<bwop>(val);
+            }
+
+            operation_fixture<A>::test(test::bitcmp, expected, bwop, arg);
+            operation_fixture<A>::test_masked(bwop, src, vtrue, arg);
+            operation_fixture<A>::test_masked(bwop, src, vfalse, arg);
+            operation_fixture<A>::test_masked(
+                bwop, src, mask_generator(engine), arg);
+            operation_fixture<A>::test_masked(
+                bwop, dpp::zero, mask_generator(engine), arg);
         }
 
-        dpl::test::unary_transform<abi_t>::template test<E>(
-            data, bwop, expected, test::bitcmp);
-        dpl::test::unary_transform<abi_t>::template test_masked<E>(
-            data, bwop, src);
+        if constexpr (dpp::fixed_width_abi<A>) {
+            constexpr auto count = test_count<E>().size();
+            auto const arg = data_generator(engine);
+            auto const rhs = data_generator(engine);
+            auto const src = data_generator(engine);
+
+            run_const_mask_test<E>([&](auto cmask) {
+                operation_fixture<A>::test_masked(bwop, src, cmask, arg);
+                operation_fixture<A>::test_masked(bwop, dpp::zero, cmask, arg);
+            });
+        }
 
         return true;
     }

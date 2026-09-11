@@ -31,7 +31,7 @@ struct operation_signature<splice_t> {
     template <simd_vector L, equivalent_vector_with<L> R, exact_mask_for<L> M>
     static consteval void operator()(M&&, L&&, R&&) noexcept {}
     template <simd_vector L, equivalent_vector_with<L> R, const_mask_for<L> M>
-    static consteval void operator()(M&&, L&&, R&&) noexcept {}
+    static consteval void operator()(M, L&&, R&&) noexcept {}
 };
 
 template <>
@@ -232,7 +232,7 @@ struct splicei_t {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(L&& lhs, R&& rhs) noexcept {
         return splice_t::operator()(
-            imm<V>, __DPL forward<L>(lhs), __DPL forward<R>(rhs));
+            cmask_v<V>, __DPL forward<L>(lhs), __DPL forward<R>(rhs));
     }
 };
 

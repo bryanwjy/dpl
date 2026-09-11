@@ -15,6 +15,43 @@ namespace dpp = dpl::datapar;
 
 export template <dpp::simd_abi A>
 class permutation {
+
+    template <typename E>
+    using abi_traits = dpp::simd_abi_traits<A, E>;
+
+    template <typename E>
+    static constexpr linear_counter test_count() noexcept {
+        auto const lanes = abi_traits<E>::size();
+        auto const limit = []() {
+            if consteval {
+                return 2zu;
+            } else {
+                return 7zu;
+            }
+        }();
+
+        auto const shift =
+            dpp::min(static_cast<size_t>(dpl::bit_width(lanes)), limit);
+        return linear_counter(1zu << shift);
+    }
+
+    template <typename E>
+    static constexpr void run_const_mask_test(auto func) noexcept {
+        [&]<size_t I = 0, serialized_mt19937 S = {}>(this auto self,
+            dpp::immediate<I> = dpp::imm<I>, mt19937_type<S> = {}) {
+            if constexpr (I < test_count<E>().size()) {
+                constexpr auto lanes = dpp::simd_abi_traits<A, E>::size();
+                constexpr bit_generator<lanes> bitgen;
+                constexpr auto pair = S.generate_with(bitgen);
+                constexpr auto cmask = dpp::deduce_const_mask_v<pair.value>;
+
+                func(cmask);
+                self(dpp::imm<I + 1>, mt19937_type<pair.state>{});
+            }
+        }
+        ();
+    }
+
 public:
     template <rng_like Rng, dpp::simd_element_for<A>... Es>
     static constexpr bool run_all(dpl::type_pack<Es...> pack, Rng& engine) {
@@ -27,156 +64,105 @@ public:
 
     template <dpp::simd_element_for<A> E, rng_like Rng>
     static constexpr bool run(Rng& engine) {
-        test::array_generator<A, E> const data_generator(test::half_range);
+        test::array_generator<A, E> const data_generator;
+        test::mask_generator<A, E> const mask_generator;
         using index_t = dpp::signed_representation_t<E>;
-        constexpr auto lanes = dpp::simd_abi_traits<A, E>::size();
-        test::array_generator<A, index_t> const idx_generator(0, lanes);
-        test::scalar_generator<E> const src_generator(
-            dpp::max_value_v<E> / 4 * 3, dpp::max_value_v<E>);
 
-        for (auto i = 0; i < 3; ++i) {
+        auto const lanes = dpp::simd_abi_traits<A, E>::size();
+        test::array_generator<A, index_t> const idx_generator(0, lanes);
+
+        auto const vtrue = dpp::broadcast<E, A>(true);
+        auto const vfalse = dpp::broadcast<E, A>(false);
+        for (auto const _ : test_count<E>()) {
             auto const lhs = data_generator(engine);
-            auto const rhs = idx_generator(engine);
-            auto const src = src_generator(engine);
+            auto const idx = idx_generator(engine);
+            auto const src = data_generator(engine);
 
             auto expected = lhs;
-            {
-                for (auto i = 0zu; i < expected.size(); ++i) {
-                    expected[i] = lhs[rhs[i]];
-                }
-                auto const vlhs = dpp::load<A>(lhs.data());
-                auto const vrhs = dpp::load<A>(rhs.data());
-                auto const vexpected = dpp::load<A>(expected.data());
-                auto const vactual = dpp::permute(vlhs, vrhs);
-                assert(dpp::all_of(test::bitcmp(vactual, vexpected)));
-                test::unary_transform<A>::template test_masked<E>(
-                    lhs,
-                    [&vrhs](
-                        auto... args) { return dpp::permute(args..., vrhs); },
-                    src);
+            for (auto const i : linear_counter(expected)) {
+                expected[i] = lhs[idx[i]];
             }
 
-            // Out of bounds index is implementation-defined behaviour and not
-            // tested
+            test::operation_fixture<A>::test(
+                test::bitcmp, expected, dpp::permute, lhs, idx);
+            test::operation_fixture<A>::test_masked(
+                dpp::permute, src, vtrue, lhs, idx);
+            test::operation_fixture<A>::test_masked(
+                dpp::permute, src, vfalse, lhs, idx);
+            auto const mask = mask_generator(engine);
+            test::operation_fixture<A>::test_masked(
+                dpp::permute, src, mask, lhs, idx);
+            test::operation_fixture<A>::test_masked(
+                dpp::permute, dpp::zero, mask, lhs, idx);
         }
 
         {
             auto const lhs = data_generator(engine);
-            auto const vrhs = dpp::lane_index<E, A>();
-            auto const vlhs = dpp::load<A>(lhs.data());
-            auto const vactual = dpp::permute(vlhs, vrhs);
-            assert(dpp::all_of(test::bitcmp(vactual, vlhs)));
+            auto const vidx = dpp::lane_index<E, A>();
+            test::operation_fixture<A>::test(
+                test::bitcmp, lhs, dpp::permute, lhs, vidx);
         }
 
-        {
+        for (auto const _ : test_count<E>()) {
             auto const lhs = data_generator(engine);
-            auto const idx = test::scalar_generator<index_t>(0, lanes)(engine);
-            auto const vrhs = dpp::broadcast<A>(idx);
-            auto const vlhs = dpp::load<A>(lhs.data());
-            auto const vactual = dpp::permute(vlhs, vrhs);
-            auto const vexpected = dpp::broadcast<E, A>(lhs[idx]);
-            assert(dpp::all_of(test::bitcmp(vactual, vexpected)));
+            auto const sidx = idx_generator.scalar(engine);
+            auto const vidx = dpp::broadcast<A>(sidx);
+            auto const vexpected = dpp::broadcast<E, A>(lhs[sidx]);
+            test::operation_fixture<A>::test(
+                test::bitcmp, vexpected, dpp::permute, lhs, vidx);
         }
 
         if constexpr (dpp::fixed_width_abi<A>) {
-            constexpr auto iota = dpl::make_index_sequence<lanes>{};
-            constexpr auto riota = [lanes]<size_t... Is>(
-                                       index_sequence<Is...>) {
-                return index_sequence<(lanes - 1 - Is)...>{};
-            }(iota);
-            constexpr auto constant = [lanes]<size_t... Is>(
-                                          index_sequence<Is...>) {
-                constexpr auto mid = lanes / 2;
-                return index_sequence<((Is == Is) ? mid : mid)...>{};
-            }(iota);
-            constexpr auto rot1 = [lanes]<size_t... Is>(index_sequence<Is...>) {
-                return index_sequence<((Is + 1) % lanes)...>{};
-            }(iota);
-            constexpr auto inter = []<size_t... Is>(index_sequence<Is...>) {
-                return index_sequence<(Is * 2)..., (Is * 2 + 1)...>{};
-            }(dpl::make_index_sequence<lanes / 2>{});
-            auto const expected_op = [iota]<size_t... Is>(
-                                         auto lhs, index_sequence<Is...>) {
-                auto result = lhs;
-                dpl::apply(
-                    [&](auto... idx) { (..., (result[idx] = lhs[Is])); }, iota);
-                return result;
-            };
-
-            {
+            run_const_mask_test<E>([&](auto cmask) {
                 auto const lhs = data_generator(engine);
-                auto const vlhs = dpp::load<A>(lhs.data());
-                auto const vactual = dpp::permute(vlhs, iota);
-                auto const vexpected = vlhs;
-                auto const src = src_generator(engine);
-                assert(dpp::all_of(test::bitcmp(vactual, vexpected)));
-                test::unary_transform<A>::template test_masked<E>(
-                    lhs,
-                    [iota](
-                        auto... args) { return dpp::permute(args..., iota); },
-                    src);
-            }
+                auto const idx = idx_generator(engine);
+                auto const src = data_generator(engine);
 
-            {
-                auto const lhs = data_generator(engine);
-                auto const vlhs = dpp::load<A>(lhs.data());
-                auto const vactual = dpp::permute(vlhs, riota);
-                auto const vexpected =
-                    dpp::load<A>(expected_op(lhs, riota).data());
-                auto const src = src_generator(engine);
-                assert(dpp::all_of(test::bitcmp(vactual, vexpected)));
-                test::unary_transform<A>::template test_masked<E>(
-                    lhs,
-                    [riota](
-                        auto... args) { return dpp::permute(args..., riota); },
-                    src);
-            }
+                auto expected = lhs;
+                for (auto const i : linear_counter(expected)) {
+                    expected[i] = lhs[idx[i]];
+                }
 
-            {
-                auto const lhs = data_generator(engine);
-                auto const vlhs = dpp::load<A>(lhs.data());
-                auto const vactual = dpp::permute(vlhs, constant);
-                auto const vexpected =
-                    dpp::load<A>(expected_op(lhs, constant).data());
-                auto const src = src_generator(engine);
-                assert(dpp::all_of(test::bitcmp(vactual, vexpected)));
-                test::unary_transform<A>::template test_masked<E>(
-                    lhs,
-                    [constant](auto... args) {
-                        return dpp::permute(args..., constant);
-                    },
-                    src);
-            }
+                operation_fixture<A>::test_masked(
+                    dpp::permute, src, cmask, lhs, idx);
+                operation_fixture<A>::test_masked(
+                    dpp::permute, dpp::zero, cmask, lhs, idx);
+            });
 
-            {
-                auto const lhs = data_generator(engine);
-                auto const vlhs = dpp::load<A>(lhs.data());
-                auto const vactual = dpp::permute(vlhs, rot1);
-                auto const vexpected =
-                    dpp::load<A>(expected_op(lhs, rot1).data());
-                auto const src = src_generator(engine);
-                assert(dpp::all_of(test::bitcmp(vactual, vexpected)));
-                test::unary_transform<A>::template test_masked<E>(
-                    lhs,
-                    [rot1](
-                        auto... args) { return dpp::permute(args..., rot1); },
-                    src);
-            }
+            constexpr test::array_generator<A, index_t> cshift_generator(
+                0zu, abi_traits<E>::size());
+            auto const lhs = data_generator(engine);
+            auto const src = data_generator(engine);
+            [&]<size_t I = 0zu, serialized_mt19937 S = {}>(this auto self,
+                dpp::immediate<I> = dpp::imm<I>, mt19937_type<S> = {}) {
+                if constexpr (I < test_count<E>().size()) {
+                    constexpr auto pair = S.generate_with(cshift_generator);
+                    constexpr auto cidx = [&]<size_t... Is>(
+                                              dpl::index_sequence<Is...>) {
+                        return dpl::index_sequence<pair.value[Is]...>{};
+                    }(dpl::make_index_sequence<abi_traits<E>::size()>{});
 
-            {
-                auto const lhs = data_generator(engine);
-                auto const vlhs = dpp::load<A>(lhs.data());
-                auto const vactual = dpp::permute(vlhs, inter);
-                auto const vexpected =
-                    dpp::load<A>(expected_op(lhs, inter).data());
-                auto const src = src_generator(engine);
-                assert(dpp::all_of(test::bitcmp(vactual, vexpected)));
-                test::unary_transform<A>::template test_masked<E>(
-                    lhs,
-                    [inter](
-                        auto... args) { return dpp::permute(args..., inter); },
-                    src);
+                    auto expected = lhs;
+                    for (auto const i : linear_counter(expected)) {
+                        expected[i] = lhs[pair.value[i]];
+                    }
+
+                    test::operation_fixture<A>::test(
+                        test::bitcmp, expected, dpp::permute, lhs, cidx);
+                    test::operation_fixture<A>::test_masked(
+                        dpp::permute, src, vtrue, lhs, cidx);
+                    test::operation_fixture<A>::test_masked(
+                        dpp::permute, src, vfalse, lhs, cidx);
+                    auto const mask = mask_generator(engine);
+                    test::operation_fixture<A>::test_masked(
+                        dpp::permute, src, mask, lhs, cidx);
+                    test::operation_fixture<A>::test_masked(
+                        dpp::permute, dpp::zero, mask, lhs, cidx);
+
+                    self(dpp::imm<I + 1>, mt19937_type<pair.state>{});
+                }
             }
+            ();
         }
 
         return true;

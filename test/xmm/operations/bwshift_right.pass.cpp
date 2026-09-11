@@ -14,7 +14,8 @@ import dpl.test.harness.operations.bitwise;
 //
 // Forms tested:
 //   (1) dpp::bwshift_right(lhs, rhs)                  -- unmasked, always
-//   available (2) dpp::bwshift_right(src, mask, lhs, rhs)       -- merge-masked
+//   available
+//   (2) dpp::bwshift_right(src, mask, lhs, rhs)       -- merge-masked
 //   (3) dpp::bwshift_right(dpp::zero, mask, lhs, rhs) -- zero-masked explicit
 //   (4) dpp::bwshift_right(mask, lhs, rhs)            -- zero-masked alias (==
 //   form 3)

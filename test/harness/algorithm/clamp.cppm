@@ -26,6 +26,40 @@ private:
         return val;
     }
 
+    template <typename E>
+    static constexpr linear_counter test_count() noexcept {
+        auto lanes = dpp::simd_abi_traits<A, E>::size();
+        auto const limit = []() {
+            if consteval {
+                return 4zu;
+            } else {
+                return 128zu;
+            }
+        }();
+
+        auto max = lanes >= dpl::type_bit_v<size_t>
+            ? limit
+            : static_cast<size_t>((1zu << lanes) - 1);
+        return linear_counter(max < limit ? max : limit);
+    }
+
+    template <typename E>
+    static constexpr void run_const_mask_test(auto func) noexcept {
+        [&]<size_t I = 0, serialized_mt19937 S = {}>(this auto self,
+            dpp::immediate<I> = dpp::imm<I>, mt19937_type<S> = {}) {
+            if constexpr (I < test_count<E>().size()) {
+                constexpr auto lanes = dpp::simd_abi_traits<A, E>::size();
+                constexpr bit_generator<lanes> bitgen;
+                constexpr auto pair = S.generate_with(bitgen);
+                constexpr auto cmask = dpp::deduce_const_mask_v<pair.value>;
+
+                func(cmask);
+                self(dpp::imm<I + 1>, mt19937_type<pair.state>{});
+            }
+        }
+        ();
+    }
+
 public:
     template <rng_like Rng, dpp::simd_element_for<A>... Es>
     static constexpr bool run_all(dpl::type_pack<Es...> pack, Rng& engine) {
@@ -39,97 +73,59 @@ public:
     template <dpp::simd_element_for<A> E, rng_like Rng>
     static constexpr bool run(Rng& engine) {
         test::array_generator<A, E> const data_generator;
-        for (auto i = 0zu; i < 5; ++i) {
+        test::mask_generator<A, E> const mask_generator;
+
+        auto const vtrue = dpp::broadcast<E, A>(true);
+        auto const vfalse = dpp::broadcast<E, A>(false);
+        for (auto const _ : test_count<E>()) {
             auto minval = data_generator(engine);
             auto maxval = data_generator(engine);
-            for (auto i = 0zu; i < minval.size(); ++i) {
+            for (auto const i : linear_counter(maxval)) {
                 if (minval[i] > maxval[i]) {
                     dpl::ranges::swap(minval[i], maxval[i]);
                 }
             }
 
             auto const val = data_generator(engine);
-            auto const src_generator = data_generator.scalar(engine) < 0
-                ? test::scalar_generator<E>(
-                      dpp::min_value_v<E>,
-                      [&minval]() {
-                          auto val = minval[0];
-                          for (auto i = 1; i < minval.size(); ++i) {
-                              if (val < minval[i]) {
-                                  val = minval[i];
-                              }
-                          }
-                          return val;
-                      }())
-                : test::scalar_generator<E>(
-                      [&maxval]() {
-                          auto val = maxval[0];
-                          for (auto i = 1; i < maxval.size(); ++i) {
-                              if (val > maxval[i]) {
-                                  val = maxval[i];
-                              }
-                          }
-                          return val;
-                      }(),
-                      dpp::max_value_v<E>);
-
-            auto const ssrc = src_generator(engine);
+            auto const src = data_generator(engine);
 
             auto expected = val;
-            for (auto i = 0zu; i < expected.size(); ++i) {
+            for (auto const i : linear_counter(expected)) {
                 expected[i] = expected_op(val[i], minval[i], maxval[i]);
             }
 
-            test::ternary_transform<A>::template test<E>(
-                val, minval, maxval, dpp::clamp, expected, test::bitcmp);
-            test::ternary_transform<A>::template test_masked<E>(
-                val, minval, maxval, dpp::clamp, ssrc);
+            operation_fixture<A>::test(
+                test::bitcmp, expected, dpp::clamp, val, minval, maxval);
+            operation_fixture<A>::test_masked(
+                dpp::clamp, src, vtrue, val, minval, maxval);
+            operation_fixture<A>::test_masked(
+                dpp::clamp, src, vfalse, val, minval, maxval);
+            auto const mask = mask_generator(engine);
+            operation_fixture<A>::test_masked(
+                dpp::clamp, src, mask, val, minval, maxval);
+            operation_fixture<A>::test_masked(
+                dpp::clamp, dpp::zero, mask, val, minval, maxval);
+        }
 
-            if not consteval {
-                constexpr auto lanes = abi_traits<E>::size();
-                test::bit_generator<lanes> mask_generator;
-                constexpr auto max = lanes > dpl::type_bit_v<size_t>
-                    ? 128
-                    : static_cast<size_t>(
-                          dpl::to_underlying(~dpl::bitset<lanes>()));
-                constexpr auto count = max < 128 ? max : 128;
-                auto const src = data_generator(engine);
-                for (auto i = 0zu; i < count; ++i) {
-                    auto const mask = mask_generator(engine);
-                    for (auto j = 0zu; j < expected.size(); ++j) {
-                        if (mask[j]) {
-                            expected[j] =
-                                expected_op(val[j], minval[j], maxval[j]);
-                        } else {
-                            expected[j] = src[j];
-                        }
-                    }
-
-                    auto const vsrc = dpp::load<A, E>(src.data());
-                    auto const vmask = dpp::from_bitset<A, E>(mask);
-                    test::ternary_transform<A>::template test<E>(
-                        val, minval, maxval,
-                        [&](auto vval, auto vmin, auto vmax) {
-                            return dpp::clamp(vsrc, vmask, vval, vmin, vmax);
-                        },
-                        expected, test::bitcmp);
-
-                    for (auto j = 0zu; j < expected.size(); ++j) {
-                        if (!mask[j]) {
-                            expected[j] = 0;
-                        }
-                    }
-
-                    test::ternary_transform<A>::template test<E>(
-                        val, minval, maxval,
-                        [&](auto vval, auto vmin, auto vmax) {
-                            return dpp::clamp(
-                                dpp::zero, vmask, vval, vmin, vmax);
-                        },
-                        expected, test::bitcmp);
+        if constexpr (dpp::fixed_width_abi<A>) {
+            auto minval = data_generator(engine);
+            auto maxval = data_generator(engine);
+            for (auto const i : linear_counter(maxval)) {
+                if (minval[i] > maxval[i]) {
+                    dpl::ranges::swap(minval[i], maxval[i]);
                 }
             }
+
+            auto const val = data_generator(engine);
+            auto const src = data_generator(engine);
+            run_const_mask_test<E>([&](auto cmask) {
+                operation_fixture<A>::test_masked(
+                    dpp::clamp, src, cmask, val, minval, maxval);
+                operation_fixture<A>::test_masked(
+                    dpp::clamp, dpp::zero, cmask, val, minval, maxval);
+            });
         }
+
         return true;
     }
 };

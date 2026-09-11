@@ -143,6 +143,7 @@ class exclusive_scan {
                 return dynamic_array<R>(abi_traits<E>::size());
             }
         }();
+
         for (auto& val : result) {
             val = init;
         }
@@ -160,17 +161,10 @@ class exclusive_scan {
 
         if constexpr (!float_sum) {
             return result;
-        } else if constexpr (dpp::fixed_width_abi<A>) {
-            auto output = array<E, abi_traits<E>::size>{};
-            output[0] = init;
-            for (auto i = 1zu; i < vals.size(); ++i) {
-                output[i] = result[i];
-            }
-            return output;
         } else {
-            auto output = dynamic_array<E>(abi_traits<E>::size());
+            auto output = test::make_array<E, A>();
             output[0] = init;
-            for (auto i = 1zu; i < vals.size(); ++i) {
+            for (auto const i : linear_counter(output)) {
                 output[i] = result[i];
             }
             return output;
@@ -180,12 +174,57 @@ class exclusive_scan {
     template <dpp::simd_element_for<A> E, typename T, typename M>
     static constexpr T expected_op(T const& vals, M mask, E init) noexcept {
         auto clean(vals);
-        for (auto i = 0zu; i < vals.size(); ++i) {
-            if (!mask[i]) {
+        auto const amask = [&] {
+            if constexpr (dpp::const_mask_like<M>) {
+                return mask;
+            } else {
+                return test::to_mask_array<E, A>(mask);
+            }
+        }();
+        for (auto const i : linear_counter(vals)) {
+            if (amask[i] == 0) {
                 clean[i] = scan_identity<scanop, E>();
             }
         }
         return expected_op(clean, init);
+    }
+
+    template <typename E>
+    static constexpr linear_counter test_count() noexcept {
+        auto lanes = dpp::simd_abi_traits<A, E>::size();
+        auto const limit = []() {
+            if consteval {
+                return 4zu;
+            } else {
+                return 128zu;
+            }
+        }();
+
+        auto max = lanes >= dpl::type_bit_v<size_t>
+            ? limit
+            : static_cast<size_t>((1zu << lanes) - 1);
+        return linear_counter(max < limit ? max : limit);
+    }
+
+    template <typename E>
+    static constexpr void run_const_mask_test(auto func) noexcept {
+        [&]<size_t I = 0, serialized_mt19937 S = {}>(this auto self,
+            dpp::immediate<I> = dpp::imm<I>, mt19937_type<S> = {}) {
+            if constexpr (I < test_count<E>().size()) {
+                constexpr auto lanes = dpp::simd_abi_traits<A, E>::size();
+                constexpr bit_generator<lanes> bitgen;
+                constexpr auto pair = S.generate_with(bitgen);
+                constexpr auto cmask = dpp::deduce_const_mask_v<pair.value>;
+
+                if constexpr (dpp::none_of(cmask)) {
+                    self(dpp::imm<I>, mt19937_type<pair.state>{});
+                } else {
+                    func(cmask);
+                    self(dpp::imm<I + 1>, mt19937_type<pair.state>{});
+                }
+            }
+        }
+        ();
     }
 
 public:
@@ -199,98 +238,41 @@ public:
     }
 
     template <dpp::simd_element_for<A> E, rng_like Rng>
-    static constexpr bool run(Rng& engine)
-    requires dpp::fixed_width_abi<A>
-    {
-        constexpr auto width = abi_traits<E>::size();
+    static constexpr bool run(Rng& engine) {
         scanning_data_generator<scanop, A, E> const data_generator;
-        test::bit_generator<width> mask_generator;
-        auto const loop_count = []() {
-            if consteval {
-                return 3;
-            } else {
-                return 128;
-            }
-        }();
+        mask_generator<A, E> const mask_generator;
 
-        for (auto i = 0; i < loop_count; ++i) {
+        for (auto const _ : test_count<E>()) {
             auto const val = data_generator(engine);
             auto const init = data_generator.scalar(engine);
-            auto const mask = mask_generator(engine);
-            auto const vval = dpp::load<A>(val.data());
-            auto const vmask = dpp::from_bitset<A, E>(mask);
 
             {
                 auto const expected = expected_op(val, init);
-                auto const vexpected = dpp::load<A, E>(expected.data());
-                auto const vactual = scanop(vval, init);
-                if constexpr (dpl::is_integral_v<E>) {
-                    assert(dpp::all_of(test::bitcmp(vactual, vexpected)));
-                } else {
-                    using sint_t = dpp::signed_representation_t<E>;
-                    auto const diff = dpp::reinterpret<sint_t>(vactual) -
-                        dpp::reinterpret<sint_t>(vexpected);
-                    // less than 2 ulp
-                    assert(dpp::all_of(dpp::cmplt(dpp::abs(diff), 2)));
-                }
+                operation_fixture<A>::test(
+                    precision_cmp<3>, expected, scanop, val, init);
             }
             {
+                auto const mask = [&] {
+                    auto mask = mask_generator(engine);
+                    while (dpp::none_of(mask)) {
+                        mask = mask_generator(engine);
+                    }
+                    return mask;
+                }();
                 auto const expected = expected_op(val, mask, init);
-                auto const vexpected = dpp::load<A, E>(expected.data());
-                auto const vactual = scanop(vval, vmask, init);
-                if constexpr (dpl::is_integral_v<E>) {
-                    assert(dpp::all_of(test::bitcmp(vactual, vexpected)));
-                } else {
-                    using sint_t = dpp::signed_representation_t<E>;
-                    auto const diff = dpp::reinterpret<sint_t>(vactual) -
-                        dpp::reinterpret<sint_t>(vexpected);
-                    // less than 2 ulp
-                    assert(dpp::all_of(dpp::cmplt(dpp::abs(diff), 2)));
-                }
+                operation_fixture<A>::test(
+                    precision_cmp<3>, expected, scanop, val, mask, init);
             }
         }
 
-        {
-            constexpr auto count = 3zu;
-            constexpr auto masks = []() {
-                return dpl::apply(
-                    [](auto... idx) {
-                        test::mt19937 rng{};
-                        using bitset_t = dpl::bitset<abi_traits<E>::size()>;
-                        return array<dpl::bitset<abi_traits<E>::size()>, count>{
-                            (dpl::test::bit_generator<abi_traits<E>::size() +
-                                 idx * 0>()(rng) |
-                                bitset_t(dpl::low_bits, 1))...};
-                    },
-                    dpl::make_index_sequence<count>{});
-            }();
-
-            dpl::pack::for_each(
-                [&]<size_t I>(dpl::size_constant<I>) {
-                    auto const val = data_generator(engine);
-                    auto const init = data_generator.scalar(engine);
-                    auto const cmask = dpp::const_mask<masks[I].size(),
-                        dpl::to_underlying(masks[I])>{};
-
-                    auto const vval = dpp::load<A>(val.data());
-                    {
-                        auto const expected = expected_op(val, masks[I], init);
-                        auto const vexpected = dpp::load<A, E>(expected.data());
-                        auto const vactual = scanop(vval, cmask, init);
-                        if constexpr (dpl::is_integral_v<E>) {
-                            assert(
-                                dpp::all_of(test::bitcmp(vactual, vexpected)));
-                        } else {
-                            using sint_t = dpp::signed_representation_t<E>;
-                            auto const diff =
-                                dpp::reinterpret<sint_t>(vactual) -
-                                dpp::reinterpret<sint_t>(vexpected);
-                            // less than 2 ulp
-                            assert(dpp::all_of(dpp::cmplt(dpp::abs(diff), 2)));
-                        }
-                    }
-                },
-                dpl::make_index_sequence<count>{});
+        if constexpr (dpp::fixed_width_abi<A>) {
+            auto const val = data_generator(engine);
+            auto const init = data_generator.scalar(engine);
+            run_const_mask_test<E>([&](auto cmask) {
+                auto const expected = expected_op(val, cmask, init);
+                operation_fixture<A>::test(
+                    precision_cmp<3>, expected, scanop, val, cmask, init);
+            });
         }
 
         return true;
@@ -350,12 +332,57 @@ private:
     template <dpp::simd_element_for<A> E, typename T, typename M>
     static constexpr T expected_op(T const& vals, M mask) noexcept {
         auto clean(vals);
-        for (auto i = 0zu; i < vals.size(); ++i) {
-            if (!mask[i]) {
+        auto const amask = [&] {
+            if constexpr (dpp::const_mask_like<M>) {
+                return mask;
+            } else {
+                return test::to_mask_array<E, A>(mask);
+            }
+        }();
+        for (auto const i : linear_counter(vals)) {
+            if (amask[i] == 0) {
                 clean[i] = scan_identity<scanop, E>();
             }
         }
         return expected_op<E>(clean);
+    }
+
+    template <typename E>
+    static constexpr linear_counter test_count() noexcept {
+        auto lanes = dpp::simd_abi_traits<A, E>::size();
+        auto const limit = []() {
+            if consteval {
+                return 4zu;
+            } else {
+                return 128zu;
+            }
+        }();
+
+        auto max = lanes >= dpl::type_bit_v<size_t>
+            ? limit
+            : static_cast<size_t>((1zu << lanes) - 1);
+        return linear_counter(max < limit ? max : limit);
+    }
+
+    template <typename E>
+    static constexpr void run_const_mask_test(auto func) noexcept {
+        [&]<size_t I = 0, serialized_mt19937 S = {}>(this auto self,
+            dpp::immediate<I> = dpp::imm<I>, mt19937_type<S> = {}) {
+            if constexpr (I < test_count<E>().size()) {
+                constexpr auto lanes = dpp::simd_abi_traits<A, E>::size();
+                constexpr bit_generator<lanes> bitgen;
+                constexpr auto pair = S.generate_with(bitgen);
+                constexpr auto cmask = dpp::deduce_const_mask_v<pair.value>;
+
+                if constexpr (dpp::none_of(cmask)) {
+                    self(dpp::imm<I>, mt19937_type<pair.state>{});
+                } else {
+                    func(cmask);
+                    self(dpp::imm<I + 1>, mt19937_type<pair.state>{});
+                }
+            }
+        }
+        ();
     }
 
 public:
@@ -369,102 +396,39 @@ public:
     }
 
     template <dpp::simd_element_for<A> E, rng_like Rng>
-    static constexpr bool run(Rng& engine)
-    requires dpp::fixed_width_abi<A>
-    {
+    static constexpr bool run(Rng& engine) {
         constexpr auto width = abi_traits<E>::size();
         scanning_data_generator<scanop, A, E> const data_generator;
-        test::bit_generator<width> mask_generator;
-        auto const loop_count = []() {
-            if consteval {
-                return 3;
-            } else {
-                return 128;
-            }
-        }();
+        mask_generator<A, E> const mask_generator;
 
-        for (auto i = 0; i < loop_count; ++i) {
+        for (auto const _ : test_count<E>()) {
             auto const val = data_generator(engine);
-            auto const mask = [&] {
-                auto mask = mask_generator(engine);
-                while (!mask) {
-                    mask = mask_generator(engine);
-                }
-                return mask;
-            }();
-            auto const vval = dpp::load<A>(val.data());
-            auto const vmask = dpp::from_bitset<A, E>(mask);
-
             {
                 auto const expected = expected_op<E>(val);
-                auto const vexpected = dpp::load<A, E>(expected.data());
-                auto const vactual = scanop(vval);
-                if constexpr (dpl::is_integral_v<E>) {
-                    assert(dpp::all_of(test::bitcmp(vactual, vexpected)));
-                } else {
-                    using sint_t = dpp::signed_representation_t<E>;
-                    auto const diff = dpp::reinterpret<sint_t>(vactual) -
-                        dpp::reinterpret<sint_t>(vexpected);
-                    // less than 2 ulp
-                    assert(dpp::all_of(dpp::cmplt(dpp::abs(diff), 2)));
-                }
+                operation_fixture<A>::test(
+                    precision_cmp<3>, expected, scanop, val);
             }
             {
+                auto const mask = [&] {
+                    auto mask = mask_generator(engine);
+                    while (dpp::none_of(mask)) {
+                        mask = mask_generator(engine);
+                    }
+                    return mask;
+                }();
                 auto const expected = expected_op<E>(val, mask);
-                auto const vexpected = dpp::load<A, E>(expected.data());
-                auto const vactual = scanop(vval, vmask);
-                if constexpr (dpl::is_integral_v<E>) {
-                    assert(dpp::all_of(test::bitcmp(vactual, vexpected)));
-                } else {
-                    using sint_t = dpp::signed_representation_t<E>;
-                    auto const diff = dpp::reinterpret<sint_t>(vactual) -
-                        dpp::reinterpret<sint_t>(vexpected);
-                    // less than 2 ulp
-                    assert(dpp::all_of(dpp::cmplt(dpp::abs(diff), 2)));
-                }
+                operation_fixture<A>::test(
+                    precision_cmp<3>, expected, scanop, val, mask);
             }
         }
 
-        {
-            constexpr auto count = 3zu;
-            constexpr auto masks = []() {
-                return dpl::apply(
-                    [](auto... idx) {
-                        test::mt19937 rng{};
-                        using bitset_t = dpl::bitset<abi_traits<E>::size()>;
-                        return array<dpl::bitset<abi_traits<E>::size()>, count>{
-                            (dpl::test::bit_generator<abi_traits<E>::size() +
-                                 idx * 0>()(rng) |
-                                bitset_t(dpl::low_bits, 1))...};
-                    },
-                    dpl::make_index_sequence<count>{});
-            }();
-
-            dpl::pack::for_each(
-                [&]<size_t I>(dpl::size_constant<I>) {
-                    auto const val = data_generator(engine);
-                    auto const cmask = dpp::const_mask<masks[I].size(),
-                        dpl::to_underlying(masks[I])>{};
-
-                    auto const vval = dpp::load<A>(val.data());
-                    {
-                        auto const expected = expected_op<E>(val, masks[I]);
-                        auto const vexpected = dpp::load<A, E>(expected.data());
-                        auto const vactual = scanop(vval, cmask);
-                        if constexpr (dpl::is_integral_v<E>) {
-                            assert(
-                                dpp::all_of(test::bitcmp(vactual, vexpected)));
-                        } else {
-                            using sint_t = dpp::signed_representation_t<E>;
-                            auto const diff =
-                                dpp::reinterpret<sint_t>(vactual) -
-                                dpp::reinterpret<sint_t>(vexpected);
-                            // less than 2 ulp
-                            assert(dpp::all_of(dpp::cmplt(dpp::abs(diff), 2)));
-                        }
-                    }
-                },
-                dpl::make_index_sequence<count>{});
+        if constexpr (dpp::fixed_width_abi<A>) {
+            auto const val = data_generator(engine);
+            run_const_mask_test<E>([&](auto cmask) {
+                auto const expected = expected_op<E>(val, cmask);
+                operation_fixture<A>::test(
+                    precision_cmp<3>, expected, scanop, val, cmask);
+            });
         }
 
         return true;
@@ -489,6 +453,22 @@ class exscan {
 private:
     template <typename E>
     using abi_traits = dpp::simd_abi_traits<A, E>;
+    template <typename E>
+    static constexpr linear_counter test_count() noexcept {
+        auto lanes = abi_traits<E>::size();
+        auto const limit = []() {
+            if consteval {
+                return 4zu;
+            } else {
+                return 128zu;
+            }
+        }();
+
+        auto max = lanes >= dpl::type_bit_v<size_t>
+            ? limit
+            : static_cast<size_t>((1zu << lanes) - 1);
+        return linear_counter(max < limit ? max : limit);
+    }
 
 public:
     template <rng_like Rng, dpp::simd_element_for<A>... Es>
@@ -502,36 +482,23 @@ public:
 
     template <dpp::simd_element_for<A> E, rng_like Rng>
     static constexpr bool run(Rng& engine) {
-        auto const loop_count = []() {
-            if consteval {
-                return 3;
-            } else {
-                return 128;
-            }
-        }();
-
         scanning_data_generator<dpp::exscan_max, A, E> const max_generator;
         scanning_data_generator<dpp::exscan_min, A, E> const min_generator;
+        test::scalar_generator<E> const init_generator;
 
-        for (auto i = 0; i < loop_count; ++i) {
-
-            // Summation introduces error complexity, ignore it for now
-            // This is anyway just a check for the generic scanning
+        for (auto const _ : test_count<E>()) {
+            auto const init = init_generator(engine);
             {
-                auto const val = max_generator(engine);
-                auto const init = max_generator.scalar(engine);
-                auto const vval = dpp::load<A>(val.data());
-                auto const expected = dpp::exscan_max(vval, init);
-                auto const actual = dpp::exscan(vval, init, dpp::max);
-                assert(dpp::all_of(test::bitcmp(actual, expected)));
+                auto const val = dpp::load<A>(max_generator(engine).data());
+                auto const expected = dpp::exscan_max(val, init);
+                test::operation_fixture<A>::test(precision_cmp<3>, expected,
+                    dpp::exscan, val, init, dpp::max);
             }
             {
-                auto const val = min_generator(engine);
-                auto const init = min_generator.scalar(engine);
-                auto const vval = dpp::load<A>(val.data());
-                auto const expected = dpp::exscan_min(vval, init);
-                auto const actual = dpp::exscan(vval, init, dpp::min);
-                assert(dpp::all_of(test::bitcmp(actual, expected)));
+                auto const val = dpp::load<A>(min_generator(engine).data());
+                auto const expected = dpp::exscan_min(val, init);
+                test::operation_fixture<A>::test(precision_cmp<3>, expected,
+                    dpp::exscan, val, init, dpp::min);
             }
         }
 
@@ -544,6 +511,22 @@ class scan {
 private:
     template <typename E>
     using abi_traits = dpp::simd_abi_traits<A, E>;
+    template <typename E>
+    static constexpr linear_counter test_count() noexcept {
+        auto lanes = abi_traits<E>::size();
+        auto const limit = []() {
+            if consteval {
+                return 4zu;
+            } else {
+                return 128zu;
+            }
+        }();
+
+        auto max = lanes >= dpl::type_bit_v<size_t>
+            ? limit
+            : static_cast<size_t>((1zu << lanes) - 1);
+        return linear_counter(max < limit ? max : limit);
+    }
 
 public:
     template <rng_like Rng, dpp::simd_element_for<A>... Es>
@@ -557,34 +540,21 @@ public:
 
     template <dpp::simd_element_for<A> E, rng_like Rng>
     static constexpr bool run(Rng& engine) {
-        auto const loop_count = []() {
-            if consteval {
-                return 3;
-            } else {
-                return 128;
-            }
-        }();
+        scanning_data_generator<dpp::exscan_max, A, E> const max_generator;
+        scanning_data_generator<dpp::exscan_min, A, E> const min_generator;
 
-        scanning_data_generator<dpp::scan_max, A, E> const max_generator;
-        scanning_data_generator<dpp::scan_min, A, E> const min_generator;
-
-        for (auto i = 0; i < loop_count; ++i) {
-
-            // Summation introduces error complexity, ignore it for now
-            // This is anyway just a check for the generic scanning
+        for (auto const _ : test_count<E>()) {
             {
-                auto const val = max_generator(engine);
-                auto const vval = dpp::load<A>(val.data());
-                auto const expected = dpp::scan_max(vval);
-                auto const actual = dpp::scan(vval, dpp::max);
-                assert(dpp::all_of(test::bitcmp(actual, expected)));
+                auto const val = dpp::load<A>(max_generator(engine).data());
+                auto const expected = dpp::scan_max(val);
+                test::operation_fixture<A>::test(
+                    precision_cmp<3>, expected, dpp::scan, val, dpp::max);
             }
             {
-                auto const val = min_generator(engine);
-                auto const vval = dpp::load<A>(val.data());
-                auto const expected = dpp::scan_min(vval);
-                auto const actual = dpp::scan(vval, dpp::min);
-                assert(dpp::all_of(test::bitcmp(actual, expected)));
+                auto const val = dpp::load<A>(min_generator(engine).data());
+                auto const expected = dpp::scan_min(val);
+                test::operation_fixture<A>::test(
+                    precision_cmp<3>, expected, dpp::scan, val, dpp::min);
             }
         }
 
