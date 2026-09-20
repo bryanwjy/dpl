@@ -4,7 +4,14 @@ module;
 #define DPL_MODULES 1
 #include "dpl/config.h"
 
+#if DPL_COMPILER_CLANG
+#  define static
+#endif
 #include <immintrin.h>
+#if DPL_COMPILER_CLANG
+#  undef static
+#endif
+
 export module dpl.xmm:details.algorithm;
 import :basic;
 import :operations;
