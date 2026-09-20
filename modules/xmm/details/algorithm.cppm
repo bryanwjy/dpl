@@ -16,6 +16,7 @@ DPL_DISABLE_WARNING(5244)
 #endif
 
 // IWYU pragma: begin_exports
+#include "dpl/xmm/algorithm/shift.h"
 #include "dpl/xmm/algorithm/slide.h"
 // IWYU pragma: end_exports
 
