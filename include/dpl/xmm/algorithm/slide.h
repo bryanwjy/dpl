@@ -9,6 +9,8 @@
 #  if !DPL_MODULES
 #    include "dpl/std/type_traits/type_identity.h"
 #    include "dpl/xmm/basic/abi.h"
+#    include "dpl/xmm/operations/arithmetic.h"
+#    include "dpl/xmm/operations/bitwise.h"
 #    include "dpl/xmm/operations/reinterpret.h"
 
 #    include <immintrin.h>
@@ -17,6 +19,108 @@
 __DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::xmm {
+
+namespace details {
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+constexpr vector<int8> left_shift_idx() noexcept {
+    return []<size_t... Is>(index_sequence<Is...>) {
+        constexpr auto offset = 0x70;
+        alignas(16) constexpr int8 array[] = {(Is + offset)...};
+        return xmm::load<int8>(dx::aligned, array);
+    }(make_index_sequence<16>{});
+}
+
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+constexpr vector<int8> right_shift_idx() noexcept {
+    return []<size_t... Is>(index_sequence<Is...>) {
+        alignas(16) constexpr int8 array[] = {Is...};
+        return xmm::load<int8>(dx::aligned, array);
+    }(make_index_sequence<16>{});
+}
+} // namespace details
+
+template <simd_element E>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+inline vector<E>
+    DPL_VECTORCALL shift_left(vector<E> lhs, size_t count) noexcept {
+    using idx_t = signed_representation_t<E>;
+    if constexpr (!integral<E>) {
+        return xmm::reinterpret<E>(
+            xmm::shift_left(xmm::reinterpret<idx_t>(lhs), count));
+    } else {
+        auto const idx = [count]() -> vector<int8> {
+            constexpr auto size = vector<E>::size();
+            auto const vidx = details::left_shift_idx();
+            auto const count8 =
+                static_cast<int8>(count < size ? count : size) * sizeof(E);
+            auto const vcount = xmm::broadcast<int8>(count8);
+            return xmm::add(vidx, vcount);
+        }();
+        return _mm_shuffle_epi8(+lhs, +idx);
+    }
+}
+
+template <simd_element E>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+inline vector<E>
+    DPL_VECTORCALL shift_right(vector<E> lhs, size_t count) noexcept {
+    using idx_t = signed_representation_t<E>;
+    if constexpr (!integral<E>) {
+        return xmm::reinterpret<E>(
+            xmm::shift_right(xmm::reinterpret<idx_t>(lhs), count));
+    } else {
+        auto const idx = [count]() -> vector<int8> {
+            constexpr auto size = vector<E>::size();
+            auto const vidx = details::right_shift_idx();
+            auto const count8 =
+                static_cast<int8>(count < size ? count : size) * sizeof(E);
+            auto const vcount = xmm::broadcast<int8>(count8);
+            return xmm::subtract(vidx, vcount);
+        }();
+
+        return _mm_shuffle_epi8(+lhs, +idx);
+    }
+}
+
+template <simd_element E>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+inline vector<E>
+    DPL_VECTORCALL slide_left(
+        vector<E> lhs, vector<E> rhs, size_t count) noexcept {
+    constexpr auto size = vector<E>::size();
+    count = count < size ? count : size;
+    auto const high = xmm::shift_left(lhs, count);
+    auto const low = xmm::shift_right(rhs, size - count);
+    return xmm::bwor(low, high);
+}
+
+template <simd_element E, imask_t<E> M>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+inline vector<E>
+    DPL_VECTORCALL slide_left(vector<E> src, cmask_t<E, M> mask, vector<E> lhs,
+        vector<E> rhs, size_t count) noexcept
+requires requires { xmm::bwor(src, mask, lhs, rhs); }
+{
+    constexpr auto size = vector<E>::size();
+    count = count < size ? count : size;
+    auto const high = xmm::shift_left(lhs, count);
+    auto const low = xmm::shift_right(rhs, size - count);
+    return xmm::bwor(src, mask, low, high);
+}
+
+template <simd_element E, imask_t<E> M>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+inline vector<E>
+    DPL_VECTORCALL slide_left(dx::zero_t zero, cmask_t<E, M> mask,
+        vector<E> lhs, vector<E> rhs, size_t count) noexcept
+requires requires { xmm::bwor(zero, mask, lhs, rhs); }
+{
+    constexpr auto size = vector<E>::size();
+    count = count < size ? count : size;
+    auto const high = xmm::shift_left(lhs, count);
+    auto const low = xmm::shift_right(rhs, size - count);
+    return xmm::bwor(zero, mask, low, high);
+}
 
 template <size_t N, simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
@@ -217,6 +321,33 @@ requires requires { xmm::slide_left(zero, mask, lhs, rhs, count); }
     return xmm::slide_left(zero, mask, lhs, rhs, count);
 }
 
+template <simd_element E>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+inline vector<E> slide_left(
+    abi_tag, vector<E> lhs, vector<E> rhs, size_t count) noexcept
+requires requires { xmm::slide_left(lhs, rhs, count); }
+{
+    return xmm::slide_left(lhs, rhs, count);
+}
+
+template <simd_element E, imask_t<E> M>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+inline vector<E> slide_left(abi_tag, type_identity_t<vector<E>> src,
+    cmask_t<E, M> mask, vector<E> lhs, vector<E> rhs, size_t count) noexcept
+requires requires { xmm::slide_left(src, mask, lhs, rhs, count); }
+{
+    return xmm::slide_left(src, mask, lhs, rhs, count);
+}
+
+template <simd_element E, imask_t<E> M>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+inline vector<E> slide_left(abi_tag, dx::zero_t zero, cmask_t<E, M> mask,
+    vector<E> lhs, vector<E> rhs, size_t count) noexcept
+requires requires { xmm::slide_left(zero, mask, lhs, rhs, count); }
+{
+    return xmm::slide_left(zero, mask, lhs, rhs, count);
+}
+
 template <simd_element E, integral_constant_like N>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 inline vector<E> slide_right(
@@ -251,6 +382,28 @@ requires requires {
     static_assert(N::value <= vector<E>::size());
     return xmm::slide_right(
         zero, mask, lhs, rhs, imm<vector<E>::size() - N::value>);
+}
+
+template <simd_element E, imask_t<E> M>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+inline vector<E> slide_right(abi_tag, type_identity_t<vector<E>> src,
+    cmask_t<E, M> mask, vector<E> lhs, vector<E> rhs, size_t count) noexcept
+requires requires {
+    xmm::slide_right(src, mask, lhs, rhs, vector<E>::size() - count);
+}
+{
+    return xmm::slide_right(src, mask, lhs, rhs, vector<E>::size() - count);
+}
+
+template <simd_element E, imask_t<E> M>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+inline vector<E> slide_right(abi_tag, dx::zero_t zero, cmask_t<E, M> mask,
+    vector<E> lhs, vector<E> rhs, size_t count) noexcept
+requires requires {
+    xmm::slide_right(zero, mask, lhs, rhs, vector<E>::size() - count);
+}
+{
+    return xmm::slide_right(zero, mask, lhs, rhs, vector<E>::size() - count);
 }
 
 } // namespace datapar::xmm

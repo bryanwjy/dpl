@@ -54,6 +54,14 @@ inline vector<E>
     }
 }
 
+template <simd_element E>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+inline vector<E> shift_left(abi_tag, vector<E> lhs, size_t count) noexcept
+requires requires { xmm::shift_left(lhs, count); }
+{
+    return xmm::shift_left(lhs, count);
+}
+
 template <simd_element E, integral_constant_like N>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 inline vector<E> shift_left(abi_tag, vector<E> lhs, N count) noexcept
@@ -80,6 +88,14 @@ requires requires {
 }
 {
     return xmm::slide_left(zero, mask, lhs, xmm::broadcast<E>(dx::zero), count);
+}
+
+template <simd_element E>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+inline vector<E> shift_right(abi_tag, vector<E> lhs, size_t count) noexcept
+requires requires { xmm::shift_right(lhs, count); }
+{
+    return xmm::shift_right(lhs, count);
 }
 
 template <simd_element E, integral_constant_like N>
