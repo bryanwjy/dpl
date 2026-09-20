@@ -3,14 +3,17 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/algorithm/shift.h"
+#include "dpl/core/algorithm/lookup.h"
 
 #if !DPL_MODULES
+#  include "dpl/core/basic/lane_index.h"
 #  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/dispatch/interface.h"
 #  include "dpl/core/dispatch/maskable/transform.h"
 #  include "dpl/core/dispatch/operation/algorithm.h"
+#  include "dpl/core/operations/arithmetic.h"
 #  include "dpl/core/operations/bitwise.h"
+#  include "dpl/core/operations/permute.h"
 #endif
 
 __DPL_DEFAULT_NAMESPACE_BEGIN
@@ -48,32 +51,58 @@ struct operation_signature<slide_left_t> {
 
 template <>
 struct fallback_impl<slide_left_t> {
+private:
+    template <simd_vector T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL shift_left(
+        T&& val, size_t num) noexcept {
+        using traits = simd_abi_traits<remove_cvref_t<T>>;
+        using vidx_t = signed_canonical_vector_t<T>;
+        using idx_t = simd_element_type_t<vidx_t>;
+        auto idx = dx::add(dx::lane_index<vidx_t>(), static_cast<idx_t>(num));
+        return dx::lookup(__DPL forward<T>(val), idx, dx::zero);
+    }
+
+    template <simd_vector T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL shift_right(
+        T&& val, size_t num) noexcept {
+        using traits = simd_abi_traits<remove_cvref_t<T>>;
+        using vidx_t = signed_canonical_vector_t<T>;
+        using idx_t = simd_element_type_t<vidx_t>;
+        auto idx =
+            dx::subtract(dx::lane_index<vidx_t>(), static_cast<idx_t>(num));
+        return dx::lookup(__DPL forward<T>(val), idx, dx::zero);
+    }
+
+public:
     template <simd_vector L, equivalent_vector_with<L> R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(
-        L&& lhs, R&& rhs, size_t num) noexcept {
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(L&& lhs, R&& rhs,
+        size_t num) noexcept(canonical_vector<L> && canonical_vector<R>) {
         using E = simd_element_type_t<L>;
         auto const simd_size = simd_abi_traits<L>::size();
         num = num <= simd_size ? num : simd_size;
-        auto low = dx::shift_left(__DPL forward<L>(lhs), num);
-        auto high = dx::shift_right(__DPL forward<R>(rhs), simd_size - num);
+        auto high = fallback_impl::shift_left(__DPL forward<L>(lhs), num);
+        auto low = fallback_impl::shift_right(
+            __DPL forward<R>(rhs), simd_size - num);
         return dx::bwor(__DPL move(low), __DPL move(high));
     }
 
-    template <simd_vector L, broadcastable_to<L> R>
-    requires cpo_invocable<slide_left_t, L, canonical_type_t<L>>
+    template <simd_vector L, broadcastable_to<L> R, typename N>
+    requires cpo_invocable<slide_left_t, L, canonical_type_t<L>, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr cpo_result_t<slide_left_t, L, canonical_type_t<L>>
-    operator()(L&& lhs, R&& rhs, size_t count) noexcept(canonical_vector<L>) {
+    static constexpr auto operator()(L&& lhs, R&& rhs, N count) noexcept(
+        canonical_vector<L>) {
         return slide_left_t::operator()( __DPL forward<L>(lhs),
             dx::broadcast<L>(__DPL forward<R>(rhs)), count);
     }
 
-    template <simd_vector R, broadcastable_to<R> L>
-    requires cpo_invocable<slide_left_t, L, canonical_type_t<L>>
+    template <simd_vector R, broadcastable_to<R> L, typename N>
+    requires cpo_invocable<slide_left_t, canonical_type_t<R>, R, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr cpo_result_t<slide_left_t, R, canonical_type_t<R>>
-    operator()(L&& lhs, R&& rhs, size_t count) noexcept(canonical_vector<L>) {
+    static constexpr auto operator()(L&& lhs, R&& rhs, N count) noexcept(
+        canonical_vector<R>) {
         return slide_left_t::operator()(
             dx::broadcast<R>(__DPL forward<L>(lhs)), __DPL forward<R>(rhs),
             count);
@@ -117,14 +146,14 @@ public:
     }
 
     template <canonical_vector L, broadcastable_to<L> R>
-    requires unqualified_canonical_slide_left<L, L>
+    requires unqualified_canonical_slide_left<L, R, size_t, L>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr L operator()(L lhs, R&& rhs, size_t count) noexcept {
         return slide_left(internal::abi<L>, lhs, __DPL forward<R>(rhs), count);
     }
 
     template <canonical_vector R, broadcastable_to<R> L>
-    requires unqualified_canonical_slide_left<R, R>
+    requires unqualified_canonical_slide_left<L, R, size_t, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr R operator()(L&& lhs, R rhs, size_t count) noexcept {
         return slide_left(internal::abi<R>, __DPL forward<L>(lhs), rhs, count);
@@ -183,7 +212,7 @@ public:
 
     template <canonical_vector L, broadcastable_to<L> R,
         integral_constant_like N>
-    requires unqualified_canonical_slide_left<L, L, N>
+    requires unqualified_canonical_slide_left<L, R, N, L>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr L operator()(L lhs, R&& rhs, N count) noexcept {
         return slide_left(internal::abi<L>, lhs, __DPL forward<R>(rhs), count);
@@ -191,7 +220,7 @@ public:
 
     template <canonical_vector R, broadcastable_to<R> L,
         integral_constant_like N>
-    requires unqualified_canonical_slide_left<R, R, N>
+    requires unqualified_canonical_slide_left<L, R, N, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr R operator()(L&& lhs, R rhs, N count) noexcept {
         return slide_left(internal::abi<R>, __DPL forward<L>(lhs), rhs, count);

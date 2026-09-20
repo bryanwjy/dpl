@@ -40,30 +40,25 @@ struct fallback_impl<rotate_left_t> {
     template <simd_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(
-        T&& val, size_t lanes) noexcept {
+        T&& val, size_t lanes) noexcept(canonical_vector<T>) {
         lanes %= simd_abi_traits<T>::size();
         return dx::slide_left(val, val, lanes);
     }
 
     template <fixed_width_vector T, integral_constant_like N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL fallback(T&& val, N) noexcept {
+    static constexpr auto DPL_VECTORCALL fallback(T&& val, N) noexcept(
+        canonical_vector<T>) {
         constexpr auto V = N::value % simd_abi_traits<T>::size();
         return dx::slide_left(val, val, imm<V>);
     }
 
-    template <simd_mask T>
-    requires cpo_invocable<rotl_t, T, size_t>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(
-        T&& val, size_t num) noexcept {
-        return dx::rotl(__DPL forward<T>(val), num);
-    }
-
-    template <simd_mask T, integral_constant_like N>
-    requires cpo_invocable<rotl_t, T, N>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(T&& val, N num) noexcept {
+    template <simd_mask T, typename N>
+    requires (integral_constant_like<N> || integral<N>) &&
+        cpo_invocable<rotl_t, T, N>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(T&& val, N num) noexcept(
+        canonical_mask<T>) {
         return dx::rotl(__DPL forward<T>(val), num);
     }
 };

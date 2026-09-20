@@ -8,4 +8,5 @@ export module dpl.xmm;
 export import :basic;
 export import :operations;
 export import :math;
+export import :algorithm;
 export import dpl;

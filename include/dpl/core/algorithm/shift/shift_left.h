@@ -3,10 +3,9 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/algorithm/lookup.h"
+#include "dpl/core/algorithm/slide.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/basic/lane_index.h"
 #  include "dpl/core/concepts/equivalence.h"
 #  include "dpl/core/concepts/mask_compatibility.h"
 #  include "dpl/core/dispatch/interface.h"
@@ -44,30 +43,21 @@ struct operation_signature<shift_left_t> {
 
 template <>
 struct fallback_impl<shift_left_t> {
-    template <simd_vector T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(
-        T&& val, size_t num) noexcept {
-        using traits = simd_abi_traits<remove_cvref_t<T>>;
-        using vidx_t = signed_canonical_vector_t<T>;
-        using idx_t = simd_element_type_t<vidx_t>;
-        auto const idx =
-            dx::add(dx::lane_index<vidx_t>(), static_cast<idx_t>(num));
-        return dx::lookup(__DPL forward<T>(val), idx, dx::zero);
+    template <simd_vector T, typename N>
+    requires (integral_constant_like<N> || integral<N>) &&
+        cpo_invocable<slide_left_t, T, dx::zero_t, N>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(T&& val, N num) noexcept(
+        canonical_vector<T>) {
+        return dx::slide_left(__DPL forward<T>(val), dx::zero, num);
     }
 
-    template <simd_mask T>
-    requires cpo_invocable<bwshift_left_t, T, size_t>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(
-        T&& val, size_t num) noexcept {
-        return dx::bwshift_left(__DPL forward<T>(val), num);
-    }
-
-    template <simd_mask T, integral_constant_like N>
-    requires cpo_invocable<bwshift_left_t, T, N>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(T&& val, N num) noexcept {
+    template <simd_mask T, typename N>
+    requires (integral_constant_like<N> || integral<N>) &&
+        cpo_invocable<bwshift_left_t, T, N>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(T&& val, N num) noexcept(
+        canonical_mask<T>) {
         return dx::bwshift_left(__DPL forward<T>(val), num);
     }
 };

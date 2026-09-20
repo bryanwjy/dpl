@@ -3,7 +3,6 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/algorithm/shift.h"
 #include "dpl/core/algorithm/slide/slide_left.h"
 
 #if !DPL_MODULES
@@ -51,7 +50,7 @@ template <>
 struct fallback_impl<slide_right_t> {
     template <simd_vector L, equivalent_vector_with<L> R>
     requires cpo_invocable<slide_left_t, L, R, size_t>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(
         L&& lhs, R&& rhs, size_t num) noexcept {
         using E = simd_element_type_t<L>;
@@ -61,20 +60,35 @@ struct fallback_impl<slide_right_t> {
             __DPL forward<L>(lhs), __DPL forward<R>(rhs), simd_size - num);
     }
 
-    template <simd_vector L, broadcastable_to<L> R>
-    requires cpo_invocable<slide_right_t, L, canonical_type_t<L>>
+    template <simd_vector L, equivalent_vector_with<L> R,
+        integral_constant_like N>
+    requires fixed_width_abi<simd_abi_type_t<L>> &&
+        cpo_invocable<slide_left_t, L, R, N>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
+    static constexpr auto DPL_VECTORCALL operator()(
+        L&& lhs, R&& rhs, N) noexcept {
+        using E = simd_element_type_t<L>;
+        constexpr auto simd_size = simd_abi_traits<L>::size();
+        constexpr auto num =
+            imm<(N::value <= simd_size ? simd_size - N::value : 0zu)>;
+        return dx::slide_left(
+            __DPL forward<L>(lhs), __DPL forward<R>(rhs), num);
+    }
+
+    template <simd_vector L, broadcastable_to<L> R, typename N>
+    requires cpo_invocable<slide_right_t, L, canonical_type_t<L>, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr cpo_result_t<slide_right_t, L, canonical_type_t<L>>
-    operator()(L&& lhs, R&& rhs, size_t count) noexcept(canonical_vector<L>) {
+    static constexpr auto operator()(L&& lhs, R&& rhs, N count) noexcept(
+        canonical_vector<L>) {
         return slide_right_t::operator()( __DPL forward<L>(lhs),
             dx::broadcast<L>(__DPL forward<R>(rhs)), count);
     }
 
-    template <simd_vector R, broadcastable_to<R> L>
-    requires cpo_invocable<slide_right_t, L, canonical_type_t<L>>
+    template <simd_vector R, broadcastable_to<R> L, typename N>
+    requires cpo_invocable<slide_right_t, canonical_type_t<R>, R, N>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr cpo_result_t<slide_right_t, R, canonical_type_t<R>>
-    operator()(L&& lhs, R&& rhs, size_t count) noexcept(canonical_vector<L>) {
+    static constexpr auto operator()(L&& lhs, R&& rhs, N count) noexcept(
+        canonical_vector<R>) {
         return slide_right_t::operator()(
             dx::broadcast<R>(__DPL forward<L>(lhs)), __DPL forward<R>(rhs),
             count);
@@ -118,7 +132,7 @@ public:
     }
 
     template <canonical_vector L, broadcastable_to<L> R>
-    requires unqualified_canonical_slide_right<L, L>
+    requires unqualified_canonical_slide_right<L, R, size_t, L>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr L operator()(L lhs, R&& rhs, size_t count) noexcept {
         return slide_right(
@@ -126,7 +140,7 @@ public:
     }
 
     template <canonical_vector R, broadcastable_to<R> L>
-    requires unqualified_canonical_slide_right<R, R>
+    requires unqualified_canonical_slide_right<L, R, size_t, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr R operator()(L&& lhs, R rhs, size_t count) noexcept {
         return slide_right(
@@ -186,7 +200,7 @@ public:
 
     template <canonical_vector L, broadcastable_to<L> R,
         integral_constant_like N>
-    requires unqualified_canonical_slide_right<L, L, N>
+    requires unqualified_canonical_slide_right<L, R, N, L>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr L operator()(L lhs, R&& rhs, N count) noexcept {
         return slide_right(
@@ -195,7 +209,7 @@ public:
 
     template <canonical_vector R, broadcastable_to<R> L,
         integral_constant_like N>
-    requires unqualified_canonical_slide_right<R, R, N>
+    requires unqualified_canonical_slide_right<L, R, N, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr R operator()(L&& lhs, R rhs, N count) noexcept {
         return slide_right(
