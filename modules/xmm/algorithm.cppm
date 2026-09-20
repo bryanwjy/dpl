@@ -11,6 +11,7 @@ import :basic;
 // NOLINTBEGIN(misc-unused-using-decls)
 __DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::xmm {
+using __DPL datapar::xmm::lookup;
 using __DPL datapar::xmm::shift_left;
 using __DPL datapar::xmm::shift_right;
 using __DPL datapar::xmm::slide_left;
