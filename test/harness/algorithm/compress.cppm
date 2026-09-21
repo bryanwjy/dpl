@@ -25,7 +25,7 @@ private:
 
     template <dpp::simd_element_for<A> E>
     static constexpr auto expected_op(
-        array_t<E> const& val, mask_t<E> mask, array_t<E> const& src) noexcept {
+        mask_t<E> mask, array_t<E> const& val, array_t<E> const& src) noexcept {
         assert(val.size() == src.size());
         array_t<E> result = val;
         auto const amask = test::to_mask_array<E, A>(mask);
@@ -99,9 +99,9 @@ public:
 
             {
                 auto const src = data_generator(engine);
-                auto const expected = expected_op<E>(val, mask, src);
+                auto const expected = expected_op<E>(mask, val, src);
                 test::operation_fixture<A>::test(
-                    test::bitcmp, expected, dpp::compress, val, mask, src);
+                    test::bitcmp, expected, dpp::compress, mask, val, src);
             }
             {
                 auto const azero = [](auto array) {
@@ -110,9 +110,9 @@ public:
                     }
                     return array;
                 }(val);
-                auto const expected = expected_op<E>(val, mask, azero);
+                auto const expected = expected_op<E>(mask, val, azero);
                 test::operation_fixture<A>::test(test::bitcmp, expected,
-                    dpp::compress, val, mask, dpp::zero);
+                    dpp::compress, mask, val, dpp::zero);
             }
         }
 
@@ -127,14 +127,14 @@ public:
             }(src);
             run_const_mask_test<E>([&](auto cmask) {
                 {
-                    auto const expected = expected_op<E>(val, cmask, src);
+                    auto const expected = expected_op<E>(cmask, val, src);
                     test::operation_fixture<A>::test(
-                        test::bitcmp, expected, dpp::compress, val, cmask, src);
+                        test::bitcmp, expected, dpp::compress, cmask, val, src);
                 }
                 {
-                    auto const expected = expected_op<E>(val, cmask, azero);
+                    auto const expected = expected_op<E>(cmask, val, azero);
                     test::operation_fixture<A>::test(test::bitcmp, expected,
-                        dpp::compress, val, cmask, dpp::zero);
+                        dpp::compress, cmask, val, dpp::zero);
                 }
             });
         }

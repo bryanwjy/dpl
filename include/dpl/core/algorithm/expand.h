@@ -26,75 +26,78 @@ struct expand_t : public algorithm_base<expand_t> {
 template <>
 struct operation_signature<expand_t> {
     template <simd_vector T, const_mask_for<T> M, equivalent_vector_with<T> S>
-    static consteval void operator()(T&&, M, S&&) noexcept {}
+    static consteval void operator()(M, T&&, S&&) noexcept {}
 
     template <simd_vector T, exact_mask_for<T> M, equivalent_vector_with<T> S>
-    static consteval void operator()(T&&, M, S&&) noexcept {}
+    static consteval void operator()(M&&, T&&, S&&) noexcept {}
 
     template <simd_vector T, const_mask_for<T> M, broadcastable_to<T> S>
-    static consteval void operator()(T&&, M, S&&) noexcept {}
+    static consteval void operator()(M, T&&, S&&) noexcept {}
 
     template <simd_vector T, exact_mask_for<T> M, broadcastable_to<T> S>
-    static consteval void operator()(T&&, M, S&&) noexcept {}
+    static consteval void operator()(M&&, T&&, S&&) noexcept {}
+
+    template <simd_vector S, const_mask_for<S> M, broadcastable_to<S> T>
+    static consteval void operator()(M, T&&, S&&) noexcept {}
+
+    template <simd_vector S, exact_mask_for<S> M, broadcastable_to<S> T>
+    static consteval void operator()(M&&, T&&, S&&) noexcept {}
 };
 
-template <typename T, typename M, typename S>
-concept unqualified_canonical_expand = requires(T val, M mask, S src) {
-    { expand(internal::abi<T>, val, mask, src) } -> same_as<T>;
+template <typename M, typename T, typename S>
+concept unqualified_canonical_expand = requires(M mask, T val, S src) {
+    { expand(internal::abi<T>, mask, val, src) } -> same_as<T>;
 };
-template <typename T, typename M>
-concept unqualified_canonical_zexpand = requires(T val, M mask) {
-    { expand(internal::abi<T>, val, mask, dx::zero) } -> same_as<T>;
+template <typename M, typename T>
+concept unqualified_canonical_zexpand = requires(M mask, T val) {
+    { expand(internal::abi<T>, mask, val, dx::zero) } -> same_as<T>;
 };
 
 template <>
 struct canonical_impl<expand_t> {
-    template <canonical_vector T>
-    requires unqualified_canonical_expand<T, simd_mask_type_t<T>,
-        type_identity_t<T>>
+    template <canonical_vector T, same_as<T> S>
+    requires unqualified_canonical_expand<simd_mask_type_t<T>, T, S>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
-        T val, simd_mask_type_t<T> mask, type_identity_t<T> src) noexcept {
-        return expand(internal::abi<T>, val, mask, src);
+        simd_mask_type_t<T> mask, T val, S src) noexcept {
+        return expand(internal::abi<T>, mask, val, src);
     }
 
-    template <canonical_vector T, const_mask_for<T> M>
-    requires unqualified_canonical_expand<T, launder_cmask_t<T, M>,
-        type_identity_t<T>>
+    template <canonical_vector T, const_mask_for<T> M, same_as<T> S>
+    requires unqualified_canonical_expand<launder_cmask_t<T, M>, T, S>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(
-        T val, M mask, type_identity_t<T> src) noexcept {
-        return expand(internal::abi<T>, val, dx::to_const_mask<T>(mask), src);
+    static constexpr T operator()(M mask, T val, S src) noexcept {
+        return expand(internal::abi<T>, dx::to_const_mask<T>(mask), val, src);
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_zexpand<T, simd_mask_type_t<T>>
+    requires unqualified_canonical_zexpand<simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
-        T val, simd_mask_type_t<T> mask, dx::zero_t zero) noexcept {
-        return expand(internal::abi<T>, val, mask, zero);
+        simd_mask_type_t<T> mask, T val, dx::zero_t zero) noexcept {
+        return expand(internal::abi<T>, mask, val, zero);
     }
 
     template <canonical_vector T, const_mask_for<T> M>
-    requires unqualified_canonical_zexpand<T, launder_cmask_t<T, M>>
+    requires unqualified_canonical_zexpand<launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(T val, M mask, dx::zero_t zero) noexcept {
-        return expand(internal::abi<T>, val, dx::to_const_mask<T>(mask), zero);
+    static constexpr T operator()(M mask, T val, dx::zero_t zero) noexcept {
+        return expand(internal::abi<T>, dx::to_const_mask<T>(mask), val, zero);
     }
 };
 
-template <typename T, typename M, typename S>
+template <typename M, typename T, typename S>
 concept unqualified_extended_expand = requires {
     {
-        expand(internal::declarg<T>(), internal::declarg<M>(),
+        expand(internal::declarg<M>(), internal::declarg<T>(),
             internal::declarg<S>())
     } -> equivalent_vector_with<S>;
 };
 
-template <typename T, typename M>
+template <typename M, typename T>
 concept unqualified_extended_zexpand = requires {
     {
-        expand(internal::declarg<T>(), internal::declarg<M>(), dx::zero)
+        expand(internal::declarg<M>(), internal::declarg<T>(), dx::zero)
     } -> equivalent_vector_with<T>;
 };
 
@@ -102,35 +105,35 @@ template <>
 struct extended_impl<expand_t> {
     template <simd_vector T, exact_mask_for<T> M, equivalent_vector_with<T> S>
     requires (extended_vector<T> || extended_mask<T> || extended_vector<S>) &&
-        unqualified_extended_expand<T, M, S>
+        unqualified_extended_expand<M, T, S>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T&& val, M&& mask, S&& src) {
-        return expand(__DPL forward<T>(val), __DPL forward<M>(mask),
+    static constexpr auto operator()(M&& mask, T&& val, S&& src) {
+        return expand(__DPL forward<M>(mask),__DPL forward<T>(val),
             __DPL forward<S>(src));
     }
 
     template <simd_vector T, const_mask_for<T> M, equivalent_vector_with<T> S>
     requires (extended_vector<T> || extended_vector<S>) &&
-        unqualified_extended_expand<T, launder_cmask_t<T, M>, S>
+        unqualified_extended_expand<launder_cmask_t<T, M>, T, S>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T&& val, M mask, S&& src) {
-        return expand(__DPL forward<T>(val), dx::to_const_mask<T>(mask),
+    static constexpr auto operator()(M mask, T&& val, S&& src) {
+        return expand(dx::to_const_mask<T>(mask),__DPL forward<T>(val),
             __DPL forward<S>(src));
     }
 
     template <simd_vector T, exact_mask_for<T> M>
     requires (extended_vector<T> || extended_mask<T>) &&
-        unqualified_extended_zexpand<T, M>
+        unqualified_extended_zexpand<M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T&& val, M&& mask, dx::zero_t zero) {
-        return expand(__DPL forward<T>(val), __DPL forward<M>(mask), zero);
+    static constexpr auto operator()(M&& mask, T&& val, dx::zero_t zero) {
+        return expand(__DPL forward<M>(mask), __DPL forward<T>(val), zero);
     }
 
     template <extended_vector T, const_mask_for<T> M>
-    requires unqualified_extended_zexpand<T, M>
+    requires unqualified_extended_zexpand<M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T&& val, M mask, dx::zero_t zero) {
-        return expand( __DPL forward<T>(val), dx::to_const_mask<T>(mask), zero);
+    static constexpr auto operator()(M mask, T&& val, dx::zero_t zero) {
+        return expand(dx::to_const_mask<T>(mask), __DPL forward<T>(val), zero);
     }
 };
 
@@ -161,7 +164,7 @@ public:
     requires cpo_invocable<permute_t, S, M, T, signed_canonical_vector_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(
-        T&& val, M&& mask, S&& src) noexcept(canonical_vector<T> &&
+        M&& mask, T&& val, S&& src) noexcept(canonical_vector<T> &&
         canonical_vector<S> && canonical_mask<M>) {
         using vidx_t = signed_canonical_vector_t<T>;
         auto const vone = dx::broadcast<vidx_t>(dx::one);
@@ -175,7 +178,7 @@ public:
     requires cpo_invocable<permute_t, S, M, T,
         decltype(fallback_impl::prefix_sum(internal::declarg<M>()))>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(T&& val, M mask,
+    static constexpr auto DPL_VECTORCALL operator()(M mask, T&& val,
         S&& src) noexcept(canonical_vector<T> && canonical_vector<S>) {
         constexpr auto cmask = dx::to_const_mask<S>(mask);
         constexpr auto seq = fallback_impl::prefix_sum(cmask);
@@ -184,23 +187,41 @@ public:
     }
 
     template <simd_vector T, exact_mask_for<T> M, broadcastable_to<T> V>
-    requires cpo_invocable<expand_t, T, M, canonical_type_t<T>>
+    requires cpo_invocable<expand_t, M, T, canonical_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr cpo_result_t<expand_t, T, M, canonical_type_t<T>>
-    operator()(T&& val, M&& mask, V&& src) noexcept(
+    static constexpr cpo_result_t<expand_t, M, T, canonical_type_t<T>>
+    operator()(M&& mask, T&& val, V&& src) noexcept(
         canonical_mask<M> && canonical_vector<T>) {
-        return expand_t::operator()(__DPL forward<T>(val),
-            __DPL forward<M>(mask),
-            dx::broadcast<T>(__DPL forward<V>(src)));
+        return expand_t::operator()(__DPL forward<M>(mask),
+            __DPL forward<T>(val), dx::broadcast<T>(__DPL forward<V>(src)));
     }
 
     template <simd_vector T, const_mask_for<T> M, broadcastable_to<T> V>
-    requires cpo_invocable<expand_t, T, M, canonical_type_t<T>>
+    requires cpo_invocable<expand_t, M, T, canonical_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr cpo_result_t<expand_t, T, M, canonical_type_t<T>>
-    operator()(T&& val, M mask, V&& src) noexcept(canonical_vector<T>) {
-        return expand_t::operator()( __DPL forward<T>(val), mask,
+    static constexpr cpo_result_t<expand_t, M, T, canonical_type_t<T>>
+    operator()(M mask, T&& val, V&& src) noexcept(canonical_vector<T>) {
+        return expand_t::operator()(mask,__DPL forward<T>(val),
             dx::broadcast<T>(__DPL forward<V>(src)));
+    }
+
+    template <simd_vector S, exact_mask_for<S> M, broadcastable_to<S> V>
+    requires cpo_invocable<expand_t, M, canonical_type_t<S>, S>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr cpo_result_t<expand_t, M, canonical_type_t<S>, S>
+    operator()(M&& mask, V&& val, S&& src) noexcept(
+        canonical_mask<M> && canonical_vector<S>) {
+        return expand_t::operator()(__DPL forward<M>(mask),
+            dx::broadcast<S>(__DPL forward<V>(val)), __DPL forward<S>(src));
+    }
+
+    template <simd_vector S, const_mask_for<S> M, broadcastable_to<S> V>
+    requires cpo_invocable<expand_t, M, canonical_type_t<S>, S>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr cpo_result_t<expand_t, M, canonical_type_t<S>, S>
+    operator()(M mask, V&& val, S&& src) noexcept(canonical_vector<S>) {
+        return expand_t::operator()(mask,
+            dx::broadcast<S>(__DPL forward<V>(val)), __DPL forward<S>(src));
     }
 };
 } // namespace datapar::internal
