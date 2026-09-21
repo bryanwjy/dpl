@@ -24,6 +24,7 @@ DPL_DISABLE_WARNING(5244)
 
 // IWYU pragma: begin_exports
 #include "dpl/xmm/algorithm/lookup.h"
+#include "dpl/xmm/algorithm/sad.h"
 #include "dpl/xmm/algorithm/shift.h"
 #include "dpl/xmm/algorithm/slide.h"
 // IWYU pragma: end_exports

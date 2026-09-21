@@ -15,11 +15,13 @@ __DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::xmm {
 
+#  if DPL_SIMD_X86_SSE4_1
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<int8> DPL_VECTORCALL min(
     vector<int8> lhs, vector<int8> rhs) noexcept {
     return _mm_min_epi8(+lhs, +rhs);
 }
+#  endif
 
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<uint8> DPL_VECTORCALL min(
@@ -33,6 +35,7 @@ inline vector<int16> DPL_VECTORCALL min(
     return _mm_min_epi16(+lhs, +rhs);
 }
 
+#  if DPL_SIMD_X86_SSE4_1
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<uint16> DPL_VECTORCALL min(
     vector<uint16> lhs, vector<uint16> rhs) noexcept {
@@ -50,6 +53,7 @@ inline vector<uint32> DPL_VECTORCALL min(
     vector<uint32> lhs, vector<uint32> rhs) noexcept {
     return _mm_min_epu32(+lhs, +rhs);
 }
+#  endif
 
 #  if DPL_SIMD_X86_AVX512F & DPL_SIMD_X86_AVX512VL
 

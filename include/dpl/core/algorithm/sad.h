@@ -76,7 +76,6 @@ concept unqualified_canonical_zmsad = cpo_invocable<sad_t, S, L, R> &&
 
 template <>
 struct canonical_impl<sad_t> {
-private:
     template <canonical_vector L, common_vector_with<L> R,
         canonical_sad_result<L, R> S>
     requires unqualified_canonical_sad<S, L, R>
@@ -167,7 +166,6 @@ concept unqualified_extended_mzsad = cpo_invocable<sad_t, S, L, R> &&
 
 template <>
 struct extended_impl<sad_t> {
-public:
     template <simd_vector L, common_vector_with<L> R, sad_result<L, R> S>
     requires (extended_vector<L> || extended_vector<R> || extended_vector<S>) &&
         unqualified_extended_sad<S, L, R>

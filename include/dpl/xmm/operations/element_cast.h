@@ -72,6 +72,35 @@ requires requires {
 {
     return xmm::element_cast<To>(zero, mask, xmm::element_cast<int16>(val));
 }
+
+template <unsigned_integral To, imask_t<To> M, unsigned_integral From>
+requires (sizeof(From) > sizeof(To))
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+inline vector<To> element_cast(
+    src_vector_t<To> src, cmask_t<To, M> mask, vector<From> val) noexcept
+requires requires {
+    xmm::element_cast<make_signed_t<To>>(
+        +src, mask, vector<make_signed_t<From>>(+val));
+}
+{
+    return +xmm::element_cast<make_signed_t<To>>(
+        +src, mask, vector<make_signed_t<From>>(+val));
+}
+
+template <unsigned_integral To, imask_t<To> M, unsigned_integral From>
+requires (sizeof(From) > sizeof(To))
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+inline vector<To> element_cast(
+    dx::zero_t zero, cmask_t<To, M> mask, vector<From> val) noexcept
+requires requires {
+    xmm::element_cast<make_signed_t<To>>(
+        zero, mask, vector<make_signed_t<From>>(+val));
+}
+{
+    return +xmm::element_cast<make_signed_t<To>>(
+        zero, mask, vector<make_signed_t<From>>(+val));
+}
+
 template <signed_integral To, imask_t<To> M, unsigned_integral From>
 requires (sizeof(From) > sizeof(To))
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)

@@ -39,18 +39,22 @@ inline vector<To> element_cast(vector<make_signed_t<To>> val) noexcept {
       DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD) \
       inline vector<To> DPL_VECTORCALL element_cast(vector<FROM>) noexcept
 
-__DPL_CAST_FWD(uint8, int16);
 __DPL_CAST_FWD(int8, int16);
-__DPL_CAST_FWD(uint8, int32);
 __DPL_CAST_FWD(int8, int32);
-__DPL_CAST_FWD(uint16, int32);
-__DPL_CAST_FWD(int16, int32);
-__DPL_CAST_FWD(uint8, int64);
 __DPL_CAST_FWD(int8, int64);
-__DPL_CAST_FWD(uint16, int64);
+__DPL_CAST_FWD(uint8, int16);
+__DPL_CAST_FWD(uint8, int32);
+__DPL_CAST_FWD(uint8, int64);
+__DPL_CAST_FWD(int16, int32);
 __DPL_CAST_FWD(int16, int64);
-__DPL_CAST_FWD(uint32, int64);
+__DPL_CAST_FWD(uint16, int32);
+__DPL_CAST_FWD(uint16, int64);
 __DPL_CAST_FWD(int32, int64);
+__DPL_CAST_FWD(uint32, int64);
+//
+__DPL_CAST_FWD(int64, int32);
+__DPL_CAST_FWD(int64, int16);
+__DPL_CAST_FWD(int64, int8);
 //
 __DPL_CAST_FWD(int32, int16);
 __DPL_CAST_FWD(int32, int8);
@@ -74,6 +78,19 @@ inline vector<To> element_cast(vector<From> val) noexcept
 requires requires { xmm::element_cast<int16>(val); }
 {
     return xmm::element_cast<To>(xmm::element_cast<int16>(val));
+}
+
+// Truncating unsigned-to-unsigned conversions
+template <unsigned_integral To, unsigned_integral From>
+requires (sizeof(From) > sizeof(To))
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+inline vector<To> element_cast(vector<From> val) noexcept
+requires requires {
+    xmm::element_cast<make_signed_t<To>>(vector<make_signed_t<From>>(+val));
+}
+{
+    return +xmm::element_cast<make_signed_t<To>>(
+        vector<make_signed_t<From>>(+val));
 }
 
 // Truncating unsigned-to-signed conversions

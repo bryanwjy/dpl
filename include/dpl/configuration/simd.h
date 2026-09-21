@@ -97,6 +97,15 @@
 #    define DPL_SIMD_X86_AVX512FP16 (!DPL_DISABLE_MSVC_AVX512FP16)
 #  endif
 
+#  ifdef __AVX512VNNI__
+#    define DPL_SIMD_X86_AVX512VNNI __AVX512VNNI__
+#  elif DPL_COMPILER_MSVC && defined(__AVX512F__)
+#    ifndef DPL_DISABLE_MSVC_AVX512VNNI
+#      define DPL_DISABLE_MSVC_AVX512VNNI 0
+#    endif
+#    define DPL_SIMD_X86_AVX512VNNI (!DPL_DISABLE_MSVC_AVX512VNNI)
+#  endif
+
 #  ifdef __AVX512BW__
 #    define DPL_SIMD_X86_AVX512BW __AVX512BW__
 #  endif
