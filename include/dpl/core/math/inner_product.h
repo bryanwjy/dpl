@@ -315,7 +315,7 @@ template <>
 struct fallback_impl<inner_product_t> {
     // Same element
     template <canonical_vector L, common_vector_with<L> R>
-    requires cpo_invocable<hsum_t, common_canonical_simd_t<L, R>>
+    requires cpo_invocable<reduce_sum_t, common_canonical_simd_t<L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr common_canonical_simd_t<L, R> operator()(
         common_canonical_simd_t<L, R> src, L lhs, R rhs) noexcept {

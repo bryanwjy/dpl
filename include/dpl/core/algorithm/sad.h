@@ -3,7 +3,7 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/algorithm/reduction/hsum.h"
+#include "dpl/core/algorithm/reduction/reduce_sum.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/basic/lane_index.h"
@@ -259,7 +259,7 @@ struct fallback_impl<sad_t> {
                 dx::abs(dx::reinterpret<sint_t>(dx::subtract(lhs, rhs))));
         };
 
-        if constexpr (dx::simd_canonical_invocable<hsum_t,
+        if constexpr (dx::simd_canonical_invocable<reduce_sum_t,
                           common_canonical_simd_t<L, R>>) {
             return dx::add(src, abs_diff(lhs, rhs));
         } else {

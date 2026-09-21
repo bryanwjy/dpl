@@ -31,10 +31,10 @@ struct operation_signature<dot_product_t> {
     static consteval void operator()(L&&, R&&) noexcept {}
 };
 
-struct hsum_t;
+struct reduce_sum_t;
 namespace fwd {
-struct fhsum : operation_base<hsum_t> {};
-inline constexpr fhsum hsum{};
+struct freduce_sum : operation_base<reduce_sum_t> {};
+inline constexpr freduce_sum reduce_sum{};
 } // namespace fwd
 
 template <>
@@ -42,14 +42,15 @@ struct fallback_impl<dot_product_t> :
     binary_canonical_broadcaster<dot_product_t> {
 
     template <canonical_vector L, common_vector_with<L> R>
-    requires cpo_invocable<hsum_t, common_canonical_simd_t<L, R>>
+    requires cpo_invocable<reduce_sum_t, common_canonical_simd_t<L, R>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr common_canonical_simd_t<L, R> operator()(
         L lhs, R rhs) noexcept {
-        if constexpr (dx::simd_canonical_invocable<hsum_t,
+        if constexpr (dx::simd_canonical_invocable<reduce_sum_t,
                           common_canonical_simd_t<L, R>>) {
-            // hsum is forward declared here, please include algorithm/hsum
-            return fwd::hsum(dx::multiply(lhs, rhs));
+            // reduce_sum is forward declared here, please include
+            // algorithm/reduce.h
+            return fwd::reduce_sum(dx::multiply(lhs, rhs));
         } else {
             return internal::reduction(dx::multiply(lhs, rhs), dx::add);
         }

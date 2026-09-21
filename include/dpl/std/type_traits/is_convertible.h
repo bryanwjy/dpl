@@ -28,6 +28,11 @@ struct is_convertible : bool_constant<is_convertible_v<From, To>> {};
 
 #endif // if __DPL_SHOULD_USE_BUILTIN(is_convertible)
 
+/**
+ * Pre-C++17 this is identical to is_convertible_v
+ * Post-C++17, immovable src type may be allowed if copy/move ellison is
+ * performed during conversion to the dst type
+ */
 template <typename From, typename To>
 inline constexpr bool is_core_convertible_v =
     requires(void (*to)(To), From (*from)()) { to(from()); };

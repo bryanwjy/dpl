@@ -43,12 +43,12 @@ template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<E>
     DPL_VECTORCALL shift_left(vector<E> lhs, size_t count) noexcept {
-    using idx_t = signed_representation_t<E>;
     if constexpr (!integral<E>) {
+        using int_t = signed_representation_t<E>;
         return xmm::reinterpret<E>(
-            xmm::shift_left(xmm::reinterpret<idx_t>(lhs), count));
+            xmm::shift_left(xmm::reinterpret<int_t>(lhs), count));
     } else {
-        auto const idx = [count]() -> vector<int8> {
+        vector<int8> const idx = [count]() {
             constexpr auto size = vector<E>::size();
             auto const vidx = details::left_shift_idx();
             auto const count8 =
@@ -64,12 +64,12 @@ template <simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<E>
     DPL_VECTORCALL shift_right(vector<E> lhs, size_t count) noexcept {
-    using idx_t = signed_representation_t<E>;
     if constexpr (!integral<E>) {
+        using int_t = signed_representation_t<E>;
         return xmm::reinterpret<E>(
-            xmm::shift_right(xmm::reinterpret<idx_t>(lhs), count));
+            xmm::shift_right(xmm::reinterpret<int_t>(lhs), count));
     } else {
-        auto const idx = [count]() -> vector<int8> {
+        vector<int8> const idx = [count]() {
             constexpr auto size = vector<E>::size();
             auto const vidx = details::right_shift_idx();
             auto const count8 =

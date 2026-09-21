@@ -57,7 +57,7 @@ template <typename T, typename Op>
 concept unqualified_extended_reduce = requires {
     {
         reduce(internal::declarg<T>(), internal::declarg<Op>())
-    } -> core_convertible_to<simd_element_type_t<T>>;
+    } -> convertible_to<simd_element_type_t<T>>;
 };
 
 template <>

@@ -15,14 +15,14 @@
 __DPL_DEFAULT_NAMESPACE_BEGIN
 
 namespace datapar::internal {
-void hsum(...) noexcept = delete;
+void reduce_sum(...) noexcept = delete;
 
-struct hsum_t : public reduction_base<hsum_t> {
-    using operation_base<hsum_t>::operator();
+struct reduce_sum_t : public reduction_base<reduce_sum_t> {
+    using operation_base<reduce_sum_t>::operator();
 };
 
 template <>
-struct operation_signature<hsum_t> {
+struct operation_signature<reduce_sum_t> {
     template <simd_vector T>
     static consteval void operator()(T&&) noexcept {}
 
@@ -34,87 +34,92 @@ struct operation_signature<hsum_t> {
 };
 
 template <typename T>
-concept unqualified_canonical_hsum = requires {
+concept unqualified_canonical_reduce_sum = requires {
     {
-        hsum(internal::abi<T>, internal::declarg<T>())
+        reduce_sum(internal::abi<T>, internal::declarg<T>())
     } -> same_as<simd_element_type_t<T>>;
 };
 
 template <typename M, typename T>
-concept unqualified_canonical_mhsum = cpo_invocable<hsum_t, T> && requires {
-    {
-        hsum(internal::abi<T>, internal::declarg<T>(), internal::declarg<M>())
-    } -> same_as<simd_element_type_t<T>>;
-};
+concept unqualified_canonical_mreduce_sum =
+    cpo_invocable<reduce_sum_t, T> && requires {
+        {
+            reduce_sum(internal::abi<T>, internal::declarg<T>(),
+                internal::declarg<M>())
+        } -> same_as<simd_element_type_t<T>>;
+    };
 
 template <>
-struct canonical_impl<hsum_t> {
+struct canonical_impl<reduce_sum_t> {
 public:
     template <canonical_vector T>
-    requires unqualified_canonical_hsum<T>
+    requires unqualified_canonical_reduce_sum<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr simd_element_type_t<T> operator()(T val) noexcept {
-        return hsum(internal::abi<T>, val);
+        return reduce_sum(internal::abi<T>, val);
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mhsum<T, simd_mask_type_t<T>>
+    requires unqualified_canonical_mreduce_sum<T, simd_mask_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr simd_element_type_t<T> operator()(
         T val, simd_mask_type_t<T> mask) noexcept {
-        return hsum(internal::abi<T>, val, mask);
+        return reduce_sum(internal::abi<T>, val, mask);
     }
 
     template <canonical_vector T, const_mask_for<T> M>
-    requires unqualified_canonical_mhsum<T, launder_cmask_t<T, M>>
+    requires unqualified_canonical_mreduce_sum<T, launder_cmask_t<T, M>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr simd_element_type_t<T> operator()(T val, M mask) noexcept {
         static_assert(dx::any_of(mask));
-        return hsum(internal::abi<T>, val, dx::to_const_mask<T>(mask));
+        return reduce_sum(internal::abi<T>, val, dx::to_const_mask<T>(mask));
     }
 };
 
 template <typename T>
-concept unqualified_extended_hsum = requires {
-    { hsum(internal::declarg<T>()) } -> convertible_to<simd_element_type_t<T>>;
+concept unqualified_extended_reduce_sum = requires {
+    {
+        reduce_sum(internal::declarg<T>())
+    } -> core_convertible_to<simd_element_type_t<T>>;
 };
 
 template <typename T, typename M>
-concept unqualified_extended_mhsum = cpo_invocable<hsum_t, T> && requires {
-    {
-        hsum(internal::declarg<T>(), internal::declarg<M>())
-    } -> convertible_to<simd_element_type_t<T>>;
-};
+concept unqualified_extended_mreduce_sum =
+    cpo_invocable<reduce_sum_t, T> && requires {
+        {
+            reduce_sum(internal::declarg<T>(), internal::declarg<M>())
+        } -> core_convertible_to<simd_element_type_t<T>>;
+    };
 
 template <>
-struct extended_impl<hsum_t> {
+struct extended_impl<reduce_sum_t> {
 public:
     template <extended_vector T>
-    requires unqualified_extended_hsum<T>
+    requires unqualified_extended_reduce_sum<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T&& val) {
-        return hsum(__DPL forward<T>(val));
+        return reduce_sum(__DPL forward<T>(val));
     }
 
     template <simd_vector T, exact_mask_for<T> M>
     requires (extended_vector<T> || extended_mask<M>) &&
-        unqualified_extended_mhsum<T, M>
+        unqualified_extended_mreduce_sum<T, M>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T&& val, M&& mask) {
-        return hsum(__DPL forward<T>(val), __DPL forward<M>(mask));
+        return reduce_sum(__DPL forward<T>(val), __DPL forward<M>(mask));
     }
 
     template <extended_vector T, const_mask_for<T> M>
-    requires unqualified_extended_mhsum<T, launder_cmask_t<T, M>>
+    requires unqualified_extended_mreduce_sum<T, launder_cmask_t<T, M>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(T&& val, M mask) {
         static_assert(dx::any_of(mask));
-        return hsum(__DPL forward<T>(val), dx::to_const_mask<T>(mask));
+        return reduce_sum(__DPL forward<T>(val), dx::to_const_mask<T>(mask));
     }
 };
 
 template <>
-struct fallback_impl<hsum_t> {
+struct fallback_impl<reduce_sum_t> {
 public:
     template <simd_vector T>
     requires cpo_invocable<reduce_t, T, add_t>
@@ -126,19 +131,19 @@ public:
 
     template <simd_vector T, exact_mask_for<T> M>
     requires cpo_invocable<select_t, M, T, dx::zero_t> &&
-        cpo_invocable<hsum_t, cpo_result_t<select_t, M, T, dx::zero_t>>
+        cpo_invocable<reduce_sum_t, cpo_result_t<select_t, M, T, dx::zero_t>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr simd_element_type_t<T>
         DPL_VECTORCALL operator()(T&& val, M&& mask) noexcept(
             canonical_mask<M> && canonical_vector<T>) {
         using E = simd_element_type_t<T>;
-        return hsum_t::operator()(dx::select(
+        return reduce_sum_t::operator()(dx::select(
             __DPL forward<M>(mask), __DPL forward<T>(val), dx::zero));
     }
 
     template <simd_vector T, const_mask_for<T> M>
     requires cpo_invocable<select_t, M, T, dx::zero_t> &&
-        cpo_invocable<hsum_t, cpo_result_t<select_t, M, T, dx::zero_t>>
+        cpo_invocable<reduce_sum_t, cpo_result_t<select_t, M, T, dx::zero_t>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static constexpr simd_element_type_t<T>
         DPL_VECTORCALL operator()(T&& val, M mask) noexcept(
@@ -146,7 +151,7 @@ public:
         static_assert(dx::any_of(mask));
         using E = simd_element_type_t<T>;
         using Arg = cpo_result_t<select_t, M, T, dx::zero_t>;
-        return hsum_t::operator()(
+        return reduce_sum_t::operator()(
             dx::select(mask, __DPL forward<T>(val), dx::zero));
     }
 };
@@ -155,7 +160,7 @@ public:
 
 namespace datapar {
 inline namespace cpo {
-inline constexpr internal::hsum_t hsum{};
+inline constexpr internal::reduce_sum_t reduce_sum{};
 }
 } // namespace datapar
 

@@ -23,7 +23,7 @@ int main() {
         return dpl::test::logical<abi_t>::run_all(types{}, engine);
     };
 
-    // static_assert(run());
+    static_assert(run());
     assert(run());
     return 0;
 }

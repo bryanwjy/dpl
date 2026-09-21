@@ -22,7 +22,7 @@ struct reduction_data_generator : test::array_generator<A, E> {
 
 export template <dpp::simd_algorithm_operation auto rop, dpp::simd_abi A,
     dpp::simd_element_for<A> E>
-requires (rop == dpp::hsum && dpl::integral<E>)
+requires (rop == dpp::reduce_sum && dpl::integral<E>)
 struct reduction_data_generator<rop, A, E> {
     template <typename Rng>
     constexpr auto operator()(Rng& engine) const noexcept {
@@ -38,7 +38,7 @@ private:
 
 export template <dpp::simd_algorithm_operation auto rop, dpp::simd_abi A,
     dpp::simd_element_for<A> E>
-requires (rop == dpp::hsum && dpl::floating_point_like<E>)
+requires (rop == dpp::reduce_sum && dpl::floating_point_like<E>)
 struct reduction_data_generator<rop, A, E> {
 
 public:
@@ -91,7 +91,8 @@ private:
     template <dpp::simd_element_for<A> E>
     static constexpr E expected_op(array_t<E> const& val) noexcept {
         auto result = [&] {
-            if constexpr (dpl::floating_point_like<E> && rop == dpp::hsum) {
+            if constexpr (dpl::floating_point_like<E> &&
+                rop == dpp::reduce_sum) {
                 // TODO deal with MSVC
                 return static_cast<long double>(val[0]);
             } else {
@@ -99,9 +100,9 @@ private:
             }
         }();
         for (auto i = 1zu; i < val.size(); ++i) {
-            if constexpr (rop == dpp::hsum) {
+            if constexpr (rop == dpp::reduce_sum) {
                 result += val[i];
-            } else if constexpr (rop == dpp::hmax) {
+            } else if constexpr (rop == dpp::reduce_max) {
                 result = result < val[i] ? val[i] : result;
             } else {
                 result = result > val[i] ? val[i] : result;
@@ -116,7 +117,8 @@ private:
         array_t<E> const& val, mask_t<E> mask) noexcept {
         auto const first = dpp::countr_zero(mask);
         auto result = [&] {
-            if constexpr (dpl::floating_point_like<E> && rop == dpp::hsum) {
+            if constexpr (dpl::floating_point_like<E> &&
+                rop == dpp::reduce_sum) {
                 // TODO deal with MSVC
                 return static_cast<long double>(val[first]);
             } else {
@@ -126,9 +128,9 @@ private:
         auto const amask = to_mask_array<E, A>(mask);
         for (auto i = first + 1; i < val.size(); ++i) {
             if (amask[i] != 0) {
-                if constexpr (rop == dpp::hsum) {
+                if constexpr (rop == dpp::reduce_sum) {
                     result += val[i];
-                } else if constexpr (rop == dpp::hmax) {
+                } else if constexpr (rop == dpp::reduce_max) {
                     result = result < val[i] ? val[i] : result;
                 } else {
                     result = result > val[i] ? val[i] : result;
@@ -230,11 +232,11 @@ public:
 };
 
 export template <dpp::simd_abi A>
-using hsum = reduction<A, dpp::hsum>;
+using reduce_sum = reduction<A, dpp::reduce_sum>;
 export template <dpp::simd_abi A>
-using hmin = reduction<A, dpp::hmin>;
+using reduce_min = reduction<A, dpp::reduce_min>;
 export template <dpp::simd_abi A>
-using hmax = reduction<A, dpp::hmax>;
+using reduce_max = reduction<A, dpp::reduce_max>;
 
 export template <dpp::simd_abi A>
 class reduce {
@@ -268,19 +270,19 @@ public:
 
     template <dpp::simd_element_for<A> E, rng_like Rng>
     static constexpr bool run(Rng& engine) {
-        reduction_data_generator<dpp::hmax, A, E> const max_generator;
-        reduction_data_generator<dpp::hmin, A, E> const min_generator;
+        reduction_data_generator<dpp::reduce_max, A, E> const max_generator;
+        reduction_data_generator<dpp::reduce_min, A, E> const min_generator;
 
         for (auto const _ : test_count<E>()) {
             {
                 auto const val = dpp::load<A>(max_generator(engine).data());
-                auto const expected = dpp::hmax(val);
+                auto const expected = dpp::reduce_max(val);
                 test::operation_fixture<A>::test(
                     precision_cmp<2>, expected, dpp::reduce, val, dpp::max);
             }
             {
                 auto const val = dpp::load<A>(min_generator(engine).data());
-                auto const expected = dpp::hmin(val);
+                auto const expected = dpp::reduce_min(val);
                 test::operation_fixture<A>::test(
                     precision_cmp<2>, expected, dpp::reduce, val, dpp::min);
             }

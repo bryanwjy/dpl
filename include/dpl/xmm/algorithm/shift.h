@@ -59,6 +59,7 @@ DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 inline vector<E> shift_left(abi_tag, vector<E> lhs, size_t count) noexcept
 requires requires { xmm::shift_left(lhs, count); }
 {
+    // defined in slide.h
     return xmm::shift_left(lhs, count);
 }
 

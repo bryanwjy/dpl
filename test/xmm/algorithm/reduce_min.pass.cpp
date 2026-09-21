@@ -7,11 +7,11 @@
 import dpl.xmm;
 import dpl.test.harness.algorithm.reduction;
 
-// Tests for dpp::hmin on xmm ABI. Requires SSE4.2 (implied by dpl.xmm).
+// Tests for dpp::reduce_min on xmm ABI. Requires SSE4.2 (implied by dpl.xmm).
 //
 // Forms tested:
-// (1) dpp::hmin(val)
-// (2) dpp::hmin(val, mask)
+// (1) dpp::reduce_min(val)
+// (2) dpp::reduce_min(val, mask)
 
 int main() {
     namespace dpp = dpl::datapar;
@@ -23,12 +23,12 @@ int main() {
             // Reduce number of types to reduce compile time steps
             using types =
                 dpl::type_pack<dpl::int8, dpl::int16, dpl::int32, float>;
-            return dpl::test::hmin<abi_t>::run_all(types{}, engine);
+            return dpl::test::reduce_min<abi_t>::run_all(types{}, engine);
         } else {
             using types = dpl::type_pack<dpl::int8, dpl::uint8, dpl::int16,
                 dpl::uint16, dpl::int32, dpl::uint32, dpl::int64, dpl::uint64,
                 float, double, dpl::ext::float16, dpl::ext::bfloat16>;
-            return dpl::test::hmin<abi_t>::run_all(types{}, engine);
+            return dpl::test::reduce_min<abi_t>::run_all(types{}, engine);
         }
     };
 

@@ -51,6 +51,11 @@ using __DPL datapar::xmm::min;
 //
 using __DPL datapar::xmm::element_cast;
 //
+using __DPL datapar::xmm::all_of;
+using __DPL datapar::xmm::any_of;
+using __DPL datapar::xmm::none_of;
+using __DPL datapar::xmm::some_of;
+//
 using __DPL datapar::xmm::permute;
 using __DPL datapar::xmm::reinterpret;
 using __DPL datapar::xmm::select;
