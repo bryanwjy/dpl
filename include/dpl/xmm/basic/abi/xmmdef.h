@@ -13,6 +13,7 @@
 #  include "dpl/core/type_traits/representation.h"
 #  include "dpl/core/type_traits/simd_abi_traits.h"
 #  include "dpl/core/type_traits/simd_element_representation.h"
+#  include "dpl/std/type_traits/type_identity.h"
 #endif
 
 __DPL_DEFAULT_NAMESPACE_BEGIN
@@ -29,6 +30,8 @@ using size_vector_t =
 template <typename E>
 using ssize_vector_t =
     dx::basic_vector<dx::signed_representation_t<E>, abi_tag>;
+template <typename E>
+using src_vector_t = type_identity_t<vector<E>>;
 template <typename E>
 using mask = dx::basic_mask<E, abi_tag>;
 } // namespace datapar::xmm

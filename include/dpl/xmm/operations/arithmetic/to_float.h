@@ -9,22 +9,17 @@
 
 __DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::xmm {
-namespace details {
-template <typename>
-struct convert_t;
-
-template <typename From, typename To>
-concept convert_to = simd_element<From> && simd_element<To> &&
-    requires(convert_t<To> cvt, vector<From> src) { cvt(src); };
-} // namespace details
-
-template <simd_element To, details::convert_to<To> E>
-DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-inline vector<To> element_cast(vector<E> src) noexcept;
-
-DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-inline vector<float> to_float(vector<ext::bfloat16> arg) noexcept;
-DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-inline vector<ext::bfloat16> to_bfloat16(vector<float> arg) noexcept;
+template <same_as<float> To>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+inline vector<To> element_cast(vector<ext::bfloat16> arg) noexcept;
+template <same_as<float> To>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+inline vector<To> element_cast(vector<ext::float16> arg) noexcept;
+template <same_as<ext::bfloat16> To>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+inline vector<To> element_cast(vector<float> arg) noexcept;
+template <same_as<ext::float16> To>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+inline vector<To> element_cast(vector<float> arg) noexcept;
 } // namespace datapar::xmm
 __DPL_DEFAULT_NAMESPACE_END

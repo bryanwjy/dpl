@@ -39,15 +39,17 @@ inline vector<ext::bfloat16> DPL_VECTORCALL subadd(
         _mm_srli_si128(__DPL bit_cast<__m128i>(+lhs), 8)));
     auto const hrhs = vector<ext::bfloat16>(__DPL bit_cast<__m128bh>(
         _mm_srli_si128(__DPL bit_cast<__m128i>(+rhs), 8)));
-    auto const lo = xmm::subadd(xmm::to_float(lhs), xmm::to_float(rhs));
-    auto const hi = xmm::subadd(xmm::to_float(hlhs), xmm::to_float(hrhs));
+    auto const lo = xmm::subadd(
+        xmm::element_cast<float>(lhs), xmm::element_cast<float>(rhs));
+    auto const hi = xmm::subadd(
+        xmm::element_cast<float>(hlhs), xmm::element_cast<float>(hrhs));
 
 #  if DPL_SIMD_X86_AVX512BF16 & DPL_SIMD_X86_AVX512VL
     return _mm_cvtne2ps_pbh(+hi, +lo);
 #  else
-    auto const packed =
-        _mm_shuffle_pd( __DPL bit_cast<__m128d>(+xmm::to_bfloat16(lo)),
-            __DPL bit_cast<__m128d>(+xmm::to_bfloat16(hi)), 0);
+    auto const packed = _mm_shuffle_pd(
+        __DPL bit_cast<__m128d>(+xmm::element_cast<ext::bfloat16>(lo)),
+        __DPL bit_cast<__m128d>(+xmm::element_cast<ext::bfloat16>(hi)), 0);
     return xmm::reinterpret<ext::bfloat16>(vector<double>(packed));
 #  endif
 }

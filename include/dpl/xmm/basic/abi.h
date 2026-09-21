@@ -40,6 +40,9 @@ struct abi_tag : simd_abi_base<abi_tag> {
     using native_mask = native_vector<E>;
 };
 
+template <simd_element E>
+inline constexpr size_t vector_size_v = abi_tag::size / sizeof(E);
+
 inline constexpr abi_tag abi{};
 
 using imask16_t DPL_NODEBUG = imask_t<int8>;
