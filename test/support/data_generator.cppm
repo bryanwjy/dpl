@@ -433,8 +433,9 @@ public:
 
     template <rng_like Rng>
     constexpr auto operator()(Rng& rng) const noexcept {
-        auto mod = dpp::bwand(
-            base_type::operator()(rng), dpp::broadcast<value_type, A>(2u));
+        auto const array = base_type::operator()(rng);
+        auto const mod = dpp::bwand(dpp::load<value_type, A>(array.data()),
+            dpp::broadcast<value_type, A>(1u));
         return dpp::reinterpret<E>(
             dpp::cmpeq(mod, dpp::broadcast<value_type, A>(1u)));
     }

@@ -185,7 +185,7 @@
 #  endif
 
 #  ifdef __AVX10_2__
-#    define DPL_SIMD_X86_AVX10_1 __AVX10_2__
+#    define DPL_SIMD_X86_AVX10_2 __AVX10_2__
 #  endif
 
 #elif DPL_ARCH_ARM
