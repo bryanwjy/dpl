@@ -12,7 +12,7 @@ import dpl.test.harness.algorithm.compress;
 // Tests for dpp::compress on xmm ABI. Requires SSE4.2 (implied by dpl.xmm).
 //
 // Forms tested:
-// (1) dpp::compress(val, mask, src)
+// (1) dpp::compress(mask, val, src)
 
 int main() {
     namespace dpp = dpl::datapar;

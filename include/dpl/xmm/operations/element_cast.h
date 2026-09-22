@@ -29,7 +29,7 @@ template <integral To, imask_t<To> M, floating_point_like From>
 requires (sizeof(From) >= sizeof(float) && sizeof(To) < sizeof(float))
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 inline vector<To> element_cast(
-    src_vector_t<To> src, mask<To> mask, vector<From> val) noexcept
+    vector_identity_t<To> src, mask<To> mask, vector<From> val) noexcept
 requires requires {
     xmm::element_cast<To>(src, mask, xmm::element_cast<int>(val));
 }
@@ -53,7 +53,7 @@ template <integral To, imask_t<To> M, floating_point_like From>
 requires (sizeof(From) == sizeof(int16) && sizeof(To) < sizeof(int16))
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 inline vector<To> element_cast(
-    src_vector_t<To> src, cmask_t<To, M> mask, vector<From> val) noexcept
+    vector_identity_t<To> src, cmask_t<To, M> mask, vector<From> val) noexcept
 requires requires {
     xmm::element_cast<To>(src, mask, xmm::element_cast<int16>(val));
 }
@@ -77,7 +77,7 @@ template <unsigned_integral To, imask_t<To> M, unsigned_integral From>
 requires (sizeof(From) > sizeof(To))
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 inline vector<To> element_cast(
-    src_vector_t<To> src, cmask_t<To, M> mask, vector<From> val) noexcept
+    vector_identity_t<To> src, cmask_t<To, M> mask, vector<From> val) noexcept
 requires requires {
     xmm::element_cast<make_signed_t<To>>(
         +src, mask, vector<make_signed_t<From>>(+val));
@@ -105,7 +105,7 @@ template <signed_integral To, imask_t<To> M, unsigned_integral From>
 requires (sizeof(From) > sizeof(To))
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 inline vector<To> element_cast(
-    src_vector_t<To> src, cmask_t<To, M> mask, vector<From> val) noexcept
+    vector_identity_t<To> src, cmask_t<To, M> mask, vector<From> val) noexcept
 requires requires {
     xmm::element_cast<To>(
         src, mask, xmm::element_cast<make_signed_t<From>>(val));
@@ -133,7 +133,7 @@ template <unsigned_integral To, imask_t<To> M, signed_integral From>
 requires (sizeof(From) > sizeof(To))
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 inline vector<To> element_cast(
-    src_vector_t<To> src, cmask_t<To, M> mask, vector<From> val) noexcept
+    vector_identity_t<To> src, cmask_t<To, M> mask, vector<From> val) noexcept
 requires requires { xmm::element_cast<make_signed_t<To>>(+src, mask, val); }
 {
     return +xmm::element_cast<make_signed_t<To>>(+src, mask, val);
@@ -153,7 +153,7 @@ template <unsigned_integral To, imask_t<To> M, integral From>
 requires (sizeof(From) < sizeof(To))
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
 inline vector<To> element_cast(
-    src_vector_t<To> src, cmask_t<To, M> mask, vector<From> val) noexcept
+    vector_identity_t<To> src, cmask_t<To, M> mask, vector<From> val) noexcept
 requires requires { xmm::element_cast<make_signed_t<To>>(+src, mask, val); }
 {
     return +xmm::element_cast<make_signed_t<To>>(+src, mask, val);
@@ -179,8 +179,8 @@ requires requires { xmm::element_cast<To>(arg); }
 
 template <simd_element To, imask_t<To> M, simd_element E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-inline vector<To> element_cast(
-    abi_tag, src_vector_t<To> src, cmask_t<To, M> mask, vector<E> arg) noexcept
+inline vector<To> element_cast(abi_tag, vector_identity_t<To> src,
+    cmask_t<To, M> mask, vector<E> arg) noexcept
 requires requires { xmm::element_cast<To>(src, mask, arg); }
 {
     return xmm::element_cast<To>(src, mask, arg);

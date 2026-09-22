@@ -22,6 +22,8 @@ DPL_DISABLE_WARNING(5244)
 #endif
 
 // IWYU pragma: begin_exports
+#include "dpl/xmm/algorithm/compress.h"
+#include "dpl/xmm/algorithm/expand.h"
 #include "dpl/xmm/algorithm/lookup.h"
 #include "dpl/xmm/algorithm/sad.h"
 #include "dpl/xmm/algorithm/shift.h"

@@ -12,7 +12,7 @@ import dpl.test.harness.algorithm.expand;
 // Tests for dpp::expand on xmm ABI. Requires SSE4.2 (implied by dpl.xmm).
 //
 // Forms tested:
-// (1) dpp::expand(val, mask, src)
+// (1) dpp::expand(mask, val, src)
 
 int main() {
     namespace dpp = dpl::datapar;

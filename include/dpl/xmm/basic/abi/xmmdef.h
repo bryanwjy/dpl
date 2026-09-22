@@ -31,9 +31,11 @@ template <typename E>
 using ssize_vector_t =
     dx::basic_vector<dx::signed_representation_t<E>, abi_tag>;
 template <typename E>
-using src_vector_t = type_identity_t<vector<E>>;
+using vector_identity_t = type_identity_t<vector<E>>;
 template <typename E>
 using mask = dx::basic_mask<E, abi_tag>;
+template <typename E>
+using mask_identity_t = type_identity_t<mask<E>>;
 } // namespace datapar::xmm
 namespace xmm = datapar::xmm;
 // NOLINTEND(misc-unused-alias_decl)
