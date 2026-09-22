@@ -253,10 +253,18 @@ private:
         assert(round_trip<float16>(0x1.p8_bf16));
         assert(round_trip<float16>(dpp::infinity_v<bfloat16>));
         assert(round_trip<float16>(-dpp::infinity_v<bfloat16>));
-        assert(one_way<float16>(1e-40_bf16));
         assert(one_way<float16>(dpp::max_value_v<bfloat16>));
         assert(one_way<float16>(min_normal));
-        assert(one_way<float16>(min_subnormal));
+        if not consteval {
+            auto volatile small = 1e-40_bf16;
+            if (const_cast<bfloat16 const&>(small) != 0) {
+                assert(one_way<float16>(1e-40_bf16));
+                assert(one_way<float16>(min_subnormal));
+            }
+        } else {
+            assert(one_way<float16>(1e-40_bf16));
+            assert(one_way<float16>(min_subnormal));
+        }
     }
 
 public:

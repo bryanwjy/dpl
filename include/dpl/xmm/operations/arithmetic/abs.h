@@ -95,7 +95,7 @@ DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<int8>
     DPL_VECTORCALL abs(
         vector<int8> src, cmask_t<int8, M> mask, vector<int8> val) noexcept {
-    return _mm_mask_abs_epi32(+src, M, +val);
+    return _mm_mask_abs_epi8(+src, M, +val);
 }
 
 template <imask_t<int16> M>
@@ -103,7 +103,7 @@ DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<int16>
     DPL_VECTORCALL abs(
         vector<int16> src, cmask_t<int16, M> mask, vector<int16> val) noexcept {
-    return _mm_mask_abs_epi64(+src, M, +val);
+    return _mm_mask_abs_epi16(+src, M, +val);
 }
 
 template <imask_t<int8> M>
@@ -111,7 +111,7 @@ DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<int8>
     DPL_VECTORCALL abs(
         dx::zero_t, cmask_t<int8, M> mask, vector<int8> val) noexcept {
-    return _mm_maskz_abs_epi32(M, +val);
+    return _mm_maskz_abs_epi8(M, +val);
 }
 
 template <imask_t<int16> M>
@@ -119,7 +119,7 @@ DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<int16>
     DPL_VECTORCALL abs(
         dx::zero_t, cmask_t<int16, M> mask, vector<int16> val) noexcept {
-    return _mm_maskz_abs_epi64(M, +val);
+    return _mm_maskz_abs_epi16(M, +val);
 }
 #    endif
 #  endif

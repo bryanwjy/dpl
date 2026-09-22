@@ -4,20 +4,12 @@ module;
 #define DPL_MODULES 1
 #include "dpl/config.h"
 
-#if DPL_COMPILER_CLANG
-// Workaround modules UB when compiling with Clang
+// TODO figure out how to work around clang UB
 
 // All functions in the intel intrinsic API has been made 'static'
-// But since it is UB to transitively expose internal linkage function
-// usage through the module interface, the 'static' attribute needs to be
-// removed when compiling with modules on Clang
-#  define static
-#endif
+// But it is UB to transitively expose internal linkage function
+// usage through the module interface
 #include <immintrin.h>
-
-#if DPL_COMPILER_CLANG
-#  undef static
-#endif
 
 export module dpl.xmm:details.basic;
 import dpl;

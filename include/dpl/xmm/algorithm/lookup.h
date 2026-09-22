@@ -53,9 +53,9 @@ inline mask<int16> DPL_VECTORCALL is_byte_idx_oob(vector<int16> idx) noexcept {
 
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline mask<int32> DPL_VECTORCALL is_byte_idx_oob(vector<int32> idx) noexcept {
-    constexpr auto bias4 = static_cast<int32>(0x80000003);
+    constexpr auto bias3 = static_cast<int32>(0x80000003);
     auto const bias = xmm::broadcast<int32>(dx::msb);
-    return xmm::cmplt(xmm::broadcast<int32>(bias4), xmm::bwxor(bias, idx));
+    return xmm::cmplt(xmm::broadcast<int32>(bias3), xmm::bwxor(bias, idx));
 }
 } // namespace details
 
@@ -88,10 +88,9 @@ inline vector<E>
             xmm::lookup(xmm::reinterpret<int16>(lhs), rhs, zero));
     } else {
 #  if DPL_SIMD_X86_AVX512BW & DPL_SIMD_X86_AVX512VL
-        auto const oob = details::is_byte_idx_oob(rhs);
-        auto const inrange = _mm_cmp_epu8_mask(
-            +oob, +xmm::broadcast<int8>(dx::zero), _MM_CMPINT_EQ);
         auto const idx = details::to_byte_shuffle_idx(rhs);
+        auto const inrange = _mm_cmp_epu8_mask(+idx,
+            +xmm::broadcast<uint8>(xmm::vector_size_v<uint8>), _MM_CMPINT_LT);
         return _mm_maskz_shuffle_epi8(inrange, +lhs, +idx);
 #  else
         auto const idx = details::to_byte_shuffle_idx(rhs);
@@ -111,10 +110,9 @@ inline vector<E>
             xmm::lookup(xmm::reinterpret<int32>(lhs), rhs, zero));
     } else {
 #  if DPL_SIMD_X86_AVX512BW & DPL_SIMD_X86_AVX512VL
-        auto const oob = details::is_byte_idx_oob(rhs);
-        auto const inrange = _mm_cmp_epu8_mask(
-            +oob, +xmm::broadcast<int8>(dx::zero), _MM_CMPINT_EQ);
         auto const idx = details::to_byte_shuffle_idx(rhs);
+        auto const inrange = _mm_cmp_epu8_mask(+idx,
+            +xmm::broadcast<uint8>(xmm::vector_size_v<uint8>), _MM_CMPINT_LT);
         return _mm_maskz_shuffle_epi8(inrange, +lhs, +idx);
 #  else
         auto const idx = details::to_byte_shuffle_idx(rhs);
@@ -134,8 +132,8 @@ inline vector<E>
             xmm::reinterpret<int8>(lhs), rhs, xmm::reinterpret<int8>(src)));
     } else {
 #  if DPL_SIMD_X86_AVX512BW & DPL_SIMD_X86_AVX512VL
-        auto const inrange = _mm_cmp_epu8_mask(
-            +rhs, +xmm::broadcast<int8>(vector<E>::size()), _MM_CMPINT_LT);
+        auto const inrange = _mm_cmp_epu8_mask(+rhs,
+            +xmm::broadcast<uint8>(xmm::vector_size_v<uint8>), _MM_CMPINT_LT);
         return _mm_mask_shuffle_epi8(+src, inrange, +lhs, +rhs);
 #  else
         auto const idx = details::to_byte_shuffle_idx(rhs);
@@ -156,10 +154,9 @@ inline vector<E>
             xmm::reinterpret<int16>(lhs), rhs, xmm::reinterpret<int16>(src)));
     } else {
 #  if DPL_SIMD_X86_AVX512BW & DPL_SIMD_X86_AVX512VL
-        auto const oob = details::is_byte_idx_oob(rhs);
-        auto const inrange = _mm_cmp_epu8_mask(
-            +rhs, +xmm::broadcast<int8>(dx::zero), _MM_CMPINT_EQ);
         auto const idx = details::to_byte_shuffle_idx(rhs);
+        auto const inrange = _mm_cmp_epu8_mask(+idx,
+            +xmm::broadcast<uint8>(xmm::vector_size_v<uint8>), _MM_CMPINT_LT);
         return _mm_mask_shuffle_epi8(+src, inrange, +lhs, +idx);
 #  else
         auto const oob = details::is_byte_idx_oob(rhs);
@@ -181,10 +178,10 @@ inline vector<E>
             xmm::reinterpret<int32>(lhs), rhs, xmm::reinterpret<int32>(src)));
     } else {
 #  if DPL_SIMD_X86_AVX512BW & DPL_SIMD_X86_AVX512VL
-        auto const oob = details::is_byte_idx_oob(rhs);
-        auto const inrange = _mm_cmp_epu8_mask(
-            +rhs, +xmm::broadcast<int8>(dx::zero), _MM_CMPINT_EQ);
+        using bitset_t = bitset<__DPL type_bit_v<E>>;
         auto const idx = details::to_byte_shuffle_idx(rhs);
+        auto const inrange = _mm_cmp_epu8_mask(+idx,
+            +xmm::broadcast<uint8>(xmm::vector_size_v<uint8>), _MM_CMPINT_LT);
         return _mm_mask_shuffle_epi8(+src, inrange, +lhs, +idx);
 #  else
         auto const oob = details::is_byte_idx_oob(rhs);

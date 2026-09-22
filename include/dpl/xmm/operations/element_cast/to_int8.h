@@ -89,7 +89,7 @@ template <same_as<int8> To, imask_t<int8> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<To>
     DPL_VECTORCALL element_cast(
-        dx::zero_t, cmask_t<int8, M> mask, vector<int32> val) noexcept {
+        dx::zero_t, cmask_t<int8, M> mask, vector<int64> val) noexcept {
     return _mm_maskz_cvtepi64_epi8(M, +val);
 }
 

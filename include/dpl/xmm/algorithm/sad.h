@@ -49,9 +49,9 @@ DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<To>
     DPL_VECTORCALL sad(vector<uint8> lhs, vector<uint8> rhs) noexcept {
 #  if DPL_SIMD_X86_AVX512VNNI & DPL_SIMD_X86_AVX512VL
-    // TODO AVX also has vnni
     auto const ad = xmm::sad<uint8>(lhs, rhs);
-    return _mm_dpbusd_epi32(+src, ad, +xmm::broadcast<uint8>(1));
+    auto const zero = xmm::broadcast<uint8>(dx::zero);
+    return _mm_dpbusd_epi32(+zero, +ad, +xmm::broadcast<uint8>(1));
 #  else
     auto const u16 = xmm::sad<uint16>(lhs, rhs);
     return _mm_madd_epi16(+u16, +xmm::broadcast<uint16>(1));
@@ -119,6 +119,28 @@ requires requires(vector<make_unsigned_t<E>> arg) { xmm::sad<To>(arg, arg); }
     return xmm::sad<To>(xmm::bwxor(bias, vector<uint_t>(+lhs)),
         xmm::bwxor(bias, vector<uint_t>(+rhs)));
 }
+
+#  if DPL_SIMD_X86_AVX512VNNI & DPL_SIMD_X86_AVX512VL
+template <unsigned_integral S>
+requires same_as<uint32, S>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+inline vector<S>
+    DPL_VECTORCALL sad(
+        vector<S> src, vector<uint8> lhs, vector<uint8> rhs) noexcept {
+    auto const ad = xmm::sad<uint8>(lhs, rhs);
+    return _mm_dpbusd_epi32(+src, +ad, +xmm::broadcast<uint8>(1));
+}
+
+template <unsigned_integral S>
+requires same_as<uint32, S>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+inline vector<S>
+    DPL_VECTORCALL sad(
+        vector<S> src, vector<int8> lhs, vector<int8> rhs) noexcept {
+    auto const ad = xmm::subtract(xmm::max(lhs, rhs), xmm::min(lhs, rhs));
+    return _mm_dpbusd_epi32(+src, +ad, +xmm::broadcast<uint8>(1));
+}
+#  endif
 
 template <unsigned_integral S, integral E>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)

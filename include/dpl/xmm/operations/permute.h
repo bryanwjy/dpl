@@ -316,7 +316,8 @@ inline vector<float> DPL_VECTORCALL permute(
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<double> DPL_VECTORCALL permute(
     vector<double> val, ssize_vector_t<double> seq) noexcept {
-    return _mm_permutevar_pd(+val, _mm_slli_epi64(+seq, 1));
+    seq = xmm::bwshift_left<1>(seq);
+    return _mm_permutevar_pd(+val, +seq);
 }
 
 template <template_barrier_t = template_barrier, simd_element E>
@@ -338,7 +339,12 @@ DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<E>
     DPL_VECTORCALL permute(dx::zero_t zero, cmask_t<E, M> mask, vector<E> val,
         ssize_vector_t<E> seq) noexcept {
-    return _mm_maskz_permutevar_ps(M, +val, +seq);
+    if constexpr (!is_same_v<E, float>) {
+        return xmm::reinterpret<E>(
+            xmm::permute(zero, mask, xmm::reinterpret<float>(val), seq));
+    } else {
+        return _mm_maskz_permutevar_ps(M, +val, +seq);
+    }
 }
 
 template <template_barrier_t = template_barrier, common_size_with<float> E,
@@ -347,7 +353,7 @@ DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<E>
     DPL_VECTORCALL permute(type_identity_t<vector<E>> src, cmask_t<E, M> mask,
         vector<E> val, ssize_vector_t<E> seq) noexcept {
-    if constexpr (integral<E>) {
+    if constexpr (!is_same_v<E, float>) {
         return xmm::reinterpret<E>(xmm::permute(xmm::reinterpret<float>(src),
             mask, xmm::reinterpret<float>(val), seq));
     } else {
@@ -361,7 +367,13 @@ DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<E>
     DPL_VECTORCALL permute(dx::zero_t zero, cmask_t<E, M> mask, vector<E> val,
         ssize_vector_t<E> seq) noexcept {
-    return _mm_maskz_permutevar_pd(M, +val, +seq);
+    if constexpr (!is_same_v<E, double>) {
+        return xmm::reinterpret<E>(
+            xmm::permute(zero, mask, xmm::reinterpret<double>(val), seq));
+    } else {
+        seq = xmm::bwshift_left<1>(seq);
+        return _mm_maskz_permutevar_pd(M, +val, +seq);
+    }
 }
 
 template <template_barrier_t = template_barrier, common_size_with<double> E,
@@ -370,10 +382,11 @@ DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<E>
     DPL_VECTORCALL permute(type_identity_t<vector<E>> src, cmask_t<E, M> mask,
         vector<E> val, ssize_vector_t<E> seq) noexcept {
-    if constexpr (integral<E>) {
+    if constexpr (!is_same_v<E, double>) {
         return xmm::reinterpret<E>(xmm::permute(xmm::reinterpret<double>(src),
             mask, xmm::reinterpret<double>(val), seq));
     } else {
+        seq = xmm::bwshift_left<1>(seq);
         return _mm_mask_permutevar_pd(+src, M, +val, +seq);
     }
 }

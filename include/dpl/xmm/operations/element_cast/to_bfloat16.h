@@ -119,7 +119,7 @@ DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<To>
     DPL_VECTORCALL element_cast(vector<ext::float16> src,
         cmask_t<ext::float16, M> mask, vector<float> val) noexcept {
-    return _mm_mask_cbtneps_pbh(+src, M, +val);
+    return _mm_mask_cvtneps_pbh(+src, M, +val);
 }
 
 template <same_as<ext::float16> To, imask_t<ext::float16> M>
@@ -127,7 +127,7 @@ DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<To>
     DPL_VECTORCALL element_cast(
         dx::zero_t, cmask_t<ext::float16, M> mask, vector<float> val) noexcept {
-    return _mm_maskz_cbtneps_pbh(M, +val);
+    return _mm_maskz_cvtneps_pbh(M, +val);
 }
 #  endif
 

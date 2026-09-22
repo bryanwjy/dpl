@@ -23,7 +23,7 @@ endif
 
 # When on clang >= 22; until someone fixes immintrin.h and issues with implicit function template instantiations
 # add -Wno-TU-local-entity-exposure -Wno-reference-tu-local-entity-in-other-tu to reduce noise
-CXXFLAGS += -mfma -mavx2 -fvisibility=hidden -fvisibility-inlines-hidden
+CXXFLAGS += -march=native -fvisibility=hidden -fvisibility-inlines-hidden
 CPPFLAGS += -I$(INCLUDE_DIR)
 
 ALL_SOURCES := $(shell find $(MODULES_DIR) $(SRC_DIR) $(TEST_DIR) -type f \( -name '*.cpp' -o -name '*.cppm' \) 2>/dev/null)

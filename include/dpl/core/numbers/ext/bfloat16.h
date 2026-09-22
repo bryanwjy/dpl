@@ -69,19 +69,17 @@ private:
 #  if DPL_SUPPORTS_STORAGE_BFLOAT16
         return storage16{static_cast<__bf16>(val)};
 #  else
-        constexpr auto msb32 = dx::msb_v<uint32>;
+        constexpr auto msb32 = 0x80000000u;
         constexpr auto inf32 = 0x7f800000u;
         constexpr auto inf16 = 0x7f80;
-        auto const signbit = (__DPL bit_cast<uint32>(val) & msb32) >> 16;
-        auto const abs =
-            __DPL bit_cast<float>(__DPL bit_cast<uint32>(val) & ~msb32);
-        if (auto const isnan = !(abs > 0.0f); isnan) {
+        auto const bits = __DPL bit_cast<uint32>(val);
+        if (val != val) {
             constexpr auto quiet32 = 1u << 22;
-            auto const qbit = (__DPL bit_cast<uint32>(val) & quiet32) >> 16;
+            auto const signbit = (bits & msb32) >> 16;
+            auto const qbit = (bits & quiet32) >> 16;
             return bits_to_storage(inf16 | signbit | qbit);
         }
 
-        auto const bits = __DPL bit_cast<uint32>(val);
         auto const lsb = (bits >> 16) & 1;
         auto const bias = 0x7fff + lsb;
         return (bits + bias) >> 16;

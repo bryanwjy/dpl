@@ -4,14 +4,12 @@ module;
 #define DPL_MODULES 1
 #include "dpl/config.h"
 
-#if DPL_COMPILER_CLANG
-#  define static
-#endif
-#include <immintrin.h>
+// TODO figure out how to work around clang UB
 
-#if DPL_COMPILER_CLANG
-#  undef static
-#endif
+// All functions in the intel intrinsic API has been made 'static'
+// But it is UB to transitively expose internal linkage function
+// usage through the module interface
+#include <immintrin.h>
 
 export module dpl.xmm:details.math;
 import :basic;

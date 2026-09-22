@@ -73,41 +73,6 @@ inline vector<To>
 }
 #    endif // if DPL_SIMD_X86_AVX512FP16
 
-#    if DPL_SIMD_X86_AVX512F
-template <same_as<uint16> To, imask_t<uint16> M>
-DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline vector<To>
-    DPL_VECTORCALL element_cast(vector<uint16> src, cmask_t<uint16, M> mask,
-        vector<int32> val) noexcept {
-    return _mm_mask_cvtepi32_epu16(+src, M, +val);
-}
-
-template <same_as<uint16> To, imask_t<uint16> M>
-DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline vector<To>
-    DPL_VECTORCALL element_cast(
-        dx::zero_t, cmask_t<uint16, M> mask, vector<int32> val) noexcept {
-    return _mm_maskz_cvtepi32_epu16(M, +val);
-}
-
-template <same_as<uint16> To, imask_t<uint16> M>
-DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline vector<To>
-    DPL_VECTORCALL element_cast(vector<uint16> src, cmask_t<uint16, M> mask,
-        vector<int64> val) noexcept {
-    return _mm_mask_cvtepi64_epu16(+src, M, +val);
-}
-
-template <same_as<uint16> To, imask_t<uint16> M>
-DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-inline vector<To>
-    DPL_VECTORCALL element_cast(
-        dx::zero_t, cmask_t<uint16, M> mask, vector<int64> val) noexcept {
-    return _mm_maskz_cvtepi64_epu16(M, +val);
-}
-
-#    endif // if DPL_SIMD_X86_AVX512F
-
 #  endif // if DPL_SIMD_X86_AVX512VL
 
 } // namespace datapar::xmm
