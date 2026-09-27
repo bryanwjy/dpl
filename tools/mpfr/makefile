@@ -1,16 +1,20 @@
-# Copyright 2025-2026 Bryan Wong
+# Copyright 2026 Bryan Wong
 
 MKFILE_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))
 MKFILE_DIR := $(patsubst %/,%,$(dir $(MKFILE_PATH)))
 
-ROOT_DIR := $(MKFILE_DIR)
-INCLUDE_DIR := $(ROOT_DIR)/include
-SRC_DIR := $(ROOT_DIR)/src
-TEST_DIR := $(ROOT_DIR)/test
-TOOLS_DIR := $(ROOT_DIR)/tools
-MODULES_DIR := $(ROOT_DIR)/modules
-OUTPUT_DIR := $(ROOT_DIR)/build
+REQUIRED_VARS := BINARY_DIR DPL_INCLUDE_DIR DPL_JMAP DPL_JGRAPH
 
+$(foreach v,$(REQUIRED_VARS),\
+    $(if $(strip $($(v))),,$(error $(v) is not set; invoke from the parent makefile)))
+
+$(foreach v,$(REQUIRED_VARS),\
+    $(if $(filter /%,$($(v))),,$(error $(v) must be an absolute path, got '$($(v))')))
+
+
+ROOT_DIR := $(MKFILE_DIR)
+OUTPUT_DIR := $(MKFILE_DIR)/build
+TOOLS_DIR := $(MKFILE_DIR)/..
 CXX := clang++-23
 SCAN_DEPS := clang-scan-deps-21
 
@@ -21,26 +25,21 @@ ifeq ($(filter -std=%,$(CXXFLAGS)),)
 CXXFLAGS += -std=c++23
 endif
 
-# When on clang >= 22; until someone fixes immintrin.h and issues with implicit function template instantiations
-# add -Wno-TU-local-entity-exposure -Wno-reference-tu-local-entity-in-other-tu to reduce noise
-CXXFLAGS += -march=native -fvisibility=hidden -fvisibility-inlines-hidden -stdlib=libc++
-CPPFLAGS += -I$(INCLUDE_DIR)
+
+CPPFLAGS += -I$(DPL_INCLUDE_DIR) -DMPFR_USE_NO_MACRO
+CXXFLAGS += -O2 -march=native -fvisibility=hidden -fvisibility-inlines-hidden -stdlib=libc++ -ftime-trace
 LDFLAGS += -lmpfr -lgmp -lc++ -lc++abi
 
-ALL_SOURCES := $(shell find $(MODULES_DIR) $(SRC_DIR) $(TEST_DIR) -type f \( -name '*.cpp' -o -name '*.cppm' \) 2>/dev/null)
+ALL_SOURCES := $(shell find $(MKFILE_DIR) -type f \( -name '*.cpp' -o -name '*.cppm' \) 2>/dev/null)
 CPP_SOURCES := $(filter %.cpp,$(ALL_SOURCES))
 MODULE_SOURCES := $(filter %.cppm,$(ALL_SOURCES))
-COMPILE_SOURCES := $(CPP_SOURCES) $(filter-out $(MODULES_DIR)/%,$(MODULE_SOURCES))
-PASS_SOURCES := $(filter %.pass.cpp,$(CPP_SOURCES))
-# TODO Death tests
-# VERIFY_SOURCES := $(filter %.verify.cpp,$(CPP_SOURCES))
-
-# Include subdirs
+EXT_JMAP := $(DPL_JMAP)
+EXT_JGRAPH := $(DPL_JGRAPH)
 
 # Precompiled modules
 PCM_TARGETS := $(addsuffix .pcm, $(MODULE_SOURCES:$(ROOT_DIR)/%=$(OUTPUT_DIR)/%))
 # Object files
-OBJ_TARGETS := $(addsuffix .o, $(COMPILE_SOURCES:$(ROOT_DIR)/%=$(OUTPUT_DIR)/%))
+OBJ_TARGETS := $(addsuffix .o, $(ALL_SOURCES:$(ROOT_DIR)/%=$(OUTPUT_DIR)/%))
 MOBJ_TARGETS := $(filter %.cppm.o,$(OBJ_TARGETS))
 OBJ_TARGETS := $(filter-out %.cppm.o,$(OBJ_TARGETS))
 
@@ -53,31 +52,16 @@ JCMD_TARGETS := $(addsuffix .jcmd,$(OUTPUT_STEMS))
 JSCAN_TARGETS := $(addsuffix .jscan,$(OUTPUT_STEMS))
 
 OUTPUT_STEMS := $(PASS_SOURCES:$(ROOT_DIR)/%=$(OUTPUT_DIR)/%)
-# Test response files
-TRSP_TARGETS := $(addsuffix .trsp, $(OUTPUT_STEMS))
 # Directive files (Extra compile flags defined in the test file)
 JDIR_TARGETS := $(addsuffix .jdir, $(OUTPUT_STEMS))
 # Link response files
 LRSP_TARGETS := $(addsuffix .lrsp, $(OUTPUT_STEMS))
 OUTPUT_STEMS :=
 
-COMPILE_PASS_TARGETS := $(filter %.compile.pass.cpp.o,$(OBJ_TARGETS))
-PASS_TARGETS := $(filter %.pass.cpp.o,$(OBJ_TARGETS))
-PASS_TARGETS := $(filter-out %.compile.pass.cpp.o,$(PASS_TARGETS))
-PASS_TARGETS := $(patsubst %.cpp.o,%,$(PASS_TARGETS))
-
-# Dependency makefiles
 DEP_FILES := $(addsuffix .d, $(ALL_SOURCES:$(ROOT_DIR)/%=$(OUTPUT_DIR)/%))
 
 ALL_TARGETS := $(PCM_TARGETS) $(MRSP_TARGETS) $(JCMD_TARGETS) $(JSCAN_TARGETS) \
-$(OBJ_TARGETS) $(LRSP_TARGETS) $(MOBJ_TARGETS) $(TRSP_TARGETS) $(JDIR_TARGETS) $(PASS_TARGETS)
-
-COMPILE_PASS_CRC := $(patsubst %.cpp.o,%.crc,$(COMPILE_PASS_TARGETS))
-PASS_CRC := $(addsuffix .crc,$(PASS_TARGETS))
-TEST_CRC := $(PASS_CRC) $(COMPILE_PASS_CRC)
-TEST_SUBDIRS := $(shell find $(TEST_DIR) -type d)
-TEST_SUBDIRS := $(TEST_SUBDIRS:$(ROOT_DIR)/%=%)
-TEST_ALIAS := $(TEST_CRC:$(OUTPUT_DIR)/%.crc=%)
+$(OBJ_TARGETS) $(LRSP_TARGETS) $(MOBJ_TARGETS) $(JDIR_TARGETS) $(PASS_TARGETS)
 
 BUILD_JSON := $(OUTPUT_DIR)/jmap.json $(OUTPUT_DIR)/jgraph.json $(OUTPUT_DIR)/compile_commands.json \
 $(OUTPUT_DIR)/module_dependencies.json $(OUTPUT_DIR)/scan_commands.json
@@ -88,10 +72,7 @@ BUILD_TXT_ALIAS := $(basename $(notdir $(BUILD_TXT)))
 MODULE_ALIAS := $(basename $(MODULE_SOURCES:$(ROOT_DIR)/%=%))
 BUILD_MANIFEST := $(OUTPUT_DIR)/build_manifest.txt
 
-# Do not evaluate now
-PROBE_FILES = $(wildcard $(OUTPUT_DIR)/probe/*.valid) $(wildcard $(OUTPUT_DIR)/probe/*.ptrn) $(OUTPUT_DIR)/probe/supported_flags.txt
-
-.PHONY: all clean parallel_probes FORCE $(BUILD_JSON_ALIAS) $(BUILD_TXT_ALIAS) $(TEST_ALIAS) $(TEST_SUBDIRS) $(MODULE_ALIAS)
+.PHONY: all clean FORCE $(BUILD_JSON_ALIAS) $(BUILD_TXT_ALIAS) $(MODULE_ALIAS)
 
 define replace_if_different
 @mkdir -p '$(@D)'
@@ -104,22 +85,16 @@ else \
 fi
 endef
 
-define subdir_to_crc
-$(patsubst $(ROOT_DIR)/%.cpp,$(OUTPUT_DIR)/%.crc,$(wildcard $(ROOT_DIR)/$(1)/*.pass.cpp)) \
-$(patsubst $(ROOT_DIR)/%.cpp,$(OUTPUT_DIR)/%.crc,$(wildcard $(ROOT_DIR)/$(1)/**/*.pass.cpp))
-endef
-
-
 empty :=
 space := $(empty) $(empty)
+comma := ,
 # newline requiures two empty lines so that dereferencing it results in a single newline
 define newline
 
 
 endef
 
-all: $(TEST_CRC) $(ALL_TARGETS) $(BUILD_FILES) $(BUILD_MANIFEST)
-	@
+all: $(BINARY_DIR)/mpfr $(BINARY_DIR)/interface.cppm.pcm
 
 clean:
 	@if [ -s $(BUILD_MANIFEST) ]; then \
@@ -131,7 +106,7 @@ clean:
 ifneq ($(MAKECMDGOALS),clean)
 
 $(OUTPUT_DIR)/build_manifest.txt: $(ALL_SOURCES)
-	@$(file >$@,$(foreach f,$(sort $(TEST_CRC) $(ALL_TARGETS) $(BUILD_FILES) $(DEP_FILES) $(OUTPUT_DIR)/scan_barrier.d $(PROBE_FILES)),$(f)$(newline)))
+	@$(file >$@,$(foreach f,$(sort $(ALL_TARGETS) $(BUILD_FILES) $(DEP_FILES) $(OUTPUT_DIR)/scan_barrier.d),$(f)$(newline)))
 
 $(OUTPUT_DIR)/env.stamp: FORCE
 	$(call replace_if_different, printf "%s\n" \
@@ -147,22 +122,11 @@ $(OUTPUT_DIR)/compile.command: makefile $(OUTPUT_DIR)/env.stamp
 $(OUTPUT_DIR)/link.command: makefile $(OUTPUT_DIR)/env.stamp
 	@$(call replace_if_different, echo "$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) $(LDLIBS)")
 
-$(PASS_CRC):$(OUTPUT_DIR)/%.crc: $(OUTPUT_DIR)/%
-	@$< && echo "\033[0;34mTEST\033[0m $*: \033[0;32mSUCCESS\033[0m" && \
-	cksum $< > $@ || { echo "TEST $*): \033[0;31mFAILED\033[0m" && rm -f $@; exit 1; }
-
-$(COMPILE_PASS_CRC):$(OUTPUT_DIR)/%.crc: $(OUTPUT_DIR)/%.cpp.o
-	@echo "\033[0;34mCOMPILE\033[0m $*: \033[0;32mSUCCESS\033[0m" && \
-	cksum $< > $@ || { echo "\033[0;34mCOMPILE\033[0m $*: \033[0;31mFAILED\033[0m"; exit 1; }
-
-$(PASS_TARGETS):%.pass: %.pass.cpp.o %.pass.cpp.lrsp $(OUTPUT_DIR)/link.command
-	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) -o '$@' $< $(LDLIBS) @$*.pass.cpp.lrsp
-
 $(OUTPUT_DIR)/jmap.json: $(TOOLS_DIR)/jdeps-to-jmap.jq $(OUTPUT_DIR)/module_dependencies.json
-	@jq -f $(TOOLS_DIR)/jdeps-to-jmap.jq -s $(OUTPUT_DIR)/module_dependencies.json > $@
+	@jq -f $(TOOLS_DIR)/jdeps-to-jmap.jq $(if $(EXT_JMAP),--slurpfile base '$(EXT_JMAP)') -s $(OUTPUT_DIR)/module_dependencies.json > $@
 
 $(OUTPUT_DIR)/jgraph.json: $(TOOLS_DIR)/graph.jq $(OUTPUT_DIR)/module_dependencies.json
-	@jq -f $^ > $@
+	@jq -f $(TOOLS_DIR)/graph.jq $(if $(EXT_JGRAPH),--slurpfile base '$(EXT_JGRAPH)') $(OUTPUT_DIR)/module_dependencies.json > $@
 
 $(OUTPUT_DIR)/compile_commands.json: $(JCMD_TARGETS)
 	@jq -s '.' $^ > $@
@@ -180,23 +144,31 @@ $(OUTPUT_DIR)/module_implementations.txt: FORCE
 	@$(file >$@.tmp,$(subst $(space),$(newline),$(sort $(MOBJ_TARGETS))))
 	@cmp -s $@.tmp $@ 2>/dev/null && rm $@.tmp || mv $@.tmp $@
 
-$(OUTPUT_DIR)/candidate_flags.txt: $(JDIR_TARGETS)
-	@jq -r '.[] | .["compile-flags"] // [] | .[]' $^ | sort -u > $@
-
 $(OUTPUT_DIR)/scan_barrier.d: $(OUTPUT_DIR)/jmap.json $(OUTPUT_DIR)/module_dependencies.json $(TOOLS_DIR)/jdep-to-d.jq
-	@jq -f $(TOOLS_DIR)/jdep-to-d.jq --slurpfile jmap $(OUTPUT_DIR)/jmap.json -r $(OUTPUT_DIR)/module_dependencies.json > $(OUTPUT_DIR)/scan_barrier.d
+	@jq -f $(TOOLS_DIR)/jdep-to-d.jq \
+	--argjson whitelist '$(or $(JMAP_WHITELIST),[])' \
+	--slurpfile jmap $(OUTPUT_DIR)/jmap.json \
+	-r $(OUTPUT_DIR)/module_dependencies.json > $(OUTPUT_DIR)/scan_barrier.d
 
 -include $(OUTPUT_DIR)/scan_barrier.d
 
 $(MODULE_ALIAS):%: $(OUTPUT_DIR)/%.cppm.pcm
-$(TEST_ALIAS):%.pass: $(OUTPUT_DIR)/%.pass.crc
 $(BUILD_JSON_ALIAS):%: $(OUTPUT_DIR)/%.json
 $(BUILD_TXT_ALIAS):%: $(OUTPUT_DIR)/%.txt
 .SECONDEXPANSION:
-$(TEST_SUBDIRS):%: $$(call subdir_to_crc,%)
 $(MOBJ_TARGETS):%.o: %.pcm
-$(filter %.pass.cpp.o,$(OBJ_TARGETS)):%.o: %.trsp
-$(filter %.pass.cpp.jcmd,$(JCMD_TARGETS)):%.jcmd: %.trsp
+
+mpfr: $(BINARY_DIR)/mpfr $(BINARY_DIR)/interface.cppm.pcm
+	@
+
+$(BINARY_DIR)/mpfr: $(OUTPUT_DIR)/mpfr
+	@cp $< $@
+
+$(BINARY_DIR)/interface.cppm.pcm: $(OUTPUT_DIR)/interface.cppm.pcm
+	@cp $< $@
+
+$(OUTPUT_DIR)/mpfr: $(OBJ_TARGETS) $(MOBJ_TARGETS)
+	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) $(LDLIBS) -o '$@' $^
 
 $(PCM_TARGETS):$(OUTPUT_DIR)/%.cppm.pcm: $(ROOT_DIR)/%.cppm $(OUTPUT_DIR)/%.cppm.mrsp $(OUTPUT_DIR)/compile.command | $(OUTPUT_DIR)/scan_barrier.d
 	@tmpfile=$$(mktemp); \
@@ -246,32 +218,5 @@ $(LRSP_TARGETS):%.lrsp: $(OUTPUT_DIR)/jgraph.json $(OUTPUT_DIR)/jmap.json $(OUTP
 	--rawfile impl $(OUTPUT_DIR)/module_implementations.txt \
     -r $(OUTPUT_DIR)/jgraph.json)
 
-$(TRSP_TARGETS):%.trsp: %.jdir $(OUTPUT_DIR)/supported_flags.txt
-	@$(call replace_if_different, (jq -r '.[] | .["compile-flags"] // [] | .[]' $< | grep -Fxf $(OUTPUT_DIR)/supported_flags.txt - || true))
-
-$(OUTPUT_DIR)/supported_flags.txt: $(OUTPUT_DIR)/candidate_flags.txt
-	@mkdir -p $(OUTPUT_DIR)/probe
-	@awk '{print $$0 > ("$(OUTPUT_DIR)/probe/" NR ".ptrn")}' $<
-	@$(MAKE) --no-print-directory parallel_probes && cp $(OUTPUT_DIR)/probe/supported_flags.txt $(OUTPUT_DIR)/supported_flags.txt
-	@echo "Supported DPL directive compile flags written to $(OUTPUT_DIR)/supported_flags.txt"
-
-ifeq ($(MAKECMDGOALS),parallel_probes)
-# Generate a list of 'valid' targets based on the 'ptrn' files we just created
-PTRNS  := $(wildcard $(OUTPUT_DIR)/probe/*.ptrn)
-VALIDS := $(patsubst %.ptrn,%.valid,$(PTRNS))
-
-parallel_probes: $(OUTPUT_DIR)/probe/supported_flags.txt
-	@echo "Probing DPL directive compile flags..."
-
-$(OUTPUT_DIR)/probe/supported_flags.txt: $(VALIDS)
-	@cat $(OUTPUT_DIR)/probe/*.valid > $@ 2>/dev/null || true
-
-$(OUTPUT_DIR)/probe/%.valid: $(OUTPUT_DIR)/probe/%.ptrn
-	@if echo "int main(){}" | $(CXX) -fsyntax-only @$< -x c++ - -o /dev/null >/dev/null 2>&1; then \
-		cp $< $@; \
-	else \
-		touch $@; \
-	fi
 endif
 
-endif

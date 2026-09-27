@@ -70,7 +70,7 @@ private:
 #  if DPL_SUPPORTS_STORAGE_FLOAT16
         return storage16{static_cast<__fp16>(val)};
 #  else
-        constexpr auto msb32 = dx::msb_v<uint32>;
+        constexpr auto msb32 = 0x80000000u;
         constexpr auto limitf16 = 0x1p16f;
         constexpr auto inf16 = __DPL to_underlying(
             floating_point_traits<float16_t>::exponent_mask);

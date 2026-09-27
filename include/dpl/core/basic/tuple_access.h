@@ -27,19 +27,21 @@ template <typename T, size_t I>
 concept canonical_element_accesible =
     enable_simd_tuple<T> && __DPL details::concepts::has_tuple_element<T, I> &&
     __DPL details::concepts::has_tuple_size<T> && (!tuple_like<T>) &&
-    (I < std::tuple_size_v<T>) && canonical_vector<std::tuple_element_t<I, T>>;
+    (I < std::tuple_size<T>::value) &&
+    canonical_vector<typename std::tuple_element<I, T>::type>;
 
 template <typename T, size_t I>
 concept canonical_get_element =
     canonical_element_accesible<remove_cvref_t<T>, I> && requires {
         {
             get<I>(internal::abi<T>, internal::declarg<T>())
-        } -> same_as<decay_t<std::tuple_element_t<I, remove_cvref_t<T>>>>;
+        } -> same_as<
+            decay_t<typename std::tuple_element<I, remove_cvref_t<T>>::type>>;
     };
 
 template <typename L, size_t I>
 concept canonical_set_element = canonical_element_accesible<L, I> &&
-    requires(std::tuple_element_t<I, L> rhs) {
+    requires(typename std::tuple_element<I, L>::type rhs) {
         {
             set<I>(internal::abi<L>, internal::declarg<L const&>(), rhs)
         } -> same_as<L>;

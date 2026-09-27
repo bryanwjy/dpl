@@ -35,7 +35,7 @@ struct simd_vector_type<T> {
 template <typename T>
 requires enable_simd_tuple<T>
 struct simd_vector_type<T> {
-    using type DPL_NODEBUG = std::tuple_element_t<0, T>;
+    using type DPL_NODEBUG = typename std::tuple_element<0, T>::type;
 };
 
 template <typename T>

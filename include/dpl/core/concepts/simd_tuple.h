@@ -27,14 +27,16 @@ concept simd_tuple_accessible =
     __DPL details::concepts::has_tuple_element<T, I> &&
     internal::cpo_invocable<internal::get_element_t<I>, T> &&
     internal::cpo_invocable<internal::set_element_t<I>, T&,
-        std::tuple_element_t<I, T>>;
+        typename std::tuple_element<I, T>::type>;
 
 template <typename T, typename S = __DPL details::concepts::sequence_for_t<T>>
 inline constexpr bool is_simd_tuple_like = false;
 template <typename T, size_t... Is>
 inline constexpr bool is_simd_tuple_like<T, index_sequence<Is...>> =
     (... && simd_tuple_accessible<T, Is>) &&
-    (... && same_as<std::tuple_element_t<0, T>, std::tuple_element_t<Is, T>>);
+    (... &&
+        same_as<typename std::tuple_element<0, T>::type,
+            typename std::tuple_element<Is, T>::type>);
 
 template <typename T>
 concept has_native_tuple = requires { typename simd_native_type_t<T>; };

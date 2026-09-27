@@ -22,14 +22,14 @@ namespace details::concepts {
 template <typename T, typename E>
 concept integer_sequence_like = integral<E> && semiregular<T> &&
     requires { typename size_constant<T::size()>; } && tuple_like<T> &&
-    (T::size() == std::tuple_size_v<T>) &&
+    (T::size() == std::tuple_size<T>::value) &&
     []<size_t I>(this auto self, size_constant<I>) {
         if constexpr (I == T::size()) {
             return true;
         } else {
-            return integral_constant_like<std::tuple_element_t<I, T>> &&
-                convertible_to<std::tuple_element_t<I, T>, E> &&
-                self(size_constant<I + 1>{});
+            using element = typename std::tuple_element<I, T>::type;
+            return integral_constant_like<element> &&
+                convertible_to<element, E> && self(size_constant<I + 1>{});
         }
     }(size_constant<0zu>{});
 

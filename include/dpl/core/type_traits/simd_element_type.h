@@ -37,7 +37,7 @@ template <typename T>
 requires enable_simd_tuple<T>
 struct simd_element_type<T> {
     // simd tuples are homogeneous!
-    using type DPL_NODEBUG = std::tuple_element_t<0, T>;
+    using type DPL_NODEBUG = typename std::tuple_element<0, T>::type;
 };
 
 template <typename T>

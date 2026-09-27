@@ -23,7 +23,8 @@ inline constexpr bool tuple_element_predicate = false;
 template <typename F, __DPL tuple_like T, size_t... Is>
 inline constexpr bool
     tuple_element_predicate<F, T, __DPL index_sequence<Is...>> = (... &&
-        __DPL predicate<F, std::tuple_element_t<Is, remove_cvref_t<T>>>);
+        __DPL predicate<F,
+            typename std::tuple_element<Is, remove_cvref_t<T>>::type>);
 
 } // namespace details::utility
 
