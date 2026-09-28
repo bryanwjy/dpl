@@ -78,12 +78,60 @@ struct storage {
 template <typename T>
 explicit storage(T const&) -> storage<T>;
 
-enum class expectation_type : unsigned char {
-    f16,
-    bf16,
-    f32,
-    f64,
+enum class expectation_type : unsigned char;
+
+namespace details {
+void to_expectation_type(...) noexcept = delete;
+
+template <dpl::floating_point_like T>
+struct expectation_tag : dpl::type_identity<T> {
+    friend consteval auto to_expectation_type(expectation_tag) noexcept;
 };
+
+template <expectation_type V>
+struct expectation_constant : dpl::integral_constant<expectation_type, V> {
+    friend consteval auto to_type(expectation_constant) noexcept;
+};
+
+template <dpl::floating_point_like T, expectation_type V>
+struct expectation_map {
+    friend consteval auto to_expectation_type(expectation_tag<T>) noexcept {
+        return V;
+    }
+
+    friend consteval auto to_type(expectation_constant<V>) noexcept {
+        return expectation_tag<T>{};
+    }
+};
+} // namespace details
+
+enum class expectation_type : unsigned char;
+
+template <typename T>
+requires requires(details::expectation_tag<T> t) { to_expectation_type(t); }
+inline constexpr expectation_type expectation_type_v =
+    to_expectation_type(details::expectation_tag<T>{});
+
+template <expectation_type V>
+requires requires(details::expectation_constant<V> t) { to_type(t); }
+using expectation_type_t =
+    typename decltype(to_type(details::expectation_constant<V>{}))::type;
+
+#define __MPFR_DEFINE_EXPECTATION(TP, NAME)                           \
+    NAME, _##NAME = [] {                                              \
+        static_assert(sizeof(details::expectation_map<TP,             \
+                          static_cast<expectation_type>(NAME)>) > 0); \
+        return NAME;                                                  \
+    }()
+
+enum class expectation_type : unsigned char {
+    __MPFR_DEFINE_EXPECTATION(dpl::ext::float16, f16),
+    __MPFR_DEFINE_EXPECTATION(dpl::ext::bfloat16, bf16),
+    __MPFR_DEFINE_EXPECTATION(float, f32),
+    __MPFR_DEFINE_EXPECTATION(double, f64),
+};
+
+#undef __MPFR_DEFINE_EXPECTATION
 
 template <dpl::floating_point_like T>
 struct expectation {

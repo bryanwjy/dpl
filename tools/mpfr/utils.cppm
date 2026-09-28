@@ -71,11 +71,41 @@ public:
         }
     }
 
+    explicit constexpr tmp_string(size_t length) noexcept : buffer_{} {
+        if (length >= sizeof(buffer_)) {
+            ptr_ = (char*)calloc(length + 1, sizeof(char));
+        } else {
+            ptr_ = buffer_;
+        }
+    }
+
     constexpr char const* c_str() const noexcept { return ptr_; }
     constexpr char const* data() const noexcept { return ptr_; }
     constexpr char* data() noexcept { return ptr_; }
+    constexpr operator std::string_view() const noexcept {
+        return std::string_view(data());
+    }
+
     tmp_string(tmp_string const&) = delete;
     tmp_string& operator=(tmp_string const&) = delete;
+    tmp_string(tmp_string&& other) noexcept {
+        if (other.ptr_ != other.buffer_) {
+            ptr_ = std::exchange(other.ptr_, nullptr);
+        } else {
+            strcpy(buffer_, other.buffer_);
+            ptr_ = buffer_;
+        }
+    }
+    tmp_string& operator=(tmp_string&& other) noexcept {
+        if (other.ptr_ != other.buffer_) {
+            ptr_ = std::exchange(other.ptr_, nullptr);
+        } else {
+            strcpy(buffer_, other.buffer_);
+            ptr_ = buffer_;
+        }
+        return *this;
+    }
+
     constexpr ~tmp_string() {
         if (ptr_ != buffer_) {
             free(ptr_);

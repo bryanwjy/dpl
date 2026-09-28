@@ -48,6 +48,7 @@ using multi_return_t DPL_NODEBUG = decltype(make_multi_return<Ts...>());
 
 template <typename F, typename... Ts>
 struct jump_result {
+    // For cases where the there is no default case handler
     using type DPL_NODEBUG = any_result;
 };
 
@@ -253,6 +254,15 @@ public:
             _JT_FWD(callable), static_cast<T>(value), _JT_FWD(args)...);
     }
 };
+
+template <auto... Args>
+requires requires {
+    typename dpl::common_type_t<decltype(Args)...>;
+    typename jump_table<dpl::common_type_t<decltype(Args)...>, Args...>;
+}
+consteval auto make_jump_table() noexcept {
+    return jump_table<dpl::common_type_t<decltype(Args)...>, Args...>{};
+}
 
 #undef _JT_FWD
 } // namespace mpfr

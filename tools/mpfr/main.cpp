@@ -40,167 +40,7 @@ import dpl.test.support;
 
 namespace {
 
-using mpfr::literals::operator""_func;
-using mpfr::literals::operator""_tp_name;
 using mpfr::literals::operator""_cli_opt;
-
-#define _CONCAT(X, Y) X##Y
-#define CONCAT(X, Y) _CONCAT(X, Y)
-
-#define DEFINE_FUNCTION(NAME, FUNC)                                 \
-    [] {                                                            \
-        constexpr auto name = CONCAT(#NAME, _func);                 \
-        static_assert(sizeof(mpfr::function_map<name, &FUNC>) > 0); \
-        return name;                                                \
-    }()
-
-constexpr std::tuple functions = {
-    // DEFINE_FUNCTION(abs, mpfr_abs),
-    DEFINE_FUNCTION(acos, mpfr_acos),
-    DEFINE_FUNCTION(acosh, mpfr_acosh),
-    DEFINE_FUNCTION(asin, mpfr_asin),
-    DEFINE_FUNCTION(asinh, mpfr_asinh),
-    DEFINE_FUNCTION(atan, mpfr_atan),
-    DEFINE_FUNCTION(atan2, mpfr_atan2),
-    DEFINE_FUNCTION(atanh, mpfr_atanh),
-    DEFINE_FUNCTION(beta, mpfr_beta),
-    DEFINE_FUNCTION(cbrt, mpfr_cbrt),
-    DEFINE_FUNCTION(ceil, mpfr_ceil),
-    // DEFINE_FUNCTION(copysign, mpfr_copysign),
-    DEFINE_FUNCTION(cos, mpfr_cos),
-    DEFINE_FUNCTION(cosh, mpfr_cosh),
-    DEFINE_FUNCTION(cot, mpfr_cot),
-    DEFINE_FUNCTION(coth, mpfr_coth),
-    DEFINE_FUNCTION(csc, mpfr_csc),
-    DEFINE_FUNCTION(csch, mpfr_csch),
-    DEFINE_FUNCTION(erf, mpfr_erf),
-    DEFINE_FUNCTION(erfc, mpfr_erfc),
-    DEFINE_FUNCTION(exp, mpfr_exp),
-    DEFINE_FUNCTION(exp10, mpfr_exp10),
-    DEFINE_FUNCTION(exp2, mpfr_exp2),
-    DEFINE_FUNCTION(expm1, mpfr_expm1),
-    DEFINE_FUNCTION(floor, mpfr_floor),
-    DEFINE_FUNCTION(fmod, mpfr_fmod),
-    DEFINE_FUNCTION(hypot, mpfr_hypot),
-    DEFINE_FUNCTION(tgamma, mpfr_gamma),
-    DEFINE_FUNCTION(lgamma, mpfr_lngamma),
-    DEFINE_FUNCTION(log, mpfr_log),
-    DEFINE_FUNCTION(log10, mpfr_log10),
-    DEFINE_FUNCTION(log1p, mpfr_log1p),
-    DEFINE_FUNCTION(log2, mpfr_log2),
-    // DEFINE_FUNCTION(modf, mpfr_modf),
-    // DEFINE_FUNCTION(nextabove, mpfr_nextabove),
-    // DEFINE_FUNCTION(nextbelow, mpfr_nextbelow),
-    DEFINE_FUNCTION(nexttoward, mpfr_nexttoward),
-    DEFINE_FUNCTION(pow, mpfr_pow),
-    // DEFINE_FUNCTION(ldexp, mpfr_mul_2si), // TODO
-    DEFINE_FUNCTION(remainder, mpfr_remainder),
-    // DEFINE_FUNCTION(remquo, mpfr_remquo),
-    DEFINE_FUNCTION(round, mpfr_round),         // CMATH
-    DEFINE_FUNCTION(roundeven, mpfr_roundeven), // IEEE
-    DEFINE_FUNCTION(sec, mpfr_sec),
-    DEFINE_FUNCTION(sech, mpfr_sech),
-    DEFINE_FUNCTION(sin, mpfr_sin),
-    DEFINE_FUNCTION(sinh, mpfr_sinh),
-    DEFINE_FUNCTION(sqrt, mpfr_sqrt),
-    DEFINE_FUNCTION(tan, mpfr_tan),
-    DEFINE_FUNCTION(tanh, mpfr_tanh),
-    DEFINE_FUNCTION(trunc, mpfr_trunc),
-    DEFINE_FUNCTION(zeta, mpfr_zeta),
-};
-#undef DEFINE_FUNCTION
-
-#define DEFINE_FLOAT_TYPE(NAME, TP)                          \
-    [] {                                                     \
-        constexpr auto name = CONCAT(#NAME, _tp_name);       \
-        static_assert(sizeof(mpfr::type_map<name, TP>) > 0); \
-        return name;                                         \
-    }()
-
-constexpr std::tuple float_types = {
-    DEFINE_FLOAT_TYPE(f16, dpl::ext::float16),
-    DEFINE_FLOAT_TYPE(bf16, dpl::ext::bfloat16),
-    DEFINE_FLOAT_TYPE(f32, float),
-    DEFINE_FLOAT_TYPE(f64, double),
-};
-
-#undef DEFINE_FLOAT_TYPE
-
-#define DEFINE_CLI_OPT(NAME, C)                              \
-    [] {                                                     \
-        constexpr auto opt = CONCAT(#NAME, _cli_opt);        \
-        static_assert(sizeof(mpfr::cli_option_map<opt, C>)); \
-        return mpfr::cli_option<opt>{};                      \
-    }()
-
-constexpr std::tuple cli_options = {
-    DEFINE_CLI_OPT(output, 'o'),
-    DEFINE_CLI_OPT(count, 'n'),
-    DEFINE_CLI_OPT(seed, 's'),
-    DEFINE_CLI_OPT(input, 'i'),
-    DEFINE_CLI_OPT(append, 'a'),
-    DEFINE_CLI_OPT(help, 'h'),
-};
-
-#undef DEFINE_CLI_OPT
-
-inline std::string_view find_long_option(char val) noexcept {
-    constexpr dpl::make_index_sequence<
-        std::tuple_size_v<dpl::decay_t<decltype(cli_options)>>>
-        seq;
-    return [&]<size_t... Is>(dpl::index_sequence<Is...>) {
-        constexpr mpfr::jump_table<char,
-            to_short_option(std::get<Is>(cli_options))...>
-            table = {};
-        return table(
-            []<typename U>(U) {
-                if constexpr (requires {
-                                  U::value;
-                                  mpfr::to_long_option<U::value>();
-                              }) {
-                    static constexpr auto opt =
-                        mpfr::to_long_option<U::value>();
-                    return std::string_view(opt);
-                } else {
-                    return std::string_view();
-                }
-            },
-            val);
-    }(seq);
-}
-
-template <mpfr::function_name_type auto name>
-constexpr auto is_exact_v = false;
-
-template <>
-constexpr auto is_exact_v<"nexttoward"_func> = true;
-template <>
-constexpr auto is_exact_v<"ceil"_func> = true;
-template <>
-constexpr auto is_exact_v<"floor"_func> = true;
-template <>
-constexpr auto is_exact_v<"trunc"_func> = true;
-template <>
-constexpr auto is_exact_v<"roundeven"_func> = true;
-template <>
-constexpr auto is_exact_v<"round"_func> = true;
-
-template <mpfr::function_name_type auto name>
-constexpr auto argument_count_v = 1zu;
-template <>
-constexpr auto argument_count_v<"pow"_func> = 2zu;
-template <>
-constexpr auto argument_count_v<"hypot"_func> = 2zu;
-template <>
-constexpr auto argument_count_v<"fmod"_func> = 2zu;
-template <>
-constexpr auto argument_count_v<"tan2"_func> = 2zu;
-template <>
-constexpr auto argument_count_v<"atan2"_func> = 2zu;
-template <>
-constexpr auto argument_count_v<"beta"_func> = 2zu;
-template <>
-constexpr auto argument_count_v<"remainder"_func> = 2zu;
 
 template <dpl::floating_point_like T>
 constexpr int precision_v = dpl::floating_point_traits<T>::digits + 32;
@@ -220,21 +60,8 @@ struct configuration {
     bool append;
 };
 
-template <dpl::floating_point_like T>
-constexpr auto expectation_type_v = static_cast<mpfr::expectation_type>(0xff);
-template <>
-constexpr auto expectation_type_v<dpl::ext::float16> =
-    mpfr::expectation_type::f16;
-template <>
-constexpr auto expectation_type_v<dpl::ext::bfloat16> =
-    mpfr::expectation_type::bf16;
-template <>
-constexpr auto expectation_type_v<float> = mpfr::expectation_type::f32;
-template <>
-constexpr auto expectation_type_v<double> = mpfr::expectation_type::f64;
-
 template <dpl::floating_point_like T, size_t N>
-class input_generator {
+class input_processor {
 public:
     auto process_inputs(configuration const& config) noexcept {
         inputs_.reserve(config.inputs.size() * N + config.range_count);
@@ -480,33 +307,90 @@ private:
     std::vector<std::array<T, N>> inputs_;
 };
 
-/**
- * Brought out of generator to make it faster to compile
- */
-inline std::error_code verify_append(FILE* stream, std::string_view filepath,
-    mpfr::latest_file_header const& header, mpfr::expectation_type type,
-    std::string_view function, size_t arity) {
+template <dpl::floating_point_like T>
+mpfr::expectation<T> make_expectation(
+    mpfr::result<precision_v<T>>&& ref_result, bool nan_arguments) noexcept {
+    auto const result = mpfr::result_cast<T>(dpl::as_const(ref_result));
+    mpfr::expectation<T> expectation{
+        .value = static_cast<T>(result),
+        .residual = 0,
+        .flags = mpfr::result_flag::none,
+    };
 
+    constexpr mpfr_exp_t emin =
+        2 - static_cast<int>(dpl::floating_point_traits<T>::exponent_bias);
+    if (mpfr::is_nan(result) && !nan_arguments) {
+        expectation.flags = mpfr::result_flag::invalid;
+        return expectation;
+    }
+
+    if (!mpfr::is_exact(result)) {
+        expectation.flags |= mpfr::result_flag::inexact;
+        if (mpfr::is_inf(result)) {
+            expectation.flags |= mpfr::result_flag::overflow;
+        } else if (mpfr::is_number(result) &&
+            (!mpfr::is_regular(ref_result) ||
+                mpfr::get_exp(ref_result) < emin)) {
+            expectation.flags |= mpfr::result_flag::underflow;
+        }
+    }
+
+    if (!mpfr::is_number(result)) {
+        expectation.residual = mpfr::is_inf(result) && mpfr::is_exact(result)
+            ? 0.0f
+            : dpl::bit_cast<float>(-1);
+    } else {
+        auto const exp = mpfr::is_zero(result)
+            ? emin
+            : dpl::datapar::max(mpfr::get_exp(result), emin);
+        auto const digits =
+            static_cast<mpfr_exp_t>(dpl::floating_point_traits<T>::digits);
+        mpfr_sub(+ref_result, +ref_result, +result, MPFR_RNDN);
+        mpfr_mul_2si(+ref_result, +ref_result, digits - exp, MPFR_RNDN);
+        expectation.residual = static_cast<float>(ref_result);
+    }
+
+    return expectation;
+}
+
+struct append_request {
+    mpfr::expectation_type type;
+    std::string_view function;
+    size_t arity;
+};
+
+enum class append_error {
+    header_format_mismatch,
+    expectation_type_mismatch,
+    function_mismatch,
+};
+
+inline std::expected<void, append_error> verify_append(
+    mpfr::latest_file_header const& header, std::string_view function,
+    append_request const& request) noexcept {
     constexpr auto header_meta = mpfr::latest_file_header{}.base;
+
+    using result_type = std::expected<void, append_error>;
+
     if (memcmp(&header_meta, &header.base, sizeof(header_meta)) != 0) {
-        fprintf(stderr, "Cannot append to unrecognized datafile: '%.*s'\n",
-            static_cast<int>(filepath.size()), filepath.data());
-        return std::make_error_code(std::errc::illegal_byte_sequence);
+        return result_type(std::unexpect, append_error::header_format_mismatch);
     }
 
-    if (header.expectation_type.get() != type) {
-        fprintf(stderr, "Mismatch expectation type in datafile: '%.*s'\n",
-            static_cast<int>(filepath.size()), filepath.data());
-        return std::make_error_code(std::errc::illegal_byte_sequence);
+    if (header.expectation_type.get() != request.type) {
+        return result_type(
+            std::unexpect, append_error::expectation_type_mismatch);
     }
 
-    if (header.function_name_length.get() != function.size() ||
-        header.function_arity.get() != arity) {
-        fprintf(stderr, "Mismatch function in datafile: '%.*s'\n",
-            static_cast<int>(filepath.size()), filepath.data());
-        return std::make_error_code(std::errc::illegal_byte_sequence);
+    if (function != request.function ||
+        header.function_arity.get() != request.arity) {
+        return result_type(std::unexpect, append_error::function_mismatch);
     }
 
+    return result_type(std::in_place);
+}
+
+inline std::expected<mpfr::tmp_string, std::error_code> read_function_name(
+    FILE* file, size_t offset, size_t length) noexcept {
     struct filepos {
         FILE* file;
         long offset;
@@ -515,72 +399,85 @@ inline std::error_code verify_append(FILE* stream, std::string_view filepath,
                 fseek(file, offset, SEEK_SET);
             }
         }
-    } const pos{.file = stream, .offset = ftell(stream)};
+    } const pos{.file = file, .offset = ftell(file)};
 
-    if (fseek(stream, header.function_name_offset.get(), SEEK_SET) != 0) {
-        return std::make_error_code(static_cast<std::errc>(errno));
+    if (fseek(file, offset, SEEK_SET) != 0) {
+        return std::unexpected(
+            std::make_error_code(static_cast<std::errc>(errno)));
     }
 
-    mpfr::tmp_string name_buffer(function);
-    if (fread(name_buffer.data(), 1zu, function.size(), stream) <
-        function.size()) {
-        return std::make_error_code(static_cast<std::errc>(errno));
+    std::expected<mpfr::tmp_string, std::error_code> result(
+        std::in_place, length);
+    if (fread(result->data(), 1zu, length, file) < length) {
+        fprintf(stderr,
+            "Could not read function name of length %zu from offset %zu\n",
+            length, offset);
+        return std::unexpected(
+            std::make_error_code(static_cast<std::errc>(errno)));
     }
 
-    if (function != name_buffer.c_str()) {
-        fprintf(stderr, "Mismatch function in datafile: '%.*s'\n",
-            static_cast<int>(filepath.size()), filepath.data());
-        return std::make_error_code(std::errc::illegal_byte_sequence);
-    }
+    return result;
+}
 
-    return std::error_code();
+std::error_code translate_append_error(append_error val, std::string_view func,
+    char const* filepath, char const* file_func) noexcept {
+    switch (val) {
+    case append_error::header_format_mismatch:
+        fprintf(stderr, "File metadata format mismatch in %s\n", filepath);
+        break;
+    case append_error::function_mismatch:
+        fprintf(stderr,
+            "Function mismatch in data file, "
+            "expected "
+            "'%.*s', but file %s contains data for "
+            "'%s'\n",
+            static_cast<int>(func.size()), func.data(), filepath, file_func);
+        break;
+    case append_error::expectation_type_mismatch:
+        fprintf(stderr,
+            "Function type mismatch in data file "
+            "%s",
+            filepath);
+        break;
+    }
+    return std::make_error_code(std::errc::illegal_byte_sequence);
 }
 
 template <dpl::floating_point_like T, auto func>
 class generator {
-    using input_type = std::array<T, argument_count_v<func>>;
-
 public:
     explicit generator(configuration config) : config_(config) {
         if (config_.output.empty()) {
-            static constexpr auto func_name = +func;
-            static constexpr auto tp_name_v = to_type_name(mpfr::type_tag<T>{});
-            static constexpr auto tp_name = std::string_view(tp_name_v);
             static constexpr std::string_view extension = ".dat";
+            static constexpr auto func_name = +func;
+            static constexpr auto tp_name = +mpfr::to_type_name<T>();
             constexpr auto length =
                 func_name.size() + tp_name.size() + 1 + extension.size();
             static char default_name[length + 1] = {};
-            auto cursor = 0zu;
-            cursor += func_name.copy(default_name, sizeof(default_name));
-            default_name[func_name.size()] = '-';
-            ++cursor;
-            cursor += tp_name.copy(
-                default_name + cursor, sizeof(default_name) - cursor);
-            extension.copy(
-                default_name + cursor, sizeof(default_name) - cursor);
+            snprintf(default_name, length + 1, "%s-%s.dat", func_name.data(),
+                tp_name.data());
             config_.output = std::string_view(default_name);
         }
     }
 
     std::error_code execute() {
         static constexpr auto tp = to_type_name(mpfr::type_tag<T>{});
-        input_generator<T, argument_count_v<func>> gen;
+        input_processor<T, mpfr::arity_v<func>> proc;
 
-        auto const inputs = gen.process_inputs(config_);
+        auto const inputs = proc.process_inputs(config_);
         if (!inputs) {
             return inputs.error();
         }
 
-        std::vector<mpfr::data_entry<T, argument_count_v<func>>> rows;
+        std::vector<mpfr::data_entry<T, mpfr::arity_v<func>>> rows;
         for (auto const input : inputs.value()) {
             auto& current = rows.emplace_back();
             auto const expectation = calculate(input);
-            if constexpr (argument_count_v<func> == 1) {
+            if constexpr (mpfr::arity_v<func> == 1) {
                 current.input = input[0];
             } else {
                 current.input =
-                    *reinterpret_cast<T const(*)[argument_count_v<func>]>(
-                        &input);
+                    *reinterpret_cast<T const(*)[mpfr::arity_v<func>]>(&input);
             }
 
             current.value = expectation.value;
@@ -595,78 +492,31 @@ public:
 
 private:
     static mpfr::expectation<T> calculate(
-        std::array<T, argument_count_v<func>> const& input) noexcept {
+        std::array<T, mpfr::arity_v<func>> const& inputs) noexcept {
         using value_type = mpfr::value<precision_v<T>>;
-        using ref_result_type = mpfr::result<precision_v<T>>;
+        using result_type = mpfr::result<precision_v<T>>;
+        auto const args = dpl::apply(
+            [](auto... inputs) {
+                return std::array{
+                    value_type(mpfr::from_floating_point, inputs)...};
+            },
+            inputs);
 
-        return [&]<dpl::size_t... Is>(dpl::index_sequence<Is...>) {
-            std::array const args{
-                value_type(mpfr::from_floating_point, input[Is])...};
-            auto const any_nan = (... || mpfr::is_nan(args[Is]));
-            auto ref_result = [&] {
-                constexpr mpfr::function_hash<string_hash(func)> hash;
-                if constexpr (is_exact_v<func>) {
-                    return ref_result_type(
-                        mpfr::from_generator,
-                        [&](auto... vals) {
-                            return mpfr::invoke<func>(vals...);
-                        },
-                        args[Is].get()...);
-                } else {
-                    return ref_result_type(
-                        mpfr::from_generator,
-                        [&](auto... vals) {
-                            return mpfr::invoke<func>(vals...);
-                        },
-                        args[Is].get()..., MPFR_RNDN);
-                }
-            }();
+        auto result = dpl::apply(
+            [](auto... args) {
+                return result_type(
+                    mpfr::from_generator, mpfr::invoke<func>, args.get()...);
+            },
+            args);
 
-            auto const result = mpfr::result_cast<T>(ref_result);
-            mpfr::expectation<T> ret{
-                .value = static_cast<T>(result),
-                .residual = 0,
-                .flags = mpfr::result_flag::none,
-            };
+        auto const nan_arguments = dpl::pack::any_of(
+            [](value_type const& arg) { return mpfr::is_nan(arg); }, args);
 
-            constexpr mpfr_exp_t emin = 2 -
-                static_cast<int>(dpl::floating_point_traits<T>::exponent_bias);
-            if (mpfr::is_nan(result) && !any_nan) {
-                ret.flags = mpfr::result_flag::invalid;
-                return ret;
-            }
-
-            if (!mpfr::is_exact(result)) {
-                ret.flags |= mpfr::result_flag::inexact;
-                if (mpfr::is_inf(result)) {
-                    ret.flags |= mpfr::result_flag::overflow;
-                } else if (mpfr::is_number(result) &&
-                    (!mpfr::is_regular(ref_result) ||
-                        mpfr::get_exp(ref_result) < emin)) {
-                    ret.flags |= mpfr::result_flag::underflow;
-                }
-            }
-
-            if (!mpfr::is_number(result)) {
-                ret.residual = mpfr::is_inf(result) && mpfr::is_exact(result)
-                    ? 0.0f
-                    : dpl::bit_cast<float>(-1);
-            } else {
-                auto const exp = mpfr::is_zero(result)
-                    ? emin
-                    : dpl::datapar::max(mpfr::get_exp(result), emin);
-                auto const digits = static_cast<mpfr_exp_t>(
-                    dpl::floating_point_traits<T>::digits);
-                mpfr_sub(+ref_result, +ref_result, +result, MPFR_RNDN);
-                mpfr_mul_2si(+ref_result, +ref_result, digits - exp, MPFR_RNDN);
-                ret.residual = static_cast<float>(ref_result);
-            }
-            return ret;
-        }(dpl::make_index_sequence<argument_count_v<func>>{});
+        return make_expectation<T>(dpl::move(result), nan_arguments);
     }
 
     std::error_code write_results(
-        std::span<mpfr::data_entry<T, argument_count_v<func>> const> entries)
+        std::span<mpfr::data_entry<T, mpfr::arity_v<func>> const> entries)
         const {
 
         auto const tmp = mpfr::tmp_string(config_.output);
@@ -717,9 +567,25 @@ private:
                 return code;
             }
 
-            if (auto verification = verify_append(stream.ptr, filepath, header,
-                    expectation_type_v<T>, func, argument_count_v<func>)) {
-                return verification;
+            auto const verified =
+                read_function_name(stream.ptr,
+                    header.function_name_offset.get(),
+                    header.function_name_length.get())
+                    .and_then([&](mpfr::tmp_string const& file_function) {
+                        return verify_append(header, file_function,
+                            append_request{
+                                .type = mpfr::expectation_type_v<T>,
+                                .function = +func,
+                                .arity = mpfr::arity_v<func>,
+                            })
+                            .transform_error([&](append_error val) {
+                                return translate_append_error(
+                                    val, func, filepath, file_function.c_str());
+                            });
+                    });
+
+            if (!verified) {
+                return verified.error();
             }
 
             if (fseek(stream.ptr,
@@ -730,6 +596,7 @@ private:
                     code.message().c_str());
                 return code;
             }
+
             auto const old_count = header.record_count.get();
             auto const new_count = old_count + entries.size();
             // Update record count
@@ -742,7 +609,7 @@ private:
 
             // Seek to end of old records
             auto const append_offset = header.record_offset.get() +
-                old_count * sizeof(mpfr::data_entry<T, argument_count_v<func>>);
+                old_count * sizeof(mpfr::data_entry<T, mpfr::arity_v<func>>);
             if (fseek(stream.ptr, append_offset, SEEK_SET) != 0) {
                 auto code = std::make_error_code(static_cast<std::errc>(errno));
                 fprintf(stderr, "Failed to seek file: %s\n",
@@ -750,13 +617,13 @@ private:
                 return code;
             }
         } else {
-            header.expectation_type = expectation_type_v<T>;
+            header.expectation_type = mpfr::expectation_type_v<T>;
             header.record_count = entries.size();
             header.record_offset =
                 header.base.header_size.get() + func_name.size();
             header.function_name_offset = header.base.header_size.get();
             header.function_name_length = func_name.size();
-            header.function_arity = argument_count_v<func>;
+            header.function_arity = mpfr::arity_v<func>;
             if (stream.ptr == nullptr ||
                 fwrite(&header, sizeof(header), 1zu, stream.ptr) < 1zu ||
                 fwrite(func_name.data(), 1zu, func_name.size(), stream.ptr) <
@@ -769,7 +636,7 @@ private:
         }
 
         if (fwrite(entries.data(),
-                sizeof(mpfr::data_entry<T, argument_count_v<func>>),
+                sizeof(mpfr::data_entry<T, mpfr::arity_v<func>>),
                 entries.size(), stream.ptr) < entries.size()) {
             auto code = std::make_error_code(static_cast<std::errc>(errno));
             fprintf(stderr, "Failed to write entries: %s\n",
@@ -798,33 +665,41 @@ private:
 };
 
 template <dpl::floating_point_like T>
-std::error_code execute_generator(
+std::expected<void, std::error_code> execute_generator(
     std::string_view func, configuration config) noexcept {
-    constexpr dpl::make_index_sequence<
-        std::tuple_size_v<dpl::decay_t<decltype(functions)>>>
-        seq;
-    return [&]<size_t... Is>(dpl::index_sequence<Is...>) {
-        constexpr mpfr::jump_table<dpl::uint64,
-            mpfr::string_hash(std::get<Is>(functions))...>
-            table = {};
-        return table(
-            []<typename U>(
-                U hash, std::string_view name, configuration const& config) {
-                if constexpr (requires {
-                                  requires !dpl::integral<U>;
-                                  to_function(mpfr::function_hash<U::value>{});
-                              }) {
-                    constexpr auto func =
-                        to_function(mpfr::function_hash<U::value>{});
-                    return generator<T, func>(config).execute();
-                } else {
-                    fprintf(stderr, "Unrecognized function: '%.*s'\n",
-                        static_cast<int>(name.size()), name.data());
-                    return std::make_error_code(std::errc::invalid_argument);
+
+    constexpr auto jump_table = dpl::apply(
+        [](auto... funcs) {
+            return mpfr::make_jump_table<mpfr::string_hash(funcs())...>();
+        },
+        mpfr::functions);
+
+    auto const code = jump_table(
+        [](auto constant, std::string_view name, configuration config) {
+            if constexpr (requires { mpfr::to_function_name(constant); }) {
+                constexpr auto& const_name = mpfr::to_function_name(constant);
+                constexpr auto func_name = +const_name;
+                constexpr auto tp_name = +mpfr::to_type_name<T>();
+                constexpr auto length =
+                    func_name.size() + tp_name.size() + 1 + 4;
+                mpfr::tmp_string default_name(length + 1);
+
+                if (config.output.empty()) {
+                    snprintf(default_name.data(), length + 1, "%s-%s.dat",
+                        func_name.data(), tp_name.data());
+                    config.output = std::string_view(default_name);
                 }
-            },
-            mpfr::string_hash(func), func, config);
-    }(seq);
+
+                return generator<T, const_name>(config).execute();
+            } else {
+                fprintf(stderr, "Unrecognized function: '%.*s'\n",
+                    static_cast<int>(name.size()), name.data());
+                return std::make_error_code(std::errc::invalid_argument);
+            }
+        },
+        mpfr::string_hash(func), func, dpl::move(config));
+
+    return std::unexpected(code);
 }
 
 class config_parser {
@@ -950,8 +825,17 @@ private:
     std::vector<mpfr::mapped_memory> arg_files_;
     configuration config_;
 
-    template <auto opt>
-    struct store_arg_t;
+    template <mpfr::cli_option_name opt>
+    struct store_arg_t {
+        static std::error_code operator()(
+            config_parser& parser, auto chunk) noexcept {
+            constexpr auto opt_str = +opt;
+            fprintf(stderr, "Missing argument handler for option '%.*s'\n",
+                static_cast<int>(opt_str.size()), opt_str.data());
+            return std::make_error_code(std::errc::invalid_argument);
+        }
+    };
+
     template <auto opt>
     static constexpr store_arg_t<opt> store_arg;
 };
@@ -990,7 +874,6 @@ struct config_parser::store_arg_t<"count"_cli_opt> {
         }
 
         return parse_int(parser.config_.range_count, chunk.front());
-        return std::error_code();
     }
 };
 
@@ -1068,8 +951,9 @@ std::error_code config_parser::parse_arg(std::string_view opt, auto chunk) {
 
     opt.remove_prefix(opt_offset);
     if (opt_offset == 1) {
-        auto const longopt =
-            opt.size() > 2 ? std::string_view() : find_long_option(opt.front());
+        auto const longopt = opt.size() > 2
+            ? std::string_view()
+            : mpfr::find_long_option(opt.front());
         if (longopt.empty()) {
             return error_path();
         }
@@ -1077,28 +961,22 @@ std::error_code config_parser::parse_arg(std::string_view opt, auto chunk) {
         opt = longopt;
     }
 
-    constexpr dpl::make_index_sequence<
-        std::tuple_size_v<dpl::decay_t<decltype(cli_options)>>>
-        seq;
-    return [&]<size_t... Is>(dpl::index_sequence<Is...>) {
-        constexpr mpfr::jump_table<dpl::uint64,
-            mpfr::string_hash(std::get<Is>(cli_options).value)...>
-            table = {};
-        return table(
-            [&]<typename U>(U hash, std::string_view opt, auto chunk) {
-                if constexpr (requires {
-                                  requires !dpl::integral<U>;
-                                  to_cli_option(
-                                      mpfr::cli_option_hash<U::value>{});
-                              }) {
-                    return store_arg<to_cli_option(
-                        mpfr::cli_option_hash<U::value>{})>(*this, chunk);
-                } else {
-                    return error_path();
-                }
-            },
-            mpfr::string_hash(opt), opt, chunk);
-    }(seq);
+    constexpr auto jump_table = __DPL apply(
+        [](auto... types) {
+            return mpfr::make_jump_table<mpfr::string_hash(types())...>();
+        },
+        mpfr::cli_options);
+
+    return jump_table(
+        [this, &error_path](auto hash, auto chunk) {
+            if constexpr (requires { mpfr::to_cli_option(hash); }) {
+                constexpr auto const_opt = mpfr::to_cli_option(hash);
+                return store_arg<const_opt>(*this, chunk);
+            } else {
+                return error_path();
+            }
+        },
+        mpfr::string_hash(opt), dpl::move(chunk));
 }
 
 void print_usage() noexcept {
@@ -1147,38 +1025,32 @@ int main(int argc, char const* argv[]) {
         return -1;
     }
 
-    constexpr dpl::make_index_sequence<
-        std::tuple_size_v<dpl::decay_t<decltype(float_types)>>>
-        seq;
-    auto const result = [&]<size_t... Is>(dpl::index_sequence<Is...>) {
-        config_parser parser(argc, argv);
-        constexpr mpfr::jump_table<dpl::uint64,
-            mpfr::string_hash(std::get<Is>(float_types))...>
-            table = {};
-        auto const name = std::string_view(argv[2]);
-        return table(
-            [&]<typename U>(U) {
-                if constexpr (requires {
-                                  requires !dpl::integral<U>;
-                                  to_type(mpfr::type_hash<U::value>{});
-                              }) {
-                    auto const config = parser();
-                    if (!config) {
-                        return config.error();
-                    }
+    constexpr auto jump_table = __DPL apply(
+        [](auto... types) {
+            return mpfr::make_jump_table<mpfr::string_hash(types())...>();
+        },
+        mpfr::float_types);
 
-                    using fptype = typename decltype(to_type(
-                        mpfr::type_hash<U::value>{}))::type;
-                    return execute_generator<fptype>(
-                        std::string_view(argv[1]), config.value());
-                } else {
-                    fprintf(stderr, "Unrecognized type: '%.*s'\n",
-                        static_cast<int>(name.size()), name.data());
-                    return std::make_error_code(std::errc::invalid_argument);
-                }
-            },
-            mpfr::string_hash(name));
-    }(seq);
+    config_parser parser(argc, argv);
+    auto const function = std::string_view(argv[1]);
+    auto const type = std::string_view(argv[2]);
 
-    return result.value();
+    return jump_table(
+        [&function, &parser](auto hash, std::string_view type) {
+            if constexpr (requires { mpfr::to_type(hash); }) {
+                using float_t = typename decltype(mpfr::to_type(hash))::type;
+                return parser()
+                    .and_then([&](configuration&& config) {
+                        return execute_generator<float_t>(
+                            function, dpl::move(config));
+                    })
+                    .error_or(std::error_code());
+            } else {
+                fprintf(stderr, "Unrecognized type: '%.*s'\n",
+                    static_cast<int>(type.size()), type.data());
+                return std::make_error_code(std::errc::invalid_argument);
+            }
+        },
+        mpfr::string_hash(type), type)
+        .value();
 }
