@@ -32,7 +32,7 @@ namespace pack {
 template <typename F, __DPL tuple_like T, __DPL tuple_like... Ts>
 requires (details::utility::tuple_element_predicate<F, T> && ... &&
     details::utility::tuple_element_predicate<F, Ts>)
-constexpr bool any_of(F&& func, T&& tuple, Ts&&... tail) {
+__DPL_HIDE_FROM_ABI constexpr bool any_of(F&& func, T&& tuple, Ts&&... tail) {
 #if (DPL_HAS_CXX26_EXTENSIONS || DPL_CXX26) && \
     __cpp_expansion_statements >= 202506L
     template for (auto&& arg :

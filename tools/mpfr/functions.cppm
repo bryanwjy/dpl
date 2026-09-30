@@ -87,18 +87,6 @@ struct function_map_impl<name, R (*)(Args...), func> {
     }
 };
 
-template <typename T>
-struct remove_ptr {
-    using type = T;
-};
-template <typename T>
-struct remove_ptr<T*> {
-    using type = T;
-};
-
-template <typename T>
-using remove_ptr_t = typename remove_ptr<T>::type;
-
 template <auto name, auto func>
 struct function_map :
     function_map_impl<name, dpl::decay_t<decltype(func)>, func> {

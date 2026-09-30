@@ -27,8 +27,8 @@ endif
 
 
 CPPFLAGS += -I$(DPL_INCLUDE_DIR) -DMPFR_USE_NO_MACRO
-CXXFLAGS += -O2 -march=native -fvisibility=hidden -fvisibility-inlines-hidden -stdlib=libc++ -ftime-trace
-LDFLAGS += -lmpfr -lgmp -lc++ -lc++abi
+CXXFLAGS += -O2 -march=native -fvisibility=hidden -fvisibility-inlines-hidden -ftime-trace
+LDFLAGS += -lmpfr -lgmp
 
 ALL_SOURCES := $(shell find $(MKFILE_DIR) -type f \( -name '*.cpp' -o -name '*.cppm' \) 2>/dev/null)
 CPP_SOURCES := $(filter %.cpp,$(ALL_SOURCES))

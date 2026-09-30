@@ -14,6 +14,8 @@ export import :utils;
 export import :functions;
 export import :cli;
 export import :types;
+export import :typeconv;
+export import :argparse;
 
 export namespace mpfr {
 
