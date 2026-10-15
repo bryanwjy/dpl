@@ -9,6 +9,7 @@
 #include "dpl/core/math/details/floating_point_simd.h"
 #include "dpl/core/math/floor.h"
 #include "dpl/core/math/isfinite.h"
+#include "dpl/core/math/roundeven.h"
 #include "dpl/core/math/rounding.h"
 #include "dpl/core/math/trunc.h"
 
@@ -452,39 +453,23 @@ struct fallback_impl<round_t> {
     static constexpr T operator()(T val, mx::rounding_t<R>) {
         constexpr auto opt = mx::rounding_v<R>;
         static_assert(opt);
-        if constexpr (opt.has(rounding::to_zero | rounding::no_exc)) {
+        if constexpr (opt.has(trunc_noexc_v)) {
             return dx::trunc(val, rounding::no_exc);
-        } else if constexpr (opt.has(rounding::to_zero)) {
+        } else if constexpr (opt.has(trunc_exc_v)) {
             return dx::trunc(val);
-        } else if constexpr (opt.has(rounding::to_pos_inf | rounding::no_exc)) {
+        } else if constexpr (opt.has(ceil_noexc_v)) {
             return dx::ceil(val, rounding::no_exc);
-        } else if constexpr (opt.has(rounding::to_pos_inf)) {
+        } else if constexpr (opt.has(ceil_exc_v)) {
             return dx::ceil(val);
-        } else if constexpr (opt.has(rounding::to_neg_inf | rounding::no_exc)) {
+        } else if constexpr (opt.has(floor_noexc_v)) {
             return dx::floor(val, rounding::no_exc);
-        } else if constexpr (opt.has(rounding::to_neg_inf)) {
+        } else if constexpr (opt.has(floor_exc_v)) {
             return dx::floor(val);
+        } else if constexpr (opt.has(roundeven_noexc_v)) {
+            return dx::roundeven(val, rounding::no_exc);
         } else {
-            // round to nearest int, tie to nearest even
-            auto const isfinite = dx::isfinite(val);
-            auto const finite = dx::select(isfinite, val, dx::zero);
-
-            auto const floored = dx::floor(finite);
-            auto const onef = dx::broadcast<T>(dx::one);
-            auto fr = dx::subtract(finite, floored);
-            auto x = dx::add(finite, dx::cmpgt(fr, 0.5f), finite, onef);
-
-            // there are bit tricks alternatives to casting available but
-            // they usually just add more instructions
-            using E = simd_element_type_t<T>;
-            using sint_t = signed_representation_t<E>;
-            auto const onei = dx::broadcast<mx::exponent_vector_t<T>>(dx::one);
-            auto const isodd = dx::cmpeq(
-                dx::bwand(dx::element_cast<sint_t>(floored), onei), onei);
-            auto const vmaxint = dx::broadcast<T>(mx::maxint);
-
-            return dx::copysign(val, dx::cmplt(isfinite, dx::abs(val), vmaxint),
-                dx::add(floored, isodd, floored, onef), finite);
+            static_assert(opt.has(roundeven_exc_v));
+            return dx::roundeven(val);
         }
     }
 };
@@ -493,6 +478,6 @@ struct fallback_impl<round_t> {
 namespace datapar {
 inline namespace cpo {
 inline constexpr internal::round_t round{};
-}
+} // namespace cpo
 } // namespace datapar
 __DPL_DEFAULT_NAMESPACE_END

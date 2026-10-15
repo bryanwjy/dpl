@@ -11,6 +11,7 @@
 #  include "dpl/core/numbers/floating_point_like.h"
 #  include "dpl/core/type_traits/rebind_simd.h"
 #  include "dpl/core/type_traits/representation.h"
+#  include "dpl/core/type_traits/simd_element_type.h"
 #endif
 
 __DPL_DEFAULT_NAMESPACE_BEGIN

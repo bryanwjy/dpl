@@ -9,9 +9,9 @@
 #  include "dpl/core/immediate/broadcastable_base.h"
 #  include "dpl/core/immediate/constants/epsilon.h"
 #  include "dpl/core/immediate/constants/mantissa_bits.h"
+#  include "dpl/core/numbers/floating_point_like.h"
 #  include "dpl/core/type_traits/representation.h"
 #  include "dpl/std/bit/bit_cast.h"
-#  include "dpl/std/concepts/floating_point.h"
 #endif
 
 __DPL_DEFAULT_NAMESPACE_BEGIN
@@ -20,7 +20,7 @@ namespace datapar::fmath {
 struct toint_t : broadcastable_base<toint_t> {
     __DPL_HIDE_FROM_ABI explicit constexpr toint_t() noexcept = default;
 
-    template <floating_point T>
+    template <floating_point_like T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     constexpr operator T(this toint_t) noexcept {
         return static_cast<T>(1.0) / epsilon_v<T>;
@@ -36,11 +36,11 @@ inline constexpr toint_t toint{};
 struct maxint_t : broadcastable_base<maxint_t> {
     __DPL_HIDE_FROM_ABI explicit constexpr maxint_t() noexcept = default;
 
-    template <floating_point T>
+    template <floating_point_like T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     constexpr operator T(this maxint_t) noexcept {
-        using uint = dx::unsigned_representation_t<T>;
-        return static_cast<T>( __DPL bit_cast<uint>(mantissa_bits_v<T>) + 1);
+        using uint_t = dx::unsigned_representation_t<T>;
+        return static_cast<T>( __DPL bit_cast<uint_t>(mantissa_bits_v<T>) + 1);
     }
 };
 
@@ -49,7 +49,7 @@ inline constexpr maxint_t maxint{};
 struct half_t : broadcastable_base<half_t> {
     __DPL_HIDE_FROM_ABI explicit constexpr half_t() noexcept = default;
 
-    template <floating_point T>
+    template <floating_point_like T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     constexpr operator T(this half_t) noexcept {
         return 0.5;
@@ -61,11 +61,11 @@ inline constexpr half_t half{};
 struct underhalf_t : broadcastable_base<underhalf_t> {
     __DPL_HIDE_FROM_ABI explicit constexpr underhalf_t() noexcept = default;
 
-    template <floating_point T>
+    template <floating_point_like T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     constexpr operator T(this underhalf_t) noexcept {
-        using uint = dx::unsigned_representation_t<T>;
-        constexpr auto half_rep = __DPL bit_cast<uint>(static_cast<T>(half));
+        using uint_t = dx::unsigned_representation_t<T>;
+        constexpr auto half_rep = __DPL bit_cast<uint_t>(static_cast<T>(half));
         return __DPL bit_cast<T>(half_rep - 1);
     }
 };

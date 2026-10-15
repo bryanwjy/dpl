@@ -32,7 +32,7 @@ struct safe_sequence {
 template <tuple_like T>
 struct safe_sequence<T> {
     using type DPL_NODEBUG = __DPL make_index_sequence<
-        std::tuple_size_v<__DPL remove_cvref_t<T>>>;
+        std::tuple_size<__DPL remove_cvref_t<T>>::value>;
 };
 
 template <size_t I, typename T>

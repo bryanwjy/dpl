@@ -42,7 +42,7 @@ template <typename T>
 requires enable_simd_tuple<T>
 struct simd_native_type<T> {
     using type DPL_NODEBUG = typename simd_abi_traits<T>::template native_tuple<
-        std::tuple_size_v<T>>;
+        std::tuple_size<T>::value>;
 };
 
 } // namespace datapar

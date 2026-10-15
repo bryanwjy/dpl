@@ -37,7 +37,7 @@ constexpr auto DPL_VECTORCALL ilogb(compliance::unsafe_t, T val) noexcept {
         __DPL countr_zero(floating_point_traits<E>::exponent_mask);
     auto const bexp = dx::bwshift_right(dx::bwand(val, exp_bits), imm<shift>);
 
-    using sint_t = dx::signed_representation_t<T>;
+    using sint_t = dx::signed_representation_t<E>;
     return dx::subtract(
         dx::reinterpret<sint_t>(bexp), floating_point_traits<E>::exponent_bias);
 }

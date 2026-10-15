@@ -13,6 +13,8 @@
 #    include "dpl/xmm/basic/store.h"
 
 #    include <immintrin.h>
+#  else
+#    include "dpl/xmm/basic/inl/cast.inl"
 #  endif
 
 __DPL_DEFAULT_NAMESPACE_BEGIN
@@ -39,7 +41,7 @@ constexpr vector<E> reinterpret(vector<F> src) noexcept {
     } else {
         if constexpr (is_same_v<E, float>) {
             if constexpr (integral<F>) {
-                return _mm_castsi128_ps(+src);
+                return xmm::fwd::castsi128_ps(+src);
             } else if constexpr (is_same_v<F, double>) {
                 return _mm_castpd_ps(+src);
             } else if constexpr (is_same_v<F, float>) {
@@ -59,7 +61,7 @@ constexpr vector<E> reinterpret(vector<F> src) noexcept {
             if constexpr (is_same_v<F, float>) {
                 return _mm_castps_pd(+src);
             } else if constexpr (integral<F>) {
-                return _mm_castsi128_pd(+src);
+                return xmm::fwd::castsi128_pd(+src);
             } else if constexpr (is_same_v<F, double>) {
                 return +src;
             } else if constexpr (is_same_v<F, ext::bfloat16>) {
@@ -74,9 +76,9 @@ constexpr vector<E> reinterpret(vector<F> src) noexcept {
             }
         } else if constexpr (integral<E>) {
             if constexpr (is_same_v<F, double>) {
-                return _mm_castpd_si128(+src);
+                return xmm::fwd::castpd_si128(+src);
             } else if constexpr (is_same_v<F, float>) {
-                return _mm_castps_si128(+src);
+                return xmm::fwd::castps_si128(+src);
             } else if constexpr (integral<F>) {
                 return +src;
             } else if constexpr (is_same_v<F, ext::bfloat16>) {
@@ -84,7 +86,7 @@ constexpr vector<E> reinterpret(vector<F> src) noexcept {
             } else {
                 static_assert(is_same_v<F, ext::float16>);
 #  if DPL_SIMD_X86_AVX512FP16
-                return _mm_castph_si128(+src);
+                return xmm::fwd::castph_si128(+src);
 #  else
                 return __DPL bit_cast<native_vector_t<E>>(+src);
 #  endif
@@ -101,7 +103,7 @@ constexpr vector<E> reinterpret(vector<F> src) noexcept {
             } else if constexpr (is_same_v<F, ext::bfloat16>) {
                 return __DPL bit_cast<__m128bh>(+src);
             } else if constexpr (integral<F>) {
-                return _mm_castsi128_ph(+src);
+                return xmm::fwd::castsi128_ph(+src);
             } else {
                 return +src;
             }

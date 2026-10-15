@@ -8,6 +8,7 @@
 
 #  include "dpl/xmm/basic/abi.h"
 #  include "dpl/xmm/basic/extract.h"
+#  include "dpl/xmm/basic/inl/cast.h"
 
 #  if !DPL_MODULES
 #    include "dpl/core/immediate/immediate.h"
@@ -37,9 +38,11 @@ DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD) constexpr bitset_t<E>
                     __DPL to_unsigned(_mm_movemask_pd(+src))));
         } else if constexpr (is_same_v<native_vector_t<E>, __m128i>) {
             if constexpr (sizeof(E) == sizeof(float)) {
-                return xmm::to_bitset(mask<float>(_mm_castsi128_ps(+src)));
+                return xmm::to_bitset(
+                    mask<float>(xmm::fwd::castsi128_ps(+src)));
             } else if constexpr (sizeof(E) == sizeof(double)) {
-                return xmm::to_bitset(mask<double>(_mm_castsi128_pd(+src)));
+                return xmm::to_bitset(
+                    mask<double>(xmm::fwd::castsi128_pd(+src)));
             } else if constexpr (sizeof(E) == sizeof(__DPL int8)) {
                 return bitset_t<E>(
                     static_cast<typename bitset_t<E>::underlying_type>(

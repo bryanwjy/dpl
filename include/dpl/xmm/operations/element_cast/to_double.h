@@ -120,7 +120,8 @@ DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<To>
     DPL_VECTORCALL element_cast(vector<uint32> val) noexcept {
     auto const large = _mm_cmplt_epi32(+val, +xmm::broadcast<int>(dx::zero));
-    auto const islolarge = _mm_castsi128_pd(_mm_unpacklo_epi32(large, large));
+    auto const islolarge =
+        xmm::fwd::castsi128_pd(_mm_unpacklo_epi32(large, large));
     return _mm_add_pd(
         _mm_and_pd(islolarge, _mm_set1_pd(0x1p32)), _mm_cvtepi32_pd(+val));
 }

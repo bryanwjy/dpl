@@ -1,0 +1,109 @@
+// Copyright 2026 Bryan Wong
+module;
+#define DPL_MODULES 1
+#include "dpl/config.h"
+
+export module dpl.test.support:array;
+import :span;
+import dpl;
+
+export namespace dpl::test {
+inline namespace support {
+template <dpl::semiregular E, size_t N>
+class array {
+    static_assert(dpl::is_same_v<E, dpl::decay_t<E>>);
+
+public:
+    using pointer = E*;
+    using const_pointer = E const*;
+    using reference = E&;
+    using const_reference = E const&;
+    using size_type = size_t;
+    using value_type = E;
+    using difference_type = ptrdiff_t;
+
+    constexpr reference operator[](difference_type idx) noexcept {
+        return data_[idx];
+    }
+
+    constexpr const_reference operator[](difference_type idx) const noexcept {
+        return data_[idx];
+    }
+
+    constexpr pointer data() noexcept { return data_; }
+    constexpr const_pointer data() const noexcept { return data_; }
+    constexpr const_pointer cdata() const noexcept { return data_; }
+    constexpr pointer begin() noexcept { return data_; }
+    constexpr pointer end() noexcept { return data_ + N; }
+    constexpr const_pointer begin() const noexcept { return data_; }
+    constexpr const_pointer end() const noexcept { return data_ + N; }
+    constexpr const_pointer cbegin() const noexcept { return data_; }
+    constexpr const_pointer cend() const noexcept { return data_ + N; }
+    constexpr size_type size() const noexcept { return N; }
+    constexpr bool empty() const noexcept { return false; }
+    constexpr operator span<E, N>() noexcept { return span<E, N>(data_); }
+    constexpr operator span<E const, N>() const noexcept {
+        return span<E const, N>(data_);
+    }
+
+    E data_[N];
+};
+
+template <typename T, typename E, size_t N>
+constexpr array<T, N * sizeof(E) / sizeof(T)> reinterpret_array(
+    array<E, N> const& src) noexcept
+requires requires { dpl::bit_cast<array<T, N * sizeof(E) / sizeof(T)>>(src); }
+{
+    static_assert(N * sizeof(E) % sizeof(T) == 0);
+    return dpl::bit_cast<array<T, N * sizeof(E) / sizeof(T)>>(src);
+}
+
+template <typename E, size_t N>
+span(array<E, N>&) -> span<E, N>;
+template <typename E, size_t N>
+span(array<E, N> const&) -> span<E const, N>;
+
+template <typename E0, typename... Es>
+array(E0, Es...) -> array<E0, sizeof...(Es) + 1>;
+
+template <size_t I, typename E, size_t N>
+requires (I < N)
+constexpr decltype(auto) get(array<E, N> const& arr) noexcept {
+    return arr[I];
+}
+
+template <size_t I, typename E, size_t N>
+requires (I < N)
+constexpr decltype(auto) get(array<E, N>& arr) noexcept {
+    return arr[I];
+}
+
+template <size_t I, typename E, size_t N>
+requires (I < N)
+constexpr decltype(auto) get(array<E, N> const&& arr) noexcept {
+    return dpl::move(arr[I]);
+}
+
+template <size_t I, typename E, size_t N>
+requires (I < N)
+constexpr decltype(auto) get(array<E, N>&& arr) noexcept {
+    return dpl::move(arr[I]);
+}
+} // namespace support
+} // namespace dpl::test
+
+export namespace dpl {
+template <typename E, size_t N>
+struct tuple_size<test::array<E, N>> : size_constant<N> {};
+template <size_t I, typename E, size_t N>
+requires (I < N)
+struct tuple_element<I, test::array<E, N>> {
+    using type = E;
+};
+
+template <size_t I, typename E, size_t N>
+requires (I < N)
+struct tuple_element<I, test::array<E, N> const> {
+    using type = E const;
+};
+} // namespace dpl

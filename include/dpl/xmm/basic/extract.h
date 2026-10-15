@@ -7,6 +7,7 @@
 #if DPL_SIMD_X86_SSE4_2
 
 #  include "dpl/xmm/basic/abi.h"
+#  include "dpl/xmm/basic/inl/cast.h"
 
 #  if !DPL_MODULES
 #    include "dpl/core/numbers/floating_point_like.h"
@@ -74,12 +75,12 @@ constexpr E extract(vector<E> src, integral_constant_like auto idx) noexcept {
             return __DPL bit_cast<E>(_mm_extract_ps(+src, imm8));
         } else if constexpr (is_same_v<E, double>) {
             return __DPL bit_cast<E>(
-                _mm_extract_epi64(_mm_castpd_si128(+src), idx));
+                _mm_extract_epi64(xmm::fwd::castpd_si128(+src), idx));
         } else if constexpr (is_same_v<E, ext::float16>) {
 #  if DPL_SIMD_X86_AVX512FP16
             if constexpr (same_as<ext::float16, E>) {
                 return __DPL bit_cast<E>(static_cast<int16>(
-                    _mm_extract_epi16(_mm_castph_si128(+src), imm8)));
+                    _mm_extract_epi16(xmm::fwd::castph_si128(+src), imm8)));
             } else {
                 return __DPL bit_cast<E>(static_cast<int16>(
                     _mm_extract_epi16(__DPL bit_cast<__m128i>(+src), imm8)));

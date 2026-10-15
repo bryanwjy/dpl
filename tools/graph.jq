@@ -2,6 +2,8 @@
 # Written by Claude
 # Generate a lookup table for ALL modules at once
 # 1. Build the graph, keyed once by logical-name only (no duplicate path entries)
+(($ARGS.named.base // {}) | if type == "array" then .[0] else . end) as $base
+|
 (reduce .rules[] as $item (
     {by_name: {}, path_only: {}};
     ($item.provides[0]["logical-name"]) as $name
@@ -25,7 +27,10 @@
       | $memo2 + {($node): $result}
     end;
 
-(reduce ($graph | keys_unsorted[]) as $k ({}; closure($k; .))) as $by_name
+(reduce ($graph | keys_unsorted[]) as $k (
+    ($base | with_entries(select(.key as $n | $graph | has($n) | not)));
+    closure($k; .)
+)) as $by_name
 
 | ($idx.path_only
     | with_entries(

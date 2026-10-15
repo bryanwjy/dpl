@@ -8,6 +8,7 @@
 
 #  include "dpl/xmm/basic/abi.h"
 #  include "dpl/xmm/basic/initialize.h"
+#  include "dpl/xmm/basic/inl/cast.h"
 
 #  if !DPL_MODULES
 #    include "dpl/core/basic/aligned.h"
@@ -36,13 +37,8 @@ constexpr vector<E> load(E const* data) noexcept {
             return __DPL bit_cast<native_vector_t<E>>(
                 _mm_loadu_si128(reinterpret_cast<__m128i const*>(data)));
         } else if constexpr (is_same_v<ext::float16, E>) {
-#  if DPL_SIMD_X86_AVX512FP16
-            return _mm_castsi128_ph(
+            return xmm::fwd::castsi128_ph(
                 _mm_loadu_si128(reinterpret_cast<__m128i const*>(data)));
-#  else
-            return __DPL bit_cast<native_vector_t<E>>(
-                _mm_loadu_si128(reinterpret_cast<__m128i const*>(data)));
-#  endif
         } else {
             return _mm_loadu_si128(reinterpret_cast<__m128i const*>(data));
         }
@@ -63,7 +59,7 @@ constexpr vector<E> load(aligned_t, E const* data) noexcept {
             return __DPL bit_cast<native_vector_t<E>>(
                 _mm_load_si128(reinterpret_cast<__m128i const*>(data)));
         } else if constexpr (is_same_v<ext::float16, E>) {
-            return _mm_castsi128_ph(
+            return xmm::fwd::castsi128_ph(
                 _mm_load_si128(reinterpret_cast<__m128i const*>(data)));
         } else {
             return _mm_load_si128(reinterpret_cast<__m128i const*>(data));

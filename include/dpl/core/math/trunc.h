@@ -316,13 +316,12 @@ public:
         exp = dx::select(dx::cmplt(exp, vnonmantissa), vone, exp);
 
         auto const vbits = dx::broadcast<vexp_t>(__DPL type_bit_v<E>);
-        auto const vbitsm1 = dx::broadcast<vexp_t>(__DPL type_bit_v<E> - 1);
-        exp = dx::min(exp, vbitsm1); // Workaround UB
+        exp = dx::min(exp, vbits); // Workaround UB
 
         // Operation might be slow for backends without vector right shift
         // But trunc is usually supported as an intrinsic so should be fine
-        auto const m = dx::bwshift_right(
-            dx::cmplt(exp, vbits), dx::broadcast<T>(dx::all_bits), exp);
+        auto const m = dx::bwshift_right(dx::broadcast<T>(dx::value_bits),
+            dx::to_unsigned(dx::subtract(exp, vone)));
         return dx::bwandnot(val, m);
     }
 

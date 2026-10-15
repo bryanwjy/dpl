@@ -18,7 +18,7 @@ namespace pack {
 template <typename F, __DPL tuple_like T, __DPL tuple_like... Ts>
 requires (details::utility::tuple_element_predicate<F, T> && ... &&
     details::utility::tuple_element_predicate<F, Ts>)
-constexpr bool none_of(F&& func, T&& tuple, Ts&&... tail) {
+__DPL_HIDE_FROM_ABI constexpr bool none_of(F&& func, T&& tuple, Ts&&... tail) {
     return !pack::any_of(__DPL forward<F>(func), __DPL forward<T>(tuple),
         __DPL forward<Ts>(tail)...);
 }

@@ -50,6 +50,7 @@ DPL_DISABLE_WARNING(5244)
 #include "dpl/core/math/pow.h"
 #include "dpl/core/math/rcp.h"
 #include "dpl/core/math/round.h"
+#include "dpl/core/math/roundeven.h"
 #include "dpl/core/math/rounding.h"
 #include "dpl/core/math/rsqrt.h"
 #include "dpl/core/math/sign.h"

@@ -14,6 +14,7 @@ DPL_DISABLE_WARNING("-Wc++26-extensions")
 #  include "dpl/xmm/basic/abi.h"
 #  include "dpl/xmm/basic/initialize.h"
 #  include "dpl/xmm/basic/inl/bitwise.h"
+#  include "dpl/xmm/basic/inl/cast.h"
 #  include "dpl/xmm/basic/inl/compare.h"
 
 #  if !DPL_MODULES
@@ -96,9 +97,9 @@ constexpr mask<E> from_bitset(bitset_t<E> mask) noexcept {
             }
         }();
         if constexpr (same_as<E, float>) {
-            return _mm_castsi128_ps(xmm0);
+            return xmm::fwd::castsi128_ps(xmm0);
         } else if constexpr (same_as<E, double>) {
-            return _mm_castsi128_pd(xmm0);
+            return xmm::fwd::castsi128_pd(xmm0);
         } else if constexpr (integral<E>) {
             return xmm0;
         } else {

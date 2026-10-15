@@ -11,17 +11,17 @@ using dpl::bitset;
 
 template <dpl::bitset<8> V>
 struct constant8 {
-    static constexpr auto value = V;
+    static constexpr dpl::bitset<8> value = V;
 };
 
 template <dpl::bitset<129> V>
 struct constant129 {
-    static constexpr auto value = V;
+    static constexpr dpl::bitset<129> value = V;
 };
 
 template <dpl::size_t W, dpl::bitset<W> V>
 struct constant_generic {
-    static constexpr auto value = V;
+    static constexpr dpl::bitset<W> value = V;
 };
 
 constexpr constant8<dpl::bitset<8>(true, false, true)> explicit_inst8;

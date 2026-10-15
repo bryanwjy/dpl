@@ -18,10 +18,13 @@
 #  include "dpl/core/type_traits/simd_abi_traits.h"
 #  include "dpl/core/type_traits/simd_abi_type.h"
 #  include "dpl/std/bit/bit_cast.h"
+#  include "dpl/std/concepts/integral.h"
 #  include "dpl/std/type_traits/is_const.h"
 #  include "dpl/std/type_traits/is_nothrow_constructible.h"
 #  include "dpl/std/type_traits/is_object.h"
 #  include "dpl/std/type_traits/is_volatile.h"
+#  include "dpl/std/type_traits/make_signed.h"
+#  include "dpl/std/type_traits/make_unsigned.h"
 #endif
 
 __DPL_DEFAULT_NAMESPACE_BEGIN
@@ -139,5 +142,24 @@ inline namespace cpo {
 template <typename To>
 inline constexpr internal::reinterpret_t<To> reinterpret{};
 } // namespace cpo
+template <simd_type T>
+requires integral<simd_element_type_t<T>> &&
+    internal::cpo_invocable<
+        internal::reinterpret_t<make_unsigned_t<simd_element_type_t<T>>>, T>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+constexpr auto to_unsigned(T&& simd) noexcept {
+    using To = make_unsigned_t<simd_element_type_t<T>>;
+    return datapar::reinterpret<To>(__DPL forward<T>(simd));
+}
+
+template <simd_type T>
+requires integral<simd_element_type_t<T>> &&
+    internal::cpo_invocable<
+        internal::reinterpret_t<make_signed_t<simd_element_type_t<T>>>, T>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+constexpr auto to_signed(T&& simd) noexcept {
+    using To = make_signed_t<simd_element_type_t<T>>;
+    return datapar::reinterpret<To>(__DPL forward<T>(simd));
+}
 } // namespace datapar
 __DPL_DEFAULT_NAMESPACE_END

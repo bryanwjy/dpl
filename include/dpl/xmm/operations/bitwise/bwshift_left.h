@@ -183,14 +183,14 @@ inline vector<L>
         auto xmm2 = _mm_sll_epi64(xmm0, xmm1);
         xmm1 = _mm_shuffle_epi32(xmm1, _MM_SHUFFLE(3, 2, 3, 2));
         xmm0 = _mm_sll_epi64(xmm0, xmm1);
-        return _mm_castpd_si128(
-            _mm_move_sd(_mm_castsi128_pd(xmm0), _mm_castsi128_pd(xmm2)));
+        return xmm::fwd::castpd_si128(_mm_move_sd(
+            xmm::fwd::castsi128_pd(xmm0), xmm::fwd::castsi128_pd(xmm2)));
     } else if constexpr (sizeof(L) == sizeof(int32)) {
         constexpr auto magic = 1065353216;
         auto xmm0 = +lhs;
         auto xmm1 = _mm_slli_epi32(+rhs, 23);
         xmm1 = _mm_add_epi32(xmm1, _mm_set1_epi32(magic));
-        xmm1 = _mm_cvttps_epi32(_mm_castsi128_ps(xmm1));
+        xmm1 = _mm_cvttps_epi32(xmm::fwd::castsi128_ps(xmm1));
         xmm1 = _mm_and_si128(_mm_cmplt_epi32(rhs, _mm_set1_epi32(32)), xmm1);
         return _mm_mullo_epi32(xmm0, xmm1);
     } else if constexpr (sizeof(L) == sizeof(int16)) {

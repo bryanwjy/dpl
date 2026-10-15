@@ -84,6 +84,7 @@ using __DPL datapar::cpo::lerp;
 using __DPL datapar::cpo::ceil;
 using __DPL datapar::cpo::floor;
 using __DPL datapar::cpo::round;
+using __DPL datapar::cpo::roundeven;
 using __DPL datapar::cpo::trunc;
 //
 using __DPL datapar::cpo::copysign;
