@@ -434,7 +434,7 @@ constexpr float_str<T> to_string(T val) noexcept {
     }
 
     using traits = dpl::floating_point_traits<T>;
-    constexpr auto shift = dpl::countr_zero(traits::exponent_mask);
+    static constexpr auto shift = dpl::countr_zero(traits::exponent_mask);
     auto const uexp =
         (dpl::to_bit_representation(val) & traits::exponent_mask) >> shift;
 
@@ -442,7 +442,7 @@ constexpr float_str<T> to_string(T val) noexcept {
         (uexp ? traits::exponent_bias : 0);
     auto const prefix =
         ((dpl::to_bit_representation(val) & ~traits::signbit) >> shift) ? 1 : 0;
-    constexpr auto mantissa_shift = (4 - (traits::digits - 1) % 4) % 4;
+    static constexpr auto mantissa_shift = (4 - (traits::digits - 1) % 4) % 4;
     auto const mantissa_hex =
         (dpl::to_bit_representation(val) & traits::mantissa_mask)
         << mantissa_shift;
@@ -452,25 +452,40 @@ constexpr float_str<T> to_string(T val) noexcept {
     *ptr++ = 'x';
     *ptr++ = prefix ? '1' : '0';
     *ptr++ = '.';
-    constexpr auto write_unsigned = [](char* out, dpl::uint64 n,
-                                        unsigned base) {
-        constexpr char digits[] = "0123456789abcdef";
+    constexpr auto write_unsigned = [](char* out, dpl::uint64 n) {
+        constexpr char digits[] = "0123456789";
         char tmp[24];
         int len = 0;
         do {
-            tmp[len++] = digits[n % base];
-            n /= base;
+            tmp[len++] = digits[n % 10];
+            n /= 10;
         } while (n != 0);
         while (len > 0)
             *out++ = tmp[--len];
         return out;
     };
 
-    ptr = write_unsigned(ptr, dpl::to_underlying(mantissa_hex), 16);
+    constexpr auto write_mantissa = [](char* out, dpl::uint64 n) {
+        constexpr char digits[] = "0123456789abcdef";
+        constexpr auto leading = (shift + mantissa_shift) / 4;
+        char tmp[24];
+        int len = 0;
+        do {
+            tmp[len++] = digits[n % 16];
+            n /= 16;
+        } while (n != 0);
+        while (len < leading) {
+            tmp[len++] = '0';
+        }
+        while (len > 0)
+            *out++ = tmp[--len];
+        return out;
+    };
+
+    ptr = write_mantissa(ptr, dpl::to_underlying(mantissa_hex));
     *ptr++ = 'p';
     *ptr++ = exp < 0 ? '-' : '+';
-    ptr =
-        write_unsigned(ptr, static_cast<dpl::uint64>(exp < 0 ? -exp : exp), 10);
+    ptr = write_unsigned(ptr, static_cast<dpl::uint64>(exp < 0 ? -exp : exp));
     if constexpr (dpl::is_same_v<T, float>) {
         *ptr++ = 'f';
     } else if constexpr (!dpl::is_same_v<T, double>) {
@@ -484,7 +499,7 @@ constexpr float_str<T> to_string(T val) noexcept {
 }
 
 template <dpl::floating_point_like T, size_t N>
-std::expected<void, std::error_condition> write_results(
+std::expected<void, std::error_condition> write_results(dpl::uint32 seed,
     std::string_view function,
     std::vector<mpfr::data_entry<T, N>> const& entries, std::string_view file) {
     auto const cfile = mpfr::tmp_string(file);
@@ -498,14 +513,19 @@ std::expected<void, std::error_condition> write_results(
             }
         }
     } const stream{.ptr = ::fopen(tmpname.c_str(), "w")};
-    static constexpr char prefix[] = //
+    static constexpr char comment[] = //
         "// Copyright 2026 Bryan Wong\n"
-        "// DO NOT EDIT: This file is auto-generated\n"
+        "// DO NOT EDIT: This file is auto-generated\n";
+    static constexpr char prefix[] = //
         "#pragma once\n\n"
         "#include \"dpl/config.h\"\n\n"
+        "// clang-format off\n"
         "namespace testdata {\n";
 
     if (stream.ptr == nullptr ||
+        fwrite(comment, 1zu, sizeof(comment) - 1, stream.ptr) <
+            sizeof(comment) - 1 ||
+        fprintf(stream.ptr, "// Seed: %u\n", seed) < 0 ||
         fwrite(prefix, 1zu, sizeof(prefix) - 1, stream.ptr) <
             sizeof(prefix) - 1) {
         auto condition =
@@ -577,7 +597,7 @@ std::expected<void, std::error_condition> write_results(
         }
     }
 
-    constexpr char suffix[] = "};\n}\n";
+    constexpr char suffix[] = "};\n}\n// clang-format on\n";
     if (fwrite(suffix, 1zu, sizeof(suffix) - 1, stream.ptr) <
         sizeof(suffix) - 1) {
         auto condition =
@@ -669,7 +689,8 @@ bool generate(mpfr::argument_parser const& parser) {
                 }
             }(std::span{rows});
 
-            return write_results(func, rows, output);
+            return write_results(
+                parser.value<"seed"_cli_opt>(), func, rows, output);
         })
         .has_value();
 }

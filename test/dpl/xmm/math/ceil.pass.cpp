@@ -2,29 +2,26 @@
 // @dpl[clang].compile-flags+: -fconstexpr-steps=6000000
 // @dpl[msvc].compile-flags+: /constexpr:steps6000000
 // @dpl.mpfr+: ceil f32 -n 12 -r urand -0x1p23:-1 -r urand 1:0x1p23 \
-// -r urand -1:1 -r urand 0x1p22:infinity -r urand -infinity:-0x1p22 \
-// -o ceil-f32.generated.h
+// -r urand -1:1 -r urand 0x1p22:infinity -r urand -infinity:-0x1p22
 
 // @dpl.mpfr+: ceil f64 -n 12 -r urand -0x1p52:-1 -r urand 1:0x1p52 \
-// -r urand -1:1 -r urand 0x1p51:infinity -r urand -infinity:-0x1p51 \
-// -o ceil-f64.generated.h
+// -r urand -1:1 -r urand 0x1p51:infinity -r urand -infinity:-0x1p51
 
 // @dpl.mpfr+: ceil f16 -n 12 -r urand -0x1p10:-1 -r urand 1:0x1p10 \
-// -r urand -1:1 -r urand 0x1p9:infinity -r urand -infinity:-0x1p9 \
-// -o ceil-f16.generated.h
+// -r urand -1:1 -r urand 0x1p9:infinity -r urand -infinity:-0x1p9
 
 // @dpl.mpfr+: ceil bf16 -n 12 -r urand -0x1p7:-1 -r urand 1:0x1p7 \
-// -r urand -1:1 -r urand 0x1p6:infinity -r urand -infinity:-0x1p6 \
-// -o ceil-bf16.generated.h
+// -r urand -1:1 -r urand 0x1p6:infinity -r urand -infinity:-0x1p6
+
 #include "../common.h"
 
 import dpl.xmm;
 import dpl.test.harness.math.rounding;
 
-#include "ceil-bf16.generated.h"
-#include "ceil-f16.generated.h"
-#include "ceil-f32.generated.h"
-#include "ceil-f64.generated.h"
+#include "ceil/bf16.h"
+#include "ceil/f16.h"
+#include "ceil/f32.h"
+#include "ceil/f64.h"
 
 int main() {
     namespace dpp = dpl::datapar;

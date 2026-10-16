@@ -29,6 +29,7 @@ PASS_CRC := $(addsuffix .crc,$(PASS_TARGETS))
 TEST_CRC := $(PASS_CRC) $(COMPILE_PASS_CRC)
 ALL_TARGETS += $(TEST_CRC)
 TEST_ALIAS := $(TEST_CRC:$(OUTPUT_DIR)/%.crc=%)
+MATHDATA_DIR := $(CURRENT_SOURCE_DIR)/mathdata
 
 define subdir_to_crc
 $(patsubst $(ROOT_DIR)/%.cpp,$(OUTPUT_DIR)/%.crc,$(wildcard $(ROOT_DIR)/$(1)/*.pass.cpp)) \
@@ -44,12 +45,12 @@ $(TEST_SUBDIRS):%: $$(call subdir_to_crc,%)
 
 $(CLEAN_MANIFEST): ALL_TARGETS += $(CURRENT_DEPS)
 
+$(CURRENT_BINARY_DIR)/%: private CPPFLAGS += -I$(MATHDATA_DIR)
 $(CURRENT_BINARY_DIR)/%: private CURRENT_BINARY_DIR := $(CURRENT_BINARY_DIR)
 $(CURRENT_BINARY_DIR)/%: private CURRENT_SOURCE_DIR := $(CURRENT_SOURCE_DIR)
 $(CURRENT_BINARY_DIR)/%: private CURRENT_OBJS := $(CURRENT_OBJS)
 $(CURRENT_BINARY_DIR)/%: private CURRENT_LIST_PATH := $(CURRENT_LIST_PATH)
 $(CURRENT_BINARY_DIR)/%.pass.cpp.o $(CURRENT_BINARY_DIR)/%.pass.cpp.jcmd: private COMPILE_RESPONSES += tflags
-$(CURRENT_BINARY_DIR)/%.pass.cpp.o $(CURRENT_BINARY_DIR)/%.pass.cpp.jcmd $(CURRENT_BINARY_DIR)/%.pass.cpp.jscan: private PREPROCESSOR_RESPONSES += mpfr
 
 $(CURRENT_BINARY_DIR)/%.crc: $(CURRENT_BINARY_DIR)/%
 	@$< && echo "\033[0;34mTEST\033[0m $*: \033[0;32mSUCCESS\033[0m" && \
@@ -154,10 +155,7 @@ $(CURRENT_BINARY_DIR)/scan_barrier.mk: $(TOOLS_DIR)/jdep-to-d.jq
 $(CURRENT_BINARY_DIR)/scan_barrier.mk: $(CURRENT_BINARY_DIR)/jmap.json $(CURRENT_BINARY_DIR)/module_dependencies.json
 	@jq -f $(TOOLS_DIR)/jdep-to-d.jq --slurpfile jmap $(CURRENT_BINARY_DIR)/jmap.json -r $(CURRENT_BINARY_DIR)/module_dependencies.json > $(CURRENT_BINARY_DIR)/scan_barrier.mk
 
-MPFR_BIN := $(OUTPUT_DIR)/test/mpfr/mpfr
-ifeq ($(call needs_build,$(MPFR_BIN)),)
 $(call safe_include,$(CURRENT_BINARY_DIR)/scan_barrier.mk)
-endif
 
 $(CURRENT_BINARY_DIR)/module_implementations.txt: $(CURRENT_DIRS)
 	@mkdir -p '$(@D)'
@@ -181,21 +179,18 @@ $(CURRENT_BINARY_DIR)/%.jdir: $(CURRENT_SOURCE_DIR)/% $(TOOLS_DIR)/directives.aw
 
 ALL_TARGETS += $(DIRECTIVES)
 
-
-MPFR_RSPS := $(DIRECTIVES:.jdir=.mpfr.rsp)
-ALL_TARGETS += $(MPFR_RSPS) $(CURRENT_BINARY_DIR)/mpfr.mk $(CURRENT_BINARY_DIR)/mpfr.mk.json
-
-# one file per test directory, rebuilt from all of that directory's .jdir files
-$(CURRENT_BINARY_DIR)/mpfr.mk: $(DIRECTIVES) $(TOOLS_DIR)/mpfr.jq
-	@$(file >$@.json,$(foreach f,$(DIRECTIVES),{"file":"$f","directives":$(file <$f)}$(newline)))
-	@$(call replace_if_different, jq -r -s -f $(TOOLS_DIR)/mpfr.jq --arg bin '$$(MPFR_BIN)' $@.json)
-
-$(call safe_include,$(CURRENT_BINARY_DIR)/mpfr.mk)
+MPFR_BIN := $(OUTPUT_DIR)/test/mpfr/mpfr
+ALL_TARGETS += $(OUTPUT_DIR)/mathdata.mk $(OUTPUT_DIR)/mathdata.json
+.PHONY: mathdata
+mathdata: $(MPFR_BIN) $(DIRECTIVES) $(TOOLS_DIR)/mathdata.jq
+	@$(file >$(OUTPUT_DIR)/mathdata.json,$(foreach f,$(DIRECTIVES),{"file":"$f","directives":$(file <$f)}$(newline)))
+	@jq -r -s -f $(TOOLS_DIR)/mathdata.jq --arg dir '$(MATHDATA_DIR)' --arg bin '$$(MPFR_BIN)' \
+	    $(OUTPUT_DIR)/mathdata.json > $(OUTPUT_DIR)/mathdata.mk
+	@$(MAKE) --no-print-directory -f $(OUTPUT_DIR)/mathdata.mk -C $(MATHDATA_DIR) MPFR_BIN='$(MPFR_BIN)' all
 
 TFLAGS_RSPS := $(patsubst %.o,%.tflags.rsp, $(filter %.pass.cpp.o,$(CURRENT_OBJS)))
 $(CURRENT_BINARY_DIR)/%.tflags.rsp: $(CURRENT_BINARY_DIR)/%.jdir $(CURRENT_BINARY_DIR)/supported_flags.txt
 	@$(call replace_if_different, (jq -r '.[] | .["compile-flags"] // [] | .[]' $< | grep -Fxf $(CURRENT_BINARY_DIR)/supported_flags.txt - || true))
-
 
 ALL_TARGETS += $(TFLAGS_RSPS) $(CURRENT_BINARY_DIR)/candidate_flags.txt
 

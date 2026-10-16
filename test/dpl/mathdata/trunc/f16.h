@@ -1,0 +1,73 @@
+// Copyright 2026 Bryan Wong
+// DO NOT EDIT: This file is auto-generated
+// Seed: 879855507
+#pragma once
+
+#include "dpl/config.h"
+
+// clang-format off
+namespace testdata {
+template <> inline constexpr mpfr::data_entry<dpl::ext::float16, 1zu> trunc<dpl::ext::float16>[] = {
+	{ +0x1.87cp+15_f16,+0x1.87cp+15_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.b68p+9_f16,-0x1.b68p+9_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.8a8p-13_f16,+0x0.000p+0_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.df0p+10_f16,+0x1.df0p+10_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.3c0p-2_f16,+0x0.000p+0_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.318p+3_f16,+0x1.200p+3_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.2acp+10_f16,-0x1.2acp+10_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.dccp+13_f16,-0x1.dccp+13_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.d34p-7_f16,+0x0.000p+0_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.cb8p+11_f16,+0x1.cb8p+11_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.ed4p+6_f16,-0x1.ec0p+6_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.0d0p+1_f16,-0x1.000p+1_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.220p+2_f16,+0x1.000p+2_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.3f0p+12_f16,+0x1.3f0p+12_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.0b4p+15_f16,-0x1.0b4p+15_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.b4cp+15_f16,-0x1.b4cp+15_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.c28p+9_f16,+0x1.c28p+9_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.06cp+12_f16,+0x1.06cp+12_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.814p-12_f16,+0x0.000p+0_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.4d0p+8_f16,+0x1.4d0p+8_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.2fcp+13_f16,+0x1.2fcp+13_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.c30p+5_f16,-0x1.c00p+5_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.914p+9_f16,+0x1.910p+9_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.084p+1_f16,-0x1.000p+1_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.a78p+14_f16,+0x1.a78p+14_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.9c8p+9_f16,-0x1.9c8p+9_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.388p+2_f16,-0x1.000p+2_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.2f4p-5_f16,+0x0.000p+0_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.684p+2_f16,+0x1.400p+2_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.f30p+2_f16,+0x1.c00p+2_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.6ecp+2_f16,-0x1.400p+2_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.2e8p+5_f16,-0x1.280p+5_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.c1cp+15_f16,-0x1.c1cp+15_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.6f0p+12_f16,+0x1.6f0p+12_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.00cp+0_f16,-0x1.000p+0_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.310p+7_f16,-0x1.300p+7_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.e6cp+4_f16,-0x1.e00p+4_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.984p+3_f16,+0x1.800p+3_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.b5cp+8_f16,-0x1.b50p+8_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.1a8p+9_f16,+0x1.1a8p+9_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.1d4p+13_f16,-0x1.1d4p+13_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.a24p-7_f16,+0x0.000p+0_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.c00p+11_f16,-0x1.c00p+11_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.0ccp+9_f16,-0x1.0c8p+9_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.970p-1_f16,+0x0.000p+0_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.000p-1_f16,+0x0.000p+0_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.79cp+11_f16,+0x1.79cp+11_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.d90p+14_f16,+0x1.d90p+14_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.d08p-7_f16,+0x0.000p+0_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.9f0p+12_f16,-0x1.9f0p+12_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.9a8p-1_f16,+0x0.000p+0_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.87cp+5_f16,+0x1.800p+5_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.2b8p+13_f16,-0x1.2b8p+13_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.510p+14_f16,+0x1.510p+14_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.158p+9_f16,+0x1.158p+9_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.c24p+0_f16,+0x1.000p+0_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.998p-7_f16,+0x0.000p+0_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.178p-5_f16,+0x0.000p+0_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.bf8p+4_f16,+0x1.b00p+4_f16,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.480p+13_f16,-0x1.480p+13_f16,0,static_cast<mpfr::result_flag>(0) },
+};
+}
+// clang-format on

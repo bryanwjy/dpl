@@ -1,0 +1,73 @@
+// Copyright 2026 Bryan Wong
+// DO NOT EDIT: This file is auto-generated
+// Seed: 2418712760
+#pragma once
+
+#include "dpl/config.h"
+
+// clang-format off
+namespace testdata {
+template <> inline constexpr mpfr::data_entry<double, 1zu> roundeven<double>[] = {
+	{ +0x1.3878708bde7cep+580,+0x1.3878708bde7cep+580,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.16ba94ead7727p+39,-0x1.16ba94ead8000p+39,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.4c9fd262d9629p+9,-0x1.4c80000000000p+9,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.4dd3c0f46bafep+1004,-0x1.4dd3c0f46bafep+1004,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.f6403a208b10dp+191,+0x1.f6403a208b10dp+191,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.9ee8a23fd8ff0p+35,-0x1.9ee8a23fe0000p+35,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.0ea0ad667f900p+975,-0x1.0ea0ad667f900p+975,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.68e309d09c3eap+37,+0x1.68e309d0a0000p+37,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.dcd1287d3cc01p+469,-0x1.dcd1287d3cc01p+469,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.7b6a692b5fbdbp+41,+0x1.7b6a692b5f800p+41,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.d06d272efccb4p+216,+0x1.d06d272efccb4p+216,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.49c218cda82ebp+31,-0x1.49c218ce00000p+31,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.1445ffc673030p+51,+0x1.1445ffc673030p+51,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.4a64ecabcaae4p-714,+0x0.0000000000000p+0,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.8205e5db8da69p+47,+0x1.8205e5db8da60p+47,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.7e39a35ef0f19p+11,-0x1.7e40000000000p+11,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.a016769378586p+817,+0x1.a016769378586p+817,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.5c96ac2d883b4p+19,+0x1.5c96a00000000p+19,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.ac5532a53d84dp-783,+0x0.0000000000000p+0,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.6f0cf7a57ab04p+381,-0x1.6f0cf7a57ab04p+381,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.9d3f89160ab0dp+115,+0x1.9d3f89160ab0dp+115,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.e403672eb98a5p-138,+0x0.0000000000000p+0,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.b0fb156bc1847p+32,+0x1.b0fb156c00000p+32,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.9f480e0703802p+746,-0x1.9f480e0703802p+746,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.0da89cfb9d8bfp-934,+0x0.0000000000000p+0,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.cf7a9861f4e53p-407,+0x0.0000000000000p+0,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.e3a124d4103e8p-189,+0x0.0000000000000p+0,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.0f0f5bf72db9ep-765,+0x0.0000000000000p+0,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.ec801419570e8p+701,+0x1.ec801419570e8p+701,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.e38d4b8921f23p+619,-0x1.e38d4b8921f23p+619,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.09b1b60428a04p+13,-0x1.09b0000000000p+13,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.344b53ef42fc0p+3,+0x1.4000000000000p+3,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.fc2760715fad6p+435,+0x1.fc2760715fad6p+435,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.473c76721c03bp+665,-0x1.473c76721c03bp+665,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.61ab56a75afb4p+760,-0x1.61ab56a75afb4p+760,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.52a7c786891cep+28,-0x1.52a7c78000000p+28,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.46805c0928afcp+32,+0x1.46805c0900000p+32,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.426d5d10e8a43p+13,-0x1.4270000000000p+13,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.189527dfda08fp-533,+0x0.0000000000000p+0,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.cf3483f3caae3p+210,-0x1.cf3483f3caae3p+210,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.f40665a849075p+880,-0x1.f40665a849075p+880,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.183d0e89c0febp+312,-0x1.183d0e89c0febp+312,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.6d222ede67a62p+2,-0x1.8000000000000p+2,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.af210e03ad58cp-570,+0x0.0000000000000p+0,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.5c8c209abcab1p-383,+0x0.0000000000000p+0,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.a60f66aaefb5ap+709,+0x1.a60f66aaefb5ap+709,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.d58ac77a803adp-855,+0x0.0000000000000p+0,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.2c754e5bbfbbbp+46,+0x1.2c754e5bbfbc0p+46,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.dd6413b9b9368p+755,+0x1.dd6413b9b9368p+755,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.bb6f9af1cc682p+18,+0x1.bb6f800000000p+18,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.7fcc54f0f380ep+49,-0x1.7fcc54f0f3810p+49,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.b575a260db59bp-211,+0x0.0000000000000p+0,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.3220859c17e23p+778,+0x1.3220859c17e23p+778,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.0fd18afa2706dp+0,+0x1.0000000000000p+0,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.48f523d3cd9ccp+420,+0x1.48f523d3cd9ccp+420,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.427538862e330p+29,-0x1.4275388800000p+29,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.8de0ffb9240fcp+31,-0x1.8de0ffba00000p+31,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.a390e06d30aeep+32,+0x1.a390e06d00000p+32,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.13a1ad8c380d0p+381,-0x1.13a1ad8c380d0p+381,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.397013df0c7ebp+38,+0x1.397013df0c000p+38,0,static_cast<mpfr::result_flag>(0) },
+};
+}
+// clang-format on

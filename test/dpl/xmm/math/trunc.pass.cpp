@@ -2,29 +2,26 @@
 // @dpl[clang].compile-flags+: -fconstexpr-steps=2000000
 // @dpl[msvc].compile-flags+: /constexpr:steps2000000
 // @dpl.mpfr+: trunc f32 -n 12 -r urand -0x1p23:-1 -r urand 1:0x1p23 \
-// -r urand -1:1 -r urand 0x1p22:infinity -r urand -infinity:-0x1p22 \
-// -o trunc-f32.generated.h
+// -r urand -1:1 -r urand 0x1p22:infinity -r urand -infinity:-0x1p22
 
 // @dpl.mpfr+: trunc f64 -n 12 -r urand -0x1p52:-1 -r urand 1:0x1p52 \
-// -r urand -1:1 -r urand 0x1p51:infinity -r urand -infinity:-0x1p51 \
-// -o trunc-f64.generated.h
+// -r urand -1:1 -r urand 0x1p51:infinity -r urand -infinity:-0x1p51
 
 // @dpl.mpfr+: trunc f16 -n 12 -r urand -0x1p10:-1 -r urand 1:0x1p10 \
-// -r urand -1:1 -r urand 0x1p9:infinity -r urand -infinity:-0x1p9 \
-// -o trunc-f16.generated.h
+// -r urand -1:1 -r urand 0x1p9:infinity -r urand -infinity:-0x1p9
 
 // @dpl.mpfr+: trunc bf16 -n 12 -r urand -0x1p7:-1 -r urand 1:0x1p7 \
-// -r urand -1:1 -r urand 0x1p6:infinity -r urand -infinity:-0x1p6 \
-// -o trunc-bf16.generated.h
+// -r urand -1:1 -r urand 0x1p6:infinity -r urand -infinity:-0x1p6
+
 #include "../common.h"
 
 import dpl.xmm;
 import dpl.test.harness.math.rounding;
 
-#include "trunc-bf16.generated.h"
-#include "trunc-f16.generated.h"
-#include "trunc-f32.generated.h"
-#include "trunc-f64.generated.h"
+#include "trunc/bf16.h"
+#include "trunc/f16.h"
+#include "trunc/f32.h"
+#include "trunc/f64.h"
 
 int main() {
     namespace dpp = dpl::datapar;

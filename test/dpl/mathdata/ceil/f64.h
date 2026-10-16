@@ -1,0 +1,73 @@
+// Copyright 2026 Bryan Wong
+// DO NOT EDIT: This file is auto-generated
+// Seed: 3209174437
+#pragma once
+
+#include "dpl/config.h"
+
+// clang-format off
+namespace testdata {
+template <> inline constexpr mpfr::data_entry<double, 1zu> ceil<double>[] = {
+	{ +0x1.84feb59272a08p+2,+0x1.c000000000000p+2,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.a0500b351af01p+306,-0x1.a0500b351af01p+306,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.15806911700c6p+53,+0x1.15806911700c6p+53,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.981f96073c7bdp-920,+0x1.0000000000000p+0,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.ec6a0f235ceecp+537,-0x1.ec6a0f235ceecp+537,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.afe5d154aa78bp+712,+0x1.afe5d154aa78bp+712,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.f3fdc571e92c9p+855,-0x1.f3fdc571e92c9p+855,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.9ed7ef24c05e7p+852,-0x1.9ed7ef24c05e7p+852,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.7dbfee54e78cbp-913,+0x0.0000000000000p+0,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.b60f0f3341fe6p-722,+0x1.0000000000000p+0,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.4ba3bc95646a9p+11,-0x1.4ba0000000000p+11,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.6ee550cda0b14p-900,+0x0.0000000000000p+0,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.ac5ae6da5d520p-1021,+0x1.0000000000000p+0,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.95b4f1b24c456p+36,+0x1.95b4f1b250000p+36,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.965fdb7cc6177p+822,+0x1.965fdb7cc6177p+822,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.ad3465d6a897cp+12,+0x1.ad40000000000p+12,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.dac1d710183eap+708,+0x1.dac1d710183eap+708,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.f05127f9217f2p-926,+0x0.0000000000000p+0,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.6ff598cec4095p-663,+0x0.0000000000000p+0,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.711f38c4d4e00p+50,-0x1.711f38c4d4e00p+50,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.d6c940f3ff160p+42,-0x1.d6c940f3ff000p+42,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.5415fad9f475bp+28,+0x1.5415fae000000p+28,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.672f7bfe063e0p+207,-0x1.672f7bfe063e0p+207,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.90af25915aca5p+967,-0x1.90af25915aca5p+967,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.0e104dc32d729p+264,-0x1.0e104dc32d729p+264,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.3ad50cecfbdeap+18,+0x1.3ad5400000000p+18,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.e616e07231fc4p-609,+0x0.0000000000000p+0,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.069b21803c354p+162,+0x1.069b21803c354p+162,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.01d40b8f12c73p+990,+0x1.01d40b8f12c73p+990,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.35bc9171536ddp-356,+0x1.0000000000000p+0,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.ebe2e1a8802d2p+21,-0x1.ebe2e00000000p+21,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.c5876fbb6591ap+10,-0x1.c580000000000p+10,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.d85c89131b440p+45,-0x1.d85c89131b400p+45,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.baa4c1f29ddcap+586,+0x1.baa4c1f29ddcap+586,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.280df3f539138p+214,-0x1.280df3f539138p+214,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.40a229a581666p+748,-0x1.40a229a581666p+748,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.e5ef2d53a62c0p+180,-0x1.e5ef2d53a62c0p+180,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.71cf08bcaa18bp+22,+0x1.71cf0c0000000p+22,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.b044c34a4591ap+1000,-0x1.b044c34a4591ap+1000,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.777fc360111f7p-648,+0x1.0000000000000p+0,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.7e85613cf4b01p+590,+0x1.7e85613cf4b01p+590,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.1dce64938047fp+28,-0x1.1dce649000000p+28,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.315671d706444p+905,+0x1.315671d706444p+905,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.c11c826d18ef0p+27,-0x1.c11c826000000p+27,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.408c8dd542180p+33,+0x1.408c8dd580000p+33,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.9c743108eebe9p+30,-0x1.9c74310800000p+30,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.e23ec2361fb03p+0,-0x1.0000000000000p+0,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.a1ed716bdc04ep+466,-0x1.a1ed716bdc04ep+466,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.d91dd461a4870p+23,+0x1.d91dd60000000p+23,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.b478b875d0b1cp+694,+0x1.b478b875d0b1cp+694,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.7c53de70d78c7p-530,+0x1.0000000000000p+0,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.421b94a4fa5c8p+71,+0x1.421b94a4fa5c8p+71,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.b4a1cf30e83b7p+27,+0x1.b4a1cf4000000p+27,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.673732ba15dc6p+14,+0x1.6738000000000p+14,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.eb8412e51a1d0p+47,+0x1.eb8412e51a1e0p+47,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.c3de2a271647fp+24,+0x1.c3de2b0000000p+24,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.f97a9ee7e5583p+817,+0x1.f97a9ee7e5583p+817,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.f9acf575b2902p+38,-0x1.f9acf575b0000p+38,0,static_cast<mpfr::result_flag>(0) },
+	{ -0x1.3da9096513e19p+44,-0x1.3da9096513e00p+44,0,static_cast<mpfr::result_flag>(0) },
+	{ +0x1.1cd51e1976795p-996,+0x1.0000000000000p+0,0,static_cast<mpfr::result_flag>(0) },
+};
+}
+// clang-format on
