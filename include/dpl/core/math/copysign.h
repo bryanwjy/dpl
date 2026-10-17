@@ -44,9 +44,13 @@ struct fallback_impl<copysign_t> {
         } else if constexpr (floating_point_like<E>) {
             constexpr auto signbit =
                 __DPL bit_cast<E>(floating_point_traits<E>::signbit);
-            return dx::bwxor(lhs, dx::bwand(dx::bwxor(lhs, rhs), signbit));
+            auto const vsign = dx::broadcast<L>(signbit);
+            return dx::bwor(dx::bwandnot(lhs, vsign), dx::bwand(rhs, vsign));
         } else {
-            return dx::negate(lhs, dx::signbit(dx::bwxor(lhs, rhs)), lhs);
+            constexpr auto signbit =
+                __DPL bit_cast<E>(integral_traits<E>::signbit);
+            auto const vsign = dx::broadcast<L>(signbit);
+            return dx::bwor(dx::bwandnot(lhs, vsign), dx::bwand(rhs, vsign));
         }
     }
 
