@@ -11,23 +11,29 @@ import dpl;
 
 export namespace dpl::test {
 inline namespace support {
+template <dpl::floating_point_like T = float>
 constexpr bool finite_math_only() noexcept {
     if consteval {
         return false;
     } else {
         // Implementation defined, may not work everywhere
-        float volatile nan = dpl::bit_cast<float>(-1);
+        using bitset_t = dpl::bit_representation_t<T>;
+        T volatile nan = dpl::bit_cast<T>(~bitset_t());
         return nan == nan;
     }
 }
 
-constexpr bool ieee_denormal() noexcept {
+template <dpl::floating_point_like T = float>
+constexpr bool flush_to_zero() noexcept {
     if consteval {
         return true;
     } else {
         // Implementation defined, may not work everywhere
-        float volatile denormal = dpl::bit_cast<float>(0x00800000) * 0.5f;
-        return denormal != 0.0f;
+        auto const volatile bits =
+            dpl::to_underlying(dpl::floating_point_traits<T>::mantissa_mask);
+        using bits_t = dpl::decay_t<decltype(bits)>;
+        auto const tiny = dpl::bit_cast<T>(static_cast<bits_t>(bits));
+        return tiny * static_cast<T>(1) == static_cast<T>(0);
     }
 }
 } // namespace support

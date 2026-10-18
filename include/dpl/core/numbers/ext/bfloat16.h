@@ -77,7 +77,7 @@ private:
             constexpr auto quiet32 = 1u << 22;
             auto const signbit = (bits & msb32) >> 16;
             auto const qbit = (bits & quiet32) >> 16;
-            return bits_to_storage(inf16 | signbit | qbit);
+            return bits_to_storage(inf16 | signbit | qbit | 1u);
         }
 
         auto const lsb = (bits >> 16) & 1;

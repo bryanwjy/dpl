@@ -76,7 +76,23 @@ public:
     }
 
     inline explicit operator dpl::ext::bfloat16() const noexcept {
-        return mpfr_get_flt(data_, MPFR_RNDN);
+        auto const val = mpfr_get_flt(data_, MPFR_RNDN);
+        // manually cast to avoid runtime ftz behaviour on certain platforms
+        constexpr auto msb32 = 0x80000000u;
+        constexpr auto inf16 = 0x7f80;
+        auto const bits = dpl::bit_cast<dpl::uint32>(val);
+        if (mpfr_nan_p(data_)) {
+            constexpr auto quiet32 = 1u << 22;
+            auto const signbit = (bits & msb32) >> 16;
+            auto const qbit = (bits & quiet32) >> 16;
+            return dpl::bit_cast<dpl::ext::bfloat16>(
+                static_cast<dpl::uint16>(inf16 | signbit | qbit | 1u));
+        }
+
+        auto const lsb = (bits >> 16) & 1;
+        auto const bias = 0x7fff + lsb;
+        return dpl::bit_cast<dpl::ext::bfloat16>(
+            static_cast<dpl::uint16>((bits + bias) >> 16));
     }
 
 private:

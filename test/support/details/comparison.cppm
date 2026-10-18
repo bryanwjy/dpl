@@ -3,7 +3,13 @@ module;
 #define DPL_MODULES 1
 #include "dpl/config.h"
 
+#include <cassert>
+
 export module dpl.test.support:comparison;
+import :span;
+import :data_generator;
+import :linear_counter;
+import :math_check;
 import dpl;
 
 export namespace dpl::test {
@@ -74,6 +80,86 @@ struct precision_cmp_t {
 
 template <size_t N>
 inline constexpr precision_cmp_t<N> precision_cmp{};
+
+template <size_t ULP>
+struct ulp_cmp {
+    // (exact - expected) / ulp(expected), per lane
+    test::span<float const> residuals;
+
+    explicit constexpr ulp_cmp(test::span<float const> r) noexcept
+        : residuals(r) {}
+
+    template <dpp::simd_vector V, dpl::same_as<V> R>
+    constexpr auto operator()(V actual, R expected) const noexcept {
+        using E = dpp::simd_element_type_t<V>;
+        if constexpr (dpl::is_integral_v<E>) {
+            return dpp::cmpeq(actual, expected);
+        } else {
+            auto const lanes = dpp::simd_abi_traits<V>::size();
+            assert(residuals.size() == lanes);
+
+            using A = dpp::simd_abi_type_t<V>;
+            using sint_t = dpp::signed_representation_t<E>;
+            using traits = dpl::floating_point_traits<E>;
+            using IV = dpp::rebind_simd_t<V, sint_t>;
+            auto const zero_i = dpp::broadcast<IV>(dpp::zero);
+
+            // Residual sign per lane: +1, 0 or -1. NaN (non-finite expected)
+            // gives 0; those lanes are decided by special_ok below.
+            auto signs = make_array<sint_t, A>();
+            for (auto const i : linear_counter(lanes))
+                signs[i] = static_cast<sint_t>(residuals[i] > 0) -
+                    static_cast<sint_t>(residuals[i] < 0);
+
+            auto const rsign = dpp::load<IV>(signs.data());
+            auto const r_ge0 = dpp::cmpge(rsign, zero_i);
+            auto const r_le0 = dpp::cmple(rsign, zero_i);
+
+            // Ordered key: monotonic in value, +0 and -0 both 0.
+            auto const mag_mask = dpp::broadcast<IV>(
+                dpl::to_signed(dpl::to_underlying(~traits::signbit)));
+            auto const key = [&](V x) {
+                auto const s = dpp::reinterpret<sint_t>(x);
+                auto const mag = dpp::bwand(s, mag_mask);
+                return dpp::select(
+                    dpp::cmplt(s, zero_i), dpp::subtract(zero_i, mag), mag);
+            };
+            auto const d = dpp::subtract(key(actual), key(expected));
+
+            auto const u = dpp::broadcast<IV>(static_cast<sint_t>(ULP));
+            auto const neg_u = dpp::subtract(zero_i, u);
+            auto const within =
+                dpp::bwand(dpp::cmpgt(d, neg_u), dpp::cmplt(d, u)); // |d| < U
+            auto const at_edge =
+                dpp::bwor(dpp::bwand(dpp::cmpeq(d, u), r_ge0), // d = U,  r >= 0
+                    dpp::bwand(dpp::cmpeq(d, neg_u), r_le0));  // d = -U, r <= 0
+            auto const finite_ok =
+                dpp::bwand(dpp::isfinite(actual), dpp::bwor(within, at_edge));
+
+            auto const min_normal = dpp::broadcast<IV>(
+                dpl::to_signed(dpl::to_underlying(traits::mantissa_mask) + 1));
+            auto const exp_mag =
+                dpp::bwand(dpp::reinterpret<sint_t>(expected), mag_mask);
+            auto const act_mag =
+                dpp::bwand(dpp::reinterpret<sint_t>(actual), mag_mask);
+            auto const flushed_ok = dpp::bwand(
+                dpp::bwand(dpp::cmpgt(exp_mag, zero_i),
+                    dpp::cmplt(exp_mag, min_normal)), // expected subnormal
+                dpp::cmpeq(act_mag, zero_i));         // actual is ±0
+
+            auto const value_ok = flush_to_zero<E>()
+                ? dpp::bwor(finite_ok, flushed_ok)
+                : finite_ok;
+
+            auto const special_ok =
+                dpp::bwor(dpp::cmpeq(dpp::reinterpret<sint_t>(actual),
+                              dpp::reinterpret<sint_t>(expected)),
+                    dpp::bwand(dpp::isnan(actual), dpp::isnan(expected)));
+
+            return dpp::select(dpp::isfinite(expected), value_ok, special_ok);
+        }
+    }
+};
 
 } // namespace support
 } // namespace dpl::test

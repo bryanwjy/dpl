@@ -670,11 +670,21 @@ struct ln2_t : dx::ln2_t {
     __DPL_HIDE_FROM_ABI explicit constexpr ln2_t() noexcept = default;
 
     template <simd_double T>
+    requires same_as<simd_value_type_t<T>, ext::float16>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    constexpr operator T(this ln2_t) noexcept {
+        using dpl::ext::literals::operator""_f16;
+        return fmath::make_pair<simd_abi_type_t<T>, ext::float16>(
+            0x1.63p-1_f16, -0x1.bdp-13_f16);
+    }
+
+    template <simd_double T>
     requires same_as<simd_value_type_t<T>, float>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     constexpr operator T(this ln2_t) noexcept {
+        // Cody-Waite split
         return fmath::make_pair<simd_abi_type_t<T>, float>(
-            0.693145751953125f, 1.428606765330187045e-06f);
+            0x1.62e4p-1f, 0x1.7f7d1cp-20f);
     }
 
     template <simd_double T>

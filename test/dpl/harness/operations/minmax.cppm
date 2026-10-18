@@ -112,7 +112,7 @@ public:
                             test::splat<E>(0.0), op, test::splat<E>(0.0), -0.0);
                     }
 
-                    if (!test::finite_math_only()) {
+                    if (!test::finite_math_only<E>()) {
                         auto const finite = data_generator(engine);
                         test::operation_fixture<A>::test(
                             finite, op, finite, dpp::nan);

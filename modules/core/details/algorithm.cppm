@@ -16,7 +16,6 @@ import :core.basic;
 import :core.concepts;
 import :core.type_traits;
 import :core.utility;
-import :core.math;
 
 DPL_DISABLE_WARNING_PUSH()
 #if DPL_COMPILER_MSVC

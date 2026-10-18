@@ -79,7 +79,7 @@ public:
             operation_fixture<A>::test(mfalse, dpp::cmpunord, lhs, rhs);
         }
 
-        if (test::finite_math_only()) {
+        if (test::finite_math_only<E>()) {
             return true;
         }
 

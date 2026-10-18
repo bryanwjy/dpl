@@ -500,6 +500,17 @@ constexpr auto make_array() noexcept(dpp::fixed_width_abi<A>) {
     }
 }
 
+template <typename E, dpp::simd_abi A>
+requires dpp::simd_element_for<E, A>
+constexpr auto make_residual_array() noexcept(dpp::fixed_width_abi<A>) {
+    if constexpr (dpp::scalable_abi<A>) {
+        return dynamic_array<float>(dpp::simd_abi_traits<A, E>::size());
+    } else {
+        constexpr auto lanes = dpp::simd_abi_traits<A, E>::size();
+        return array<float, lanes>{};
+    }
+}
+
 template <typename E, dpp::simd_abi A, dpp::canonical_mask M>
 requires dpp::simd_element_for<E, A>
 constexpr auto to_mask_vector(M mask,

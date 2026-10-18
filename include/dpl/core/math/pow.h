@@ -273,8 +273,7 @@ private:
         using sint_t = signed_representation_t<E>;
 
         auto u = fmath::recombine(arg);
-        auto const qf =
-            dx::round(u, rounding::to_nearest_int | rounding::no_exc);
+        auto const qf = dx::roundeven(u, rounding::no_exc);
         auto const q = dx::element_cast<sint_t>(qf);
         auto s = fmath::normalize(fmath::pair_ref{arg} - qf);
 

@@ -105,7 +105,7 @@ class arithmetic {
             operation_fixture<A>::test(
                 test::splat<E>(0.0), dpp::add, test::splat<E>(1.0), -1.0);
 
-            if (!test::finite_math_only()) {
+            if (!test::finite_math_only<E>()) {
                 constexpr auto inf = dpp::infinity_v<E>;
                 operation_fixture<A>::test(
                     test::splat<E>(inf), dpp::add, test::splat<E>(inf), 1.0);
@@ -177,7 +177,7 @@ class arithmetic {
             operation_fixture<A>::test(
                 test::splat<E>(0.0), dpp::subtract, test::splat<E>(-1.0), -1.0);
 
-            if (!dpl::test::finite_math_only()) {
+            if (!dpl::test::finite_math_only<E>()) {
                 constexpr auto inf = dpp::infinity_v<E>;
                 operation_fixture<A>::test(
                     test::splat(inf), dpp::subtract, test::splat(inf), 1.0);
@@ -240,7 +240,7 @@ class arithmetic {
             operation_fixture<A>::test(
                 test::splat<E>(1.0), dpp::multiply, test::splat<E>(-1.0), -1.0);
 
-            if (test::ieee_denormal()) {
+            if (!test::flush_to_zero<E>()) {
                 using ubit_t = dpp::unsigned_representation_t<E>;
                 auto const denorm = dpl::bit_cast<E>(ubit_t(1));
                 operation_fixture<A>::test(test::splat<E>(0), dpp::multiply,
@@ -250,7 +250,7 @@ class arithmetic {
                     test::splat(denorm), 2.0);
             }
 
-            if (!test::finite_math_only()) {
+            if (!test::finite_math_only<E>()) {
                 constexpr auto inf = dpp::infinity_v<E>;
                 operation_fixture<A>::test(
                     test::splat(inf), dpp::multiply, test::splat(inf), 2.0);
@@ -287,7 +287,7 @@ class arithmetic {
         operation_fixture<A>::test(
             test::splat<E>(-rnd[0]), dpp::divide, test::splat(rnd[0]), -1);
 
-        if (test::ieee_denormal()) {
+        if (!test::flush_to_zero<E>()) {
             using ubit_t = dpp::unsigned_representation_t<E>;
             auto const denorm = dpl::bit_cast<E>(ubit_t(1));
             operation_fixture<A>::test(test::splat<E>(dpp::infinity),
@@ -296,7 +296,7 @@ class arithmetic {
                 test::splat(dpl::bit_cast<E>(ubit_t(2))), 2.0);
         }
 
-        if (!test::finite_math_only()) {
+        if (!test::finite_math_only<E>()) {
             constexpr auto inf = dpp::infinity_v<E>;
 
             operation_fixture<A>::test(

@@ -407,7 +407,7 @@ constexpr size_t max_hex_float_chars = [] {
     auto const val = 1 + 2 + 2 +
         (dpl::floating_point_traits<T>::digits - 1 + 3) / 4 + 2 + log10p1(exp);
     using std::string_view_literals::operator""sv;
-    constexpr auto inf_str = "-dpl::infinity"sv;
+    constexpr auto inf_str = "-dpp::infinity"sv;
     auto const max_suffix = 5; // "_bf16"
     return val + max_suffix < inf_str.size() ? inf_str.size()
                                              : val + max_suffix;
@@ -417,19 +417,20 @@ template <dpl::floating_point_like T>
 using float_str = std::array<char, max_hex_float_chars<T> + 1>;
 
 template <dpl::floating_point_like T>
-constexpr float_str<T> to_string(T val) noexcept {
+constexpr float_str<T> to_string(T const& val) noexcept {
+    // use a reference here, certain ISAs ftz on copy ctor
     using std::string_view_literals::operator""sv;
     float_str<T> buffer{};
     if (val != val) {
-        "dpl::nan"sv.copy(buffer.data(), buffer.size());
+        "dpp::nan"sv.copy(buffer.data(), buffer.size());
         return buffer;
     }
     if (val == dpl::datapar::infinity_v<T>) {
-        "dpl::infinity"sv.copy(buffer.data(), buffer.size());
+        "dpp::infinity"sv.copy(buffer.data(), buffer.size());
         return buffer;
     }
     if (val == -dpl::datapar::infinity_v<T>) {
-        "-dpl::infinity"sv.copy(buffer.data(), buffer.size());
+        "-dpp::infinity"sv.copy(buffer.data(), buffer.size());
         return buffer;
     }
 
@@ -438,8 +439,8 @@ constexpr float_str<T> to_string(T val) noexcept {
     auto const uexp =
         (dpl::to_bit_representation(val) & traits::exponent_mask) >> shift;
 
-    auto const exp = dpl::to_signed(dpl::to_underlying(uexp)) -
-        (uexp ? traits::exponent_bias : 0);
+    auto const exp = (uexp ? dpl::to_signed(dpl::to_underlying(uexp)) : 1) -
+        traits::exponent_bias;
     auto const prefix =
         ((dpl::to_bit_representation(val) & ~traits::signbit) >> shift) ? 1 : 0;
     static constexpr auto mantissa_shift = (4 - (traits::digits - 1) % 4) % 4;
@@ -520,7 +521,8 @@ std::expected<void, std::error_condition> write_results(dpl::uint32 seed,
         "#pragma once\n\n"
         "#include \"dpl/config.h\"\n\n"
         "// clang-format off\n"
-        "namespace testdata {\n";
+        "namespace testdata {\n"
+        "namespace dpp = dpl::datapar;\n";
 
     if (stream.ptr == nullptr ||
         fwrite(comment, 1zu, sizeof(comment) - 1, stream.ptr) <
@@ -591,8 +593,17 @@ std::expected<void, std::error_condition> write_results(dpl::uint32 seed,
             return error_path();
         }
 
-        if (fprintf(stream.ptr, "%g,static_cast<mpfr::result_flag>(%u) },\n",
-                entry.residual, 0u + dpl::to_underlying(entry.flags)) < 0) {
+        auto const nan_residual = entry.residual != entry.residual;
+        if (nan_residual) {
+            if (fprintf(stream.ptr,
+                    "dpp::nan,static_cast<mpfr::result_flag>(%u) },\n",
+                    0u + dpl::to_underlying(entry.flags)) < 0) {
+                return error_path();
+            }
+        } else if (fprintf(stream.ptr,
+                       "%g,static_cast<mpfr::result_flag>(%u) },\n",
+                       entry.residual,
+                       0u + dpl::to_underlying(entry.flags)) < 0) {
             return error_path();
         }
     }

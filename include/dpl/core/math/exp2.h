@@ -7,10 +7,13 @@
 #include "dpl/core/math/details/ldexp.h"
 #include "dpl/core/math/details/pair.h"
 #include "dpl/core/math/details/polynomial.h"
+#include "dpl/core/math/isnan.h"
 #include "dpl/core/math/mulx.h"
-#include "dpl/core/math/round.h"
+#include "dpl/core/math/roundeven.h"
 
 #if !DPL_MODULES
+#  include "dpl/core/algorithm/rotate_right.h"
+#  include "dpl/core/algorithm/shift_left.h"
 #  include "dpl/core/concepts/extended.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_vector.h"
@@ -156,90 +159,136 @@ public:
 template <>
 struct fallback_impl<exp2_t> {
 private:
-    static constexpr auto rounding_opt =
-        rounding::no_exc | rounding::to_nearest_int;
     template <canonical_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr T DPL_VECTORCALL solve_poly(T val) noexcept {
-        if constexpr (is_same_v<T, double>) {
-            constexpr fmath::polynomial<0.6931471805599452862,
-                0.2402265069591012214e+0, 0.5550410866482046596e-1,
-                0.9618129107597600536e-2, 0.1333355814670499073e-2,
-                0.1540353045101147808e-3, 0.1525273353517584730e-4,
-                0.1321543872511327615e-5, 0.1017819260921760451e-6,
-                0.7073164598085707425e-8, 0.4434359082926529454e-9>
+        using E = simd_element_type_t<T>;
+        if constexpr (is_same_v<E, double>) {
+            constexpr fmath::polynomial<
+                0x1.62e42fefa39efp-1,  // 0.6931471805599453
+                0x1.ebfbdff82c598p-3,  // 0.24022650695910097
+                0x1.c6b08d704a0cbp-5,  // 0.05550410866482166
+                0x1.3b2ab6fba1dd9p-7,  // 0.009618129107606887
+                0x1.5d87fe78a2cbdp-10, // 0.0013333558146395995
+                0x1.43091309700dap-13, // 0.00015403530441738291
+                0x1.ffcbfc7441c97p-17, // 1.5252733853289477e-05
+                0x1.62bfd476e9a95p-20, // 1.3215442586728665e-06
+                0x1.b524dcb878ef4p-24, // 1.0178051724308302e-07
+                0x1.e606406677be9p-28, // 7.072586161230777e-09
+                0x1.ea0447380274bp-32  // 4.456676030826705e-10
+                >
+                poly;
+            return poly(val);
+        } else if constexpr (is_same_v<E, float>) {
+            constexpr fmath::polynomial<0x1.62e43p-1f, // 0.6931472
+                0x1.ebfbep-3f,                         // 0.2402265
+                0x1.c6af6cp-5f,                        // 0.05550357
+                0x1.3b29e4p-7f,                        // 0.009618031
+                0x1.5f0896p-10f,                       // 0.0013390867
+                0x1.446c82p-13f                        // 0.00015469735
+                >
                 poly;
             return poly(val);
         } else {
-            constexpr fmath::polynomial<0.6931471825f, //
-                0.2402264476f,                         //
-                0.5550347269e-1f,                      //
-                0.9618384764e-2f,                      //
-                0.1339262701e-2f,                      //
-                0.1535920892e-3f>
+            static_assert(is_same_v<E, ext::float16>);
+            using ext::literals::operator""_f16;
+            constexpr fmath::polynomial<0x1.63p-1_f16, // 0.6934
+                0x1.ecp-3_f16,                         // 0.2402
+                0x1.c98p-5_f16,                        // 0.05585
+                0x1.3dp-7_f16                          // 0.009674
+                >
                 poly;
             return poly(val);
         }
+    }
+
+    template <floating_point_like E>
+    static constexpr E upper_bound =
+        floating_point_traits<E>::exponent_bias + 1;
+    template <floating_point_like E>
+    static constexpr E lower_bound = -floating_point_traits<E>::exponent_bias -
+        static_cast<int>(floating_point_traits<E>::digits) - 1;
+
+    template <canonical_vector T>
+    static constexpr T DPL_VECTORCALL exp2(T val) noexcept {
+        using E = simd_element_type_t<T>;
+        using sint_t = signed_representation_t<E>;
+        using pair_t = mx::pair_type_t<T>;
+
+        auto const qf = dx::roundeven(val, rounding::no_exc);
+        auto const q = dx::element_cast<sint_t>(qf);
+        auto const fr = dx::subtract(val, qf);
+        auto u = dx::muladd(solve_poly(fr), fr, dx::one);
+        u = fmath::ldexp(fmath::compliance::speed, u, q);
+
+        // Use ge to ensure NANs propogates
+        u = dx::select(dx::cmpge(val, upper_bound<E>), dx::infinity, u);
+        return dx::select(dx::cmpge(val, lower_bound<E>), u, dx::zero);
+    }
+
+    template <canonical_vector T>
+    requires same_as<simd_element_type_t<T>, ext::bfloat16>
+    static constexpr T DPL_VECTORCALL exp2(T val) noexcept {
+        auto const shift = [] {
+            if constexpr (fixed_width_abi<simd_abi_type_t<T>>) {
+                return dx::imm<dx::simd_abi_traits<T>::size() / 2>;
+            } else {
+                return dx::simd_abi_traits<T>::size() / 2;
+            }
+        }();
+
+        auto const lo = dx::element_cast<float>(val);
+        auto const hi = dx::element_cast<float>(dx::shift_left(val, shift));
+        constexpr auto exp2 = [](dx::rebind_simd_t<T, float> fp32) {
+            using vf32_t = dx::rebind_simd_t<T, float>;
+            using sint_t = signed_representation_t<float>;
+            using pair_t = mx::pair_type_t<vf32_t>;
+            using ext::literals::operator""_bf16;
+            constexpr fmath::polynomial<0x1.62p-1f, // 0.69140625
+                0x1.fp-3f,                          // 0.2421875
+                0x1.cap-5f                          // 0.055908203125
+                >
+                poly;
+
+            auto const qf = dx::roundeven(fp32, rounding::no_exc);
+            auto const q = dx::element_cast<sint_t>(qf);
+            auto const fr = dx::subtract(fp32, qf);
+            auto u = dx::muladd(poly(fr), fr, dx::one);
+            u = fmath::ldexp(fmath::compliance::speed, u, q);
+
+            // Use ge to ensure NANs propogates
+            u = dx::select(
+                dx::cmpge(fp32, upper_bound<ext::bfloat16>), dx::infinity, u);
+            return dx::select(
+                dx::cmpge(fp32, lower_bound<ext::bfloat16>), u, dx::zero);
+        };
+
+        auto const r_lo = dx::element_cast<ext::bfloat16>(exp2(lo));
+        auto const r_hi = dx::element_cast<ext::bfloat16>(exp2(hi));
+        return dx::slide_left(dx::rotate_right(r_lo, shift), r_hi, shift);
     }
 
 public:
     template <canonical_vector T>
     requires same_as<simd_element_type_t<T>, double> ||
-        same_as<simd_element_type_t<T>, float>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+        same_as<simd_element_type_t<T>, float> ||
+        same_as<simd_element_type_t<T>, ext::float16> ||
+        same_as<simd_element_type_t<T>, ext::bfloat16>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T DPL_VECTORCALL operator()(T val) noexcept {
-        using E = simd_element_type_t<T>;
-        using sint_t = signed_representation_t<E>;
-        using pair = mx::pair_type_t<T>;
-        auto const qf = dx::round(dx::multiply(val, mx::inv_ln2), rounding_opt);
-        auto const q = dx::element_cast<sint_t>(qf);
-
-        using fpair = mx::pair_type_t<T>;
-        auto const [ln2upper, ln2lower] = dx::to_tuple_like(mx::ln2_v<fpair>);
-        auto const s =
-            dx::nmuladd(qf, ln2lower, dx::nmuladd(qf, ln2upper, val));
-
-        auto u = dx::muladd(solve_poly(s), s, dx::one);
-        u = fmath::ldexp(fmath::compliance::speed, u, q);
-        constexpr E upper_bound = is_same_v<E, double> ? 1024.0 : 128.0;
-        constexpr E lower_bound = is_same_v<E, double> ? -1074.0 : -149.0;
-        u = dx::select(dx::cmpge(val, upper_bound), dx::infinity, u);
-        return dx::select(dx::cmpge(val, lower_bound), u, dx::zero);
-    }
-
-    /*
-    template <canonical_vector T>
-    requires (same_as<ext::float16, simd_element_type_t<T>> ||
-    same_as<ext::bfloat16, simd_element_type_t<T>>) && cpo_invocable<round_t, T,
-    decltype(rounding_opt)> DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(T val) noexcept {
-        using sint = signed_representation_t<E>;
-        auto const qf = dx::round(
-            val * fmath::inv_ln2, rounding::no_exc | rounding::to_nearest_int);
-        auto const q = dx::element_cast<sint>(qf);
-        using fpair = fmath::pair<E, A>;
-        constexpr auto ln2 = fmath::ln2_v<fpair>;
-        auto const s =
-            dx::nmuladd(qf, ln2.lower, dx::nmuladd(qf, ln2.upper, val));
-        static constexpr fmath::polynomial<0.6931471825f, //
-            0.2402264476f,                                //
-            0.5550347269e-1f,                             //
-            0.9618384764e-2f>
-            polynomial;
-        static constexpr E max_log = 11;
-        auto u = dx::muladd(polynomial(s), s, dx::one);
-        u = fmath::ldexp(fmath::compliance::speed, u, q);
-        if constexpr (same_as<ext::bfloat16>) {
-            u = dx::select(val >= 128.0f, dx::infinity, u);
-            // underflow
-            return dx::select(val >= -133.0, u, dx::zero);
+        if consteval {
+            using E = simd_element_type_t<T>;
+            auto const isnan = dx::isnan(val);
+            // prevent NAN arithmetics
+            auto safe = dx::select(isnan, dx::zero, val);
+            // prevent OOB cast
+            safe = dx::min(safe, upper_bound<E>);
+            safe = dx::max(safe, lower_bound<E>);
+            return dx::select(isnan, val, fallback_impl::exp2(safe));
         } else {
-            u = dx::select(val >= 16.0, dx::infinity, u);
-            // underflow
-            return dx::select(val >= -24.0, u, dx::zero);
+            return fallback_impl::exp2(val);
         }
     }
-    */
 };
 } // namespace datapar::internal
 

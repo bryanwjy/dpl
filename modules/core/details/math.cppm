@@ -13,6 +13,7 @@ import :std.type_traits;
 import :std.utility;
 import :core.basic;
 import :core.concepts;
+import :core.algorithm;
 import :core.immediate;
 import :core.numbers;
 import :core.operations;
