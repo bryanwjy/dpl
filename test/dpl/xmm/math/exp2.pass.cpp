@@ -36,7 +36,7 @@ int main() {
         dpl::type_pack<float, double, dpl::ext::float16, dpl::ext::bfloat16>;
     constexpr auto run = []() {
         dpl::test::mt19937 engine;
-        return dpl::test::exp2<abi_t, 1>::run_all(types{}, engine);
+        return dpl::test::exp2<abi_t, 0.75>::run_all(types{}, engine);
     };
 
     static_assert(run());

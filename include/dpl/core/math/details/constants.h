@@ -78,7 +78,7 @@ struct bit_width_of_t : broadcastable_base<bit_width_of_t<T>> {
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     constexpr operator integral auto(this bit_width_of_t) noexcept {
-        return sizeof(T) * char_bit_v;
+        return __DPL type_bit_v<T>;
     }
 };
 template <typename T>
@@ -87,10 +87,23 @@ inline constexpr bit_width_of_t<T> bit_width_of{};
 struct inv_ln2_t : broadcastable_base<inv_ln2_t> {
     __DPL_HIDE_FROM_ABI explicit constexpr inv_ln2_t() noexcept = default;
 
-    template <floating_point T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    constexpr operator T(this inv_ln2_t) noexcept {
-        return 1.442695040888963407359924681001892137426645954152985934135449406931;
+    constexpr operator float() noexcept {
+        return 0x1.715476p+0f;
+    }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    constexpr operator double() noexcept {
+        return 0x1.71547652b82fep+0;
+    }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    constexpr operator ext::float16() noexcept {
+        using ext::literals::operator""_f16;
+        return 0x1.714p+0_f16;
+    }
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    constexpr operator ext::bfloat16() noexcept {
+        using ext::literals::operator""_bf16;
+        return 0x1.72p+0_bf16;
     }
 };
 

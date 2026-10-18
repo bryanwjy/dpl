@@ -24,7 +24,7 @@ inline constexpr dataspan_t<T> entries = dataspan_t<T>{};
 
 export namespace dpl::test {
 namespace dpp = dpl::datapar;
-template <dpp::simd_math_operation auto op, dpp::simd_abi A, size_t ulp>
+template <dpp::simd_math_operation auto op, dpp::simd_abi A, double ulp>
 class unary {
     template <typename E>
     static constexpr auto data = testdata::entries<op, E>;
@@ -135,11 +135,12 @@ public:
         dataspan_t<T>(NAME<T>);                            \
     }                                                      \
     export namespace dpl::test {                           \
-    template <dpp::simd_abi A, size_t ulp>                 \
+    template <dpp::simd_abi A, double ulp>                 \
     using NAME = unary<dpp::NAME, A, ulp>;                 \
     }                                                      \
     static_assert(true)
 
 __DPLT_DEFINE_FUNCTION(exp2);
+__DPLT_DEFINE_FUNCTION(exp);
 
 #undef __DPLT_DEFINE_FUNCTION

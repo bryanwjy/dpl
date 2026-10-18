@@ -6,6 +6,7 @@
 #include "dpl/core/math/details/compliance.h"
 #include "dpl/core/math/details/floating_point_simd.h"
 #include "dpl/core/math/details/ilogb.h"
+#include "dpl/core/math/floor.h"
 #include "dpl/core/math/rounding.h"
 
 #if !DPL_MODULES

@@ -81,7 +81,7 @@ struct precision_cmp_t {
 template <size_t N>
 inline constexpr precision_cmp_t<N> precision_cmp{};
 
-template <size_t ULP>
+template <double ULP>
 struct ulp_cmp {
     // (exact - expected) / ulp(expected), per lane
     test::span<float const> residuals;
@@ -126,16 +126,23 @@ struct ulp_cmp {
             };
             auto const d = dpp::subtract(key(actual), key(expected));
 
-            auto const u = dpp::broadcast<IV>(static_cast<sint_t>(ULP));
-            auto const neg_u = dpp::subtract(zero_i, u);
-            auto const within =
-                dpp::bwand(dpp::cmpgt(d, neg_u), dpp::cmplt(d, u)); // |d| < U
-            auto const at_edge =
-                dpp::bwor(dpp::bwand(dpp::cmpeq(d, u), r_ge0), // d = U,  r >= 0
-                    dpp::bwand(dpp::cmpeq(d, neg_u), r_le0));  // d = -U, r <= 0
-            auto const finite_ok =
-                dpp::bwand(dpp::isfinite(actual), dpp::bwor(within, at_edge));
+            auto const dist = [&] {
+                auto dist = make_array<sint_t, A>();
+                dpp::store(d, dist.data());
+                return dist;
+            }();
 
+            auto pass = make_array<sint_t, A>();
+            for (auto const i : linear_counter(lanes)) {
+                auto const res = residuals[i];
+                auto const err =
+                    (res != res) ? 0.0f : static_cast<float>(dist[i]) - res;
+                pass[i] = (err <= ULP && -err <= ULP) ? sint_t(-1) : sint_t(0);
+            }
+            auto const within = dpp::cmpneq(dpp::load<IV>(pass.data()), zero_i);
+            auto const finite_ok = dpp::bwand(dpp::isfinite(actual), within);
+
+            // Flush-to-zero: a subnormal expected value may come back as ±0.
             auto const min_normal = dpp::broadcast<IV>(
                 dpl::to_signed(dpl::to_underlying(traits::mantissa_mask) + 1));
             auto const exp_mag =
@@ -146,7 +153,6 @@ struct ulp_cmp {
                 dpp::bwand(dpp::cmpgt(exp_mag, zero_i),
                     dpp::cmplt(exp_mag, min_normal)), // expected subnormal
                 dpp::cmpeq(act_mag, zero_i));         // actual is ±0
-
             auto const value_ok = flush_to_zero<E>()
                 ? dpp::bwor(finite_ok, flushed_ok)
                 : finite_ok;

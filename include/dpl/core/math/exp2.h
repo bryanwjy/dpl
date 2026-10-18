@@ -20,7 +20,7 @@
 #  include "dpl/core/dispatch/interface.h"
 #  include "dpl/core/dispatch/maskable/transform.h"
 #  include "dpl/core/dispatch/operation/math.h"
-#  include "dpl/core/numbers/ext.h" // IWYU pragma: keep
+#  include "dpl/core/numbers/ext.h"
 #  include "dpl/core/operations/arithmetic.h"
 #  include "dpl/core/operations/cast.h"
 #  include "dpl/core/operations/compare.h"
@@ -210,10 +210,10 @@ private:
         static_cast<int>(floating_point_traits<E>::digits) - 1;
 
     template <canonical_vector T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr T DPL_VECTORCALL exp2(T val) noexcept {
         using E = simd_element_type_t<T>;
         using sint_t = signed_representation_t<E>;
-        using pair_t = mx::pair_type_t<T>;
 
         auto const qf = dx::roundeven(val, rounding::no_exc);
         auto const q = dx::element_cast<sint_t>(qf);
@@ -223,11 +223,12 @@ private:
 
         // Use ge to ensure NANs propogates
         u = dx::select(dx::cmpge(val, upper_bound<E>), dx::infinity, u);
-        return dx::select(dx::cmpge(val, lower_bound<E>), u, dx::zero);
+        return dx::select(dx::cmplt(val, lower_bound<E>), dx::zero, u);
     }
 
     template <canonical_vector T>
     requires same_as<simd_element_type_t<T>, ext::bfloat16>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr T DPL_VECTORCALL exp2(T val) noexcept {
         auto const shift = [] {
             if constexpr (fixed_width_abi<simd_abi_type_t<T>>) {
@@ -242,7 +243,7 @@ private:
         constexpr auto exp2 = [](dx::rebind_simd_t<T, float> fp32) {
             using vf32_t = dx::rebind_simd_t<T, float>;
             using sint_t = signed_representation_t<float>;
-            using pair_t = mx::pair_type_t<vf32_t>;
+
             using ext::literals::operator""_bf16;
             constexpr fmath::polynomial<0x1.62p-1f, // 0.69140625
                 0x1.fp-3f,                          // 0.2421875
@@ -275,7 +276,7 @@ public:
         same_as<simd_element_type_t<T>, ext::float16> ||
         same_as<simd_element_type_t<T>, ext::bfloat16>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T DPL_VECTORCALL operator()(T val) noexcept {
+    static constexpr T operator()(T val) noexcept {
         if consteval {
             using E = simd_element_type_t<T>;
             auto const isnan = dx::isnan(val);
