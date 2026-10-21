@@ -3,6 +3,8 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/math/floor.h"
+
 #if !DPL_MODULES
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/dispatch/interface.h"
@@ -12,6 +14,7 @@
 #  include "dpl/core/immediate/constants/exponent_mask.h"
 #  include "dpl/core/immediate/constants/mantissa_width.h"
 #  include "dpl/core/operations/arithmetic.h"
+#  include "dpl/core/operations/cast.h"
 #  include "dpl/core/operations/minmax.h"
 #  include "dpl/std/bit/popcount.h"
 #endif
@@ -62,7 +65,8 @@ concept unqualified_canonical_zmldexp =
     unqualified_canonical_mldexp_base<dx::zero_t, M, L, R, T>;
 
 template <typename R, typename L>
-concept broadcastable_to_exp_of = broadcastable_to<R, mx::exponent_vector_t<L>>;
+concept broadcastable_to_exp_of =
+    broadcastable_to<R, mx::exponent_vector_t<L>> || broadcastable_to<R, R>;
 
 template <>
 struct canonical_impl<ldexp_t> {
@@ -232,6 +236,24 @@ public:
     requires binary_layout_floating_point<simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr T DPL_VECTORCALL operator()(
+        T num, type_identity_t<T> exp) noexcept {
+        using E = simd_element_type_t<T>;
+        using sint_t = signed_representation_t<E>;
+        constexpr auto lower_bound =
+            static_cast<E>(dpl::integral_traits<sint_t>::min_value);
+        constexpr auto upper_bound =
+            static_cast<E>(dpl::integral_traits<sint_t>::max_value);
+        num = dx::select(dx::isnan(exp), dx::all_bits, num);
+        exp = dx::floor(exp);
+        auto const iexp = dx::element_cast<sint_t>(
+            dx::max(dx::min(exp, upper_bound), lower_bound));
+        return operator()(num, iexp);
+    }
+
+    template <canonical_vector T>
+    requires binary_layout_floating_point<simd_element_type_t<T>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr T DPL_VECTORCALL operator()(
         T num, mx::exponent_vector_t<T> exp) noexcept {
         using E = simd_element_type_t<T>;
         using traits = floating_point_traits<E>;
@@ -268,8 +290,11 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr L operator()(L lhs, R&& rhs) noexcept {
         using I DPL_NODEBUG = mx::exponent_vector_t<L>;
-        return ldexp_t::operator()(
-            lhs, dx::broadcast<I>(__DPL forward<R>(rhs)));
+        if constexpr (broadcastable_to<R, I>) {
+            return operator()(lhs, dx::broadcast<I>(__DPL forward<R>(rhs)));
+        } else {
+            return operator()(lhs, dx::broadcast<L>(__DPL forward<R>(rhs)));
+        }
     }
 };
 } // namespace datapar::internal

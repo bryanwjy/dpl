@@ -3,6 +3,7 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/math/details/apply_widened.h"
 #include "dpl/core/math/details/constants.h"
 #include "dpl/core/math/details/ldexp.h"
 #include "dpl/core/math/details/pair.h"
@@ -263,13 +264,12 @@ private:
         using sint_t = signed_representation_t<E>;
         auto const qf =
             dx::roundeven(dx::multiply(val, mx::inv_ln2), rounding::no_exc);
-        auto const q = dx::element_cast<sint_t>(qf);
         auto const s =
             dx::nmulsub(qf, ln2lower<E>, dx::nmulsub(qf, ln2upper<E>, val));
         // x2 * f + x + 1
         auto u = dx::muladd(dx::multiply(s, s), solve_poly(s), s);
         u = dx::add(u, dx::one);
-        u = fmath::ldexp(fmath::compliance::speed, u, q);
+        u = fmath::ldexp(fmath::compliance::speed, u, qf);
         u = dx::select(dx::cmpge(val, upper_bound<E>), dx::infinity, u);
         return dx::select(dx::cmple(val, lower_bound<E>), dx::zero, u);
     }
@@ -278,38 +278,25 @@ private:
     requires same_as<simd_element_type_t<T>, ext::bfloat16>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr T DPL_VECTORCALL exp(T val) noexcept {
-        auto const shift = [] {
-            if constexpr (fixed_width_abi<simd_abi_type_t<T>>) {
-                return dx::imm<dx::simd_abi_traits<T>::size() / 2>;
-            } else {
-                return dx::simd_abi_traits<T>::size() / 2;
-            }
-        }();
-
-        using E = simd_element_type_t<T>;
-        auto const lo = dx::element_cast<float>(val);
-        auto const hi = dx::element_cast<float>(dx::shift_left(val, shift));
-        constexpr auto exp = [](dx::rebind_simd_t<T, float> fp32) {
+        constexpr auto expf = [](dx::rebind_simd_t<T, float> fp32) {
             using vf32_t = dx::rebind_simd_t<T, float>;
             using sint_t = signed_representation_t<float>;
+            using E = simd_element_type_t<T>;
 
             // 0.50390625, 0.16796875
             constexpr fmath::polynomial<0x1.02p-1f, 0x1.58p-3f> poly;
             auto const qf = dx::roundeven(
                 dx::multiply(fp32, mx::inv_ln2), rounding::no_exc);
-            auto const q = dx::element_cast<sint_t>(qf);
             auto const fr = dx::nmulsub(qf, dx::ln2, fp32);
             // x2 * f + x + 1
             auto u = dx::muladd(dx::multiply(fr, fr), solve_poly(fr), fr);
             u = dx::add(u, dx::one);
-            u = fmath::ldexp(fmath::compliance::speed, u, q);
+            u = fmath::ldexp(fmath::compliance::speed, u, qf);
             u = dx::select(dx::cmpge(fp32, upper_bound<E>), dx::infinity, u);
             return dx::select(dx::cmple(fp32, lower_bound<E>), dx::zero, u);
         };
 
-        auto const r_lo = dx::element_cast<E>(exp(lo));
-        auto const r_hi = dx::element_cast<E>(exp(hi));
-        return dx::slide_left(dx::rotate_right(r_lo, shift), r_hi, shift);
+        return fmath::apply_widened<float>(expf, val);
     }
 
 public:

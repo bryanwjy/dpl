@@ -101,11 +101,11 @@ constexpr pair_type_t<T> make_pair(
     return make_tuple(dx::internal::abi<T>, upper, lower);
 }
 
-template <canonical_vector T>
+template <canonical_vector T, same_as<T> R = T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 constexpr pair_type_t<T>
     DPL_VECTORCALL make_pair(
-        T upper, T lower = dx::broadcast<T>(dx::zero)) noexcept {
+        T upper, R lower = dx::broadcast<R>(dx::zero)) noexcept {
     return pair_type_t<T>{
         .upper = upper,
         .lower = lower,
@@ -242,12 +242,12 @@ struct pair_ref {
         this pair_ref self, pair_ref right) noexcept {
         auto const [lupper, llower] = self;
         auto const [rupper, rlower] = right;
-        auto const one = dx::broadcast<T>(dx::one);
+        auto const vone = dx::broadcast<element_type>(dx::one);
 
-        auto t = dx::divide(one, rupper);
+        auto t = dx::divide(vone, rupper);
         auto s = dx::multiply(lupper, t);
         auto u = dx::mulsub(t, lupper, s);
-        auto v = dx::nmuladd(rlower, t, dx::nmuladd(rupper, t, one));
+        auto v = dx::nmulsub(rlower, t, dx::nmulsub(rupper, t, vone));
         return fmath::make_pair(s, dx::muladd(s, v, dx::muladd(llower, t, u)));
     }
 
@@ -295,7 +295,7 @@ struct pair_ref {
 };
 
 template <simd_double T>
-explicit pair_ref(T const&) -> pair_ref<T>;
+explicit pair_ref(T&&) -> pair_ref<decay_t<T>>;
 
 } // namespace datapar::fmath
 
@@ -362,16 +362,23 @@ constexpr T DPL_VECTORCALL normalize(T arg) noexcept {
 
 template <simd_double T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-constexpr T DPL_VECTORCALL scale(T arg, simd_value_type_t<T> scale) noexcept {
+constexpr T DPL_VECTORCALL scale(T arg, simd_element_type_t<T> scale) noexcept {
     return fmath::make_pair(dx::multiply(dx::get_element<0>(arg), scale),
         dx::multiply(dx::get_element<1>(arg), scale));
+}
+
+template <simd_double T, broadcastable_to<simd_element_type_t<T>> V>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+constexpr T DPL_VECTORCALL scale(T arg, V&& scale) noexcept {
+    return fmath::scale(
+        arg, dx::broadcast<simd_element_type_t<T>>(__DPL forward<V>(scale)));
 }
 
 template <simd_double T>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 constexpr T DPL_VECTORCALL square(T arg) noexcept {
     auto const [in_upper, in_lower] = dx::to_tuple_like(arg);
-    auto s = dx::multiply(in_upper, in_lower);
+    auto s = dx::multiply(in_upper, in_upper);
     return fmath::make_pair(s,
         dx::muladd(                      //
             dx::add(in_upper, in_upper), //
@@ -386,7 +393,7 @@ constexpr T DPL_VECTORCALL rcp(T arg) noexcept {
     auto s = dx::divide(one, dx::get_element<0>(arg));
     return fmath::make_pair(s,
         dx::multiply(
-            s, dx::nmuladd(arg.lower, s, dx::nmuladd(arg.upper, s, one))));
+            s, dx::nmulsub(arg.lower, s, dx::nmulsub(arg.upper, s, one))));
 }
 
 struct frsqrt_t : public dx::internal::operation_base<dx::internal::rsqrt_t> {
@@ -490,7 +497,7 @@ constexpr pair_type_t<T>
     DPL_VECTORCALL rcp(single<T> arg) noexcept {
     auto const one = dx::broadcast<T>(dx::one);
     auto s = dx::divide(one, arg.value);
-    return fmath::make_pair(s, dx::multiply(s, dx::nmuladd(arg.value, s, one)));
+    return fmath::make_pair(s, dx::multiply(s, dx::nmulsub(arg.value, s, one)));
 }
 
 struct fsqrt_t : public dx::internal::operation_base<dx::internal::sqrt_t> {

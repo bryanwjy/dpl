@@ -5,6 +5,7 @@
 
 #include "dpl/core/math/details/pair.h"
 #include "dpl/core/math/details/polynomial.h"
+#include "dpl/core/math/exp2.h"
 #include "dpl/core/math/fixup.h"
 #include "dpl/core/math/frexp.h"
 #include "dpl/core/math/round.h"
@@ -22,6 +23,7 @@
 #  include "dpl/core/operations/arithmetic.h"
 #  include "dpl/core/operations/bitwise.h"
 #  include "dpl/core/operations/compare.h"
+#  include "dpl/core/operations/internal/transform.h"
 #  include "dpl/core/operations/logical.h"
 #  include "dpl/std/concepts/tuple_like.h"
 #endif
@@ -237,30 +239,7 @@ public:
 template <>
 struct fallback_impl<pow_t> : binary_canonical_broadcaster<pow_t> {
 private:
-    template <typename T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr T DPL_VECTORCALL exp2_poly(T arg) noexcept {
-        // polynomial for f(x) = (pow(2,x) - 1 - x ln(2)) / pow(x,2)
-        if constexpr (is_same_v<T, double>) {
-            constexpr fmath::polynomial<0.24069579622573783,
-                0.06440213344186142, 0.087906020124066, 0.3927994222793298,
-                1.1138080524555194, 1.399782605545827, -1.3239033234264652,
-                -7.953882600802256, -12.875978831585796, -9.890373910625978,
-                -3.065528692252689>
-                poly;
-            return poly(arg);
-        } else {
-            constexpr fmath::polynomial<0.24022650718688965f, //
-                0.055503811687231064f,                        //
-                0.00961806159466505f,                         //
-                0.0013381305616348982f,                       //
-                0.0001546145067550242f>
-                poly;
-            return poly(arg);
-        }
-    }
-
-    template <fmath::simd_double T>
+    template <mx::simd_double T>
     requires same_as<simd_value_type_t<T>, float> ||
         same_as<simd_value_type_t<T>, double>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
@@ -270,37 +249,44 @@ private:
         // better precision for this use-case
         using E = simd_value_type_t<T>;
         using A = simd_abi_type_t<T>;
-        using sint_t = signed_representation_t<E>;
+        using exp2_impl = fallback_impl<exp2_t>;
 
-        auto u = fmath::recombine(arg);
-        auto const qf = dx::roundeven(u, rounding::no_exc);
-        auto const q = dx::element_cast<sint_t>(qf);
-        auto s = fmath::normalize(fmath::pair_ref{arg} - qf);
+        constexpr auto self = [](T arg, simd_element_type_t<T> varg) {
+            auto const qf = dx::roundeven(varg, rounding::no_exc);
+            auto s = mx::normalize(mx::pair_ref{arg} - qf);
+            auto const u = exp2_impl::solve_poly(dx::get_element<0>(s));
+            // t = pow(2,x) where x is in the interval [-0.5,0.5]
+            // |s| <= 0.5
+            // |u| < 1
+            // so s * u < 1
+            // so assumptions for fast arithmetic holds
+            s = mx::pair_ref{s} * u;
+            s = mx::fast(dx::broadcast<E, A>(dx::one)) + s;
+            // zero if underflow
+            return dx::select(dx::cmplt(varg, exp2_impl::lower_bound<E>),
+                dx::zero,
+                mx::ldexp(mx::compliance::speed, mx::recombine(s), qf));
+        };
 
-        u = exp2_poly(dx::get_element<0>(s));
-        auto const one = dx::broadcast<E, A>(dx::one);
-
-        // t = pow(2,x) where x is in the interval [-0.5,0.5]
-        // |s| <= 0.5
-        // |u| < 0.271
-        // ln2 ~ 0.69
-        // so assumptions for fast arithmetic holds
-        auto t = fmath::pair_ref{fmath::square(s)} * u;
-        t = fmath::fast(fmath::pair_ref{fmath::ln2_v<T>} * s) + t;
-        t = fmath::fast(one) + t;
-        // zero if underflow
-        constexpr E zero_threshold = is_same_v<E, double> ? -1000.0 : -150.0;
-        return dx::select(dx::cmplt(dx::get_element<0>(arg), zero_threshold),
-            dx::zero,
-            fmath::ldexp(fmath::compliance::speed, fmath::recombine(t), q));
+        if consteval {
+            auto const varg = mx::recombine(arg);
+            auto const oob = dx::cmpge(varg, exp2_impl::upper_bound<E>);
+            auto const result =
+                self(mx::select(oob, mx::make_pair<A, E>(dx::zero), arg),
+                    dx::select(oob, dx::zero, varg));
+            return dx::select(oob, dx::infinity, result);
+        } else {
+            return self(arg, mx::recombine(arg));
+        }
     }
 
     template <canonical_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr T DPL_VECTORCALL log2_poly(T arg) noexcept {
         // polynomial for atanh
-        if constexpr (is_same_v<T, double>) {
-            fmath::polynomial<0.400000000000000077715612,
+        using E = simd_element_type_t<T>;
+        if constexpr (is_same_v<E, double>) {
+            mx::polynomial<0.400000000000000077715612,
                 0.285714285714249172087875, 0.222222222230083560345903,
                 0.181818180850050775676507, 0.153846227114512262845736,
                 0.13332981086846273921509, 0.117754809412463995466069,
@@ -308,8 +294,8 @@ private:
                 poly;
             return poly(arg);
         } else {
-            constexpr fmath::polynomial<0.400007992982864379882812f, //
-                0.285112679004669189453125f,                         //
+            constexpr mx::polynomial<0.400007992982864379882812f, //
+                0.285112679004669189453125f,                      //
                 0.240320354700088500976562f>
                 poly;
             return poly(arg);
@@ -320,98 +306,167 @@ private:
     requires same_as<simd_element_type_t<T>, float> ||
         same_as<simd_element_type_t<T>, double>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr fmath::pair_type_t<T>
+    static constexpr mx::pair_type_t<T>
         DPL_VECTORCALL log2(T arg) noexcept {
+
         // takes a decomposed significand; only valid in interval [0.75,1.5)
-        auto const one = dx::broadcast<T>(dx::one);
-        auto const x = (arg - fmath::single{one}) / (fmath::single{one} + arg);
-        auto const x2 = fmath::square(x);
+        auto const vone = dx::broadcast<T>(dx::one);
+        auto const x =
+            mx::pair_ref{arg - mx::single{vone}} / (mx::single{vone} + arg);
+        auto const x2 = mx::square(x);
         auto t = log2_poly(dx::get_element<0>(x2));
 
         using E = simd_element_type_t<T>;
-        auto const onethird = []() {
+        auto const twothirds = []() {
             if constexpr (is_same_v<E, double>) {
-                return fmath::make_pair(
-                    dx::broadcast<T>(0.666666666666666629659233),
-                    dx::broadcast<T>(3.80554962542412056336616e-17));
+                return mx::make_pair( //
+                    dx::broadcast<T>(0x1.5555555555555p-1),
+                    dx::broadcast<T>(0x1.5555555555555p-55));
             } else {
-                return fmath::make_pair(
-                    dx::broadcast<T>(0.66666662693023681640625f),
-                    dx::broadcast<T>(3.69183861259614332084311e-09f));
+                return mx::make_pair( //
+                    dx::broadcast<T>(0x1.555556p-1f),
+                    dx::broadcast<T>(-0x1.555556p-26f));
             }
         }();
 
-        auto const x3 = fmath::pair_ref{x2} * x;
-        auto s = fmath::pair_ref{x2} * t;
-        s = fmath::pair_ref{s} + onethird;
-        s = fmath::pair_ref{x3} * s;
-        s = fmath::fast(fmath::scale(x, dx::broadcast<T>(2.0))) + s;
+        auto const x3 = mx::pair_ref{x2} * x;
+        auto s = mx::pair_ref{x2} * t;
+        s = mx::pair_ref{s} + twothirds;
+        s = mx::pair_ref{x3} * s;
+        s = mx::fast(mx::scale(x, 2.0)) + s;
         auto const inv_ln2 = []() {
             if constexpr (is_same_v<E, double>) {
-                return fmath::make_pair(
-                    dx::broadcast<T>(1.44269504088896338700465091244),
-                    dx::broadcast<T>(2.03552737684314300702482381274e-17));
+                return mx::make_pair( //
+                    dx::broadcast<T>(0x1.71547652b82fep+0),
+                    dx::broadcast<T>(0x1.777d0ffda0d24p-56));
             } else {
-                return fmath::make_pair(
-                    dx::broadcast<T>(1.44269502162933349609f),
-                    dx::broadcast<T>(1.92596299112661746887e-08f));
+                return mx::make_pair( //
+                    dx::broadcast<T>(0x1.715476p+0f),
+                    dx::broadcast<T>(0x1.4ae0cp-26f));
             }
         }();
 
-        return fmath::pair_ref{s} * inv_ln2;
+        return mx::pair_ref{s} * inv_ln2;
     }
 
-public:
-    template <canonical_vector T, same_as<T> U>
-    requires cpo_invocable<frexp_t, T, frexp_options::reduced_t> &&
-        requires(T rhs, T fr, T exp) {
-            fallback_impl::exp2(rhs *
-                fmath::pair_ref{
-                    fmath::pair_ref{fallback_impl::log2(fr)} + exp});
-        }
+    template <canonical_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr T DPL_VECTORCALL operator()(T lhs, U rhs) noexcept {
+    static constexpr T DPL_VECTORCALL pow(T lhs, T rhs) noexcept {
         using E = simd_element_type_t<T>;
         using A = simd_abi_type_t<T>;
+        constexpr auto impl = [](T absl, T rhs) {
+            if constexpr (is_same_v<E, float> || is_same_v<E, double>) {
+                auto const [fr, exp] =
+                    dx::to_tuple_like(dx::frexp(absl, frexp_options::reduced));
+                return fallback_impl::exp2(rhs *
+                    mx::pair_ref{mx::pair_ref{fallback_impl::log2(fr)} + exp});
+            } else {
+                auto const powf = [](auto lhs, auto rhs) {
+                    auto const [fr, exp] = dx::to_tuple_like(
+                        dx::frexp(lhs, frexp_options::reduced));
+                    return dx::exp2(
+                        dx::multiply(dx::add(dx::log2(fr), exp), rhs));
+                };
 
+                return mx::apply_widened<float>(powf, absl, rhs);
+            }
+        };
         auto const absl = dx::abs(lhs);
-        auto const [fr, exp] =
-            dx::to_tuple_like(dx::frexp(absl, frexp_options::reduced));
-        auto result = fallback_impl::exp2(rhs *
-            fmath::pair_ref{fmath::pair_ref{fallback_impl::log2(fr)} + exp});
+        auto result = [&] {
+            if consteval {
+                auto const cleanl =
+                    dx::select(dx::isfinite(absl), absl, dx::zero);
+                auto const cleanr =
+                    dx::select(dx::isfinite(rhs), rhs, dx::zero);
+                return impl(cleanl, cleanr);
+            } else {
+                return impl(absl, rhs);
+            }
+        }();
 
-        auto const inf = dx::broadcast<T>(dx::infinity);
+        auto const isrhs_odd = [](auto val) {
+            constexpr E half = 0.5;
+            if consteval {
+                val = dx::select(dx::isfinite(val), val, dx::zero);
+            }
+
+            auto const h = dx::multiply(val, half); // y/2, exact
+            return dx::cmpeq(dx::abs(dx::subtract(h, dx::trunc(h))), half);
+        }(rhs);
+
+        auto const islhs_ltz = dx::signbit(lhs);
+        {
+            auto const isrhs_int = dx::cmpeq(dx::trunc(rhs), rhs);
+            result = dx::select(                    //
+                dx::bwandnot(islhs_ltz, isrhs_int), //
+                dx::all_bits,                       //
+                dx::negate(
+                    result, dx::logical_and(isrhs_odd, islhs_ltz), result));
+        }
+
+        auto const vinf = dx::broadcast<T>(dx::infinity);
 
         {
-            auto efx = dx::sign(dx::subtract(absl, dx::one), rhs);
+            auto efx = [&] {
+                if consteval {
+                    auto const isnan = dx::isnan(absl);
+                    return dx::select(isnan, absl,
+                        dx::subtract(
+                            dx::select(isnan, dx::zero, absl), dx::one));
+                } else {
+                    return dx::subtract(absl, dx::one);
+                }
+            }();
+            efx = dx::sign(efx, rhs);
             auto const ltz = dx::cmplt(efx, dx::zero);
             auto const eqz = dx::cmpeq(efx, dx::zero);
-            efx = dx::select(ltz, dx::zero, dx::select(eqz, dx::one, inf));
+            efx = dx::select(ltz, dx::zero, dx::select(eqz, dx::one, vinf));
             result = dx::select(dx::isinf(rhs), efx, result);
         }
 
         auto const islhs_zero = dx::cmpeq(lhs, dx::zero);
-        auto const is_odd = [](auto rhs) {
-            using sint_t = signed_representation_t<E>;
-            return dx::logical_and(
-                dx::cmpeq(
-                    dx::bwand(dx::element_cast<sint_t>(rhs), dx::one), dx::one),
-                dx::cmpeq(dx::trunc(rhs), rhs),
-                dx::cmplt(dx::abs(rhs), fmath::maxint));
-        };
-
-        auto const invalid =
-            dx::select(dx::cmpneq(dx::signbit(rhs), islhs_zero), dx::zero, inf);
-        auto const negated = dx::negate(invalid,
-            dx::logical_and(is_odd(rhs), dx::cmplt(lhs, dx::zero)), invalid);
+        auto const invalid = dx::select(
+            dx::cmpneq(dx::signbit(rhs), islhs_zero), dx::zero, vinf);
+        auto const negated =
+            dx::negate(invalid, dx::logical_and(isrhs_odd, islhs_ltz), invalid);
         result = dx::select(
             dx::logical_or(dx::isinf(lhs), islhs_zero), negated, result);
 
         result = dx::select(dx::cmpunord(lhs, rhs), dx::all_bits, result);
 
         return dx::select(
-            dx::logical_or(dx::cmpeq(rhs, dx::zero), dx::cmpeq(rhs, dx::one)),
+            dx::logical_or(dx::cmpeq(rhs, dx::zero), dx::cmpeq(lhs, dx::one)),
             dx::one, result);
+    }
+
+public:
+    template <canonical_vector T, same_as<T> U>
+    requires cpo_invocable<frexp_t, T, frexp_options::reduced_t> &&
+        (same_as<simd_element_type_t<T>, double> ||
+            same_as<simd_element_type_t<T>, float> ||
+            same_as<simd_element_type_t<T>, ext::float16> ||
+            same_as<simd_element_type_t<T>, ext::bfloat16>)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(T lhs, U rhs) noexcept {
+        using E = simd_element_type_t<T>;
+        using A = simd_abi_type_t<T>;
+#if DPL_HAS_CONSTEXPR_BUILTIN(__builtin_pow)
+        if consteval {
+            if constexpr (fixed_width_abi<A>) {
+                return internal::transform<T>(
+                    [](E lhs, E rhs) {
+                        if constexpr (is_same_v<E, double>) {
+                            return __builtin_pow(lhs, rhs);
+                        } else {
+                            return __builtin_powf(static_cast<float>(lhs),
+                                static_cast<float>(rhs));
+                        }
+                    },
+                    lhs, rhs);
+            }
+        }
+#endif
+        return fallback_impl::pow(lhs, rhs);
     }
 
     using binary_canonical_broadcaster<pow_t>::operator();

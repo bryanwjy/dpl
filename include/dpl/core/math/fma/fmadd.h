@@ -43,15 +43,23 @@ public:
         binary_layout_floating_point<simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static consteval T DPL_VECTORCALL operator()(T lhs, T mid, T rhs) noexcept {
+        using E = simd_element_type_t<T>;
         return internal::transform<T>(
-            [](double lhs, double mid, double rhs) -> simd_element_type_t<T> {
 #if DPL_HAS_CONSTEXPR_BUILTIN(__builtin_fma)
-                return __builtin_fma(lhs, mid, rhs);
+            [](E lhs, E mid, E rhs) -> simd_element_type_t<T> {
+                if constexpr (is_same_v<E, double>) {
+                    return __builtin_fma(lhs, mid, rhs);
+                } else {
+                    return __builtin_fmaf(static_cast<float>(lhs),
+                        static_cast<float>(mid), static_cast<float>(rhs));
+                }
+            },
 #else
+            [](double lhs, double mid, double rhs) -> simd_element_type_t<T> {
                 // TODO: Do this properly for MSVC
                 return lhs * mid + rhs;
-#endif
             },
+#endif
             lhs, mid, rhs);
     }
 

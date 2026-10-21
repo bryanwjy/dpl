@@ -89,7 +89,7 @@ template <internal::has_simd_members T>
 struct simd_abi_traits<T> :
     simd_abi_traits<simd_element_type_t<T>, simd_abi_type_t<T>> {};
 
-template <typename T>
+template <internal::has_simd_members T>
 requires enable_simd_tuple<T>
 struct simd_abi_traits<T> :
     simd_abi_traits<simd_value_type_t<T>, simd_abi_type_t<T>> {};

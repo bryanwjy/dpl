@@ -42,14 +42,21 @@ struct fallback_impl<fmacc_t> : fm_canonical_broadcaster<fmacc_t> {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
     static consteval T operator()(T lhs, T mid, T rhs) noexcept {
         return internal::transform<T>(
-            [](double lhs, double mid, double rhs) -> simd_element_type_t<T> {
 #if DPL_HAS_CONSTEXPR_BUILTIN(__builtin_fma)
-                return __builtin_fma(mid, rhs, lhs);
-#else
-                // TODO: Do this properly for MSVC
-                return lhs + mid * rhs;
-#endif
+            [](E lhs, E mid, E rhs) -> simd_element_type_t<T> {
+                if constexpr (is_same_v<E, double>) {
+                    return __builtin_fma(mid, rhs, lhs);
+                } else {
+                    return __builtin_fmaf(static_cast<float>(mid),
+                        static_cast<float>(rhs), static_cast<float>(lhs));
+                }
             },
+#else
+            [](double lhs, double mid, double rhs) -> simd_element_type_t<T> {
+                // TODO: Do this properly for MSVC < 19.52
+                return lhs + mid * rhs;
+            },
+#endif
             lhs, mid, rhs);
     }
 

@@ -435,24 +435,26 @@ constexpr float_str<T> to_string(T const& val) noexcept {
     }
 
     using traits = dpl::floating_point_traits<T>;
-    static constexpr auto shift = dpl::countr_zero(traits::exponent_mask);
-    auto const uexp =
-        (dpl::to_bit_representation(val) & traits::exponent_mask) >> shift;
+    auto const valbits = dpl::to_bit_representation(val);
 
+    static constexpr auto shift = dpl::countr_zero(traits::exponent_mask);
+    auto const uexp = (valbits & traits::exponent_mask) >> shift;
     auto const exp = (uexp ? dpl::to_signed(dpl::to_underlying(uexp)) : 1) -
         traits::exponent_bias;
-    auto const prefix =
-        ((dpl::to_bit_representation(val) & ~traits::signbit) >> shift) ? 1 : 0;
+    auto const prefix = ((valbits & ~traits::signbit) >> shift) ? 1 : 0;
     static constexpr auto mantissa_shift = (4 - (traits::digits - 1) % 4) % 4;
-    auto const mantissa_hex =
-        (dpl::to_bit_representation(val) & traits::mantissa_mask)
+    auto const mantissa_hex = (valbits & traits::mantissa_mask)
         << mantissa_shift;
+    auto const negative = static_cast<bool>(valbits & traits::signbit);
+    // There is a weird behaviour with !(valbits & ~traits::signbit)
+    // where the compiler will return zero if val is subnormal if the type has
+    // flush-to-zero behaviour, e.g. bf16 on x86
+    auto const iszero =
+        dpl::countr_zero(valbits) == dpl::countr_zero(traits::signbit);
     auto ptr = buffer.data();
-    *ptr++ = val < 0 ? '-' : '+';
+    *ptr++ = negative ? '-' : '+';
     *ptr++ = '0';
-    *ptr++ = 'x';
-    *ptr++ = prefix ? '1' : '0';
-    *ptr++ = '.';
+
     constexpr auto write_unsigned = [](char* out, dpl::uint64 n) {
         constexpr char digits[] = "0123456789";
         char tmp[24];
@@ -483,10 +485,20 @@ constexpr float_str<T> to_string(T const& val) noexcept {
         return out;
     };
 
-    ptr = write_mantissa(ptr, dpl::to_underlying(mantissa_hex));
-    *ptr++ = 'p';
-    *ptr++ = exp < 0 ? '-' : '+';
-    ptr = write_unsigned(ptr, static_cast<dpl::uint64>(exp < 0 ? -exp : exp));
+    if (iszero) {
+        *ptr++ = '.';
+        *ptr++ = '0';
+    } else {
+        *ptr++ = 'x';
+        *ptr++ = prefix ? '1' : '0';
+        *ptr++ = '.';
+        ptr = write_mantissa(ptr, dpl::to_underlying(mantissa_hex));
+        *ptr++ = 'p';
+        *ptr++ = exp < 0 ? '-' : '+';
+        ptr =
+            write_unsigned(ptr, static_cast<dpl::uint64>(exp < 0 ? -exp : exp));
+    }
+
     if constexpr (dpl::is_same_v<T, float>) {
         *ptr++ = 'f';
     } else if constexpr (!dpl::is_same_v<T, double>) {
@@ -569,11 +581,17 @@ std::expected<void, std::error_condition> write_results(dpl::uint32 seed,
                     [&](auto idx) {
                         auto const str = to_string(entry.input[idx]);
                         auto const view = std::string_view(str.data());
-                        return fwrite(view.data(), 1zu, view.size(),
-                                   stream.ptr) < view.size();
+                        if constexpr (idx < N - 1) {
+                            return fwrite(view.data(), 1zu, view.size(),
+                                       stream.ptr) < view.size() ||
+                                fputs(", ", stream.ptr) < 0;
+                        } else {
+                            return fwrite(view.data(), 1zu, view.size(),
+                                       stream.ptr) < view.size();
+                        }
                     },
                     dpl::make_index_sequence<N>{}) ||
-                fwrite("},\n", 1zu, 3zu, stream.ptr) < 3zu) {
+                fwrite("},", 1zu, 2zu, stream.ptr) < 2zu) {
                 return error_path();
             }
         } else {

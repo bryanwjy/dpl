@@ -33,7 +33,7 @@ constexpr auto DPL_VECTORCALL ldexp(
         __DPL countr_zero(floating_point_traits<E>::exponent_mask);
     auto const rhs = dx::bwshift_left(exp, imm<shift>);
     auto const result = dx::add(dx::reinterpret<sint_t>(val), rhs);
-    return dx::reinterpret<T>(result);
+    return dx::reinterpret<E>(result);
 }
 
 template <canonical_vector T>
@@ -49,7 +49,7 @@ constexpr auto DPL_VECTORCALL ldexp(compliance::unsafe_t,
     auto const rhs = dx::bwshift_left(exp, imm<shift>);
     auto const result = dx::add(
         dx::reinterpret<sint_t>(src), mask, dx::reinterpret<sint_t>(val), rhs);
-    return dx::reinterpret<T>(result);
+    return dx::reinterpret<E>(result);
 }
 
 template <canonical_vector T>
@@ -64,7 +64,7 @@ constexpr auto DPL_VECTORCALL ldexp(compliance::unsafe_t,
     auto const rhs = dx::bwshift_left(exp, imm<shift>);
     auto const result =
         dx::add(dx::zero, mask, dx::reinterpret<sint_t>(val), rhs);
-    return dx::reinterpret<T>(result);
+    return dx::reinterpret<E>(result);
 }
 
 template <canonical_vector T>
@@ -72,6 +72,12 @@ requires binary_layout_floating_point<simd_element_type_t<T>>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 constexpr auto DPL_VECTORCALL ldexp(
     compliance::speed_t, T val, exponent_vector_t<T> exp) noexcept {
+    if not consteval {
+        if constexpr (requires { ldexp(internal::abi<T>, val, exp); }) {
+            return ldexp(internal::abi<T>, val, exp);
+        }
+    }
+
     using E = simd_element_type_t<T>;
     constexpr auto shift =
         __DPL countr_zero(floating_point_traits<E>::exponent_mask);
@@ -83,6 +89,22 @@ constexpr auto DPL_VECTORCALL ldexp(
     auto const hexp = dx::bwshift_right(exp, imm<1>);
     return dx::multiply(
         dx::multiply(val, pow2i(hexp)), pow2i(dx::subtract(exp, hexp)));
+}
+
+template <canonical_vector T>
+requires binary_layout_floating_point<simd_element_type_t<T>>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+constexpr auto DPL_VECTORCALL ldexp(
+    compliance::speed_t speed, T val, type_identity_t<T> exp) noexcept {
+    // exp is assumed to be integral
+    if not consteval {
+        if constexpr (requires { ldexp(internal::abi<T>, val, exp); }) {
+            return ldexp(internal::abi<T>, val, exp);
+        }
+    }
+
+    using sint_t = signed_representation_t<simd_element_type_t<T>>;
+    return fmath::ldexp(speed, val, dx::element_cast<sint_t>(exp));
 }
 
 } // namespace datapar::fmath

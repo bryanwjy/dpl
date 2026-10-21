@@ -3,6 +3,7 @@
 
 #include "dpl/config.h"
 
+#include "dpl/core/math/details/apply_widened.h"
 #include "dpl/core/math/details/constants.h"
 #include "dpl/core/math/details/ldexp.h"
 #include "dpl/core/math/details/pair.h"
@@ -12,8 +13,9 @@
 #include "dpl/core/math/roundeven.h"
 
 #if !DPL_MODULES
-#  include "dpl/core/algorithm/rotate_right.h"
-#  include "dpl/core/algorithm/shift_left.h"
+#  include "dpl/core/algorithm/rotate_.h"
+#  include "dpl/core/algorithm/slide.h"
+#  include "dpl/core/concepts/canonical.h"
 #  include "dpl/core/concepts/extended.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/concepts/simd_vector.h"
@@ -156,9 +158,13 @@ public:
     }
 };
 
+struct pow_t;
+
 template <>
 struct fallback_impl<exp2_t> {
 private:
+    friend fallback_impl<pow_t>;
+
     template <canonical_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr T DPL_VECTORCALL solve_poly(T val) noexcept {
@@ -205,44 +211,33 @@ private:
     template <floating_point_like E>
     static constexpr E upper_bound =
         floating_point_traits<E>::exponent_bias + 1;
+
     template <floating_point_like E>
-    static constexpr E lower_bound = -floating_point_traits<E>::exponent_bias -
-        static_cast<int>(floating_point_traits<E>::digits) - 1;
+    static constexpr E lower_bound =
+        1 - floating_point_traits<E>::exponent_bias -
+        static_cast<int>(floating_point_traits<E>::digits);
 
     template <canonical_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr T DPL_VECTORCALL exp2(T val) noexcept {
         using E = simd_element_type_t<T>;
-        using sint_t = signed_representation_t<E>;
 
         auto const qf = dx::roundeven(val, rounding::no_exc);
-        auto const q = dx::element_cast<sint_t>(qf);
         auto const fr = dx::subtract(val, qf);
         auto u = dx::muladd(solve_poly(fr), fr, dx::one);
-        u = fmath::ldexp(fmath::compliance::speed, u, q);
+        u = fmath::ldexp(fmath::compliance::speed, u, qf);
 
         // Use ge to ensure NANs propogates
         u = dx::select(dx::cmpge(val, upper_bound<E>), dx::infinity, u);
-        return dx::select(dx::cmplt(val, lower_bound<E>), dx::zero, u);
+        return dx::select(dx::cmple(val, lower_bound<E>), dx::zero, u);
     }
 
     template <canonical_vector T>
     requires same_as<simd_element_type_t<T>, ext::bfloat16>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr T DPL_VECTORCALL exp2(T val) noexcept {
-        auto const shift = [] {
-            if constexpr (fixed_width_abi<simd_abi_type_t<T>>) {
-                return dx::imm<dx::simd_abi_traits<T>::size() / 2>;
-            } else {
-                return dx::simd_abi_traits<T>::size() / 2;
-            }
-        }();
-
-        auto const lo = dx::element_cast<float>(val);
-        auto const hi = dx::element_cast<float>(dx::shift_left(val, shift));
-        constexpr auto exp2 = [](dx::rebind_simd_t<T, float> fp32) {
+        constexpr auto exp2f = [](dx::rebind_simd_t<T, float> fp32) {
             using vf32_t = dx::rebind_simd_t<T, float>;
-            using sint_t = signed_representation_t<float>;
 
             using ext::literals::operator""_bf16;
             constexpr fmath::polynomial<0x1.62p-1f, // 0.69140625
@@ -252,10 +247,9 @@ private:
                 poly;
 
             auto const qf = dx::roundeven(fp32, rounding::no_exc);
-            auto const q = dx::element_cast<sint_t>(qf);
             auto const fr = dx::subtract(fp32, qf);
             auto u = dx::muladd(poly(fr), fr, dx::one);
-            u = fmath::ldexp(fmath::compliance::speed, u, q);
+            u = fmath::ldexp(fmath::compliance::speed, u, qf);
 
             // Use ge to ensure NANs propogates
             u = dx::select(
@@ -264,9 +258,7 @@ private:
                 dx::cmpge(fp32, lower_bound<ext::bfloat16>), u, dx::zero);
         };
 
-        auto const r_lo = dx::element_cast<ext::bfloat16>(exp2(lo));
-        auto const r_hi = dx::element_cast<ext::bfloat16>(exp2(hi));
-        return dx::slide_left(dx::rotate_right(r_lo, shift), r_hi, shift);
+        return fmath::apply_widened<float>(exp2f, val);
     }
 
 public:

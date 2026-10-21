@@ -39,7 +39,10 @@ struct simd_native_type<T> {
 };
 
 template <typename T>
-requires enable_simd_tuple<T>
+requires enable_simd_tuple<T> && requires {
+    typename simd_abi_traits<T>::template native_tuple<
+        std::tuple_size<T>::value>;
+}
 struct simd_native_type<T> {
     using type DPL_NODEBUG = typename simd_abi_traits<T>::template native_tuple<
         std::tuple_size<T>::value>;

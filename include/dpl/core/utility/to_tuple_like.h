@@ -45,6 +45,14 @@ constexpr decltype(auto) to_tuple_like(
         return internal::tuple_reference<T&&>{__DPL forward<T>(tuple)};
     }
 }
+template <tuple_like T>
+requires (!simd_tuple<T>)
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+constexpr decltype(auto) to_tuple_like(
+    T&& tuple DPL_LIFETIMEBOUND) noexcept {
+    return __DPL forward<T>(tuple);
+}
+
 } // namespace datapar
 
 template <typename T>

@@ -185,8 +185,10 @@ public:
             dx::to_tuple_like(dx::frexp(val, frexp_options::reduced));
 
         auto const one = dx::broadcast<T>(dx::one);
-        auto const x = (fr - fmath::single(one)) / (fmath::single(one) + fr);
-        auto const x2 = dx::multiply(dx::get_element<0>(x));
+        auto const x =
+            mx::pair_ref(fr - fmath::single(one)) / (fmath::single(one) + fr);
+        auto const x2 =
+            dx::multiply(dx::get_element<0>(x), dx::get_element<0>(x));
         auto const t = solve_poly(x2);
 
         auto const inv_halfln2 = []() {
@@ -199,8 +201,8 @@ public:
             }
         }();
         auto const x3 = x2 * mx::pair_ref{x};
-        auto s = exp + mx::pair_ref{x} * inv_halfln2;
-        s = s + mx::pair_ref{x3} * t;
+        auto s = exp + mx::pair_ref{mx::pair_ref{x} * inv_halfln2};
+        s = s + mx::pair_ref{mx::pair_ref{x3} * t};
 
         constexpr auto fixflags = fpfix::condition<fpfix::negative, dx::nan> |
             fpfix::condition<fpfix::zero, -dx::infinity> |

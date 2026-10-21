@@ -10,6 +10,7 @@
 #include "dpl/core/math/ldexp.h"
 
 #if !DPL_MODULES
+#  include "dpl/core/basic/undefined.h"
 #  include "dpl/core/concepts/simd_abi.h"
 #  include "dpl/core/dispatch/interface.h"
 #  include "dpl/core/dispatch/operation/math.h"
@@ -49,6 +50,7 @@ inline constexpr default_t default_v{};
 namespace datapar::internal {
 template <simd_vector T0, simd_vector T1 = T0>
 struct frexp_pair {
+    static_assert(is_same_v<simd_abi_type_t<T0>, simd_abi_type_t<T1>>);
     T0 fr;
     T1 exp;
 
@@ -120,9 +122,6 @@ concept unqualified_canonical_frexp = requires(T val, Exp& exp, O opt) {
 
 template <>
 struct canonical_impl<frexp_t> {
-    template <typename T>
-    using viexp_t DPL_NODEBUG =
-        rebind_simd_t<T, signed_representation_t<simd_element_type_t<T>>>;
 
     template <canonical_vector T,
         frexp_options_type O = frexp_options::default_t>
@@ -135,10 +134,10 @@ struct canonical_impl<frexp_t> {
 
     template <canonical_vector T,
         frexp_options_type O = frexp_options::default_t>
-    requires unqualified_canonical_frexp<T, viexp_t<T>&, O>
+    requires unqualified_canonical_frexp<T, signed_canonical_vector_t<T>&, O>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(
-        T val, viexp_t<T>& exp, O opt = frexp_options::default_v) noexcept {
+    static constexpr auto operator()(T val, signed_canonical_vector_t<T>& exp,
+        O opt = frexp_options::default_v) noexcept {
         return frexp(internal::abi<T>, val, exp, opt);
     }
 };
@@ -162,12 +161,10 @@ struct extended_impl<frexp_t> {
         return frexp(__DPL forward<T>(val), exp, opt);
     }
 
-    template <simd_vector T, simd_vector Exp,
+    template <simd_vector T,
+        equivalent_vector_with<signed_canonical_vector_t<T>> Exp,
         frexp_options_type O = frexp_options::default_t>
-    requires same_as<signed_representation_t<simd_element_type_t<T>>,
-                 simd_element_type_t<Exp>> &&
-        same_abi_as<simd_abi_type_t<T>, simd_abi_type_t<Exp>> &&
-        (extended_vector<T> || extended_vector<Exp>) &&
+    requires (extended_vector<T> || extended_vector<Exp>) &&
         unqualified_extended_frexp<T, Exp, O>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(
@@ -181,33 +178,32 @@ struct fallback_impl<frexp_t> {
 private:
     template <floating_point_like E>
     static constexpr auto normalizer = []() {
-        if constexpr (dx::digits_v<E> >= dx::digits_v<float>) {
+        if constexpr (floating_point_traits<E>::digits >=
+            floating_point_traits<float>::digits) {
             return static_cast<E>(0x1.p64);
         } else {
             return static_cast<E>(0x1.p12);
         }
     }();
 
-    template <typename E>
-    using iexp_t = signed_representation_t<E>;
-
     template <floating_point_like E>
-    static constexpr iexp_t<E> subnormal_offset = []() {
-        if constexpr (dx::digits_v<E> >= dx::digits_v<float>) {
+    static constexpr signed_representation_t<E> subnormal_offset = []() {
+        if constexpr (floating_point_traits<E>::digits >=
+            floating_point_traits<float>::digits) {
             return 64;
         } else {
             return 12;
         }
     }();
 
-    template <canonical_vector T, frexp_options_type Opt,
-        typename E = simd_element_type_t<T>>
+    template <canonical_vector T, frexp_options_type Opt>
     requires floating_point_like<simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr T DPL_VECTORCALL impl(
-        T val, rebind_simd_t<T, iexp_t<E>>& iexp, Opt) noexcept
+        T val, signed_canonical_vector_t<T>& iexp, Opt) noexcept
     requires (Opt::contains(frexp_options::reduced))
     {
+        using E = simd_element_type_t<T>;
         using A = simd_abi_type_t<T>;
         constexpr auto fourthirds = static_cast<E>(1.0 / 0.75);
         auto const vfourthirds = dx::broadcast<E, A>(fourthirds);
@@ -239,13 +235,14 @@ private:
         }
     }
 
-    template <canonical_vector T, frexp_options_type Opt,
-        typename E = simd_element_type_t<T>>
+    template <canonical_vector T, frexp_options_type Opt>
+    requires floating_point_like<simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL impl(
-        T val, rebind_simd_t<T, iexp_t<E>>& iexp, Opt) noexcept
+        T val, signed_canonical_vector_t<T>& iexp, Opt) noexcept
     requires (Opt::contains(frexp_options::standard))
     {
+        using E = simd_element_type_t<T>;
         auto const issubnormal = [](auto val) {
             if constexpr (Opt::contains(frexp_options::sign_nan)) {
                 return dx::cmplt(val, dx::min_value);
@@ -254,13 +251,13 @@ private:
             }
         }(val);
 
-        constexpr auto exp_bits = __DPL bit_cast<iexp_t<E>>(
+        constexpr auto exp_bits = __DPL bit_cast<signed_representation_t<E>>(
             floating_point_traits<E>::exponent_mask);
-        constexpr iexp_t<E> magic_v =
+        constexpr signed_representation_t<E> magic_v =
             floating_point_traits<E>::exponent_bias - 1;
         constexpr auto exp_shift =
             __DPL countr_zero(floating_point_traits<E>::exponent_mask);
-        constexpr auto all_exp = __DPL bit_cast<iexp_t<E>>(
+        constexpr auto all_exp = __DPL bit_cast<signed_representation_t<E>>(
             floating_point_traits<E>::exponent_mask >> exp_shift);
 
         using A = simd_abi_type_t<T>;
@@ -293,27 +290,28 @@ private:
 
 public:
     template <canonical_vector T,
-        frexp_options_type Opt = frexp_options::default_t,
-        typename E = simd_element_type_t<T>>
+        frexp_options_type Opt = frexp_options::default_t>
+    requires floating_point_like<simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL operator()(T val,
-        rebind_simd_t<T, iexp_t<E>>& iexp,
+        signed_canonical_vector_t<T>& iexp,
         Opt opt = frexp_options::default_v) noexcept
-    requires floating_point_like<E> &&
-        requires { fallback_impl::impl(val, iexp, opt); }
+    requires requires { fallback_impl::impl(val, iexp, opt); }
     {
         return fallback_impl::impl(val, iexp, opt);
     }
 
     template <canonical_vector T,
-        frexp_options_type Opt = frexp_options::default_t,
-        typename E = simd_element_type_t<T>>
-    requires floating_point_like<E> &&
-        cpo_invocable<frexp_t, T, rebind_simd_t<T, iexp_t<E>>, Opt>
+        frexp_options_type Opt = frexp_options::default_t>
+    requires floating_point_like<simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr T DPL_VECTORCALL operator()(T val,
-        type_identity_t<T>& fexp, Opt opt = frexp_options::default_v) noexcept {
-        rebind_simd_t<T, iexp_t<E>> iexp;
+        type_identity_t<T>& fexp, Opt opt = frexp_options::default_v) noexcept
+    requires requires(
+        signed_canonical_vector_t<T> iexp) { operator()(val, iexp, opt); }
+    {
+        using E = simd_element_type_t<T>;
+        auto iexp = dx::undefined<signed_canonical_vector_t<T>>();
         auto fr = frexp_t::operator()(val, iexp, opt);
         fexp = dx::element_cast<E>(iexp);
         return fr;

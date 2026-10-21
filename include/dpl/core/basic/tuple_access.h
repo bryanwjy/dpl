@@ -52,14 +52,14 @@ struct get_element_t : basic_operation_base<set_element_t<I>> {
     template <tuple_like T>
     requires enable_simd_tuple<remove_cvref_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    constexpr decltype(auto) operator()(T&& arg) noexcept(
+    static constexpr decltype(auto) operator()(T&& arg) noexcept(
         noexcept(__DPL ranges::get_element<I>(arg))) {
         return __DPL ranges::get_element<I>(arg);
     }
 
     template <canonical_get_element<I> T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    constexpr decltype(auto) operator()(T&& arg) noexcept {
+    static constexpr decltype(auto) operator()(T&& arg) noexcept {
         return get<I>(internal::abi<T>, __DPL forward<T>(arg));
     }
 };
@@ -74,7 +74,7 @@ public:
     requires enable_simd_tuple<L> &&
         assignable_from<cpo_result_t<base_get, L&>, R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    constexpr L& operator()(L& lhs, R&& rhs) noexcept(
+    static constexpr L& operator()(L& lhs, R&& rhs) noexcept(
         noexcept(__DPL ranges::get_element<I>(lhs)) &&
         is_nothrow_assignable_v<cpo_result_t<base_get, L&>, R>) {
         __DPL ranges::get_element<I>(lhs) = __DPL forward<R>(rhs);
@@ -83,7 +83,7 @@ public:
 
     template <canonical_set_element<I> L, canonical_vector R>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    constexpr L& operator()(L& lhs, R rhs) noexcept {
+    static constexpr L& operator()(L& lhs, R rhs) noexcept {
         return lhs = set<I>(internal::abi<L>, __DPL as_const(lhs), rhs);
     }
 };
