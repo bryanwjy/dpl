@@ -160,15 +160,15 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr T DPL_VECTORCALL solve_poly(T val) noexcept {
         if constexpr (is_same_v<simd_element_type_t<T>, double>) {
-            constexpr fmath::polynomial<0.96179669392608091449,
+            constexpr mx::polynomial<0.96179669392608091449,
                 0.5770780162997058982, 0.4121985945485324709,
                 0.3205977477944495502, 0.2623708057488514656,
                 0.2200768693152277689, 0.2211941750456081490>
                 poly;
             return poly(val);
         } else {
-            constexpr fmath::polynomial<0.9618012905120f, //
-                0.5764790177f,                            //
+            constexpr mx::polynomial<0.9618012905120f, //
+                0.5764790177f,                         //
                 0.4374550283f>
                 poly;
             return poly(val);
@@ -181,28 +181,38 @@ public:
         same_as<simd_element_type_t<T>, double>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr T DPL_VECTORCALL operator()(T val) noexcept {
-        auto const [fr, exp] =
-            dx::to_tuple_like(dx::frexp(val, frexp_options::reduced));
+        constexpr auto impl = [](T val) {
+            auto const [fr, exp] =
+                dx::to_tuple_like(dx::frexp(val, frexp_options::reduced));
 
-        auto const one = dx::broadcast<T>(dx::one);
-        auto const x =
-            mx::pair_ref(fr - fmath::single(one)) / (fmath::single(one) + fr);
-        auto const x2 =
-            dx::multiply(dx::get_element<0>(x), dx::get_element<0>(x));
-        auto const t = solve_poly(x2);
+            auto const one = dx::broadcast<T>(dx::one);
+            auto const x =
+                mx::pair_ref(fr - mx::single(one)) / (mx::single(one) + fr);
+            auto const x2 =
+                dx::multiply(dx::get_element<0>(x), dx::get_element<0>(x));
+            auto const t = solve_poly(x2);
 
-        auto const inv_halfln2 = []() {
-            if constexpr (is_same_v<simd_element_type_t<T>, double>) {
-                return mx::make_pair(dx::broadcast<T>(2.885390081777926774),
-                    dx::broadcast<T>(6.0561604995516736434e-18));
+            auto const inv_halfln2 = []() {
+                if constexpr (is_same_v<simd_element_type_t<T>, double>) {
+                    return mx::make_pair(dx::broadcast<T>(0x1.71547652b82fep+1),
+                        dx::broadcast<T>(0x1.777d0ffda0d24p-55));
+                } else {
+                    return mx::make_pair(dx::broadcast<T>(0x1.715476p+1f),
+                        dx::broadcast<T>(0x1.4ae0cp-25f));
+                }
+            }();
+            auto const x3 = x2 * mx::pair_ref{x};
+            auto s = exp + mx::pair_ref{mx::pair_ref{x} * inv_halfln2};
+            return s + mx::pair_ref{mx::pair_ref{x3} * t};
+        };
+
+        auto s = [&] {
+            if consteval {
+                return impl(dx::min(dx::abs(val), dx::max_value));
             } else {
-                return mx::make_pair(dx::broadcast<T>(2.8853900432586669922f),
-                    dx::broadcast<T>(3.2734474483568488616e-08f));
+                return impl(val);
             }
         }();
-        auto const x3 = x2 * mx::pair_ref{x};
-        auto s = exp + mx::pair_ref{mx::pair_ref{x} * inv_halfln2};
-        s = s + mx::pair_ref{mx::pair_ref{x3} * t};
 
         constexpr auto fixflags = fpfix::condition<fpfix::negative, dx::nan> |
             fpfix::condition<fpfix::zero, -dx::infinity> |
@@ -213,6 +223,47 @@ public:
             return dx::fixup(val, mx::recombine(s), fixflags);
         } else {
             auto result = mx::recombine(s);
+            result = dx::select(dx::isinf(val), dx::infinity, result);
+            result = dx::select(
+                dx::logical_or(dx::cmplt(val, dx::zero), dx::isnan(val)),
+                dx::all_bits, result);
+            result =
+                dx::select(dx::cmpeq(val, dx::zero), -dx::infinity, result);
+            return result;
+        }
+    }
+
+    template <canonical_vector T>
+    requires same_as<simd_element_type_t<T>, ext::float16> ||
+        same_as<simd_element_type_t<T>, ext::bfloat16>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr T DPL_VECTORCALL operator()(T val) noexcept {
+        using A = simd_abi_type_t<T>;
+        constexpr auto log2f = [](rebind_simd_t<T, float> val) {
+            auto const [fr, exp] =
+                dx::to_tuple_like(dx::frexp(val, frexp_options::reduced));
+            auto const vone = dx::broadcast<A, float>(dx::one);
+            auto const x =
+                dx::divide(dx::subtract(fr, vone), dx::add(fr, vone));
+            auto const x2 = dx::multiply(x, x);
+            auto const t = solve_poly(x2);
+
+            auto const inv_halfln2 = dx::broadcast<A, float>(0x1.715476p+1f);
+            auto s = dx::fmadd(x, inv_halfln2, exp);
+            return dx::fmacc(s, dx::multiply(x2, x), t);
+        };
+
+        auto const cval = dx::min(dx::abs(val), dx::max_value);
+        auto result = mx::apply_widened<float>(log2f, cval);
+
+        constexpr auto fixflags = fpfix::condition<fpfix::negative, dx::nan> |
+            fpfix::condition<fpfix::zero, -dx::infinity> |
+            fpfix::condition<fpfix::infinite, fpfix::copy> |
+            fpfix::condition<fpfix::nan, fpfix::copy>;
+        if constexpr (dx::is_simd_canonical_invocable<T, T, decltype(fixflags)>(
+                          dx::fixup)) {
+            return dx::fixup(val, result, fixflags);
+        } else {
             result = dx::select(dx::isinf(val), dx::infinity, result);
             result = dx::select(
                 dx::logical_or(dx::cmplt(val, dx::zero), dx::isnan(val)),

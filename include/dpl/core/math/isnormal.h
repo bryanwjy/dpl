@@ -43,11 +43,13 @@ public:
         using sint_t = signed_representation_t<E>;
         constexpr auto shift =
             __DPL countr_zero(floating_point_traits<E>::exponent_mask);
-        constexpr sint_t limit = sint_t(1) << shift;
+        constexpr sint_t limit = __DPL to_signed(
+            __DPL to_underlying(floating_point_traits<E>::mantissa_mask));
 
         auto const vabs = dx::abs(val);
         auto const vlimit = dx::broadcast<mx::exponent_vector_t<T>>(limit);
-        return dx::cmplt(dx::reinterpret<sint_t>(vabs), vlimit);
+        return dx::cmplt(dx::cmpneq(vabs, dx::infinity),
+            dx::reinterpret<sint_t>(vabs), vlimit);
     }
 
     template <canonical_vector T>
@@ -59,11 +61,14 @@ public:
         using sint_t = signed_representation_t<E>;
         constexpr auto shift =
             __DPL countr_zero(floating_point_traits<E>::exponent_mask);
-        constexpr sint_t limit = sint_t(1) << shift;
+        constexpr sint_t limit = __DPL to_signed(
+            __DPL to_underlying(floating_point_traits<E>::mantissa_mask));
 
         auto const vabs = dx::abs(val);
         auto const vlimit = dx::broadcast<mx::exponent_vector_t<T>>(limit);
-        return dx::cmplt(mask, dx::reinterpret<sint_t>(vabs), vlimit);
+        return dx::cmpgt( //
+            dx::bwandnot(mask, dx::cmpeq(vabs, dx::infinity)),
+            dx::reinterpret<sint_t>(vabs), vlimit);
     }
 
     template <canonical_vector T, const_mask_for<T> M>
@@ -75,11 +80,13 @@ public:
         using sint_t = signed_representation_t<E>;
         constexpr auto shift =
             __DPL countr_zero(floating_point_traits<E>::exponent_mask);
-        constexpr sint_t limit = sint_t(1) << shift;
+        constexpr sint_t limit = __DPL to_signed(
+            __DPL to_underlying(floating_point_traits<E>::mantissa_mask));
 
         auto const vabs = dx::abs(val);
         auto const vlimit = dx::broadcast<mx::exponent_vector_t<T>>(limit);
-        return dx::cmplt(cmask, dx::reinterpret<sint_t>(vabs), vlimit);
+        return dx::cmplt(dx::cmpneq(cmask, vabs, dx::infinity),
+            dx::reinterpret<sint_t>(vabs), vlimit);
     }
 };
 
