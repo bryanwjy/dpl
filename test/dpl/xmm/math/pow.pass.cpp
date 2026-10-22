@@ -1,7 +1,7 @@
 // Copyright 2025-2026 Bryan Wong
-// @dpl[clang].compile-flags+: -fconstexpr-steps=36000000
-// @dpl[gcc].compile-flags+: -fconstexpr-ops-limit=36000000
-// @dpl[msvc].compile-flags+: /constexpr:steps36000000
+// @dpl[clang].compile-flags+: -fconstexpr-steps=38000000
+// @dpl[gcc].compile-flags+: -fconstexpr-ops-limit=38000000
+// @dpl[msvc].compile-flags+: /constexpr:steps38000000
 
 // @dpl.mpfr+: pow f32 -n 12 \
 // -r linear 0.5:2 -4:4 -r linear 0.999:1.001 -10000:10000 \

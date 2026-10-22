@@ -423,28 +423,58 @@ struct fallback_impl<round_t> {
     requires binary_layout_floating_point<simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr T DPL_VECTORCALL operator()(T val) noexcept {
-        // cmath rounding: round to nearest int, tie away from zero
-        auto const isfinite = dx::isfinite(val);
-        auto const finite = dx::select(isfinite, val, dx::zero);
-        auto x = dx::add(finite, mx::half);
-        auto fr = dx::subtract(x, dx::trunc(x));
-        auto const vone = dx::broadcast<T>(dx::one);
+        if consteval {
+            return operator()(val, rounding::no_exc);
+        } else { // cmath rounding: round to nearest int, tie away from zero
+            auto const isfinite = dx::isfinite(val);
+            auto const finite = dx::select(isfinite, val, dx::zero);
+            auto x = dx::add(finite, mx::half);
+            auto fr = dx::subtract(x, dx::trunc(x));
+            auto const vone = dx::broadcast<T>(dx::one);
 
-        auto const submask = dx::cmpeq(dx::cmple(x, dx::zero), fr, dx::zero);
-        x = dx::subtract(x, submask, x, vone);
-        fr = dx::add(fr, dx::cmplt(fr, dx::zero), fr, vone);
-        x = dx::select(dx::cmpneq(fr, mx::underhalf), x, dx::zero);
+            auto const submask =
+                dx::cmpeq(dx::cmple(x, dx::zero), fr, dx::zero);
+            x = dx::subtract(x, submask, x, vone);
+            fr = dx::add(fr, dx::cmplt(fr, dx::zero), fr, vone);
+            x = dx::select(dx::cmpneq(fr, mx::underhalf), x, dx::zero);
 
-        auto const vmaxint = dx::broadcast<T>(mx::maxint);
-        return dx::copysign(val, dx::cmplt(isfinite, dx::abs(val), vmaxint),
-            dx::subtract(x, fr), finite);
+            auto const argvalid = dx::cmplt(isfinite, dx::abs(val), mx::maxint);
+            return dx::copysign(val, argvalid, dx::subtract(x, fr), val);
+        }
     }
 
     template <canonical_vector T>
     requires binary_layout_floating_point<simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(T val, rounding::no_exc_t) noexcept {
-        return operator()(val);
+    static constexpr T operator()(T val, rounding::no_exc_t noexc) noexcept {
+#if DPL_HAS_CONSTEXPR_BUILTIN(__builtin_round)
+        if consteval {
+            if constexpr (fixed_width_abi<A>) {
+                return internal::transform<T>(
+                    [](E val) {
+                        if constexpr (is_same_v<E, double>) {
+                            return __builtin_round(val);
+                        } else {
+                            return __builtin_roundf(static_cast<float>(val));
+                        }
+                    },
+                    val);
+            }
+        }
+#endif
+        auto const isfinite = dx::isfinite(val);
+        auto const finite = dx::select(isfinite, val, dx::zero);
+        auto x = dx::add(finite, mx::half);
+        auto fr = dx::subtract(x, dx::trunc(x, noexc));
+
+        auto const vone = dx::broadcast<T>(dx::one);
+        auto const submask = dx::cmpeq(dx::cmple(x, dx::zero), fr, dx::zero);
+        x = dx::subtract(x, submask, x, vone);
+        fr = dx::add(fr, dx::cmplt(fr, dx::zero), fr, vone);
+        x = dx::select(dx::cmpneq(fr, mx::underhalf), x, dx::zero);
+
+        auto const argvalid = dx::cmplt(isfinite, dx::abs(val), mx::maxint);
+        return dx::copysign(val, argvalid, dx::subtract(x, fr), finite);
     }
 
     template <canonical_vector T, mx::rounding_flags R>

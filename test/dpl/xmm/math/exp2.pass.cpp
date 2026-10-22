@@ -1,6 +1,6 @@
 // Copyright 2025-2026 Bryan Wong
-// @dpl[clang].compile-flags+: -fconstexpr-steps=10000000
-// @dpl[msvc].compile-flags+: /constexpr:steps10000000
+// @dpl[clang].compile-flags+: -fconstexpr-steps=12000000
+// @dpl[msvc].compile-flags+: /constexpr:steps12000000
 // @dpl.mpfr+: exp2 f32 -n 12 -r linear -1:1 -r urand -0x1p-8:0x1p-8 \
 // -r linear 1:32 -r linear -32:-1 -r linear -126:128 -r linear 127:128 \
 // -r linear 128:256 -r linear -150:-126 -r linear -300:-150 -r urand :

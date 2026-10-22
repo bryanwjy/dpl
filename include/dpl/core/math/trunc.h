@@ -300,8 +300,30 @@ struct fallback_impl<trunc_t> {
 public:
     template <canonical_vector T>
     requires binary_layout_floating_point<simd_element_type_t<T>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T DPL_VECTORCALL operator()(T val) noexcept {
+        return operator()(val, rounding::no_exc);
+    }
+
+    template <canonical_vector T>
+    requires binary_layout_floating_point<simd_element_type_t<T>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr T operator()(T val, rounding::no_exc_t) noexcept {
+#if DPL_HAS_CONSTEXPR_BUILTIN(__builtin_trunc)
+        if consteval {
+            if constexpr (fixed_width_abi<A>) {
+                return internal::transform<T>(
+                    [](E val) {
+                        if constexpr (is_same_v<E, double>) {
+                            return __builtin_trunc(val);
+                        } else {
+                            return __builtin_truncf(static_cast<float>(val));
+                        }
+                    },
+                    val);
+            }
+        }
+#endif
         // Based on musl libm
         using vexp_t = mx::exponent_vector_t<T>;
         using E = simd_element_type_t<T>;
@@ -323,13 +345,6 @@ public:
         auto const m = dx::bwshift_right(dx::broadcast<T>(dx::value_bits),
             dx::to_unsigned(dx::subtract(exp, vone)));
         return dx::bwandnot(val, m);
-    }
-
-    template <canonical_vector T>
-    requires binary_layout_floating_point<simd_element_type_t<T>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(T val, rounding::no_exc_t) noexcept {
-        return operator()(val);
     }
 };
 } // namespace datapar::internal

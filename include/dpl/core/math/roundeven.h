@@ -311,10 +311,33 @@ struct fallback_impl<roundeven_t> {
     requires binary_layout_floating_point<simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr T DPL_VECTORCALL operator()(T val) noexcept {
+        return operator()(val, rounding::no_exc);
+    }
+
+    template <canonical_vector T>
+    requires binary_layout_floating_point<simd_element_type_t<T>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(T val, rounding::no_exc_t noexc) noexcept {
+#if DPL_HAS_CONSTEXPR_BUILTIN(__builtin_roundeven)
+        if consteval {
+            if constexpr (fixed_width_abi<A>) {
+                return internal::transform<T>(
+                    [](E val) {
+                        if constexpr (is_same_v<E, double>) {
+                            return __builtin_roundeven(val);
+                        } else {
+                            return __builtin_roundevenf(
+                                static_cast<float>(val));
+                        }
+                    },
+                    val);
+            }
+        }
+#endif
         // round to nearest int, tie to nearest even
         auto const isfinite = dx::isfinite(val);
         auto const finite = dx::select(isfinite, val, dx::zero);
-        auto const floored = dx::floor(finite);
+        auto const floored = dx::floor(finite, noexc);
 
         // there are bit tricks alternatives to casting available but
         // they usually just add more instructions
@@ -336,13 +359,6 @@ struct fallback_impl<roundeven_t> {
         auto const result =
             dx::add(floored, roundup, floored, dx::broadcast<T>(dx::one));
         return dx::copysign(val, isfinite, result, val);
-    }
-
-    template <canonical_vector T>
-    requires binary_layout_floating_point<simd_element_type_t<T>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(T val, rounding::no_exc_t) noexcept {
-        return operator()(val);
     }
 };
 } // namespace datapar::internal

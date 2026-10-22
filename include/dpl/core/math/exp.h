@@ -308,6 +308,21 @@ public:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(T val) noexcept {
         if consteval {
+#if DPL_HAS_CONSTEXPR_BUILTIN(__builtin_exp)
+            if consteval {
+                if constexpr (fixed_width_abi<A>) {
+                    return internal::transform<T>(
+                        [](E val) {
+                            if constexpr (is_same_v<E, double>) {
+                                return __builtin_exp(val);
+                            } else {
+                                return __builtin_expf(static_cast<float>(val));
+                            }
+                        },
+                        val);
+                }
+            }
+#else
             using E = simd_element_type_t<T>;
             auto const isnan = dx::isnan(val);
             // prevent NAN arithmetics
@@ -316,6 +331,7 @@ public:
             safe = dx::min(safe, upper_bound<E>);
             safe = dx::max(safe, lower_bound<E>);
             return dx::select(isnan, val, fallback_impl::exp(safe));
+#endif
         } else {
             return fallback_impl::exp(val);
         }
