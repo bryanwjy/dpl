@@ -175,12 +175,11 @@ private:
         }
     }
 
-public:
     template <canonical_vector T>
     requires same_as<simd_element_type_t<T>, float> ||
         same_as<simd_element_type_t<T>, double>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr T DPL_VECTORCALL operator()(T val) noexcept {
+    static constexpr T DPL_VECTORCALL log2(T val) noexcept {
         constexpr auto impl = [](T val) {
             auto const [fr, exp] =
                 dx::to_tuple_like(dx::frexp(val, frexp_options::reduced));
@@ -237,7 +236,7 @@ public:
     requires same_as<simd_element_type_t<T>, ext::float16> ||
         same_as<simd_element_type_t<T>, ext::bfloat16>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr T DPL_VECTORCALL operator()(T val) noexcept {
+    static constexpr T DPL_VECTORCALL log2(T val) noexcept {
         using A = simd_abi_type_t<T>;
         constexpr auto log2f = [](rebind_simd_t<T, float> val) {
             auto const [fr, exp] =
@@ -272,6 +271,33 @@ public:
                 dx::select(dx::cmpeq(val, dx::zero), -dx::infinity, result);
             return result;
         }
+    }
+
+public:
+    template <canonical_vector T>
+    requires same_as<simd_element_type_t<T>, float> ||
+        same_as<simd_element_type_t<T>, double> ||
+        same_as<simd_element_type_t<T>, ext::float16> ||
+        same_as<simd_element_type_t<T>, ext::bfloat16>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr T DPL_VECTORCALL operator()(T val) noexcept {
+#if DPL_HAS_CONSTEXPR_BUILTIN(__builtin_log2)
+        if consteval {
+            if constexpr (fixed_width_abi<A>) {
+                return internal::transform<T>(
+                    [](E val) {
+                        if constexpr (is_same_v<E, double>) {
+                            return __builtin_log2(val);
+                        } else {
+                            return __builtin_log2f(static_cast<float>(val));
+                        }
+                    },
+                    val);
+            }
+        }
+#else
+        return fallback_impl::log2(val);
+#endif
     }
 };
 } // namespace datapar::internal
