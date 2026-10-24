@@ -7,6 +7,7 @@
 #include "dpl/core/math/details/polynomial.h"
 #include "dpl/core/math/fixup.h"
 #include "dpl/core/math/frexp.h"
+#include "dpl/core/math/mulx.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/extended.h"
@@ -248,8 +249,8 @@ private:
             auto const t = solve_poly(x2);
 
             auto const inv_halfln2 = dx::broadcast<A, float>(0x1.715476p+1f);
-            auto s = dx::fmadd(x, inv_halfln2, exp);
-            return dx::fmacc(s, dx::multiply(x2, x), t);
+            auto s = dx::muladd(x, inv_halfln2, exp);
+            return dx::mulacc(s, dx::multiply(x2, x), t);
         };
 
         auto const cval = dx::min(dx::abs(val), dx::max_value);

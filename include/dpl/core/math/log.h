@@ -7,6 +7,7 @@
 #include "dpl/core/math/details/polynomial.h"
 #include "dpl/core/math/fixup.h"
 #include "dpl/core/math/frexp.h"
+#include "dpl/core/math/mulx.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/extended.h"
@@ -27,6 +28,7 @@
 __DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void log(...) noexcept = delete;
+struct log1p_t;
 
 struct DPL_EMPTY_BASES log_t :
     public math_operation_base<log_t>,
@@ -156,6 +158,7 @@ public:
 template <>
 struct fallback_impl<log_t> {
 private:
+    friend fallback_impl<log1p_t>;
     template <canonical_vector T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr T DPL_VECTORCALL solve_poly(T val) noexcept {
@@ -182,6 +185,23 @@ private:
     }
 
     template <canonical_vector T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto ln2_val() noexcept {
+        if constexpr (is_same_v<simd_element_type_t<T>, double>) {
+            return mx::make_pair(dx::broadcast<T>(0x1.62e42fefa39efp-1),
+                dx::broadcast<T>(0x1.abc9e3b39803fp-56));
+        } else if constexpr (is_same_v<simd_element_type_t<T>, float>) {
+            return mx::make_pair(dx::broadcast<T>(0x1.62e43p-1f),
+                dx::broadcast<T>(-0x1.05c61p-29f));
+        } else {
+            using A = simd_abi_type_t<T>;
+            return dx::broadcast<A, float>(0x1.62e42fefa39efp-1f);
+        }
+    }
+
+    friend fallback_impl<log1p_t>;
+
+    template <canonical_vector T>
     requires same_as<simd_element_type_t<T>, float> ||
         same_as<simd_element_type_t<T>, double>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
@@ -197,15 +217,7 @@ private:
                 dx::multiply(dx::get_element<0>(x), dx::get_element<0>(x));
             auto const t = solve_poly(x2);
 
-            auto const ln2 = []() {
-                if constexpr (is_same_v<simd_element_type_t<T>, double>) {
-                    return mx::make_pair(dx::broadcast<T>(0x1.62e42fefa39efp-1),
-                        dx::broadcast<T>(0x1.abc9e3b39803fp-56));
-                } else {
-                    return mx::make_pair(dx::broadcast<T>(0x1.62e43p-1f),
-                        dx::broadcast<T>(-0x1.05c61p-29f));
-                }
-            }();
+            auto const ln2 = ln2_val<T>();
             auto s = mx::pair_ref{ln2} * exp;
             s = mx::pair_ref{s} + mx::scale(x, 2);
             return mx::pair_ref{s} +
@@ -254,9 +266,9 @@ private:
             auto const x2 = dx::multiply(x, x);
             auto const t = solve_poly(x2);
 
-            auto const ln2 = dx::broadcast<A, float>(0x1.62e42fefa39efp-1f);
-            auto s = dx::fmacc(dx::multiply(2, x), ln2, exp);
-            return dx::fmacc(s, dx::multiply(x2, x), t);
+            auto const ln2 = ln2_val<T>();
+            auto s = dx::mulacc(dx::multiply(2, x), ln2, exp);
+            return dx::mulacc(s, dx::multiply(x2, x), t);
         };
 
         auto const cval = dx::min(dx::abs(val), dx::max_value);

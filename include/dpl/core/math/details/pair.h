@@ -257,6 +257,18 @@ struct pair_ref {
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
+    friend constexpr T DPL_VECTORCALL operator/(
+        element_type left, pair_ref right) noexcept {
+        auto const [upper, lower] = right;
+        auto const t = dx::divide(dx::one, upper); // ≈ 1/upper
+        auto const s = dx::multiply(left, t);      // leading quotient
+        auto const u = dx::mulsub(t, left, s);     // exact error of left·t
+        auto const v = dx::nmulsub(lower, t,
+            dx::nmulsub(upper, t, dx::one)); // v = 1 − (upper + lower)·t
+        return fmath::make_pair(s, dx::muladd(s, v, u)); // q ≈ s + (u + s·v)
+    }
+
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
     constexpr T DPL_VECTORCALL operator*(
         this pair_ref self, element_type right) noexcept {
         auto const [upper, lower] = self;
