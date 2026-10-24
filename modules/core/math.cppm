@@ -100,6 +100,7 @@ using __DPL datapar::cpo::exp2;
 using __DPL datapar::cpo::fixup;
 using __DPL datapar::cpo::ldexp;
 using __DPL datapar::cpo::log;
+using __DPL datapar::cpo::log10;
 using __DPL datapar::cpo::log2;
 using __DPL datapar::cpo::pow;
 using __DPL datapar::cpo::rcp;
