@@ -1,17 +1,6 @@
 // Copyright 2025-2026 Bryan Wong
 // @dpl[clang].compile-flags+: -fconstexpr-steps=6000000
 // @dpl[msvc].compile-flags+: /constexpr:steps6000000
-// @dpl.mpfr+: roundeven f32 -n 12 -r urand -0x1p23:-1 -r urand 1:0x1p23 \
-// -r urand -1:1 -r urand 0x1p22:infinity -r urand -infinity:-0x1p22
-
-// @dpl.mpfr+: roundeven f64 -n 12 -r urand -0x1p52:-1 -r urand 1:0x1p52 \
-// -r urand -1:1 -r urand 0x1p51:infinity -r urand -infinity:-0x1p51
-
-// @dpl.mpfr+: roundeven f16 -n 12 -r urand -0x1p10:-1 -r urand 1:0x1p10 \
-// -r urand -1:1 -r urand 0x1p9:infinity -r urand -infinity:-0x1p9
-
-// @dpl.mpfr+: roundeven bf16 -n 12 -r urand -0x1p7:-1 -r urand 1:0x1p7 \
-// -r urand -1:1 -r urand 0x1p6:infinity -r urand -infinity:-0x1p6
 
 #include "../common.h"
 

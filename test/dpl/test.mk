@@ -180,13 +180,18 @@ $(CURRENT_BINARY_DIR)/%.jdir: $(CURRENT_SOURCE_DIR)/% $(TOOLS_DIR)/directives.aw
 ALL_TARGETS += $(DIRECTIVES)
 
 MPFR_BIN := $(OUTPUT_DIR)/test/mpfr/mpfr
-ALL_TARGETS += $(OUTPUT_DIR)/mathdata.mk $(OUTPUT_DIR)/mathdata.json
+MATHDATA_MK  := $(OUTPUT_DIR)/mathdata/mathdata.mk
+MATHDATA_SUBDIRS := $(call rdirs,$(MATHDATA_DIR))
+GENERATE_MKS     := $(wildcard $(addsuffix /generate.mk,$(MATHDATA_SUBDIRS)))
+ALL_TARGETS += $(MATHDATA_MK)
 .PHONY: mathdata
-mathdata: $(MPFR_BIN) $(DIRECTIVES) $(TOOLS_DIR)/mathdata.jq
-	@$(file >$(OUTPUT_DIR)/mathdata.json,$(foreach f,$(DIRECTIVES),{"file":"$f","directives":$(file <$f)}$(newline)))
-	@jq -r -s -f $(TOOLS_DIR)/mathdata.jq --arg dir '$(MATHDATA_DIR)' --arg bin '$$(MPFR_BIN)' \
-	    $(OUTPUT_DIR)/mathdata.json > $(OUTPUT_DIR)/mathdata.mk
-	@$(MAKE) --no-print-directory -f $(OUTPUT_DIR)/mathdata.mk -C $(MATHDATA_DIR) MPFR_BIN='$(MPFR_BIN)' all
+
+$(MATHDATA_MK): $(GENERATE_MKS) $(MATHDATA_SUBDIRS)
+	@mkdir -p $(@D)
+	@{ printf '.PHONY: all\n'; printf 'include %s\n' $(GENERATE_MKS); } > $@
+
+mathdata: $(MPFR_BIN) $(MATHDATA_MK)
+	@$(MAKE) --no-print-directory -f $(MATHDATA_MK) MPFR_BIN='$(MPFR_BIN)' all
 
 TFLAGS_RSPS := $(patsubst %.o,%.tflags.rsp, $(filter %.pass.cpp.o,$(CURRENT_OBJS)))
 $(CURRENT_BINARY_DIR)/%.tflags.rsp: $(CURRENT_BINARY_DIR)/%.jdir $(CURRENT_BINARY_DIR)/supported_flags.txt
