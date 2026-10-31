@@ -5,7 +5,7 @@
 
 #include "dpl/core/math/details/fwd.h" // IWYU pragma: export
 
-#include "dpl/core/math/details/accuracy.h" // IWYU pragma: export
+#include "dpl/core/math/accuracy.h"
 #include "dpl/core/math/details/apply_widened.h"
 #include "dpl/core/math/details/floating_point_simd.h"
 #include "dpl/core/math/details/polynomial.h"
@@ -74,13 +74,13 @@ public:
     template <canonical_vector T, accuracy_tag Tag>
     requires floating_point_like<simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr T DPL_VECTORCALL operator()(Tag, T val) noexcept {
+    static constexpr T DPL_VECTORCALL operator()(T val, Tag acc) noexcept {
         constexpr simd_element_type_t<T> two = 2.0;
         auto const vtwo = dx::broadcast<T>(two);
         auto const vone = dx::broadcast<T>(dx::one);
         auto poly = polynomial(dx::mulsub(vtwo, val, vone));
         using E = simd_element_type_t<T>;
-        if constexpr (is_same_v<accuracy::speed_t, Tag>) {
+        if constexpr (acc == accuracy::approximate) {
             constexpr auto steps = digits_v<E> / digits_v<double>;
             return refine(poly, val, imm<steps>);
         } else {
@@ -90,7 +90,7 @@ public:
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)
-    static constexpr auto operator()(accuracy_tag auto, dx::one_t) noexcept {
+    static constexpr auto operator()(dx::one_t, accuracy_tag auto) noexcept {
         return rsqrt2_t::one{};
     }
 

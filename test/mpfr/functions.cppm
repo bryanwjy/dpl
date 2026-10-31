@@ -5,6 +5,8 @@ module;
 
 #include "mpfr.h"
 
+#include <cassert>
+
 export module mpfr:functions;
 import :utils;
 import dpl;
@@ -153,6 +155,12 @@ struct invoke_t {
 template <function_name name>
 inline constexpr invoke_t<name> invoke;
 
+inline int mpfr_rcp(mpfr_ptr rop, mpfr_srcptr op, mpfr_rnd_t rnd) noexcept {
+    [[maybe_unused]] auto const r = mpfr_init_set_ui(rop, 1, rnd);
+    assert(r == 0); // set to 1 is always exact
+    return mpfr_div(rop, rop, op, rnd);
+}
+
 #define __MPFR_DEFINE_FUNCTION(NAME, FUNC)                          \
     [] {                                                            \
         constexpr auto name = DPL_CONCAT(#NAME, _func);             \
@@ -196,8 +204,10 @@ constexpr dpl::constant_type_pack<                       //
     __MPFR_DEFINE_FUNCTION(pow, mpfr_pow),               //
     __MPFR_DEFINE_FUNCTION(ldexp, mpfr_mul_2si),         //
     __MPFR_DEFINE_FUNCTION(remainder, mpfr_remainder),   //
+    __MPFR_DEFINE_FUNCTION(rcp, mpfr_rcp),               //
     __MPFR_DEFINE_FUNCTION(round, mpfr_round),           // CMATH
     __MPFR_DEFINE_FUNCTION(roundeven, mpfr_roundeven),   // IEEE
+    __MPFR_DEFINE_FUNCTION(rsqrt, mpfr_rec_sqrt),        //
     __MPFR_DEFINE_FUNCTION(sec, mpfr_sec),               //
     __MPFR_DEFINE_FUNCTION(sech, mpfr_sech),             //
     __MPFR_DEFINE_FUNCTION(sin, mpfr_sin),               //

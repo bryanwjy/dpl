@@ -3,12 +3,10 @@
 
 #include "dpl/config.h"
 
-#include "dpl/core/math/details/accuracy.h"
 #include "dpl/core/math/details/apply_widened.h"
-#include "dpl/core/math/details/ldexp.h"
-#include "dpl/core/math/details/rsqrt2.h"
 #include "dpl/core/math/frexp.h"
 #include "dpl/core/math/isfinite.h"
+#include "dpl/core/math/rsqrt.h"
 
 #if !DPL_MODULES
 #  include "dpl/core/concepts/equivalence.h"
@@ -153,75 +151,114 @@ public:
 template <>
 struct fallback_impl<sqrt_t> {
     template <canonical_vector T>
-    requires floating_point_like<simd_element_type_t<T>> &&
-        same_as<simd_element_type_t<T>, ext::bfloat16>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr T DPL_VECTORCALL sqrt(T val) noexcept {
-        // should we do this properly?
-        return mx::apply_widened<float>(fallback_impl{}, val);
+    static constexpr T DPL_VECTORCALL rsqrt(T val) noexcept {
+        if consteval {
+            return fallback_impl<rsqrt_t>::normal_rsqrt(val);
+        } else {
+            if constexpr (dx::is_simd_canonical_invocable<T>(dx::rsqrt)) {
+                // approximate
+                return dx::rsqrt(val);
+            } else {
+                // skips the fixup instructions
+                return fallback_impl<rsqrt_t>::normal_rsqrt(val);
+            }
+        }
     }
 
     template <canonical_vector T>
-    requires floating_point_like<simd_element_type_t<T>>
+    requires same_as<simd_element_type_t<T>, ext::bfloat16>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr T DPL_VECTORCALL sqrt(T val) noexcept {
-        using vexp_t = mx::exponent_vector_t<T>;
+        using vf32_t = rebind_simd_t<T, float>;
+        return mx::apply_widened<float>(
+            [](vf32_t val) {
+                constexpr auto half = 0.5f;
+                auto g = fallback_impl::rsqrt(val);
+                auto y = dx::multiply(val, g);
+                auto result = dx::nmulsub(y, y, val);
+                return dx::muladd(result, dx::multiply(half, g), y);
+            },
+            val);
+    }
+
+    template <canonical_vector T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr T DPL_VECTORCALL sqrt_impl(T val) noexcept {
         using E = simd_element_type_t<T>;
-        auto const vsqrt8 = dx::broadcast<T>(2.8284271247461900976033774484);
-        auto const vtwo = dx::broadcast<T>(2.0);
-        auto const vone = dx::broadcast<vexp_t>(dx::one);
+        using rsqrt_impl = fallback_impl<rsqrt_t>;
+        constexpr auto lower_bound = [] {
+            auto const digits = floating_point_traits<E>::digits;
+            auto const shift =
+                __DPL countr_zero(floating_point_traits<E>::exponent_mask);
+            return __DPL bit_cast<E>(bit_representation_t<E>(digits) << shift);
+        }();
 
-        auto exp = dx::undefined<vexp_t>();
-        auto const fr = dx::frexp(val, exp);
-        auto const isodd = dx::cmpeq(dx::bwand(exp, vone), dx::one);
-
-        auto const k =
-            dx::bwshift_right(dx::subtract(exp, isodd, exp, vone), imm<1>);
-
-        auto const f = dx::add(fr, isodd, fr, fr);
-        auto const vrsqrt2 = dx::broadcast<T>(mx::rsqrt2(dx::one));
-        auto const vhalf = dx::broadcast<T>(0.5);
-        auto const scale = dx::select(isodd, vhalf, vrsqrt2);
-        auto const rsqrt2fr = mx::rsqrt2(mx::accuracy::maximum, fr);
-
+        auto const issmall = dx::cmplt(val, lower_bound);
+        val = dx::multiply(val, issmall, val, rsqrt_impl::prenormalizer<E>);
+        constexpr E half = 0.5;
+        auto g = rsqrt(val);
+        auto y = dx::multiply(val, g);
         auto result = [&] {
-            // TODO: implement constexpr fmadd. Once we add support for 'real'
-            // fmadd at compile-time if not consteval won't be needed
+            // TODO: implement constexpr fmadd
             if not consteval {
                 if constexpr (dx::is_simd_canonical_invocable<T, T, T>(
                                   dx::fmadd)) {
-                    auto const half_rsqrtf = dx::multiply(rsqrt2fr, scale);
-                    auto const sqrtf = dx::multiply(half_rsqrtf, dx::add(f, f));
-                    auto result = dx::nmulsub(sqrtf, sqrtf, f);
-                    return dx::muladd(result, half_rsqrtf, sqrtf);
+                    return dx::nmulsub(y, y, val);
                 }
             }
 
-            auto const half_rsqrtf = mx::single{rsqrt2fr} * scale;
-            auto const sqrtf = mx::pair_ref{half_rsqrtf} * dx::add(f, f);
-
-            auto result = mx::pair_ref{sqrtf} * sqrtf;
-            result = f - mx::pair_ref{result};
-            result = mx::pair_ref{result} * half_rsqrtf;
-            result = mx::pair_ref{result} + sqrtf;
+            auto result = mx::single(y) * y;
+            result = val - mx::pair_ref{result};
             return mx::recombine(result);
         }();
+        result = dx::muladd(result, dx::multiply(half, g), y);
+        constexpr auto normalizer =
+            static_cast<E>(1.0 / rsqrt_impl::normalizer<E>);
+        return dx::multiply(result, issmall, result, normalizer);
+    }
 
-        return mx::ldexp(mx::compliance::unsafe, //
-            val, dx::isfinite(val), result, k);
+    template <canonical_vector T>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr T DPL_VECTORCALL sqrt(T val) noexcept {
+        using E = simd_element_type_t<T>;
+        using rsqrt_impl = fallback_impl<rsqrt_t>;
+        // TODO: implement constexpr fmadd
+        if not consteval {
+            if constexpr (dx::is_simd_canonical_invocable<T, T, T>(dx::fmadd)) {
+                return sqrt_impl(val);
+            }
+        }
+
+        constexpr auto preshrink =
+            static_cast<E>(1.0 / rsqrt_impl::prenormalizer<E>);
+        constexpr auto upper_bound = [] {
+            auto const bias = floating_point_traits<E>::exponent_bias;
+            auto const shift =
+                __DPL countr_zero(floating_point_traits<E>::exponent_mask);
+            return __DPL bit_cast<E>(
+                bit_representation_t<E>(bias * 2 - 1) << shift);
+        }();
+
+        auto const islarge = dx::cmpgt(val, upper_bound);
+        val = dx::multiply(val, islarge, val, preshrink);
+        auto result = sqrt_impl(val);
+        result =
+            dx::multiply(result, islarge, result, rsqrt_impl::normalizer<E>);
+        return result;
     }
 
 public:
     template <canonical_vector T>
-    requires floating_point_like<simd_element_type_t<T>>
+    requires binary_layout_floating_point<simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr T DPL_VECTORCALL operator()(T val) noexcept {
         auto const vzero = dx::broadcast<T>(dx::zero);
         auto result = [&] {
             if consteval {
                 return fallback_impl::sqrt(dx::select(
-                    dx::logical_and(dx::isfinite(val), dx::cmpge(val, vzero)),
-                    val, dx::zero));
+                    dx::logical_and(dx::isfinite(val), dx::cmpgt(val, vzero)),
+                    val, dx::one));
             } else {
                 return fallback_impl::sqrt(val);
             }

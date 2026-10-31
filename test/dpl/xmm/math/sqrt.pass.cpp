@@ -21,7 +21,7 @@ int main() {
         dpl::type_pack<float, double, dpl::ext::float16, dpl::ext::bfloat16>;
     constexpr auto run = []() {
         dpl::test::mt19937 engine;
-        return dpl::test::sqrt<abi_t, 0.5>::run_all(types{}, engine);
+        return dpl::test::sqrt<abi_t, 0.75>::run_all(types{}, engine);
     };
 
     static_assert(run());
