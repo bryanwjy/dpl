@@ -238,7 +238,7 @@ private:
             fpfix::condition<fpfix::nan, fpfix::copy>;
         if constexpr (dx::is_simd_canonical_invocable<T, T, decltype(fixflags)>(
                           dx::fixup)) {
-            return dx::fixup(val, mx::recombine(s), fixflags);
+            return dx::fixup(mx::recombine(s), val, fixflags);
         } else {
             auto result = mx::recombine(s);
             result = dx::select(dx::isinf(val), dx::infinity, result);
@@ -280,7 +280,7 @@ private:
             fpfix::condition<fpfix::nan, fpfix::copy>;
         if constexpr (dx::is_simd_canonical_invocable<T, T, decltype(fixflags)>(
                           dx::fixup)) {
-            return dx::fixup(val, result, fixflags);
+            return dx::fixup(result, val, fixflags);
         } else {
             result = dx::select(dx::isinf(val), dx::infinity, result);
             result = dx::select(

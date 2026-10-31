@@ -123,6 +123,36 @@ constexpr pair_type_t<make_canonical_vector_t<E, A>>
         dx::broadcast<E, A>(upper), dx::broadcast<E, A>(lower));
 }
 
+template <canonical_vector T>
+requires floating_point_like<simd_element_type_t<T>>
+DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+constexpr T two_product_error(T left, T right, T prod) noexcept {
+    // TODO: implement constexpr fmadd. Once we add support for 'real' fmadd at
+    // compile-time if not consteval won't be needed
+    if not consteval {
+        if constexpr (dx::is_simd_canonical_invocable<T, T, T>(dx::fmadd)) {
+            return dx::mulsub(left, right, prod);
+        }
+    }
+
+    using E = simd_element_type_t<T>;
+    constexpr auto split = [](auto a) {
+        constexpr int p =
+            floating_point_traits<E>::digits; // 11 (f16), 8 (bf16), 24, 53
+        constexpr E C = E((1u << ((p + 1) / 2)) + 1); // 65, 17, 4097, 2^27 + 1
+        auto const c = dx::multiply(a, C);
+        auto const hi = dx::subtract(c, dx::subtract(c, a));
+        return fmath::make_pair(hi, dx::subtract(a, hi));
+    };
+
+    auto const [ah, al] = split(left);
+    auto const [bh, bl] = split(right);
+    auto e = dx::subtract(dx::multiply(ah, bh), prod); // each step is exact
+    e = dx::add(e, dx::multiply(ah, bl));
+    e = dx::add(e, dx::multiply(al, bh));
+    return dx::add(e, dx::multiply(al, bl));
+}
+
 /**
  * Scalable ABI workaround
  * For ADL operations
@@ -199,18 +229,24 @@ struct pair_ref {
     constexpr T DPL_VECTORCALL operator-(
         this pair_ref self, element_type right) noexcept {
         auto const [upper, lower] = self;
-        auto s = dx::subtract(upper, right);
-        return fmath::make_pair(
-            s, dx::add(lower, dx::subtract(dx::subtract(upper, s), right)));
+        auto const s = dx::subtract(upper, right);
+        auto const v = dx::subtract(s, upper);
+        return fmath::make_pair(s,
+            dx::add(dx::subtract(dx::subtract(upper, dx::subtract(s, v)),
+                        dx::add(right, v)),
+                lower));
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
     friend constexpr T DPL_VECTORCALL operator-(
         element_type left, pair_ref self) noexcept {
         auto const [upper, lower] = self;
-        auto s = dx::subtract(left, upper);
-        return fmath::make_pair(
-            s, dx::subtract(dx::subtract(dx::subtract(left, s), upper)), lower);
+        auto const s = dx::subtract(left, upper);
+        auto const v = dx::subtract(s, left);
+        return fmath::make_pair(s,
+            dx::subtract(dx::subtract(dx::subtract(left, dx::subtract(s, v)),
+                             dx::add(upper, v)),
+                lower));
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
@@ -273,8 +309,9 @@ struct pair_ref {
         this pair_ref self, element_type right) noexcept {
         auto const [upper, lower] = self;
         auto const s = dx::multiply(upper, right);
-        return fmath::make_pair(
-            s, dx::muladd(lower, right, dx::mulsub(upper, right, s)));
+        return fmath::make_pair(s,
+            dx::muladd(
+                lower, right, fmath::two_product_error(upper, right, s)));
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
@@ -282,8 +319,8 @@ struct pair_ref {
         element_type left, pair_ref self) noexcept {
         auto const [upper, lower] = self;
         auto const s = dx::multiply(left, upper);
-        return fmath::make_pair(
-            s, dx::muladd(left, lower, dx::mulsub(left, upper, s)));
+        return fmath::make_pair(s,
+            dx::muladd(left, lower, fmath::two_product_error(left, upper, s)));
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
@@ -295,7 +332,8 @@ struct pair_ref {
         auto const s = dx::multiply(lupper, rupper);
         return fmath::make_pair(s,
             dx::muladd(lupper, rlower,
-                dx::muladd(llower, rupper, dx::mulsub(lupper, rupper, s))));
+                dx::muladd(llower, rupper,
+                    fmath::two_product_error(lupper, rupper, s))));
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -482,8 +520,9 @@ struct single<T> {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
     constexpr pair_type_t<T> DPL_VECTORCALL operator*(
         this single self, element_type right) noexcept {
-        auto s = dx::multiply(self.value, right);
-        return fmath::make_pair(s, dx::mulsub(self.value, right, s));
+        auto const s = dx::multiply(self.value, right);
+        return fmath::make_pair(
+            s, fmath::two_product_error(self.value, right, s));
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, NODISCARD)

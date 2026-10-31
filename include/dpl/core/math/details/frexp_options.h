@@ -92,11 +92,11 @@ public:
     consteval bool operator!=(frexp_options_t) noexcept { return false; }
 
     static consteval bool contains(frexp_interval val) noexcept {
-        return val == S;
+        return val == I;
     }
 
     static consteval bool contains(frexp_sign val) noexcept { //
-        return val == I;
+        return val == S;
     }
 };
 

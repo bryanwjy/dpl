@@ -209,7 +209,7 @@ private:
         if constexpr (dx::is_simd_canonical_invocable<T, T, decltype(fixflags)>(
                           dx::fixup)) {
             // hope CSE removes the add
-            return dx::fixup(valp1, mx::recombine(s), fixflags);
+            return dx::fixup(mx::recombine(s), valp1, fixflags);
         } else {
             auto result = mx::recombine(s);
             result = dx::select(dx::isinf(val), dx::infinity, result);
@@ -268,7 +268,7 @@ private:
             fpfix::condition<fpfix::nan, fpfix::copy>;
         if constexpr (dx::is_simd_canonical_invocable<T, T, decltype(fixflags)>(
                           dx::fixup)) {
-            return dx::fixup(valp1, result, fixflags);
+            return dx::fixup(result, valp1, fixflags);
         } else {
             result = dx::select(dx::isinf(val), dx::infinity, result);
             result = dx::select(

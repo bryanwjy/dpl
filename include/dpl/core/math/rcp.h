@@ -193,7 +193,7 @@ public:
         if constexpr (dx::is_simd_canonical_invocable<T, T, decltype(fixflags)>(
                           dx::fixup)) {
             // nan is implicitly handled
-            return dx::fixup(val, approximate(val), fixflags);
+            return dx::fixup(approximate(val), val, fixflags);
         } else {
             auto result = approximate(val);
             auto const inf = dx::broadcast<T>(dx::infinity);

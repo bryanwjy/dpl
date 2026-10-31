@@ -4,6 +4,7 @@
 #include "dpl/config.h"
 
 #include "dpl/core/math/details/accuracy.h"
+#include "dpl/core/math/details/apply_widened.h"
 #include "dpl/core/math/details/ldexp.h"
 #include "dpl/core/math/details/rsqrt2.h"
 #include "dpl/core/math/frexp.h"
@@ -151,34 +152,94 @@ public:
 
 template <>
 struct fallback_impl<sqrt_t> {
-public:
-    // TODO: float16/bfloat16
     template <canonical_vector T>
-    requires same_as<float, simd_element_type_t<T>> ||
-        same_as<double, simd_element_type_t<T>>
+    requires floating_point_like<simd_element_type_t<T>> &&
+        same_as<simd_element_type_t<T>, ext::bfloat16>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr T DPL_VECTORCALL sqrt(T val) noexcept {
+        // should we do this properly?
+        return mx::apply_widened<float>(fallback_impl{}, val);
+    }
+
+    template <canonical_vector T>
+    requires floating_point_like<simd_element_type_t<T>>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr T DPL_VECTORCALL sqrt(T val) noexcept {
+        using vexp_t = mx::exponent_vector_t<T>;
+        using E = simd_element_type_t<T>;
+        auto const vsqrt8 = dx::broadcast<T>(2.8284271247461900976033774484);
+        auto const vtwo = dx::broadcast<T>(2.0);
+        auto const vone = dx::broadcast<vexp_t>(dx::one);
+
+        auto exp = dx::undefined<vexp_t>();
+        auto const fr = dx::frexp(val, exp);
+        auto const isodd = dx::cmpeq(dx::bwand(exp, vone), dx::one);
+
+        auto const k =
+            dx::bwshift_right(dx::subtract(exp, isodd, exp, vone), imm<1>);
+
+        auto const f = dx::add(fr, isodd, fr, fr);
+        auto const vrsqrt2 = dx::broadcast<T>(mx::rsqrt2(dx::one));
+        auto const vhalf = dx::broadcast<T>(0.5);
+        auto const scale = dx::select(isodd, vhalf, vrsqrt2);
+        auto const rsqrt2fr = mx::rsqrt2(mx::accuracy::maximum, fr);
+
+        auto result = [&] {
+            // TODO: implement constexpr fmadd. Once we add support for 'real'
+            // fmadd at compile-time if not consteval won't be needed
+            if not consteval {
+                if constexpr (dx::is_simd_canonical_invocable<T, T, T>(
+                                  dx::fmadd)) {
+                    auto const half_rsqrtf = dx::multiply(rsqrt2fr, scale);
+                    auto const sqrtf = dx::multiply(half_rsqrtf, dx::add(f, f));
+                    auto result = dx::nmulsub(sqrtf, sqrtf, f);
+                    return dx::muladd(result, half_rsqrtf, sqrtf);
+                }
+            }
+
+            auto const half_rsqrtf = mx::single{rsqrt2fr} * scale;
+            auto const sqrtf = mx::pair_ref{half_rsqrtf} * dx::add(f, f);
+
+            auto result = mx::pair_ref{sqrtf} * sqrtf;
+            result = f - mx::pair_ref{result};
+            result = mx::pair_ref{result} * half_rsqrtf;
+            result = mx::pair_ref{result} + sqrtf;
+            return mx::recombine(result);
+        }();
+
+        return mx::ldexp(mx::compliance::unsafe, //
+            val, dx::isfinite(val), result, k);
+    }
+
+public:
+    template <canonical_vector T>
+    requires floating_point_like<simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr T DPL_VECTORCALL operator()(T val) noexcept {
-        // 2 * sqrt(2)
-        auto const vone = dx::broadcast<T>(dx::one);
-        auto const vtwo = dx::broadcast<T>(2.0);
-        auto const vsqrt8 = dx::broadcast<T>(2.8284271247461900976033774484);
-
-        using vexp_t = mx::exponent_vector_t<T>;
-        vexp_t exp;
-        auto const fr = dx::frexp(val, exp);
-        auto const remtwo = dx::bwand(exp, vone);
-        auto const ifodd =
-            dx::select(dx::cmpeq(remtwo, dx::zero), vsqrt8, vtwo);
-        auto const sig = dx::multiply(
-            dx::multiply(ifodd, fr), mx::rsqrt2(mx::accuracy::maximum, fr));
-        auto const result = mx::ldexp(mx::compliance::unsafe, //
-            sig, dx::bwshift_right(dx::subtract(exp, vone), imm<1>));
-
         auto const vzero = dx::broadcast<T>(dx::zero);
-        auto const eqz = dx::cmpeq(val, vzero);
-        auto const gtz = dx::cmpgt(val, vzero);
+        auto result = [&] {
+            if consteval {
+                return fallback_impl::sqrt(dx::select(
+                    dx::logical_and(dx::isfinite(val), dx::cmpge(val, vzero)),
+                    val, dx::zero));
+            } else {
+                return fallback_impl::sqrt(val);
+            }
+        }();
 
-        return dx::select(eqz, val, dx::select(gtz, result, dx::all_bits));
+        constexpr auto fixflags = fpfix::condition<fpfix::negative, dx::nan> |
+            fpfix::condition<fpfix::zero, fpfix::copy> |
+            fpfix::condition<fpfix::infinite, fpfix::copy> |
+            fpfix::condition<fpfix::nan, fpfix::copy>;
+        if constexpr (dx::is_simd_canonical_invocable<T, T, decltype(fixflags)>(
+                          dx::fixup)) {
+            return dx::fixup(result, val, fixflags);
+        } else {
+            result = dx::select(dx::isinf(val), dx::infinity, result);
+            result = dx::select(dx::cmpgt(val, vzero), result, dx::all_bits);
+            result = dx::select(dx::cmpeq(val, vzero), val, result);
+            return result;
+        }
     }
 };
 } // namespace datapar::internal

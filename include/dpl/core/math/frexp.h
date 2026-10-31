@@ -243,6 +243,7 @@ private:
     requires (Opt::contains(frexp_options::standard))
     {
         using E = simd_element_type_t<T>;
+        using exp_t = signed_representation_t<E>;
         auto const issubnormal = [](auto val) {
             if constexpr (Opt::contains(frexp_options::sign_nan)) {
                 return dx::cmplt(val, dx::min_value);
@@ -251,36 +252,42 @@ private:
             }
         }(val);
 
-        constexpr auto exp_bits = __DPL bit_cast<signed_representation_t<E>>(
-            floating_point_traits<E>::exponent_mask);
-        constexpr signed_representation_t<E> magic_v =
+        constexpr signed_representation_t<E> qexp =
             floating_point_traits<E>::exponent_bias - 1;
-        constexpr auto exp_shift =
+        constexpr auto shift =
             __DPL countr_zero(floating_point_traits<E>::exponent_mask);
-        constexpr auto all_exp = __DPL bit_cast<signed_representation_t<E>>(
-            floating_point_traits<E>::exponent_mask >> exp_shift);
+        constexpr auto exp_mask = __DPL bit_cast<exp_t>(
+            floating_point_traits<E>::exponent_mask >> shift);
 
         using A = simd_abi_type_t<T>;
-        auto const magic = dx::broadcast<A>(magic_v);
-        auto const offset = dx::broadcast<A>(subnormal_offset<E>);
-        iexp = fmath::ilogb(fmath::compliance::unsafe, val);
-        iexp = dx::subtract(iexp, dx::cmpneq(iexp, all_exp), iexp, magic);
-        // perform the select for better ILP
-        iexp = dx::subtract(iexp, dx::select(issubnormal, offset, dx::zero));
-
-        using bitset_t = bit_representation_t<E>;
-        constexpr auto magic_exp = [&]() {
-            auto const signctrl = Opt::contains(frexp_options::sign_zero)
-                ? ~floating_point_traits<E>::signbit
-                : ~bitset_t();
-
-            return __DPL bit_cast<E>(
-                (bitset_t(magic_v) << exp_shift) & signctrl);
-        }();
-
         auto const vnormalizer = dx::broadcast<A>(normalizer<E>);
         val = dx::multiply(val, issubnormal, val, vnormalizer);
-        auto fr = dx::bwand(val, dx::isfinite(val), val, magic_exp);
+
+        auto const vqexp = dx::broadcast<A>(qexp);
+        auto const offset = dx::broadcast<A>(subnormal_offset<E>);
+        auto const bexp = dx::bwand(
+            dx::bwshift_right(dx::reinterpret<exp_t>(val), imm<shift>),
+            exp_mask);
+        iexp = dx::subtract(iexp, dx::cmpneq(bexp, exp_mask), bexp, vqexp);
+        iexp = dx::subtract(iexp, issubnormal, iexp, offset);
+        iexp = dx::select(dx::cmpeq(val, dx::zero), dx::zero, iexp);
+
+        using bitset_t = bit_representation_t<E>;
+        constexpr auto mask = [] {
+            auto const signctrl = Opt::contains(frexp_options::sign_zero)
+                ? ~bitset_t()
+                : ~floating_point_traits<E>::signbit;
+
+            auto result = ~floating_point_traits<E>::exponent_mask;
+            if constexpr (!Opt::contains(frexp_options::sign_zero)) {
+                result &= ~floating_point_traits<E>::signbit;
+            }
+
+            return __DPL bit_cast<E>(result);
+        }();
+
+        constexpr auto qexpf = __DPL bit_cast<E>(bitset_t(qexp) << shift);
+        auto fr = dx::bwor(val, dx::isfinite(val), dx::bwand(mask, val), qexpf);
         if constexpr (Opt::contains(frexp_options::sign_nan)) {
             return dx::select(dx::cmpgt(val, dx::zero), fr, dx::all_bits);
         } else {
@@ -292,9 +299,8 @@ public:
     template <canonical_vector T,
         frexp_options_type Opt = frexp_options::default_t>
     requires floating_point_like<simd_element_type_t<T>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr auto DPL_VECTORCALL operator()(T val,
-        signed_canonical_vector_t<T>& iexp,
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr auto operator()(T val, signed_canonical_vector_t<T>& iexp,
         Opt opt = frexp_options::default_v) noexcept
     requires requires { fallback_impl::impl(val, iexp, opt); }
     {
@@ -304,9 +310,9 @@ public:
     template <canonical_vector T,
         frexp_options_type Opt = frexp_options::default_t>
     requires floating_point_like<simd_element_type_t<T>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr T DPL_VECTORCALL operator()(T val,
-        type_identity_t<T>& fexp, Opt opt = frexp_options::default_v) noexcept
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(T val, type_identity_t<T>& fexp,
+        Opt opt = frexp_options::default_v) noexcept
     requires requires(
         signed_canonical_vector_t<T> iexp) { operator()(val, iexp, opt); }
     {

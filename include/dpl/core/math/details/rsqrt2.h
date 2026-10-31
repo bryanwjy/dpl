@@ -6,6 +6,7 @@
 #include "dpl/core/math/details/fwd.h" // IWYU pragma: export
 
 #include "dpl/core/math/details/accuracy.h" // IWYU pragma: export
+#include "dpl/core/math/details/apply_widened.h"
 #include "dpl/core/math/details/floating_point_simd.h"
 #include "dpl/core/math/details/polynomial.h"
 #include "dpl/core/math/mulx.h"
@@ -42,11 +43,21 @@ private:
     static constexpr T DPL_VECTORCALL refine(
         T poly, T half_x, immediate<N>) noexcept {
         static_assert(N >= 1);
-        constexpr simd_element_type_t<T> threehalves = 1.5;
-        auto result = dx::multiply(poly, poly);
-        result = dx::nmuladd(result, half_x, threehalves);
-        result = dx::multiply(result, poly);
-        return refine(result, half_x, imm<N - 1>);
+        using E = simd_element_type_t<T>;
+        constexpr E threehalves = 1.5;
+        if constexpr (is_same_v<E, ext::bfloat16>) {
+            using vf32_t = rebind_simd_t<T, float>;
+            return fmath::apply_widened<float>(
+                [](vf32_t poly, vf32_t half_x) {
+                    return rsqrt2_t::refine(poly, half_x, imm<N>);
+                },
+                poly, half_x);
+        } else {
+            auto result = dx::multiply(poly, poly);
+            result = dx::nmulsub(result, half_x, threehalves);
+            result = dx::multiply(result, poly);
+            return refine(result, half_x, imm<N - 1>);
+        }
     }
 
     struct one : broadcastable_base<one> {
@@ -54,7 +65,7 @@ private:
 
         template <floating_point_like T>
         DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-        constexpr operator T(this one_t) noexcept {
+        constexpr operator T(this one) noexcept {
             return 0.7071067811865475244008443;
         }
     };
@@ -68,13 +79,12 @@ public:
         auto const vtwo = dx::broadcast<T>(two);
         auto const vone = dx::broadcast<T>(dx::one);
         auto poly = polynomial(dx::mulsub(vtwo, val, vone));
+        using E = simd_element_type_t<T>;
         if constexpr (is_same_v<accuracy::speed_t, Tag>) {
-            constexpr auto steps =
-                digits_v<simd_element_type_t<T>> / digits_v<double>;
+            constexpr auto steps = digits_v<E> / digits_v<double>;
             return refine(poly, val, imm<steps>);
         } else {
-            constexpr auto steps =
-                digits_v<simd_element_type_t<T>> / digits_v<float>;
+            constexpr auto steps = digits_v<E> / digits_v<float>;
             return refine(poly, val, imm<steps>);
         }
     }
