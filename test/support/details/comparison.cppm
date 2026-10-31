@@ -44,18 +44,38 @@ inline constexpr struct bitcmp_t {
 
 template <size_t N>
 struct precision_cmp_t {
+    template <typename E>
+    static constexpr auto scale = [] {
+        E scale = 1;
+        for (auto i = 0zu; i < N; ++i) {
+            scale = scale + scale;
+        }
+        return scale;
+    }();
     template <dpp::simd_vector L, dpl::same_as<L> R>
     static constexpr auto operator()(L lhs, R rhs) noexcept {
         using E = dpp::simd_element_type_t<L>;
         if constexpr (dpl::is_integral_v<E>) {
             return dpp::cmpeq(lhs, rhs);
         } else {
-            static_assert(N <
-                dpl::popcount(dpl::floating_point_traits<E>::mantissa_mask));
+            static_assert(N < dpl::floating_point_traits<E>::digits);
             using sint_t = dpp::signed_representation_t<E>;
-            auto const diff =
-                dpp::reinterpret<sint_t>(lhs) - dpp::reinterpret<sint_t>(rhs);
-            return dpp::cmplt(dpp::abs(diff), dpl::to_signed(N));
+            auto const x = dpp::abs(lhs);
+            auto const y = dpp::abs(rhs);
+            auto const hi = dpp::max(x, y);
+            auto const lo = dpp::min(x, y);
+            auto const diff = dpp::subtract(hi, lo);
+            auto const close = dpp::cmple(dpp::multiply(diff, scale<E>), hi);
+            auto const same_sign =
+                dpp::cmpeq(dpp::signbit(lhs), dpp::signbit(rhs));
+            auto const finite =
+                dpp::logical_and(dpp::isfinite(lhs), dpp::isfinite(rhs));
+            auto const both_nan =
+                dpp::logical_and(dpp::isnan(lhs), dpp::isnan(rhs));
+
+            return dpp::logical_or(
+                dpp::logical_or(both_nan, dpp::cmpeq(lhs, rhs)),
+                dpp::logical_and(dpp::logical_and(finite, same_sign), close));
         }
     }
 
@@ -68,12 +88,30 @@ struct precision_cmp_t {
         if constexpr (dpl::is_integral_v<E>) {
             return lhs == rhs;
         } else {
-            static_assert(N <
-                dpl::popcount(dpl::floating_point_traits<E>::mantissa_mask));
-            using sint_t = dpp::signed_representation_t<E>;
-            auto diff = dpl::bit_cast<sint_t>(lhs) - dpl::bit_cast<sint_t>(rhs);
-            diff = diff < 0 ? -diff : diff;
-            return diff < dpl::to_signed(N);
+            static_assert(N < dpl::floating_point_traits<E>::digits);
+            if (lhs != lhs || rhs != rhs) {
+                return lhs != lhs && rhs != rhs;
+            }
+            if (lhs == rhs) {
+                return true;
+            }
+            if (lhs - lhs != 0 || rhs - rhs != 0) {
+                return false;
+            }
+            if ((lhs < 0) != (rhs < 0) || lhs == 0 || rhs == 0) {
+                return false;
+            }
+
+            auto const x = lhs < 0 ? -lhs : lhs;
+            auto const y = rhs < 0 ? -rhs : rhs;
+            auto const hi = x < y ? y : x;
+            auto const lo = x < y ? x : y;
+            auto const diff = hi - lo;
+            if (diff > lo) {
+                return false;
+            }
+
+            return diff * scale<E> <= hi;
         }
     }
 };

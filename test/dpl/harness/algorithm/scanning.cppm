@@ -227,6 +227,16 @@ class exclusive_scan {
         ();
     }
 
+    template <typename E>
+    static constexpr auto pcmp = [] {
+        if constexpr (integral<E>) {
+            return test::bitcmp;
+        } else {
+            return test::precision_cmp<dpl::floating_point_traits<E>::digits -
+                2>;
+        }
+    }();
+
 public:
     template <rng_like Rng, dpp::simd_element_for<A>... Es>
     static constexpr bool run_all(dpl::type_pack<Es...> pack, Rng& engine) {
@@ -249,7 +259,7 @@ public:
             {
                 auto const expected = expected_op(val, init);
                 operation_fixture<A>::test(
-                    precision_cmp<3>, expected, scanop, val, init);
+                    pcmp<E>, expected, scanop, val, init);
             }
             {
                 auto const mask = [&] {
@@ -261,7 +271,7 @@ public:
                 }();
                 auto const expected = expected_op(val, mask, init);
                 operation_fixture<A>::test(
-                    precision_cmp<3>, expected, scanop, val, mask, init);
+                    pcmp<E>, expected, scanop, val, mask, init);
             }
         }
 
@@ -271,7 +281,7 @@ public:
             run_const_mask_test<E>([&](auto cmask) {
                 auto const expected = expected_op(val, cmask, init);
                 operation_fixture<A>::test(
-                    precision_cmp<3>, expected, scanop, val, cmask, init);
+                    pcmp<E>, expected, scanop, val, cmask, init);
             });
         }
 
@@ -385,6 +395,16 @@ private:
         ();
     }
 
+    template <typename E>
+    static constexpr auto pcmp = [] {
+        if constexpr (integral<E>) {
+            return test::bitcmp;
+        } else {
+            return test::precision_cmp<dpl::floating_point_traits<E>::digits -
+                2>;
+        }
+    }();
+
 public:
     template <rng_like Rng, dpp::simd_element_for<A>... Es>
     static constexpr bool run_all(dpl::type_pack<Es...> pack, Rng& engine) {
@@ -405,8 +425,7 @@ public:
             auto const val = data_generator(engine);
             {
                 auto const expected = expected_op<E>(val);
-                operation_fixture<A>::test(
-                    precision_cmp<3>, expected, scanop, val);
+                operation_fixture<A>::test(pcmp<E>, expected, scanop, val);
             }
             {
                 auto const mask = [&] {
@@ -418,7 +437,7 @@ public:
                 }();
                 auto const expected = expected_op<E>(val, mask);
                 operation_fixture<A>::test(
-                    precision_cmp<3>, expected, scanop, val, mask);
+                    pcmp<E>, expected, scanop, val, mask);
             }
         }
 
@@ -427,7 +446,7 @@ public:
             run_const_mask_test<E>([&](auto cmask) {
                 auto const expected = expected_op<E>(val, cmask);
                 operation_fixture<A>::test(
-                    precision_cmp<3>, expected, scanop, val, cmask);
+                    pcmp<E>, expected, scanop, val, cmask);
             });
         }
 
@@ -470,6 +489,16 @@ private:
         return linear_counter(max < limit ? max : limit);
     }
 
+    template <typename E>
+    static constexpr auto pcmp = [] {
+        if constexpr (integral<E>) {
+            return test::bitcmp;
+        } else {
+            return test::precision_cmp<dpl::floating_point_traits<E>::digits -
+                2>;
+        }
+    }();
+
 public:
     template <rng_like Rng, dpp::simd_element_for<A>... Es>
     static constexpr bool run_all(dpl::type_pack<Es...> pack, Rng& engine) {
@@ -491,14 +520,14 @@ public:
             {
                 auto const val = dpp::load<A>(max_generator(engine).data());
                 auto const expected = dpp::exscan_max(val, init);
-                test::operation_fixture<A>::test(precision_cmp<3>, expected,
-                    dpp::exscan, val, init, dpp::max);
+                test::operation_fixture<A>::test(
+                    pcmp<E>, expected, dpp::exscan, val, init, dpp::max);
             }
             {
                 auto const val = dpp::load<A>(min_generator(engine).data());
                 auto const expected = dpp::exscan_min(val, init);
-                test::operation_fixture<A>::test(precision_cmp<3>, expected,
-                    dpp::exscan, val, init, dpp::min);
+                test::operation_fixture<A>::test(
+                    pcmp<E>, expected, dpp::exscan, val, init, dpp::min);
             }
         }
 
@@ -528,6 +557,16 @@ private:
         return linear_counter(max < limit ? max : limit);
     }
 
+    template <typename E>
+    static constexpr auto pcmp = [] {
+        if constexpr (integral<E>) {
+            return test::bitcmp;
+        } else {
+            return test::precision_cmp<dpl::floating_point_traits<E>::digits -
+                2>;
+        }
+    }();
+
 public:
     template <rng_like Rng, dpp::simd_element_for<A>... Es>
     static constexpr bool run_all(dpl::type_pack<Es...> pack, Rng& engine) {
@@ -548,13 +587,13 @@ public:
                 auto const val = dpp::load<A>(max_generator(engine).data());
                 auto const expected = dpp::scan_max(val);
                 test::operation_fixture<A>::test(
-                    precision_cmp<3>, expected, dpp::scan, val, dpp::max);
+                    pcmp<E>, expected, dpp::scan, val, dpp::max);
             }
             {
                 auto const val = dpp::load<A>(min_generator(engine).data());
                 auto const expected = dpp::scan_min(val);
                 test::operation_fixture<A>::test(
-                    precision_cmp<3>, expected, dpp::scan, val, dpp::min);
+                    pcmp<E>, expected, dpp::scan, val, dpp::min);
             }
         }
 

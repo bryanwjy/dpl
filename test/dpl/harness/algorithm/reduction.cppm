@@ -178,6 +178,15 @@ private:
         }
         ();
     }
+    template <typename E>
+    static constexpr auto pcmp = [] {
+        if constexpr (integral<E>) {
+            return test::bitcmp;
+        } else {
+            return test::precision_cmp<dpl::floating_point_traits<E>::digits -
+                2>;
+        }
+    }();
 
 public:
     template <rng_like Rng, dpp::simd_element_for<A>... Es>
@@ -208,13 +217,12 @@ public:
             {
 
                 auto const expected = expected_op<E>(val);
-                test::operation_fixture<A>::test(
-                    precision_cmp<2>, expected, rop, val);
+                test::operation_fixture<A>::test(pcmp<E>, expected, rop, val);
             }
             {
                 auto const expected = expected_op<E>(val, mask);
                 test::operation_fixture<A>::test(
-                    precision_cmp<2>, expected, rop, val, mask);
+                    pcmp<E>, expected, rop, val, mask);
             }
         }
 
@@ -223,7 +231,7 @@ public:
             run_const_mask_test<E>([&](auto cmask) {
                 auto const expected = expected_op<E>(val, cmask);
                 test::operation_fixture<A>::test(
-                    precision_cmp<2>, expected, rop, val, cmask);
+                    pcmp<E>, expected, rop, val, cmask);
             });
         }
 
@@ -258,6 +266,16 @@ class reduce {
         return linear_counter(max < limit ? max : limit);
     }
 
+    template <typename E>
+    static constexpr auto pcmp = [] {
+        if constexpr (integral<E>) {
+            return test::bitcmp;
+        } else {
+            return test::precision_cmp<dpl::floating_point_traits<E>::digits -
+                2>;
+        }
+    }();
+
 public:
     template <rng_like Rng, dpp::simd_element_for<A>... Es>
     static constexpr bool run_all(dpl::type_pack<Es...> pack, Rng& engine) {
@@ -278,13 +296,13 @@ public:
                 auto const val = dpp::load<A>(max_generator(engine).data());
                 auto const expected = dpp::reduce_max(val);
                 test::operation_fixture<A>::test(
-                    precision_cmp<2>, expected, dpp::reduce, val, dpp::max);
+                    pcmp<E>, expected, dpp::reduce, val, dpp::max);
             }
             {
                 auto const val = dpp::load<A>(min_generator(engine).data());
                 auto const expected = dpp::reduce_min(val);
                 test::operation_fixture<A>::test(
-                    precision_cmp<2>, expected, dpp::reduce, val, dpp::min);
+                    pcmp<E>, expected, dpp::reduce, val, dpp::min);
             }
         }
 

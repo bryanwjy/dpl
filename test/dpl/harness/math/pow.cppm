@@ -118,6 +118,18 @@ public:
                 dpp::pow, dpp::zero, mask, lin, rin);
         }
 
+        if constexpr (dpp::fixed_width_abi<A>) {
+            [[maybe_unused]] auto const [lin, rin, out, res] =
+                generate_data<E>(engine);
+            auto const src = src_generator(engine);
+            run_const_mask_test<E>([&](auto cmask) {
+                operation_fixture<A>::test_masked(
+                    dpp::pow, src, cmask, lin, rin);
+                operation_fixture<A>::test_masked(
+                    dpp::pow, dpp::zero, cmask, lin, rin);
+            });
+        }
+
         return true;
     }
 };

@@ -449,7 +449,7 @@ struct fallback_impl<round_t> {
     static constexpr T operator()(T val, rounding::no_exc_t noexc) noexcept {
 #if DPL_HAS_CONSTEXPR_BUILTIN(__builtin_round)
         if consteval {
-            if constexpr (fixed_width_abi<A>) {
+            if constexpr (fixed_width_abi<simd_abi_type_t<T>>) {
                 return internal::transform<T>(
                     [](E val) {
                         if constexpr (is_same_v<E, double>) {

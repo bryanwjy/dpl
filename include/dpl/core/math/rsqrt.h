@@ -4,6 +4,7 @@
 #include "dpl/config.h"
 
 #include "dpl/core/math/accuracy.h"
+#include "dpl/core/math/details/apply_widened.h"
 #include "dpl/core/math/fixup.h"
 
 #if !DPL_MODULES
@@ -31,119 +32,157 @@ struct DPL_EMPTY_BASES rsqrt_t :
 
 template <>
 struct operation_signature<rsqrt_t> {
-    static consteval void operator()(simd_vector auto&&) noexcept {}
+    static consteval void operator()(
+        simd_vector auto&&, accuracy_tag auto) noexcept {}
 };
 
-template <typename S, typename M, typename T>
-concept unqualified_canonical_mrsqrt = cpo_invocable<rsqrt_t, T> &&
-    (!simd_type<S> || same_as<S, cpo_result_t<rsqrt_t, T>>) &&
-    requires(S src, M mask, T val) {
+template <typename T, typename O>
+concept unqualified_canonical_rsqrt = accuracy_tag<O> && requires {
+    {
+        rsqrt(internal::abi<T>, internal::declarg<T>(), internal::declarg<O>())
+    } -> same_as<T>;
+};
+
+template <typename S, typename M, typename T, typename O>
+concept unqualified_canonical_mrsqrt_base =
+    cpo_invocable<rsqrt_t, T, O> && requires {
         {
-            rsqrt(internal::abi<T>, src, mask, val)
-        } -> same_as<cpo_result_t<rsqrt_t, T>>;
+            rsqrt(internal::abi<T>, internal::declarg<S>(),
+                internal::declarg<M>(), internal::declarg<T>(),
+                internal::declarg<O>())
+        } -> same_as<T>;
     };
+
+template <typename M, typename T, typename O>
+concept unqualified_canonical_mrsqrt =
+    unqualified_canonical_mrsqrt_base<T, M, T, O>;
+
+template <typename M, typename T, typename O>
+concept unqualified_canonical_zmrsqrt =
+    unqualified_canonical_mrsqrt_base<dx::zero_t, M, T, O>;
 
 template <>
 struct canonical_impl<rsqrt_t> {
-    template <canonical_vector T>
+    template <canonical_vector T, accuracy_tag O = accuracy::approximate_t>
+    requires unqualified_canonical_rsqrt<T, O>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(T val) noexcept
-    requires requires { rsqrt(internal::abi<T>, val); }
+    static constexpr T operator()(
+        T val, O opt = accuracy::approximate) noexcept {
+        return rsqrt(internal::abi<T>, val, opt);
+    }
+
+    template <canonical_vector T, accuracy_tag O = accuracy::approximate_t>
+    requires unqualified_canonical_mrsqrt<simd_mask_type_t<T>, T, O>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(type_identity_t<T> src,
+        simd_mask_type_t<T> mask, T val,
+        O opt = accuracy::approximate) noexcept {
+        return rsqrt(internal::abi<T>, src, mask, val, opt);
+    }
+
+    template <canonical_vector T, const_mask_for<T> M,
+        accuracy_tag O = accuracy::approximate_t>
+    requires unqualified_canonical_mrsqrt<launder_cmask_t<T, M>, T, O>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(type_identity_t<T> src, M mask, T val,
+        O opt = accuracy::approximate) noexcept {
+        return rsqrt(
+            internal::abi<T>, src, dx::to_const_mask<T>(mask), val, opt);
+    }
+
+    template <canonical_vector T, accuracy_tag O = accuracy::approximate_t>
+    requires unqualified_canonical_zmrsqrt<simd_mask_type_t<T>, T, O>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(dx::zero_t zero, simd_mask_type_t<T> mask,
+        T val, O opt = accuracy::approximate) noexcept {
+        return rsqrt(internal::abi<T>, zero, mask, val, opt);
+    }
+
+    template <canonical_vector T, const_mask_for<T> M,
+        accuracy_tag O = accuracy::approximate_t>
+    requires unqualified_canonical_zmrsqrt<launder_cmask_t<T, M>, T, O>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(dx::zero_t zero, M mask, T val,
+        O opt = accuracy::approximate) noexcept {
+        return rsqrt(
+            internal::abi<T>, zero, dx::to_const_mask<T>(mask), val, opt);
+    }
+};
+
+template <typename T, typename O>
+concept unqualified_extended_rsqrt = accuracy_tag<O> && requires {
     {
-        return rsqrt(internal::abi<T>, val);
-    }
-
-    template <canonical_vector T>
-    requires unqualified_canonical_mrsqrt<T, simd_mask_type_t<T>, T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(
-        type_identity_t<T> src, simd_mask_type_t<T> mask, T val) noexcept {
-        return rsqrt(internal::abi<T>, src, mask, val);
-    }
-
-    template <canonical_vector T, const_mask_for<T> M>
-    requires unqualified_canonical_mrsqrt<T, launder_cmask_t<T, M>, T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(
-        type_identity_t<T> src, M cmask, T val) noexcept {
-        return rsqrt(internal::abi<T>, src, dx::to_const_mask<T>(cmask), val);
-    }
-
-    template <canonical_vector T>
-    requires unqualified_canonical_mrsqrt<dx::zero_t, simd_mask_type_t<T>, T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(
-        dx::zero_t zero, simd_mask_type_t<T> mask, T val) noexcept {
-        return rsqrt(internal::abi<T>, zero, mask, val);
-    }
-
-    template <canonical_vector T, const_mask_for<T> M>
-    requires unqualified_canonical_mrsqrt<dx::zero_t, launder_cmask_t<T, M>, T>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(dx::zero_t zero, M cmask, T val) noexcept {
-        return rsqrt(internal::abi<T>, zero, dx::to_const_mask<T>(cmask), val);
-    }
+        rsqrt(internal::declarg<T>(), internal::declarg<O>())
+    } -> equivalent_vector_with<T>;
 };
 
-template <typename T, typename A = simd_abi_type_t<T>>
-concept unqualified_extended_rsqrt = requires {
-    { rsqrt(internal::declarg<T>()) } -> vector_with_common_abi<A>;
-};
-
-template <typename S, typename M, typename T>
-concept unqualified_extended_mrsqrt = cpo_invocable<rsqrt_t, T> &&
-    (!simd_type<S> || equivalent_vector_with<S, cpo_result_t<rsqrt_t, T>>) &&
-    requires {
+template <typename S, typename M, typename T, typename O>
+concept unqualified_extended_mrsqrt_base =
+    cpo_invocable<rsqrt_t, T, O> && requires {
         {
             rsqrt(internal::declarg<S>(), internal::declarg<M>(),
-                internal::declarg<T>())
-        } -> equivalent_vector_with<cpo_result_t<rsqrt_t, T>>;
+                internal::declarg<T>(), internal::declarg<O>())
+        } -> equivalent_vector_with<T>;
     };
+
+template <typename S, typename M, typename T, typename O>
+concept unqualified_extended_mrsqrt = equivalent_vector_with<T, S> &&
+    unqualified_extended_mrsqrt_base<S, M, T, O>;
+
+template <typename M, typename T, typename O>
+concept unqualified_extended_zmrsqrt =
+    unqualified_extended_mrsqrt_base<dx::zero_t, M, T, O>;
 
 template <>
 struct extended_impl<rsqrt_t> {
-public:
-    template <extended_vector T>
-    requires unqualified_extended_rsqrt<T>
+    template <extended_vector T, accuracy_tag O = accuracy::approximate_t>
+    requires unqualified_extended_rsqrt<T, O>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(T&& val) {
-        return rsqrt(__DPL forward<T>(val));
+    static constexpr auto operator()(T&& val, O opt = accuracy::approximate) {
+        return rsqrt(__DPL forward<T>(val), opt);
     }
 
-    template <simd_vector S, exact_mask_for<S> M, equivalent_vector_with<S> T>
+    template <simd_vector S, exact_mask_for<S> M, equivalent_vector_with<S> T,
+        accuracy_tag O = accuracy::approximate_t>
     requires (extended_vector<S> || extended_mask<M> || extended_vector<T>) &&
-        unqualified_extended_mrsqrt<S, M, T>
+        unqualified_extended_mrsqrt<S, M, T, O>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(S&& src, M&& mask, T&& val) {
+    static constexpr auto operator()(
+        S&& src, M&& mask, T&& val, O opt = accuracy::approximate) {
         return rsqrt( __DPL forward<S>(src), __DPL forward<M>(mask),
-            __DPL forward<T>(val));
+            __DPL forward<T>(val), opt);
     }
 
-    template <simd_vector S, const_mask_for<S> M, equivalent_vector_with<S> T>
+    template <simd_vector S, const_mask_for<S> M, equivalent_vector_with<S> T,
+        accuracy_tag O = accuracy::approximate_t>
     requires (extended_vector<S> || extended_vector<T>) &&
-        unqualified_extended_mrsqrt<S, launder_cmask_t<S, M>, T>
+        unqualified_extended_mrsqrt<S, launder_cmask_t<S, M>, T, O>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(S&& src, M cmask, T&& val) {
-        return rsqrt( __DPL forward<S>(src), dx::to_const_mask<S>(cmask),
-            __DPL forward<T>(val));
+    static constexpr auto operator()(
+        S&& src, M mask, T&& val, O opt = accuracy::approximate) {
+        return rsqrt( __DPL forward<S>(src), dx::to_const_mask<S>(mask),
+            __DPL forward<T>(val), opt);
     }
 
-    template <simd_vector T, result_mask_for<rsqrt_t, T> M>
+    template <simd_vector T, exact_mask_for<T> M,
+        accuracy_tag O = accuracy::approximate_t>
     requires (extended_mask<M> || extended_vector<T>) &&
-        unqualified_extended_mrsqrt<dx::zero_t, M, T>
+        unqualified_extended_zmrsqrt<M, T, O>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(dx::zero_t zero, M&& mask, T&& val) {
-        return rsqrt(zero, __DPL forward<M>(mask), __DPL forward<T>(val));
+    static constexpr auto operator()(
+        dx::zero_t zero, M&& mask, T&& val, O opt = accuracy::approximate) {
+        return rsqrt(
+            zero, __DPL forward<M>(mask), __DPL forward<T>(val), opt);
     }
 
-    template <simd_vector T, result_cmask_for<rsqrt_t, T> M>
-    requires extended_vector<T> &&
-        unqualified_extended_mrsqrt<dx::zero_t,
-            launder_cmask_t<cpo_result_t<rsqrt_t, T>, M>, T>
+    template <extended_vector T, const_mask_for<T> M,
+        accuracy_tag O = accuracy::approximate_t>
+    requires unqualified_extended_zmrsqrt<launder_cmask_t<T, M>, T, O>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(dx::zero_t zero, M cmask, T&& val) {
-        return rsqrt(zero, dx::to_const_mask<cpo_result_t<rsqrt_t, T>>(cmask),
-            __DPL forward<T>(val));
+    static constexpr auto operator()(
+        dx::zero_t zero, M mask, T&& val, O opt = accuracy::approximate) {
+        return rsqrt(
+            zero, dx::to_const_mask<T>(mask), __DPL forward<T>(val), opt);
     }
 };
 
@@ -156,15 +195,18 @@ private:
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T fix(T result, T val) noexcept {
         constexpr auto fixflags = fpfix::condition<fpfix::nan, fpfix::copy> //
-            | fpfix::condition<fpfix::infinite, dx::zero>                   //
-            | fpfix::condition<fpfix::negative, dx::nan>;
+            | fpfix::condition<fpfix::pos_inf, dx::zero>                    //
+            | fpfix::condition<fpfix::neg_inf, dx::nan>                     //
+            | fpfix::condition<fpfix::negative, dx::nan>                    //
+            | fpfix::condition<fpfix::one, fpfix::copy>;
         if constexpr (dx::is_simd_canonical_invocable<T, T, decltype(fixflags)>(
                           dx::fixup)) {
             return dx::fixup(result, val, fixflags);
         } else {
             result = dx::select(dx::cmpgt(val, dx::zero), result, dx::all_bits);
             result = dx::select(dx::cmpeq(val, dx::zero), dx::infinity, result);
-            result = dx::select(dx::isinf(val), dx::zero, result);
+            result = dx::select(dx::cmpeq(val, dx::one), val, result);
+            result = dx::select(dx::cmpeq(val, dx::infinity), dx::zero, result);
             return result;
         }
     }
@@ -173,15 +215,9 @@ private:
     static constexpr unsigned_representation_t<E> quake_lut = [] {
         if constexpr (is_same_v<E, double>) {
             return 0x5fe6eb50c7b537a9ull;
-        } else if constexpr (is_same_v<E, float>) {
-            return 0x5f3759dfu;
-        } else if constexpr (is_same_v<E, ext::float16>) {
-            return 0x59bau;
         } else {
-            static_assert(is_same_v<E, ext::bfloat16>);
-            return __DPL to_underlying(
-                __DPL to_bit_representation(static_cast<ext::bfloat16>(
-                    __DPL bit_cast<float>(0x5f3759dfu))));
+            static_assert(is_same_v<E, float>);
+            return 0x5f3759dfu;
         }
     }();
 
@@ -205,20 +241,52 @@ private:
         }
     }();
 
-    template <canonical_vector T>
-    static constexpr T refine(T y, T, immediate<0>) noexcept {
-        return y;
+    template <canonical_vector T, int N>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr T DPL_VECTORCALL refine_precise(
+        T y, T x, immediate<N>) noexcept {
+        static_assert(N >= 1);
+        using E = simd_element_type_t<T>;
+        constexpr E half = 0.5;
+        if constexpr (N > 1) { // cheap steps
+            auto r = dx::nmulsub(dx::multiply(x, y), y, dx::one);
+            return refine_precise(
+                dx::muladd(dx::multiply(y, half), r, y), x, imm<N - 1>);
+        } else { // last step: exact residual
+            auto const h = mx::single(x) * y;
+            // TODO: implement constexpr fmadd
+            if not consteval {
+                if constexpr (dx::is_simd_canonical_invocable<T, T, T>(
+                                  dx::fmadd)) {
+                    auto const [upper, lower] = dx::to_tuple_like(h);
+                    auto r = dx::nmulsub(upper, y, dx::one);
+                    r = dx::nmulsub(lower, y, r);
+                    return dx::muladd(dx::multiply(y, half), r, y);
+                }
+            }
+
+            auto const p = mx::single(dx::get_element<0>(h)) * y;
+            auto r = dx::subtract(dx::subtract(dx::one, dx::get_element<0>(p)),
+                dx::get_element<1>(p));
+            r = dx::subtract(r, dx::multiply(dx::get_element<1>(h), y));
+            return dx::muladd(dx::multiply(y, half), r, y);
+        }
     }
 
     template <canonical_vector T, int N>
-    static constexpr T refine(T y, T half_x, immediate<N>) noexcept {
-        static_assert(N >= 1);
-        using E = simd_element_type_t<T>;
-        constexpr E threehalves = 1.5;
-        auto result = dx::multiply(y, y);
-        result = dx::nmulsub(result, half_x, threehalves);
-        result = dx::multiply(result, y);
-        return refine(result, half_x, imm<N - 1>);
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr T DPL_VECTORCALL refine_approx(
+        T y, T x, immediate<N>) noexcept {
+        if constexpr (N == 0) {
+            return y;
+        } else {
+            using E = simd_element_type_t<T>;
+            constexpr E half = 0.5;
+            auto result = dx::multiply(x, y);
+            result = dx::nmulsub(result, y, dx::one);
+            result = dx::muladd(dx::multiply(y, half), result, y);
+            return refine_approx(result, x, imm<N - 1>);
+        }
     }
 
     friend fallback_impl<sqrt_t>;
@@ -233,10 +301,9 @@ private:
         return n;
     }
 
-    template <canonical_vector T, accuracy_tag Tag = accuracy::approximate_t>
+    template <canonical_vector T, accuracy_tag O>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr T normal_rsqrt(
-        T val, Tag tag = accuracy::approximate) noexcept {
+    static constexpr T DPL_VECTORCALL normal_rsqrt(T val, O opt) noexcept {
         // normal: i.e. does not deal with subnormals
         using E = simd_element_type_t<T>;
         using A = simd_abi_type_t<T>;
@@ -244,43 +311,140 @@ private:
         auto const vlut = dx::broadcast<uint_t, A>(quake_lut<E>);
         auto y = dx::reinterpret<E>(dx::subtract(
             vlut, dx::bwshift_right(dx::reinterpret<uint_t>(val), imm<1>)));
-        constexpr int steps = [tag] {
-            if constexpr (tag == accuracy::approximate) {
-                return refine_steps(floating_point_traits<E>::digits / 2);
-            } else {
-                return refine_steps(floating_point_traits<E>::digits);
+        if constexpr (opt == accuracy::approximate) {
+            constexpr int steps =
+                refine_steps(floating_point_traits<E>::digits / 2);
+            return refine_approx(y, val, imm<steps>);
+        } else {
+            constexpr int steps =
+                refine_steps(floating_point_traits<E>::digits);
+            return refine_precise(y, val, imm<steps>);
+        }
+    }
+
+    template <canonical_vector T, accuracy_tag O>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr T DPL_VECTORCALL rsqrt_impl(T val, O opt) noexcept {
+        using E = simd_element_type_t<T>;
+        auto const issubnormal = dx::cmplt(val, dx::min_value);
+        val = dx::multiply(
+            val, issubnormal, val, fallback_impl<rsqrt_t>::prenormalizer<E>);
+        auto const result = fallback_impl::normal_rsqrt(val, opt);
+        return dx::multiply(
+            result, issubnormal, result, fallback_impl<rsqrt_t>::normalizer<E>);
+    }
+
+    template <canonical_vector T, accuracy_tag O>
+    requires same_as<simd_element_type_t<T>, float> ||
+        same_as<simd_element_type_t<T>, double>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr T DPL_VECTORCALL rsqrt(T val, O opt) noexcept {
+        using E = simd_element_type_t<T>;
+        // TODO: implement constexpr fmadd
+        if not consteval {
+            if constexpr (dx::is_simd_canonical_invocable<T, T, T>(dx::fmadd)) {
+                return rsqrt_impl(val, opt);
             }
+        }
+
+        constexpr auto upper_bound = [] {
+            auto const bias = floating_point_traits<E>::exponent_bias;
+            auto const digits = floating_point_traits<E>::digits;
+            auto const shift =
+                __DPL countr_zero(floating_point_traits<E>::exponent_mask);
+            return __DPL bit_cast<E>(
+                bit_representation_t<E>(bias * 2 - digits) << shift);
         }();
-        constexpr E half = 0.5;
-        return refine(y, dx::multiply(half, val), imm<steps>);
+        constexpr auto shrink =
+            static_cast<E>(1.0 / fallback_impl<rsqrt_t>::prenormalizer<E>);
+        constexpr auto grow =
+            static_cast<E>(1.0 / fallback_impl<rsqrt_t>::normalizer<E>);
+        auto const islarge = dx::cmpge(val, upper_bound);
+        val = dx::multiply(val, islarge, val, shrink);
+        auto result = rsqrt_impl(val, opt);
+        result = dx::multiply(result, islarge, result, grow);
+        return result;
+    }
+
+    template <canonical_vector T, accuracy_tag O>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr T DPL_VECTORCALL rsqrt(T val, O opt) noexcept {
+        using E = simd_element_type_t<T>;
+        using vf32_t = rebind_simd_t<T, float>;
+        return mx::apply_widened<float>(
+            [opt](vf32_t val) {
+                auto const result = [&] {
+                    if not consteval {
+                        if constexpr (dx::simd_canonical_invocable<rsqrt_t,
+                                          vf32_t, accuracy::approximate_t>) {
+                            constexpr rsqrt_t impl;
+                            return impl(val, accuracy::approximate);
+                        }
+                    }
+
+                    if constexpr (is_same_v<E, ext::float16>) {
+                        // No need to deal with large/small values
+                        return normal_rsqrt(val, accuracy::approximate);
+                    } else {
+                        return fallback_impl::rsqrt(val, accuracy::approximate);
+                    }
+                }();
+
+                if constexpr (is_same_v<E, ext::float16> &&
+                    opt == accuracy::precise) {
+                    // DPL guarantees rsqrt is accurate to 12 bits
+                    // but 12 bit accuracy is insufficient for float16
+                    // at least 13 bits needed
+                    return refine_approx(result, val, imm<1>);
+                } else {
+                    return result;
+                }
+            },
+            val);
     }
 
 public:
     template <canonical_vector T>
-    requires binary_layout_floating_point<simd_element_type_t<T>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr T DPL_VECTORCALL operator()(
-        T val, accuracy::approximate_t approximate) noexcept {
-        auto const x = fallback_impl::normal_rsqrt(val, approximate);
-        return fallback_impl::fix(x, val);
-    }
-
-    template <canonical_vector T>
-    requires binary_layout_floating_point<simd_element_type_t<T>>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr T DPL_VECTORCALL operator()(
-        T val, accuracy::precise_t precise) noexcept {
-
-        auto x = fallback_impl::normal_rsqrt(val, precise);
-
-        return fallback_impl::fix(x, val);
-    }
-
-    template <canonical_vector T>
-    requires cpo_invocable<fallback_impl, T, accuracy::approximate_t>
+    requires same_as<simd_element_type_t<T>, double> ||
+        same_as<simd_element_type_t<T>, float> ||
+        same_as<simd_element_type_t<T>, ext::float16> ||
+        same_as<simd_element_type_t<T>, ext::bfloat16>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T DPL_VECTORCALL operator()(T val) noexcept {
-        return operator()(val, accuracy::approximate);
+    static constexpr T operator()(T val,
+        accuracy::approximate_t approximate = accuracy::approximate) noexcept {
+        auto const result = [&] {
+            if consteval {
+                return fallback_impl::rsqrt(
+                    dx::select(dx::logical_and(
+                                   dx::isfinite(val), dx::cmpgt(val, dx::zero)),
+                        val, dx::one),
+                    approximate);
+            } else {
+                return fallback_impl::rsqrt(val, approximate);
+            }
+        }();
+        return fallback_impl::fix(result, val);
+    }
+
+    template <canonical_vector T>
+    requires same_as<simd_element_type_t<T>, double> ||
+        same_as<simd_element_type_t<T>, float> ||
+        same_as<simd_element_type_t<T>, ext::float16> ||
+        same_as<simd_element_type_t<T>, ext::bfloat16>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T operator()(T val, accuracy::precise_t precise) noexcept {
+        auto const result = [&] {
+            if consteval {
+                return fallback_impl::rsqrt(
+                    dx::select(dx::logical_and(
+                                   dx::isfinite(val), dx::cmpgt(val, dx::zero)),
+                        val, dx::one),
+                    precise);
+            } else {
+                return fallback_impl::rsqrt(val, precise);
+            }
+        }();
+        return fallback_impl::fix(result, val);
     }
 };
 } // namespace datapar::internal

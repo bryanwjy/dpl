@@ -452,7 +452,7 @@ public:
         using A = simd_abi_type_t<T>;
 #if DPL_HAS_CONSTEXPR_BUILTIN(__builtin_pow)
         if consteval {
-            if constexpr (fixed_width_abi<A>) {
+            if constexpr (fixed_width_abi<simd_abi_type_t<T>>) {
                 return internal::transform<T>(
                     [](E lhs, E rhs) {
                         if constexpr (is_same_v<E, double>) {

@@ -11,6 +11,14 @@ import :core.details.math;
 // NOLINTBEGIN(misc-unused-using-decls,misc-unused-alias-decls)
 __DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar {
+
+namespace accuracy {
+using __DPL datapar::accuracy::approximate;
+using __DPL datapar::accuracy::approximate_t;
+using __DPL datapar::accuracy::precise;
+using __DPL datapar::accuracy::precise_t;
+} // namespace accuracy
+
 namespace rounding {
 using __DPL datapar::rounding::current_dir;
 using __DPL datapar::rounding::current_dir_t;
@@ -135,5 +143,6 @@ using __DPL datapar::cpo::sinhcoshi;
 
 namespace rounding = __DPL datapar::rounding;
 namespace fpfix = __DPL datapar::fpfix;
+namespace accuracy = __DPL datapar::accuracy;
 __DPL_DEFAULT_NAMESPACE_END
 // NOLINTEND(misc-unused-using-decls,misc-unused-alias-decls)

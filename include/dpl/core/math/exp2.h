@@ -46,27 +46,38 @@ struct operation_signature<exp2_t> {
     static consteval void operator()(simd_vector auto&&) noexcept {}
 };
 
+template <typename T>
+concept unqualified_canonical_exp2 = requires {
+    { exp2(internal::abi<T>, internal::declarg<T>()) } -> same_as<T>;
+};
+
 template <typename S, typename M, typename T>
-concept unqualified_canonical_mexp2 = cpo_invocable<exp2_t, T> &&
-    (!simd_type<S> || same_as<S, cpo_result_t<exp2_t, T>>) &&
-    requires(S src, M mask, T val) {
+concept unqualified_canonical_mexp2_base =
+    cpo_invocable<exp2_t, T> && requires {
         {
-            exp2(internal::abi<T>, src, mask, val)
-        } -> same_as<cpo_result_t<exp2_t, T>>;
+            exp2(internal::abi<T>, internal::declarg<S>(),
+                internal::declarg<M>(), internal::declarg<T>())
+        } -> same_as<T>;
     };
+
+template <typename M, typename T>
+concept unqualified_canonical_mexp2 = unqualified_canonical_mexp2_base<T, M, T>;
+
+template <typename M, typename T>
+concept unqualified_canonical_zmexp2 =
+    unqualified_canonical_mexp2_base<dx::zero_t, M, T>;
 
 template <>
 struct canonical_impl<exp2_t> {
     template <canonical_vector T>
+    requires unqualified_canonical_exp2<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(T val) noexcept
-    requires requires { exp2(internal::abi<T>, val); }
-    {
+    static constexpr T operator()(T val) noexcept {
         return exp2(internal::abi<T>, val);
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mexp2<T, simd_mask_type_t<T>, T>
+    requires unqualified_canonical_mexp2<simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
         type_identity_t<T> src, simd_mask_type_t<T> mask, T val) noexcept {
@@ -74,15 +85,15 @@ struct canonical_impl<exp2_t> {
     }
 
     template <canonical_vector T, const_mask_for<T> M>
-    requires unqualified_canonical_mexp2<T, launder_cmask_t<T, M>, T>
+    requires unqualified_canonical_mexp2<launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
-        type_identity_t<T> src, M cmask, T val) noexcept {
-        return exp2(internal::abi<T>, src, dx::to_const_mask<T>(cmask), val);
+        type_identity_t<T> src, M mask, T val) noexcept {
+        return exp2(internal::abi<T>, src, dx::to_const_mask<T>(mask), val);
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mexp2<dx::zero_t, simd_mask_type_t<T>, T>
+    requires unqualified_canonical_zmexp2<simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
         dx::zero_t zero, simd_mask_type_t<T> mask, T val) noexcept {
@@ -90,31 +101,36 @@ struct canonical_impl<exp2_t> {
     }
 
     template <canonical_vector T, const_mask_for<T> M>
-    requires unqualified_canonical_mexp2<dx::zero_t, launder_cmask_t<T, M>, T>
+    requires unqualified_canonical_zmexp2<launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(dx::zero_t zero, M cmask, T val) noexcept {
-        return exp2(internal::abi<T>, zero, dx::to_const_mask<T>(cmask), val);
+    static constexpr T operator()(dx::zero_t zero, M mask, T val) noexcept {
+        return exp2(internal::abi<T>, zero, dx::to_const_mask<T>(mask), val);
     }
 };
 
-template <typename T, typename A = simd_abi_type_t<T>>
+template <typename T>
 concept unqualified_extended_exp2 = requires {
-    { exp2(internal::declarg<T>()) } -> vector_with_common_abi<A>;
+    { exp2(internal::declarg<T>()) } -> equivalent_vector_with<T>;
 };
 
 template <typename S, typename M, typename T>
-concept unqualified_extended_mexp2 = cpo_invocable<exp2_t, T> &&
-    (!simd_type<S> || equivalent_vector_with<S, cpo_result_t<exp2_t, T>>) &&
-    requires {
-        {
-            exp2(internal::declarg<S>(), internal::declarg<M>(),
-                internal::declarg<T>())
-        } -> equivalent_vector_with<cpo_result_t<exp2_t, T>>;
-    };
+concept unqualified_extended_mexp2_base = cpo_invocable<exp2_t, T> && requires {
+    {
+        exp2(internal::declarg<S>(), internal::declarg<M>(),
+            internal::declarg<T>())
+    } -> equivalent_vector_with<T>;
+};
+
+template <typename S, typename M, typename T>
+concept unqualified_extended_mexp2 =
+    equivalent_vector_with<T, S> && unqualified_extended_mexp2_base<S, M, T>;
+
+template <typename M, typename T>
+concept unqualified_extended_zmexp2 =
+    unqualified_extended_mexp2_base<dx::zero_t, M, T>;
 
 template <>
 struct extended_impl<exp2_t> {
-public:
     template <extended_vector T>
     requires unqualified_extended_exp2<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -135,26 +151,24 @@ public:
     requires (extended_vector<S> || extended_vector<T>) &&
         unqualified_extended_mexp2<S, launder_cmask_t<S, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(S&& src, M cmask, T&& val) {
-        return exp2( __DPL forward<S>(src), dx::to_const_mask<S>(cmask),
+    static constexpr auto operator()(S&& src, M mask, T&& val) {
+        return exp2( __DPL forward<S>(src), dx::to_const_mask<S>(mask),
             __DPL forward<T>(val));
     }
 
-    template <simd_vector T, result_mask_for<exp2_t, T> M>
+    template <simd_vector T, exact_mask_for<T> M>
     requires (extended_mask<M> || extended_vector<T>) &&
-        unqualified_extended_mexp2<dx::zero_t, M, T>
+        unqualified_extended_zmexp2<M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(dx::zero_t zero, M&& mask, T&& val) {
         return exp2(zero, __DPL forward<M>(mask), __DPL forward<T>(val));
     }
 
-    template <extended_vector T, result_cmask_for<exp2_t, T> M>
-    requires unqualified_extended_mexp2<dx::zero_t,
-        launder_cmask_t<cpo_result_t<exp2_t, T>, M>, T>
+    template <extended_vector T, const_mask_for<T> M>
+    requires unqualified_extended_zmexp2<launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(dx::zero_t zero, M cmask, T&& val) {
-        return exp2(zero, dx::to_const_mask<cpo_result_t<exp2_t, T>>(cmask),
-            __DPL forward<T>(val));
+    static constexpr auto operator()(dx::zero_t zero, M mask, T&& val) {
+        return exp2(zero, dx::to_const_mask<T>(mask), __DPL forward<T>(val));
     }
 };
 
@@ -271,18 +285,16 @@ public:
     static constexpr T operator()(T val) noexcept {
         if consteval {
 #if DPL_HAS_CONSTEXPR_BUILTIN(__builtin_exp2)
-            if consteval {
-                if constexpr (fixed_width_abi<A>) {
-                    return internal::transform<T>(
-                        [](E val) {
-                            if constexpr (is_same_v<E, double>) {
-                                return __builtin_exp2(val);
-                            } else {
-                                return __builtin_exp2f(static_cast<float>(val));
-                            }
-                        },
-                        val);
-                }
+            if constexpr (fixed_width_abi<simd_abi_type_t<T>>) {
+                return internal::transform<T>(
+                    [](E val) {
+                        if constexpr (is_same_v<E, double>) {
+                            return __builtin_exp2(val);
+                        } else {
+                            return __builtin_exp2f(static_cast<float>(val));
+                        }
+                    },
+                    val);
             }
 #else
             using E = simd_element_type_t<T>;

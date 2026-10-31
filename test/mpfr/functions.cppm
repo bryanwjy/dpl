@@ -155,7 +155,7 @@ struct invoke_t {
 template <function_name name>
 inline constexpr invoke_t<name> invoke;
 
-inline int mpfr_rcp(mpfr_ptr rop, mpfr_srcptr op, mpfr_rnd_t rnd) noexcept {
+inline int mpfr_rcp(mpfr_ptr rop, mpfr_srcptr op, mpfr_rnd_t rnd) {
     [[maybe_unused]] auto const r = mpfr_init_set_ui(rop, 1, rnd);
     assert(r == 0); // set to 1 is always exact
     return mpfr_div(rop, rop, op, rnd);

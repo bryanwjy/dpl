@@ -28,7 +28,6 @@
 __DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void log(...) noexcept = delete;
-struct log1p_t;
 
 struct DPL_EMPTY_BASES log_t :
     public math_operation_base<log_t>,
@@ -42,28 +41,37 @@ struct operation_signature<log_t> {
     static consteval void operator()(simd_vector auto&&) noexcept {}
 };
 
+template <typename T>
+concept unqualified_canonical_log = requires {
+    { log(internal::abi<T>, internal::declarg<T>()) } -> same_as<T>;
+};
+
 template <typename S, typename M, typename T>
-concept unqualified_canonical_mlog = cpo_invocable<log_t, T> &&
-    (!simd_type<S> || same_as<S, cpo_result_t<log_t, T>>) &&
-    requires(S src, M mask, T val) {
-        {
-            log(internal::abi<T>, src, mask, val)
-        } -> same_as<cpo_result_t<log_t, T>>;
-    };
+concept unqualified_canonical_mlog_base = cpo_invocable<log_t, T> && requires {
+    {
+        log(internal::abi<T>, internal::declarg<S>(), internal::declarg<M>(),
+            internal::declarg<T>())
+    } -> same_as<T>;
+};
+
+template <typename M, typename T>
+concept unqualified_canonical_mlog = unqualified_canonical_mlog_base<T, M, T>;
+
+template <typename M, typename T>
+concept unqualified_canonical_zmlog =
+    unqualified_canonical_mlog_base<dx::zero_t, M, T>;
 
 template <>
 struct canonical_impl<log_t> {
-public:
     template <canonical_vector T>
+    requires unqualified_canonical_log<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(T val) noexcept
-    requires requires { log(internal::abi<T>, val); }
-    {
+    static constexpr T operator()(T val) noexcept {
         return log(internal::abi<T>, val);
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mlog<T, simd_mask_type_t<T>, T>
+    requires unqualified_canonical_mlog<simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
         type_identity_t<T> src, simd_mask_type_t<T> mask, T val) noexcept {
@@ -71,15 +79,15 @@ public:
     }
 
     template <canonical_vector T, const_mask_for<T> M>
-    requires unqualified_canonical_mlog<T, launder_cmask_t<T, M>, T>
+    requires unqualified_canonical_mlog<launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
-        type_identity_t<T> src, M cmask, T val) noexcept {
-        return log(internal::abi<T>, src, dx::to_const_mask<T>(cmask), val);
+        type_identity_t<T> src, M mask, T val) noexcept {
+        return log(internal::abi<T>, src, dx::to_const_mask<T>(mask), val);
     }
 
     template <canonical_vector T>
-    requires unqualified_canonical_mlog<dx::zero_t, simd_mask_type_t<T>, T>
+    requires unqualified_canonical_zmlog<simd_mask_type_t<T>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr T operator()(
         dx::zero_t zero, simd_mask_type_t<T> mask, T val) noexcept {
@@ -87,31 +95,36 @@ public:
     }
 
     template <canonical_vector T, const_mask_for<T> M>
-    requires unqualified_canonical_mlog<dx::zero_t, launder_cmask_t<T, M>, T>
+    requires unqualified_canonical_zmlog<launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr T operator()(dx::zero_t zero, M cmask, T val) noexcept {
-        return log(internal::abi<T>, zero, dx::to_const_mask<T>(cmask), val);
+    static constexpr T operator()(dx::zero_t zero, M mask, T val) noexcept {
+        return log(internal::abi<T>, zero, dx::to_const_mask<T>(mask), val);
     }
 };
 
-template <typename T, typename A = simd_abi_type_t<T>>
+template <typename T>
 concept unqualified_extended_log = requires {
-    { log(internal::declarg<T>()) } -> vector_with_common_abi<A>;
+    { log(internal::declarg<T>()) } -> equivalent_vector_with<T>;
 };
 
 template <typename S, typename M, typename T>
-concept unqualified_extended_mlog = cpo_invocable<log_t, T> &&
-    (!simd_type<S> || equivalent_vector_with<S, cpo_result_t<log_t, T>>) &&
-    requires {
-        {
-            log(internal::declarg<S>(), internal::declarg<M>(),
-                internal::declarg<T>())
-        } -> equivalent_vector_with<cpo_result_t<log_t, T>>;
-    };
+concept unqualified_extended_mlog_base = cpo_invocable<log_t, T> && requires {
+    {
+        log(internal::declarg<S>(), internal::declarg<M>(),
+            internal::declarg<T>())
+    } -> equivalent_vector_with<T>;
+};
+
+template <typename S, typename M, typename T>
+concept unqualified_extended_mlog =
+    equivalent_vector_with<T, S> && unqualified_extended_mlog_base<S, M, T>;
+
+template <typename M, typename T>
+concept unqualified_extended_zmlog =
+    unqualified_extended_mlog_base<dx::zero_t, M, T>;
 
 template <>
 struct extended_impl<log_t> {
-public:
     template <extended_vector T>
     requires unqualified_extended_log<T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
@@ -132,28 +145,28 @@ public:
     requires (extended_vector<S> || extended_vector<T>) &&
         unqualified_extended_mlog<S, launder_cmask_t<S, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(S&& src, M cmask, T&& val) {
-        return log( __DPL forward<S>(src), dx::to_const_mask<S>(cmask),
+    static constexpr auto operator()(S&& src, M mask, T&& val) {
+        return log( __DPL forward<S>(src), dx::to_const_mask<S>(mask),
             __DPL forward<T>(val));
     }
 
-    template <simd_vector T, result_mask_for<log_t, T> M>
+    template <simd_vector T, exact_mask_for<T> M>
     requires (extended_mask<M> || extended_vector<T>) &&
-        unqualified_extended_mlog<dx::zero_t, M, T>
+        unqualified_extended_zmlog<M, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
     static constexpr auto operator()(dx::zero_t zero, M&& mask, T&& val) {
         return log(zero, __DPL forward<M>(mask), __DPL forward<T>(val));
     }
 
-    template <extended_vector T, result_cmask_for<log_t, T> M>
-    requires unqualified_extended_mlog<dx::zero_t,
-        launder_cmask_t<cpo_result_t<log_t, T>, M>, T>
+    template <extended_vector T, const_mask_for<T> M>
+    requires unqualified_extended_zmlog<launder_cmask_t<T, M>, T>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
-    static constexpr auto operator()(dx::zero_t zero, M cmask, T&& val) {
-        return log(zero, dx::to_const_mask<cpo_result_t<log_t, T>>(cmask),
-            __DPL forward<T>(val));
+    static constexpr auto operator()(dx::zero_t zero, M mask, T&& val) {
+        return log(zero, dx::to_const_mask<T>(mask), __DPL forward<T>(val));
     }
 };
+
+struct log1p_t;
 
 template <>
 struct fallback_impl<log_t> {
@@ -302,7 +315,7 @@ public:
     static constexpr T DPL_VECTORCALL operator()(T val) noexcept {
 #if DPL_HAS_CONSTEXPR_BUILTIN(__builtin_log)
         if consteval {
-            if constexpr (fixed_width_abi<A>) {
+            if constexpr (fixed_width_abi<simd_abi_type_t<T>>) {
                 return internal::transform<T>(
                     [](E val) {
                         if constexpr (is_same_v<E, double>) {
