@@ -77,7 +77,13 @@ DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<float>
     DPL_VECTORCALL fmadd(vector<float> lhs, cmask_t<float, M> mask,
         vector<float> mid, vector<float> rhs) noexcept {
-    return _mm_mask_fmadd_ps(+lhs, M, +mid, +rhs);
+    if constexpr (all_of(mask)) {
+        return _mm_fmadd_ps(+lhs, +mid, +rhs);
+    } else if constexpr (none_of(mask)) {
+        return lhs;
+    } else {
+        return _mm_mask_fmadd_ps(+lhs, M, +mid, +rhs);
+    }
 }
 
 template <imask_t<float> M>
@@ -85,7 +91,13 @@ DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<float>
     DPL_VECTORCALL fmadd(dx::zero_t, cmask_t<float, M> mask, vector<float> lhs,
         vector<float> mid, vector<float> rhs) noexcept {
-    return _mm_maskz_fmadd_ps(M, +lhs, +mid, +rhs);
+    if constexpr (all_of(mask)) {
+        return _mm_fmadd_ps(+lhs, +mid, +rhs);
+    } else if constexpr (none_of(mask)) {
+        return xmm::broadcast<float>(dx::zero);
+    } else {
+        return _mm_maskz_fmadd_ps(M, +lhs, +mid, +rhs);
+    }
 }
 
 template <imask_t<float> M>
@@ -93,7 +105,13 @@ DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<float>
     DPL_VECTORCALL fmadd(vector<float> lhs, vector<float> mid,
         vector<float> rhs, cmask_t<float, M> mask) noexcept {
-    return _mm_mask3_fmadd_ps(+lhs, +mid, +rhs, M);
+    if constexpr (all_of(mask)) {
+        return _mm_fmadd_ps(+lhs, +mid, +rhs);
+    } else if constexpr (none_of(mask)) {
+        return rhs;
+    } else {
+        return _mm_mask3_fmadd_ps(+lhs, +mid, +rhs, M);
+    }
 }
 
 template <imask_t<ext::bfloat16> M>
@@ -188,7 +206,13 @@ DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<double>
     DPL_VECTORCALL fmadd(vector<double> lhs, cmask_t<double, M> mask,
         vector<double> mid, vector<double> rhs) noexcept {
-    return _mm_mask_fmadd_pd(+lhs, M, +mid, +rhs);
+    if constexpr (all_of(mask)) {
+        return _mm_fmadd_pd(+lhs, +mid, +rhs);
+    } else if constexpr (none_of(mask)) {
+        return lhs;
+    } else {
+        return _mm_mask_fmadd_pd(+lhs, M, +mid, +rhs);
+    }
 }
 
 template <imask_t<double> M>
@@ -196,14 +220,27 @@ DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<double>
     DPL_VECTORCALL fmadd(dx::zero_t, cmask_t<double, M> mask,
         vector<double> lhs, vector<double> mid, vector<double> rhs) noexcept {
-    return _mm_maskz_fmadd_pd(M, +lhs, +mid, +rhs);
+    if constexpr (all_of(mask)) {
+        return _mm_fmadd_pd(+lhs, +mid, +rhs);
+    } else if constexpr (none_of(mask)) {
+        return xmm::broadcast<double>(dx::zero);
+    } else {
+        return _mm_maskz_fmadd_pd(M, +lhs, +mid, +rhs);
+    }
 }
+
 template <imask_t<double> M>
 DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
 inline vector<double>
     DPL_VECTORCALL fmadd(vector<double> lhs, vector<double> mid,
         vector<double> rhs, cmask_t<double, M> mask) noexcept {
-    return _mm_mask3_fmadd_pd(+lhs, +mid, +rhs, M);
+    if constexpr (all_of(mask)) {
+        return _mm_fmadd_pd(+lhs, +mid, +rhs);
+    } else if constexpr (none_of(mask)) {
+        return rhs;
+    } else {
+        return _mm_mask3_fmadd_pd(+lhs, +mid, +rhs, M);
+    }
 }
 #    endif
 

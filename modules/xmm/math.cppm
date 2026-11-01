@@ -17,6 +17,7 @@ using __DPL datapar::xmm::fmsub;
 using __DPL datapar::xmm::fmsubadd;
 using __DPL datapar::xmm::fnmadd;
 using __DPL datapar::xmm::fnmsub;
+using __DPL datapar::xmm::rsqrt;
 } // namespace datapar::xmm
 __DPL_DEFAULT_NAMESPACE_END
 // NOLINTEND(misc-unused-using-decls)

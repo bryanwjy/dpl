@@ -28,6 +28,7 @@ DPL_DISABLE_WARNING(5244)
 #include "dpl/xmm/math/fmsubadd.h"
 #include "dpl/xmm/math/fnmadd.h"
 #include "dpl/xmm/math/fnmsub.h"
+#include "dpl/xmm/math/rsqrt.h"
 // IWYU pragma: end_exports
 
 DPL_DISABLE_WARNING_POP()

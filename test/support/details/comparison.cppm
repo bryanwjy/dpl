@@ -60,8 +60,8 @@ struct precision_cmp_t {
         } else {
             static_assert(N < dpl::floating_point_traits<E>::digits);
             using sint_t = dpp::signed_representation_t<E>;
-            auto const x = dpp::abs(lhs);
-            auto const y = dpp::abs(rhs);
+            auto const x = dpp::abs(dpp::isfinite(lhs), lhs);
+            auto const y = dpp::abs(dpp::isfinite(rhs), rhs);
             auto const hi = dpp::max(x, y);
             auto const lo = dpp::min(x, y);
             auto const diff = dpp::subtract(hi, lo);
@@ -88,14 +88,18 @@ struct precision_cmp_t {
         if constexpr (dpl::is_integral_v<E>) {
             return lhs == rhs;
         } else {
-            static_assert(N < dpl::floating_point_traits<E>::digits);
+            using traits = dpl::floating_point_traits<E>;
+            static_assert(N < traits::digits);
             if (lhs != lhs || rhs != rhs) {
                 return lhs != lhs && rhs != rhs;
             }
             if (lhs == rhs) {
                 return true;
             }
-            if (lhs - lhs != 0 || rhs - rhs != 0) {
+            if ((dpl::to_bit_representation(lhs) & traits::exponent_mask) ==
+                    traits::exponent_mask ||
+                (dpl::to_bit_representation(rhs) & traits::exponent_mask) ==
+                    traits::exponent_mask) {
                 return false;
             }
             if ((lhs < 0) != (rhs < 0) || lhs == 0 || rhs == 0) {

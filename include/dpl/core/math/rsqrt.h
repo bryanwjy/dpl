@@ -23,6 +23,49 @@ __DPL_DEFAULT_NAMESPACE_BEGIN
 namespace datapar::internal {
 void rsqrt(...) noexcept = delete;
 
+/**
+ * @brief Computes the reciprocal square root, 1/√x, of each element.
+ *
+ * Two accuracy levels are available, selected with a trailing tag:
+ *
+ * @code
+ * dx::rsqrt(x);                      // approximate (default)
+ * dx::rsqrt(x, accuracy::approximate);
+ * dx::rsqrt(x, accuracy::precise);
+ * @endcode
+ *
+ * <b>Approximate</b> (default, @c accuracy::approximate)
+ * - Accurate to at least half the precision of the element type
+ *   (for example, at least 12 bits for @c float).
+ * - Subnormal arguments are handled.
+ * - Results that would be subnormal may be flushed to zero, depending on the
+ *   target instruction set.
+ * - The exact result may differ between platforms within the stated accuracy.
+ * - Intended for uses where speed matters more than the last bits of accuracy.
+ *
+ * <b>Precise</b> (@c accuracy::precise)
+ * - More accurate (0.75 ULP) than computing @c 1 / sqrt(x).
+ * - May have higher latency than @c 1 /sqrt(x).
+ * - Throughput depends on the platform. On targets with a fast hardware
+ *   reciprocal square root estimate (accurate to at least half the precision
+ *   of the element type) and native fused multiply-add, such as AVX-512,
+ *   throughput is typically equal to or better than @c 1 / sqrt(x), making it
+ *   well suited to processing large amounts of independent data. In
+ *   latency-critical dependency chains, prefer the approximate variant.
+ * - On other targets, a generic fallback implementation is used. It favours
+ *   correctness and constant evaluation over speed: it is not optimized and
+ *   is not intended for performance-sensitive runtime use. If accuracy beyond
+ *   @c 1 / sqrt(x) is not required there, use @c 1 / sqrt(x) or the
+ *   approximate variant instead with appropriate number of newton steps.
+ *
+ * @tparam T  A floating-point SIMD vector type.
+ *
+ * @param x   The input values.
+ * @param tag Optional. @c accuracy::approximate (default) or
+ *            @c accuracy::precise.
+ *
+ * @return A vector of the same type as @p x containing 1/√x for each element.
+ */
 struct DPL_EMPTY_BASES rsqrt_t :
     public math_operation_base<rsqrt_t>,
     public maskable_transform_base<rsqrt_t> {
@@ -32,6 +75,7 @@ struct DPL_EMPTY_BASES rsqrt_t :
 
 template <>
 struct operation_signature<rsqrt_t> {
+    static consteval void operator()(simd_vector auto&&) noexcept {}
     static consteval void operator()(
         simd_vector auto&&, accuracy_tag auto) noexcept {}
 };
