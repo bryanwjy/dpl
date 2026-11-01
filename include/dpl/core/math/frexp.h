@@ -82,7 +82,10 @@ struct frexp_t : public math_operation_base<frexp_t> {
         DPL_VECTORCALL operator()(T&& val,
             O opt = frexp_options::default_v) noexcept(canonical_vector<T>) {
         using A = simd_abi_type_t<T>;
-        frexp_pair<decay_t<T>> pair;
+        frexp_pair<decay_t<T>> pair{
+            .fr = dx::undefined<decay_t<T>>(),
+            .exp = dx::undefined<decay_t<T>>(),
+        };
         pair.fr = operator()(__DPL forward<T>(val), pair.exp, opt);
         return pair;
     }
@@ -197,7 +200,7 @@ private:
     }();
 
     template <canonical_vector T, frexp_options_type Opt>
-    requires floating_point_like<simd_element_type_t<T>>
+    requires binary_layout_floating_point<simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr T DPL_VECTORCALL impl(
         T val, signed_canonical_vector_t<T>& iexp, Opt) noexcept
@@ -205,8 +208,7 @@ private:
     {
         using E = simd_element_type_t<T>;
         using A = simd_abi_type_t<T>;
-        constexpr auto fourthirds = static_cast<E>(1.0 / 0.75);
-        auto const vfourthirds = dx::broadcast<E, A>(fourthirds);
+
         auto const issubnormal = [](auto val) {
             if constexpr (Opt::contains(frexp_options::sign_nan)) {
                 return dx::cmplt(val, dx::min_value);
@@ -215,19 +217,18 @@ private:
             }
         }(val);
 
-        auto const vnormalizer = dx::broadcast<A>(normalizer<E>);
-        val = dx::multiply(val, issubnormal, val, vnormalizer);
+        val = dx::multiply(val, issubnormal, val, normalizer<E>);
         if constexpr (Opt::contains(frexp_options::sign_zero)) {
             val = dx::abs(val);
         }
 
+        constexpr auto fourthirds = static_cast<E>(1.0 / 0.75);
         iexp = fmath::ilogb(
-            fmath::compliance::unsafe, dx::multiply(val, vfourthirds));
-        auto const offset = dx::broadcast<A>(subnormal_offset<E>);
-        iexp = dx::subtract(iexp, issubnormal, iexp, offset);
+            fmath::compliance::unsafe, dx::multiply(val, fourthirds));
+        auto fr = mx::ldexp(fmath::compliance::unsafe, val, dx::isfinite(val),
+            val, dx::negate(iexp));
 
-        auto fr = fmath::ldexp(fmath::compliance::unsafe, val,
-            dx::isfinite(val), val, dx::negate(iexp));
+        iexp = dx::subtract(iexp, issubnormal, iexp, subnormal_offset<E>);
         if constexpr (Opt::contains(frexp_options::sign_nan)) {
             return dx::select(dx::cmpgt(val, dx::zero), fr, dx::all_bits);
         } else {
@@ -236,7 +237,7 @@ private:
     }
 
     template <canonical_vector T, frexp_options_type Opt>
-    requires floating_point_like<simd_element_type_t<T>>
+    requires binary_layout_floating_point<simd_element_type_t<T>>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
     static constexpr auto DPL_VECTORCALL impl(
         T val, signed_canonical_vector_t<T>& iexp, Opt) noexcept

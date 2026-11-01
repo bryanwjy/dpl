@@ -248,15 +248,17 @@ private:
         }();
 
         constexpr auto fixflags = fpfix::condition<fpfix::negative, dx::nan> |
+            fpfix::condition<fpfix::neg_inf, fpfix::nan> |
             fpfix::condition<fpfix::zero, -dx::infinity> |
-            fpfix::condition<fpfix::infinite, fpfix::copy> |
+            fpfix::condition<fpfix::pos_inf, fpfix::copy> |
             fpfix::condition<fpfix::nan, fpfix::copy>;
         if constexpr (dx::is_simd_canonical_invocable<T, T, decltype(fixflags)>(
                           dx::fixup)) {
             return dx::fixup(mx::recombine(s), val, fixflags);
         } else {
             auto result = mx::recombine(s);
-            result = dx::select(dx::isinf(val), dx::infinity, result);
+            result =
+                dx::select(dx::cmpeq(val, dx::infinity), dx::infinity, result);
             result = dx::select(
                 dx::logical_or(dx::cmplt(val, dx::zero), dx::isnan(val)),
                 dx::all_bits, result);
@@ -289,14 +291,16 @@ private:
         auto result = mx::apply_widened<float>(log10f, cval);
 
         constexpr auto fixflags = fpfix::condition<fpfix::negative, dx::nan> |
+            fpfix::condition<fpfix::neg_inf, fpfix::nan> |
             fpfix::condition<fpfix::zero, -dx::infinity> |
-            fpfix::condition<fpfix::infinite, fpfix::copy> |
+            fpfix::condition<fpfix::pos_inf, fpfix::copy> |
             fpfix::condition<fpfix::nan, fpfix::copy>;
         if constexpr (dx::is_simd_canonical_invocable<T, T, decltype(fixflags)>(
                           dx::fixup)) {
             return dx::fixup(result, val, fixflags);
         } else {
-            result = dx::select(dx::isinf(val), dx::infinity, result);
+            result =
+                dx::select(dx::cmpeq(val, dx::infinity), dx::infinity, result);
             result = dx::select(
                 dx::logical_or(dx::cmplt(val, dx::zero), dx::isnan(val)),
                 dx::all_bits, result);

@@ -280,10 +280,13 @@ struct pair_ref {
         auto const [rupper, rlower] = right;
         auto const vone = dx::broadcast<element_type>(dx::one);
 
-        auto t = dx::divide(vone, rupper);
-        auto s = dx::multiply(lupper, t);
-        auto u = dx::mulsub(t, lupper, s);
-        auto v = dx::nmulsub(rlower, t, dx::nmulsub(rupper, t, vone));
+        auto const t = dx::divide(vone, rupper);
+        auto const s = dx::multiply(lupper, t);
+        auto const u = fmath::two_product_error(lupper, t, s);
+        auto const q = dx::multiply(rupper, t);
+        auto const qe = fmath::two_product_error(rupper, t, q);
+        auto v = dx::subtract(dx::subtract(vone, q), qe);
+        v = dx::nmulsub(rlower, t, v);
         return fmath::make_pair(s, dx::muladd(s, v, dx::muladd(llower, t, u)));
     }
 
@@ -295,13 +298,16 @@ struct pair_ref {
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)
     friend constexpr T DPL_VECTORCALL operator/(
         element_type left, pair_ref right) noexcept {
-        auto const [upper, lower] = right;
-        auto const t = dx::divide(dx::one, upper); // ≈ 1/upper
-        auto const s = dx::multiply(left, t);      // leading quotient
-        auto const u = dx::mulsub(t, left, s);     // exact error of left·t
-        auto const v = dx::nmulsub(lower, t,
-            dx::nmulsub(upper, t, dx::one)); // v = 1 − (upper + lower)·t
-        return fmath::make_pair(s, dx::muladd(s, v, u)); // q ≈ s + (u + s·v)
+        auto const [rupper, rlower] = right; // denominator = rupper + rlower
+        auto const vone = dx::broadcast<element_type>(dx::one);
+        auto const t = dx::divide(vone, rupper);
+        auto const s = dx::multiply(left, t);
+        auto const u = fmath::two_product_error(left, t, s);
+        auto const q = dx::multiply(rupper, t);
+        auto const qe = fmath::two_product_error(rupper, t, q);
+        auto v = dx::subtract(dx::subtract(vone, q), qe);
+        v = dx::nmulsub(rlower, t, v);
+        return fmath::make_pair(s, dx::muladd(s, v, u));
     }
 
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, PURE, NODISCARD)

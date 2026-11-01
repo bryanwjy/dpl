@@ -73,7 +73,7 @@ public:
     template <tuple_like L, simd_vector R>
     requires enable_simd_tuple<L> &&
         assignable_from<cpo_result_t<base_get, L&>, R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
     static constexpr L& operator()(L& lhs, R&& rhs) noexcept(
         noexcept(__DPL ranges::get_element<I>(lhs)) &&
         is_nothrow_assignable_v<cpo_result_t<base_get, L&>, R>) {
@@ -82,7 +82,7 @@ public:
     }
 
     template <canonical_set_element<I> L, canonical_vector R>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE)
     static constexpr L& operator()(L& lhs, R rhs) noexcept {
         return lhs = set<I>(internal::abi<L>, __DPL as_const(lhs), rhs);
     }

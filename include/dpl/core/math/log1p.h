@@ -174,60 +174,20 @@ template <>
 struct fallback_impl<log1p_t> {
 private:
     template <canonical_vector T>
-    requires same_as<simd_element_type_t<T>, float> ||
-        same_as<simd_element_type_t<T>, double>
-    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr T DPL_VECTORCALL log1p(T val) noexcept {
-        using E = simd_element_type_t<T>;
-        constexpr auto impl = [](T val, T valp1) {
-            using log_impl = fallback_impl<log_t>;
-            using sint_t = signed_representation_t<E>;
-            auto const [_, exp] =
-                dx::to_tuple_like(dx::frexp(valp1, frexp_options::reduced));
-            auto const vone = dx::broadcast<T>(dx::one);
-            auto const fr = [&] {
-                auto const sc =
-                    mx::ldexp(mx::compliance::speed, vone, dx::negate(exp));
-                return dx::muladd(val, sc, dx::subtract(sc, vone));
-            }();
-
-            auto const x =
-                fr / mx::pair_ref(mx::single(dx::broadcast<T>(2)) + fr);
-            auto const x2 =
-                dx::multiply(dx::get_element<0>(x), dx::get_element<0>(x));
-            auto const t = log_impl::solve_poly(x2);
-
-            auto const ln2 = log_impl::template ln2_val<T>();
-            auto s = mx::pair_ref{ln2} * exp;
-            s = mx::pair_ref{s} + mx::scale(x, 2);
-            return mx::pair_ref{s} +
-                dx::multiply(dx::multiply(dx::get_element<0>(x), x2), t);
-        };
-
-        auto const valp1 = dx::add(val, dx::one);
-        auto s = [&] {
-            if consteval {
-                auto const valid = dx::logical_and(dx::cmpgt(valp1, dx::zero),
-                    dx::cmple(valp1, dx::max_value));
-                auto const cvalp1 = dx::select(valid, valp1, dx::one);
-                auto const cval = dx::select(valid, val, dx::one);
-                return impl(cval, cvalp1);
-            } else {
-                return impl(val, valp1);
-            }
-        }();
-
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, ALWAYS_INLINE, NODISCARD)
+    static constexpr T fix(T result, T val, T valp1) noexcept {
         constexpr auto fixflags = fpfix::condition<fpfix::negative, dx::nan> |
+            fpfix::condition<fpfix::neg_inf, fpfix::nan> |
             fpfix::condition<fpfix::zero, -dx::infinity> |
-            fpfix::condition<fpfix::infinite, fpfix::copy> |
+            fpfix::condition<fpfix::pos_inf, fpfix::copy> |
             fpfix::condition<fpfix::nan, fpfix::copy>;
         if constexpr (dx::is_simd_canonical_invocable<T, T, decltype(fixflags)>(
                           dx::fixup)) {
             // hope CSE removes the add
-            return dx::fixup(mx::recombine(s), valp1, fixflags);
+            return dx::fixup(result, valp1, fixflags);
         } else {
-            auto result = mx::recombine(s);
-            result = dx::select(dx::isinf(val), dx::infinity, result);
+            result =
+                dx::select(dx::cmpeq(val, dx::infinity), dx::infinity, result);
             result = dx::select(
                 dx::logical_or(dx::cmplt(valp1, dx::zero), dx::isnan(val)),
                 dx::all_bits, result);
@@ -238,61 +198,67 @@ private:
     }
 
     template <canonical_vector T>
+    requires same_as<simd_element_type_t<T>, float> ||
+        same_as<simd_element_type_t<T>, double>
+    DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
+    static constexpr T DPL_VECTORCALL log1p(T val, T valp1) noexcept {
+        using E = simd_element_type_t<T>;
+        using log_impl = fallback_impl<log_t>;
+        using sint_t = signed_representation_t<E>;
+
+        auto const [_, exp] =
+            dx::to_tuple_like(dx::frexp(valp1, frexp_options::reduced));
+        auto const fr = [&] {
+            auto const vone = dx::broadcast<T>(dx::one);
+            auto const sc =
+                mx::ldexp(mx::compliance::speed, vone, dx::negate(exp));
+            // val * sc is precise regardless of fma
+            return dx::muladd(val, sc, dx::subtract(sc, vone));
+        }();
+
+        auto x = mx::single(dx::broadcast<T>(2)) + fr;
+        x = mx::pair_ref(mx::make_pair(fr)) / x;
+        auto const x2 =
+            dx::multiply(dx::get_element<0>(x), dx::get_element<0>(x));
+        auto const t = log_impl::solve_poly(x2);
+
+        auto const ln2 = log_impl::template ln2_val<T>();
+        auto s = mx::pair_ref{ln2} * exp;
+        s = mx::pair_ref{s} + mx::scale(x, 2);
+        s = mx::pair_ref{s} +
+            dx::multiply(dx::multiply(dx::get_element<0>(x), x2), t);
+
+        return mx::recombine(s);
+    }
+
+    template <canonical_vector T>
     requires same_as<simd_element_type_t<T>, ext::float16> ||
         same_as<simd_element_type_t<T>, ext::bfloat16>
     DPL_ATTRIBUTES(_HIDE_FROM_ABI, CONST, NODISCARD)
-    static constexpr T DPL_VECTORCALL log1p(T val) noexcept {
+    static constexpr T DPL_VECTORCALL log1p(T val, T valp1) noexcept {
         using log_impl = fallback_impl<log_t>;
         using A = simd_abi_type_t<T>;
-        constexpr auto log1pf = [](rebind_simd_t<T, float> val,
-                                    rebind_simd_t<T, float> valp1) {
-            auto [_, exp] =
-                dx::to_tuple_like(dx::frexp(valp1, frexp_options::reduced));
-            auto const vone = dx::broadcast<A, float>(dx::one);
-            auto const fr = [&] {
-                auto sc =
-                    mx::ldexp(mx::compliance::speed, vone, dx::negate(exp));
-                return dx::muladd(val, sc, dx::subtract(sc, vone));
-            }();
+        using vf32_t = rebind_simd_t<T, float>;
+        return mx::apply_widened<float>(
+            [](vf32_t val, vf32_t valp1) {
+                auto [_, exp] =
+                    dx::to_tuple_like(dx::frexp(valp1, frexp_options::reduced));
+                auto const vone = dx::broadcast<A, float>(dx::one);
+                auto const fr = [&] {
+                    auto sc =
+                        mx::ldexp(mx::compliance::speed, vone, dx::negate(exp));
+                    return dx::muladd(val, sc, dx::subtract(sc, vone));
+                }();
 
-            auto const x = dx::divide(fr, dx::add(fr, 2));
-            auto const x2 = dx::multiply(x, x);
-            auto const t = log_impl::solve_poly(x2);
+                auto const x = dx::divide(fr, dx::add(fr, 2));
+                auto const x2 = dx::multiply(x, x);
+                auto const t = log_impl::solve_poly(x2);
 
-            auto const ln2 = log_impl::template ln2_val<T>();
-            auto s = dx::mulacc(dx::multiply(2, x), ln2, exp);
-            return dx::mulacc(s, dx::multiply(x2, x), t);
-        };
-
-        auto const valp1 = dx::add(val, dx::one);
-        auto result = [&] {
-            if consteval {
-                auto const valid = dx::logical_and(dx::cmpgt(valp1, dx::zero),
-                    dx::cmple(valp1, dx::max_value));
-                auto const cvalp1 = dx::select(valid, valp1, dx::one);
-                auto const cval = dx::select(valid, val, dx::one);
-                return mx::apply_widened<float>(log1pf, cval, cvalp1);
-            } else {
-                return mx::apply_widened<float>(log1pf, val, valp1);
-            }
-        }();
-
-        constexpr auto fixflags = fpfix::condition<fpfix::negative, dx::nan> |
-            fpfix::condition<fpfix::zero, -dx::infinity> |
-            fpfix::condition<fpfix::infinite, fpfix::copy> |
-            fpfix::condition<fpfix::nan, fpfix::copy>;
-        if constexpr (dx::is_simd_canonical_invocable<T, T, decltype(fixflags)>(
-                          dx::fixup)) {
-            return dx::fixup(result, valp1, fixflags);
-        } else {
-            result = dx::select(dx::isinf(val), dx::infinity, result);
-            result = dx::select(
-                dx::logical_or(dx::cmplt(valp1, dx::zero), dx::isnan(val)),
-                dx::all_bits, result);
-            result =
-                dx::select(dx::cmpeq(valp1, dx::zero), -dx::infinity, result);
-            return result;
-        }
+                auto const ln2 = log_impl::template ln2_val<T>();
+                auto s = dx::mulacc(dx::add(x, x), ln2, exp);
+                return dx::mulacc(s, dx::multiply(x2, x), t);
+            },
+            val, valp1);
     }
 
 public:
@@ -318,7 +284,19 @@ public:
             }
         }
 #else
-        return fallback_impl::log1p(val);
+        if consteval {
+            auto const valp1 = dx::add(val, dx::isfinite(val), val, dx::one);
+            auto const valid = dx::logical_and(
+                dx::cmpgt(valp1, dx::zero), dx::cmple(valp1, dx::max_value));
+            auto const cvalp1 = dx::select(valid, valp1, dx::one);
+            auto const cval = dx::select(valid, val, dx::one);
+            auto const result = fallback_impl::log1p(cval, cvalp1);
+            return fallback_impl::fix(result, val, valp1);
+        } else {
+            auto const valp1 = dx::add(val, dx::one);
+            auto const result = fallback_impl::log1p(val, valp1);
+            return fallback_impl::fix(result, val, valp1);
+        }
 #endif
     }
 };

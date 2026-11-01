@@ -250,34 +250,36 @@ private:
         using E = simd_value_type_t<T>;
         using A = simd_abi_type_t<T>;
         using exp2_impl = fallback_impl<exp2_t>;
-
-        constexpr auto self = [](T arg, simd_element_type_t<T> varg) {
-            auto const qf = dx::roundeven(varg, rounding::no_exc);
-            auto s = mx::normalize(mx::pair_ref{arg} - qf);
-            auto const u = exp2_impl::solve_poly(dx::get_element<0>(s));
-            // t = pow(2,x) where x is in the interval [-0.5,0.5]
-            // |s| <= 0.5
-            // |u| < 1
-            // so s * u < 1
-            // so assumptions for fast arithmetic holds
-            s = mx::pair_ref{s} * u;
-            s = mx::fast(dx::broadcast<E, A>(dx::one)) + s;
-            // zero if underflow
-            return dx::select(dx::cmplt(varg, exp2_impl::lower_bound<E>),
-                dx::zero,
-                mx::ldexp(mx::compliance::speed, mx::recombine(s), qf));
-        };
-
+        auto const varg = mx::recombine(arg);
+        auto qf = dx::roundeven(varg, rounding::no_exc);
         if consteval {
-            auto const varg = mx::recombine(arg);
-            auto const oob = dx::cmpge(varg, exp2_impl::upper_bound<E>);
-            auto const result =
-                self(mx::select(oob, mx::make_pair<A, E>(dx::zero), arg),
-                    dx::select(oob, dx::zero, varg));
-            return dx::select(oob, dx::infinity, result);
-        } else {
-            return self(arg, mx::recombine(arg));
+            auto const in_range =
+                dx::logical_and(dx::cmpge(varg, exp2_impl::lower_bound<E>),
+                    dx::cmplt(varg, exp2_impl::upper_bound<E>));
+            auto const vzero = dx::broadcast<simd_element_type_t<T>>(dx::zero);
+            dx::set_element<0>(
+                arg, dx::select(in_range, dx::get_element<0>(arg), dx::zero));
+            dx::set_element<1>(
+                arg, dx::select(in_range, dx::get_element<1>(arg), dx::zero));
+            qf = dx::select(in_range, qf, dx::zero);
         }
+
+        auto s = mx::normalize(mx::pair_ref{arg} - qf);
+
+        auto const u = exp2_impl::solve_poly(dx::get_element<0>(s));
+        // t = pow(2,x) where x is in the interval [-0.5,0.5]
+        // |s| <= 0.5
+        // |u| < 1
+        // so s * u < 1
+        // so assumptions for fast arithmetic holds
+        s = mx::pair_ref{s} * u;
+        s = mx::fast(dx::broadcast<E, A>(dx::one)) + s;
+        auto result = mx::ldexp(mx::compliance::speed, mx::recombine(s), qf);
+        result = dx::select(
+            dx::cmplt(varg, exp2_impl::lower_bound<E>), dx::zero, result);
+        result = dx::select( //
+            dx::cmpge(varg, exp2_impl::upper_bound<E>), dx::infinity, result);
+        return result;
     }
 
     template <canonical_vector T>
@@ -314,7 +316,7 @@ private:
         auto const x =
             mx::pair_ref{arg - mx::single{vone}} / (mx::single{vone} + arg);
         auto const x2 = mx::square(x);
-        auto t = log2_poly(dx::get_element<0>(x2));
+        auto const t = log2_poly(dx::get_element<0>(x2));
 
         using E = simd_element_type_t<T>;
         auto const twothirds = []() {

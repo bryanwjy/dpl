@@ -1,6 +1,7 @@
 // Copyright 2025-2026 Bryan Wong
-// @dpl[clang].compile-flags+: -fconstexpr-steps=12000000
-// @dpl[msvc].compile-flags+: /constexpr:steps12000000
+// @dpl[clang].compile-flags+: -fconstexpr-steps=28000000
+// @dpl[gcc].compile-flags+: -fconstexpr-ops-limit=28000000
+// @dpl[msvc].compile-flags+: /constexpr:steps28000000
 
 #include "../common.h"
 
